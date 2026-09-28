@@ -1,0 +1,227 @@
+[
+  {
+    "id": "ed580ea2-fd15-4f05-a9e1-00fd6b7a5984",
+    "name": "poster.webp",
+    "sha": "04137cb5a67dbe404ba287081a97c481a890052b7f480989c0abbbdc9b2f1495",
+    "mime": "image/webp",
+    "license": "来自作品 tiny-seed；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "28cbb983-15fc-4581-b3e9-7d1845bec073",
+    "name": "speech-1790621284529.wav",
+    "sha": "0801c1cebaa2836dbe2cc49b3cb1cac3c6b1990c50f594f837efc58b01b2739f",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文 · 本地 CPU",
+    "tags": "",
+    "deleted": true
+  },
+  {
+    "id": "ae40925a-c2f7-4e62-b340-28a03c2b81da",
+    "name": "foreground.svg",
+    "sha": "12f78284298e72d97389e34daa33bcb1bdb8effe197f1c4dafc37776f9415a5e",
+    "mime": "image/svg+xml",
+    "license": "项目原创 / Original project asset",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "fa6887d9-06c7-455d-bf03-ca3ee6800b91",
+    "name": "score.wav",
+    "sha": "201d4de70c37b80755b2e230daa08cfece4d5754bb55df2d4bb7e9a5039ac288",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "2bfc7459-7b9f-40c6-b01a-f4c50509fba7",
+    "name": "foley.wav",
+    "sha": "27d08ff77a371ba97f6dd08c9d4f20717550d74e4fe038f80bad6e581a365bbf",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "b94526d5-1618-453a-812c-30cbffeb04c6",
+    "name": "speech-1790620489270.wav",
+    "sha": "30306d80c97d0c0d53a5b9d0244ce72340b27a5d92582295b98d4bef3fd9fe84",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文 · 本地 CPU",
+    "tags": "",
+    "deleted": true
+  },
+  {
+    "id": "2f9d98f5-dcd4-4b9c-80c8-7f4eb9256e7c",
+    "name": "r2-master.wav",
+    "sha": "43ce68b455a2130676ac3d60db94d51a60d4f16960565789ba39dedbb34788d9",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "8b33c530-b3e4-45d5-85dd-de269c5120b3",
+    "name": "poster.webp",
+    "sha": "44f09389c9957a1639a6cb710c846207af7191d80bbcd981cafb725280c2a52d",
+    "mime": "image/webp",
+    "license": "来自作品 paper-wings；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "ed7d68a9-5c6d-46ec-a174-b971de910834",
+    "name": "voice.wav",
+    "sha": "50c4ac23ca4ded1fb3b744e8888836658c7a90dcb496d3a47465bc3475458e0a",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "0d1ce47b-ad32-4c34-8a16-80ecb7f69a72",
+    "name": "voice.wav",
+    "sha": "5d492a6250c4e930263b93e82be7b8fc824fad1be3fdcd0ff74a9d37f3cfdad6",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "415de741-6ba2-4fe2-936b-b82f921ad8ee",
+    "name": "voice.wav",
+    "sha": "60834ec0b51e6cec54230fe9af5d17950867720248e520a026204ed3695691b1",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "6e222288-65aa-4fa7-833c-3d64c2900487",
+    "name": "mountains.svg",
+    "sha": "60f6028b38a02bcad114a498f75cb265bac4ef566f6f120737b1cae759e41379",
+    "mime": "image/svg+xml",
+    "license": "项目原创 / Original project asset",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "fcb4e12b-091c-4750-b570-bb8fc384bc14",
+    "name": "sb_emergent-e0e83f4b-50cc-4f36-ac59-4091805fee82.mp3",
+    "sha": "653e6a1e22ae7a122d7d2db87ddb3183f7bd30fe9a9ff709e93647a8f71c48e5",
+    "mime": "audio/mpeg",
+    "license": "'Emergent' by Scott Buckley. Released under CC BY 4.0. Source: https://www.scottbuckley.com.au/library/emergent/ . Attribution must accompany publication. Used as edited soundtrack, not claimed as original composition.",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "5bc3c46e-4623-41d3-87d8-bcbed723991f",
+    "name": "poster.webp",
+    "sha": "6b35de6c38c1b27c8c6c3e53d00d73645066c61340abfdc79330327cdf837c2d",
+    "mime": "image/webp",
+    "license": "来自作品 sunny-rail；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "23519251-65e1-407d-80b3-b2ffae8ada28",
+    "name": "voice.wav",
+    "sha": "73d28cd4b1bcecaf304c58583255add5cd82ea49e6ec778cf915a9c9cd83ffee",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "4e9f66da-fd46-4318-96d9-fffd31ec3113",
+    "name": "cloud.svg",
+    "sha": "8ba6a57e311abaf9288349591fea9ea3b75433c444622ce668175d2b11123d23",
+    "mime": "image/svg+xml",
+    "license": "项目原创 / Original project asset",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "e6647b3e-6f44-4112-b2a4-347ab9f777d7",
+    "name": "GeneralUser-GS.sf2",
+    "sha": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe",
+    "mime": "application/octet-stream",
+    "license": "Chris Collins / GeneralUser GS v2.0.3；完整许可见本项目 public/music/GENERALUSER-LICENSE.txt",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "fe463754-7a01-420f-8049-5eb5e5ab03a4",
+    "name": "poster.svg",
+    "sha": "b4e7844449de31fa791201d2185ce9a048d09fa6cba0ca8729a3517ee9e8851a",
+    "mime": "image/svg+xml",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "ab41250b-5479-40f9-8aa8-b8a67233a6f1",
+    "name": "speech-1790620485112.wav",
+    "sha": "bbe00c41d40aa267994e7a62e5d90829e6c71d32c052d34981f36e4e38be68f8",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文 · 本地 CPU",
+    "tags": "",
+    "deleted": true
+  },
+  {
+    "id": "6dda034f-9a03-4f08-9fb8-c57c82236639",
+    "name": "lighthouse.svg",
+    "sha": "bc56d08816845ecca2c338031dea9f7d73802583aa7175c47b9e74b9d53c2936",
+    "mime": "image/svg+xml",
+    "license": "项目原创 / Original project asset",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "8ddcac8e-bda4-4766-83f8-cceb96f20a38",
+    "name": "paper-plane.svg",
+    "sha": "c5ab0c3befd787c0c39c03b1d790375314d52c8bdf5ffa38bfd12353181a8e4a",
+    "mime": "image/svg+xml",
+    "license": "项目原创 / Original project asset",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "10b8a0d3-c889-4c24-be34-f572d60b9311",
+    "name": "voice.wav",
+    "sha": "c8bdc351a12558bac57385c081da7d16d1b29ee18e4b920a7a85e5e413506920",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "c0bb8539-f189-4ada-ae75-d761e6466f1c",
+    "name": "voice.wav",
+    "sha": "ca96e53395793aa5164d1f21ce2d9fb8d69ddcdcae5ba0640b2dd751e7f92496",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "f051c918-1104-4d5b-84f7-283e8ae3dcf9",
+    "name": "voice-master.wav",
+    "sha": "d2cd2a8b1d868dfbf072c1ae9e05b11f4b684fa868c688690ccefd389e5a12f6",
+    "mime": "audio/wav",
+    "license": "来自作品 the-learning-machine；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "2e82c175-929b-44d4-b921-114e3c452041",
+    "name": "landscape.svg",
+    "sha": "e262796fb830ff0ed8ef9443d8c997ba2c6048416468fe959198929f23f71fc6",
+    "mime": "image/svg+xml",
+    "license": "项目原创 / Original project asset",
+    "tags": "作品导入",
+    "deleted": false
+  }
+]
