@@ -1,0 +1,13 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const story=JSON.parse(await fs.readFile(path.join(root,'production/story.json'),'utf8'));
+const subtitles=JSON.parse(await fs.readFile(path.join(root,'captions.json'),'utf8'));
+const tracks=[['narration','中文旁白'],['harmony','和声 · 主旋律'],['pulse','琶音 · 低音'],['drums','鼓组 · 节奏'],['fx','转场 · 交互音效']].map(([id,name])=>({id,name,kind:'file',src:`films/work-0560feb5/audio/${id}.mp3`,start:0,duration:216,gain:id==='narration'?.9:1}));
+for(const t of tracks)await fs.access(path.join(root,'public/audio',t.id+'.mp3'));
+const shots=[['opening',5,'超越对话','对话框向执行工具转化'],['rules',22,'规则匹配','关键词在分支轨道上匹配'],['dead-end',28,'无法匹配','规则的局限'],['network',43,'从误差学习','信号与误差反传'],['gradient',53,'权重更新','预测逼近目标'],['attention',72,'上下文关联','它与小猫的注意力示意'],['next-token',85,'下一词元','条件概率与采样示意'],['post-train',104,'训练到有用','预训练、示范和反馈'],['reasoning',124,'推理与回退','候选路径和回退'],['multimodal',135,'多模态','视觉声音语言汇聚'],['tools',151,'工具执行','读取、编辑与真实回执'],['failure',162,'测试失败','错误反馈至编辑器'],['passed',171,'修复通过','再运行与验证'],['software',182.5,'编写软件','能力示意'],['research',184.6,'检索研究','能力示意'],['data',186.7,'数据分析','能力示意'],['media',188.8,'生成影像','能力示意'],['audio',190.9,'声音与音乐','能力示意'],['math',193,'数学探索','能力示意'],['algorithms',195.1,'优化算法','能力示意'],['protein',197.2,'生命结构','能力示意'],['weather',199.3,'天气预测','能力示意'],['robot',201.4,'机器人行动','能力示意'],['ending',210,'开始创造','回到人类意图与行动']];
+const meta={id:'work-0560feb5',title:story.title,subtitle:'语言，开始变成行动',description:'原创科技知识短片。用连续三维动画解释规则、学习、注意力、后训练、推理与智能体闭环；以不同顶尖系统的公开能力示意收束。包含逐句实测中文旁白、可关闭字幕和原创五轨混音。参考资料及能力边界见 production/sources.md。',renderer:'three',engineProtocol:1,composition:{width:1920,height:1080},duration:216,fps:60,audioTracks:tracks,accent:'#65e5ed',poster:'films/work-0560feb5/poster.svg',posterTime:5,tags:['知识科普','AI','Agent','原创音乐','3D','中文旁白'],status:'film',beats:shots.map(([id,at,title,detail])=>({id,at,title,detail})),subtitles,credits:['导演脚本、三维动画、音乐与声音设计：本作品原创','旁白：Kokoro 中文 zm_yunyang（Apache-2.0），逐句实测对齐','图形为机制及能力示意，不是模型内部实拍或产品录屏','资料核实日期：2026-10-01；完整来源：production/sources.md','不同系统能力与条件不同，不表示单一模型无所不能']};
+await fs.writeFile(path.join(root,'project.ts'),`import type { AnimationProject } from '../../src/engine/types';\nconst project: AnimationProject = { ...${JSON.stringify(meta,null,2)}, load: () => import('./scene') };\nexport default project;\n`);
+await fs.writeFile(path.join(root,'production/shot-list.json'),JSON.stringify(shots.map(([id,at,title,detail])=>({id,at,title,detail})),null,2));
+console.log(JSON.stringify({status:'metadata_ready',duration:216,fps:60,audioTracks:tracks.length,subtitles:subtitles.length,shots:shots.length}));

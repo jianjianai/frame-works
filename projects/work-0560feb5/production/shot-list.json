@@ -1,0 +1,146 @@
+[
+  {
+    "id": "opening",
+    "at": 5,
+    "title": "超越对话",
+    "detail": "对话框向执行工具转化"
+  },
+  {
+    "id": "rules",
+    "at": 22,
+    "title": "规则匹配",
+    "detail": "关键词在分支轨道上匹配"
+  },
+  {
+    "id": "dead-end",
+    "at": 28,
+    "title": "无法匹配",
+    "detail": "规则的局限"
+  },
+  {
+    "id": "network",
+    "at": 43,
+    "title": "从误差学习",
+    "detail": "信号与误差反传"
+  },
+  {
+    "id": "gradient",
+    "at": 53,
+    "title": "权重更新",
+    "detail": "预测逼近目标"
+  },
+  {
+    "id": "attention",
+    "at": 72,
+    "title": "上下文关联",
+    "detail": "它与小猫的注意力示意"
+  },
+  {
+    "id": "next-token",
+    "at": 85,
+    "title": "下一词元",
+    "detail": "条件概率与采样示意"
+  },
+  {
+    "id": "post-train",
+    "at": 104,
+    "title": "训练到有用",
+    "detail": "预训练、示范和反馈"
+  },
+  {
+    "id": "reasoning",
+    "at": 124,
+    "title": "推理与回退",
+    "detail": "候选路径和回退"
+  },
+  {
+    "id": "multimodal",
+    "at": 135,
+    "title": "多模态",
+    "detail": "视觉声音语言汇聚"
+  },
+  {
+    "id": "tools",
+    "at": 151,
+    "title": "工具执行",
+    "detail": "读取、编辑与真实回执"
+  },
+  {
+    "id": "failure",
+    "at": 162,
+    "title": "测试失败",
+    "detail": "错误反馈至编辑器"
+  },
+  {
+    "id": "passed",
+    "at": 171,
+    "title": "修复通过",
+    "detail": "再运行与验证"
+  },
+  {
+    "id": "software",
+    "at": 182.5,
+    "title": "编写软件",
+    "detail": "能力示意"
+  },
+  {
+    "id": "research",
+    "at": 184.6,
+    "title": "检索研究",
+    "detail": "能力示意"
+  },
+  {
+    "id": "data",
+    "at": 186.7,
+    "title": "数据分析",
+    "detail": "能力示意"
+  },
+  {
+    "id": "media",
+    "at": 188.8,
+    "title": "生成影像",
+    "detail": "能力示意"
+  },
+  {
+    "id": "audio",
+    "at": 190.9,
+    "title": "声音与音乐",
+    "detail": "能力示意"
+  },
+  {
+    "id": "math",
+    "at": 193,
+    "title": "数学探索",
+    "detail": "能力示意"
+  },
+  {
+    "id": "algorithms",
+    "at": 195.1,
+    "title": "优化算法",
+    "detail": "能力示意"
+  },
+  {
+    "id": "protein",
+    "at": 197.2,
+    "title": "生命结构",
+    "detail": "能力示意"
+  },
+  {
+    "id": "weather",
+    "at": 199.3,
+    "title": "天气预测",
+    "detail": "能力示意"
+  },
+  {
+    "id": "robot",
+    "at": 201.4,
+    "title": "机器人行动",
+    "detail": "能力示意"
+  },
+  {
+    "id": "ending",
+    "at": 210,
+    "title": "开始创造",
+    "detail": "回到人类意图与行动"
+  }
+]
