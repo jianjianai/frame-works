@@ -60,7 +60,7 @@ const project: AnimationProject = { ...{
     }
   ],
   "accent": "#65e5ed",
-  "poster": "films/work-0560feb5/poster.svg",
+  "poster": "films/work-0560feb5/poster.png",
   "posterTime": 5,
   "tags": [
     "知识科普",
