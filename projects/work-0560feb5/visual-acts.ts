@@ -87,11 +87,11 @@ export function frontier():K.Actor{
  const circuit=K.chip();circuit.scale.setScalar(1.4);circuit.rotation.x=.6;circuit.userData.update=(t:number)=>{circuit.rotation.y=t*.5;};objects.push(circuit);
  const bio=K.protein();bio.userData.update=(t:number)=>{bio.rotation.y=t*.3;bio.rotation.z=-.45+Math.sin(t*.6)*.08;};objects.push(bio);
  const earth=K.globe();earth.userData.update=(t:number)=>{earth.rotation.y=t*.35;earth.rotation.z=.18;};objects.push(earth);
- const robot=K.robot();robot.position.y=.3;robot.rotation.y=-.3;const cube=box(.45,.45,.45,C.gold,2,-1.6,.1);robot.add(cube);robot.userData.update=(t:number)=>{robot.userData.pose(t);cube.position.set(1.3+Math.sin(t*1.9)*.7,-1.6+Math.max(0,Math.sin(t*1.9))*.9,0);};objects.push(robot);
+ const robot=K.robot();robot.position.y=.3;robot.rotation.y=-.3;const cube=box(.27,.27,.27,C.gold,0,.55,0);robot.userData.grip.add(cube);robot.userData.update=(t:number)=>{robot.userData.pose(t);};objects.push(robot);
  const tools=new T.Group();const a=K.codeScreen(),b=K.documentStack();a.scale.setScalar(.65);a.position.set(-1.8,.2,0);b.scale.setScalar(.62);b.position.set(2,.2,-.5);tools.add(a,b,core(.5));tools.userData.update=(t:number)=>{tools.rotation.y=Math.sin(t*.6)*.1;};objects.push(tools);
  const all=new T.Group();for(let i=0;i<10;i++){let o=[K.chip,K.documentStack,K.protein,K.globe,K.codeScreen][i%5]();o.scale.setScalar(i%5===0?.3:.18);const a=i/10*Math.PI*2;o.position.set(Math.cos(a)*4.1,Math.sin(a)*2.2,Math.sin(a)*.7);all.add(o);}all.add(core(.9));all.userData.update=(t:number)=>{all.rotation.z=Math.sin(t*.18)*.04;all.children.forEach((a,i)=>{a.rotation.y=t*.4+i;});};objects.push(all);
  objects.forEach(o=>root.add(o));
- return{root,update(t){const {index,local}=frontierCue(t);objects.forEach((o,i)=>{o.visible=i===index;if(i!==index)return;let punch=1+.12*Math.exp(-local*5);o.scale.setScalar((i===6?1.4:1)*punch);if(o.userData.update)o.userData.update(local+index*.7);if(i<2)o.rotation.y=-.2+local*.12;o.position.z=-.2+local*.1;});root.rotation.y=0;}};
+ return{root,update(t){const {index,local}=frontierCue(t);objects.forEach((o,i)=>{o.visible=i===index;if(i!==index)return;let punch=1+.12*Math.exp(-local*5);o.scale.setScalar(([1.5,1.6,1.45,1.05,1.35,1.45,1.65,1.5,1.35,1.5,1.2,1.1][i])*punch);if(o.userData.update)o.userData.update(local+index*.7);if(i<2)o.rotation.y=-.2+local*.12;o.position.z=-.2+local*.1;});root.rotation.y=0;}};
 }
 function meshLandscape(seed:number){const g=new T.Group();for(let i=0;i<7;i++){const a=new T.Mesh(new T.ConeGeometry(.52,.8+hash(i+seed)*.8,4),K.metal(i%2?C.slate:C.cyan));a.position.set((i-3)*.5,-.2,hash(i)*.4);g.add(a);}return g;}
 export function ending():K.Actor{

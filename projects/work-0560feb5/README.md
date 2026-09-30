@@ -2,7 +2,15 @@
 
 工程 id：`work-0560feb5`。文件修改范围：`projects/work-0560feb5/`。
 
-默认工程是空白合成，不预选 2D 或 3D 引擎。可以按需求选择已安装框架、组合素材，或使用项目内的程序化场景。本文只说明工程结构、接口与工具。
+本作品为 216 秒、1920×1080、60fps 的原创科技知识片。采用 Three.js 实时生成三维结构、因果过程和连续摄影机运动；46 句中文旁白逐句实测对齐，字幕可关闭。结尾用不同顶尖系统的 12 类公开能力示意做加速蒙太奇，不把所有能力混称为单一模型。
+
+## 本片入口
+
+`scene.ts` 负责主场景、灯光、画布合成与标题；`visual-kit.ts` 是本工程私有三维构件；`visual-acts.ts` 包含九个绝对时间场景及与旁白对应的快切时码；`camera-motion.ts` 保存主体跟踪、近景推进和拉远揭示轨迹。`captions.json` 和 `public/captions.srt` 来自实测音频时长，不按字数猜测。
+
+当前播放使用五条文件音轨：旁白、和声、低音琶音、鼓组、交互音效，均位于 `public/audio/`。`production/build-narration.mjs` 使用已配置的内部 Kokoro 服务并缓存逐句结果；`production/build-score.mjs` 确定性重建原创音乐和音效；`production/finalize.mjs` 更新静态元数据。默认脚手架 `audio.ts` 未接入本片播放。
+
+导演脚本见 [story.json](production/story.json)，来源与能力边界见 [sources.md](production/sources.md)，审片与验证见 [records](records/)。修改保持项目内隔离，下面保留平台通用接口说明。
 
 | 路径 | 用途 |
 |---|---|

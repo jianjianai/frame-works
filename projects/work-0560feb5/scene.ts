@@ -3,6 +3,7 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import type {Scene,SceneOptions} from '../../src/engine/types';
 import * as K from './visual-kit';
 import * as A from './visual-acts';
+import {moveCamera} from './camera-motion';
 const cuts=[0,16,36,62,92,116,142,180,207,216];
 const headings=['超越对话','先有规则，后有学习','错误，变成训练信号','上下文，连接起来','从续写，到有用','从直觉，到推演','从回答，到完成','此刻，能力仍在扩展','不止回答。开始创造。'];
 const eyebrow=['BEYOND THE CHAT','01  /  RULES → LEARNING','02  /  LEARN FROM ERROR','03  /  TRANSFORMER · 2017','04  /  PRETRAIN → POST-TRAIN','05  /  REASONING + MULTIMODAL','06  /  THE AGENT LOOP','THE FRONTIER','HUMAN INTENT × MACHINE CAPABILITY'];
@@ -28,7 +29,7 @@ export async function createScene({width,height}:SceneOptions):Promise<Scene>{
   actors.forEach((a,i)=>{a.root.visible=i===index;});const active=actors[index];active.update(local);
   const incoming=index===0?0:1-K.ease(local/.95),outgoing=index===8?0:K.ease((local-len+.8)/.8);active.root.position.x+=(incoming-outgoing)*15;active.root.position.z=-incoming*3-outgoing*1.4;
   if(index!==8)active.root.position.x=(incoming-outgoing)*15;
-  const camZ=[17.5,16.9,17.8,16.4,16.2,16.9,17.7,14.3,17.2][index];const travel=index===7?.65:1.35;camera.position.set(Math.sin(t*.13)*.62,1.45+Math.sin(t*.16)*.19,camZ-travel*K.ease(p));camera.lookAt(index===0?.45:index===8?.65:0,-.55,0);camera.updateMatrixWorld();
+  const camZ=[17.5,16.9,17.8,16.4,16.2,16.9,17.7,14.3,17.2][index];const travel=index===7?.65:1.35;camera.position.set(Math.sin(t*.13)*.62,1.45+Math.sin(t*.16)*.19,camZ-travel*K.ease(p));camera.lookAt(index===0?.45:index===8?.65:0,-.55,0);moveCamera(index,local,camera,camZ-travel*K.ease(p));camera.updateMatrixWorld();
   dust.rotation.y=t*.012;dust.rotation.z=Math.sin(t*.03)*.015;
   continuity.visible=index!==0&&(local<1.2||local>len-1.2);const q=local<1.2?local/1.2:(local-len+1.2)/1.2;continuity.position.set(K.mix(-9,9,K.ease(q)),.6-Math.sin(q*Math.PI)*.7,3.2);
   renderer.render(world,camera);ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(renderer.domElement,0,0,width,height);ctx.drawImage(glowCanvas,0,0,width,height);ctx.scale(width/1920,height/1080);

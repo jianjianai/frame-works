@@ -20,7 +20,7 @@ const project: AnimationProject = { ...{
       "src": "films/work-0560feb5/audio/narration.mp3",
       "start": 0,
       "duration": 216,
-      "gain": 0.9
+      "gain": 1.26
     },
     {
       "id": "harmony",
@@ -29,7 +29,7 @@ const project: AnimationProject = { ...{
       "src": "films/work-0560feb5/audio/harmony.mp3",
       "start": 0,
       "duration": 216,
-      "gain": 1
+      "gain": 1.4
     },
     {
       "id": "pulse",
@@ -38,7 +38,7 @@ const project: AnimationProject = { ...{
       "src": "films/work-0560feb5/audio/pulse.mp3",
       "start": 0,
       "duration": 216,
-      "gain": 1
+      "gain": 1.4
     },
     {
       "id": "drums",
@@ -47,7 +47,7 @@ const project: AnimationProject = { ...{
       "src": "films/work-0560feb5/audio/drums.mp3",
       "start": 0,
       "duration": 216,
-      "gain": 1
+      "gain": 1.4
     },
     {
       "id": "fx",
@@ -56,7 +56,7 @@ const project: AnimationProject = { ...{
       "src": "films/work-0560feb5/audio/fx.mp3",
       "start": 0,
       "duration": 216,
-      "gain": 1
+      "gain": 1.4
     }
   ],
   "accent": "#65e5ed",
