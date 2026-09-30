@@ -152,61 +152,61 @@ const project: AnimationProject = { ...{
     },
     {
       "id": "software",
-      "at": 182.5,
+      "at": 184.8,
       "title": "编写软件",
       "detail": "能力示意"
     },
     {
       "id": "research",
-      "at": 184.6,
+      "at": 185.5,
       "title": "检索研究",
       "detail": "能力示意"
     },
     {
       "id": "data",
-      "at": 186.7,
+      "at": 186.5,
       "title": "数据分析",
       "detail": "能力示意"
     },
     {
       "id": "media",
-      "at": 188.8,
+      "at": 187.8,
       "title": "生成影像",
       "detail": "能力示意"
     },
     {
       "id": "audio",
-      "at": 190.9,
+      "at": 189.1,
       "title": "声音与音乐",
       "detail": "能力示意"
     },
     {
       "id": "math",
-      "at": 193,
+      "at": 190.6,
       "title": "数学探索",
       "detail": "能力示意"
     },
     {
       "id": "algorithms",
-      "at": 195.1,
+      "at": 191.7,
       "title": "优化算法",
       "detail": "能力示意"
     },
     {
       "id": "protein",
-      "at": 197.2,
+      "at": 193.4,
       "title": "生命结构",
       "detail": "能力示意"
     },
     {
       "id": "weather",
-      "at": 199.3,
+      "at": 194.8,
       "title": "天气预测",
       "detail": "能力示意"
     },
     {
       "id": "robot",
-      "at": 201.4,
+      "at": 196.6,
       "title": "机器人行动",
       "detail": "能力示意"
     },
@@ -453,7 +453,7 @@ const project: AnimationProject = { ...{
     "导演脚本、三维动画、音乐与声音设计：本作品原创",
     "旁白：Kokoro 中文 zm_yunyang（Apache-2.0），逐句实测对齐",
     "图形为机制及能力示意，不是模型内部实拍或产品录屏",
-    "资料核实日期：2026-10-01；完整来源：production/sources.md",
+    "资料核实日期：2026-10-01；完整来源索引见本作品的制作资料目录",
     "不同系统能力与条件不同，不表示单一模型无所不能"
   ]
 }, load: () => import('./scene') };

@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "transaction": "877dc2d2-1cd6-4a79-b26b-07c338c971c2",
+  "time": "2026-09-30T20:26:59.193Z",
+  "changes": [
+    {
+      "path": "project.ts",
+      "operation": "replace",
+      "beforeSha256": "af5aef5641076198967e60a6de2bd818e1746a1065ab77e5ababa35fb839f72e",
+      "afterSha256": "1ccc79f498f7cdea0fc495d7e06fefeca9e86165dbb489771351cfbf51efc5c1"
+    },
+    {
+      "path": "production/finalize.mjs",
+      "operation": "replace",
+      "beforeSha256": "f42baa24c3dd511f6df18800e0e3f326e5440e8e9d2b1cab2b255dd281418edb",
+      "afterSha256": "e6406fbb8171ecea2dc3908c1c85613e43a81da50f8394f70694edd773ba278c"
+    },
+    {
+      "path": "visual-acts.ts",
+      "operation": "replace",
+      "beforeSha256": "7cf98d2559acd15cfff99e613835daa535567859e56e2552d2d0d071c89b0d6f",
+      "afterSha256": "5ee77023a6ddf8eaccb8d13f3fd8e611939dd8f2fff03bcbffaa11ed084d5011"
+    },
+    {
+      "path": "scene.ts",
+      "operation": "replace",
+      "beforeSha256": "b1449e421323b9c6fca4ae23f30b98657c6b46459d521535bcdddce3448c76e9",
+      "afterSha256": "34d12a52a556e4c45f493a23d9d42f47f2504660f2bb82d18c316fac35bb6d3f"
+    }
+  ],
+  "validation": {
+    "passed": true,
+    "errors": 0,
+    "warnings": 0
+  }
+}

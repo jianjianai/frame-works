@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "transaction": "0da6a9bf-2acf-4af2-a051-74f9834ce944",
+  "time": "2026-09-30T20:27:20.263Z",
+  "changes": [
+    {
+      "path": "production/finalize.mjs",
+      "operation": "replace",
+      "beforeSha256": "e6406fbb8171ecea2dc3908c1c85613e43a81da50f8394f70694edd773ba278c",
+      "afterSha256": "b60e8f3dd0d4536be51c92d16b9bb8f8049fc1539b2917774ba49b3f9bb0082e"
+    },
+    {
+      "path": "production/build-score.mjs",
+      "operation": "replace",
+      "beforeSha256": "611a74a90fa9140a4c80ece91e6cdce514e279f4d878dec7a91688357c056cf9",
+      "afterSha256": "ad4b61805199e508bf0749d7973b7eaac1b5769d2ffb547c46f37c0f574dfd55"
+    }
+  ],
+  "validation": {
+    "passed": true,
+    "errors": 0,
+    "warnings": 0
+  }
+}
