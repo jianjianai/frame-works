@@ -15,8 +15,8 @@ export async function createScene({width,height}:SceneOptions):Promise<Scene>{
  const camera=new T.PerspectiveCamera(40,width/height,.1,120);camera.position.set(0,1.7,17.8);
  const pmrem=new T.PMREMGenerator(renderer),room=new RoomEnvironment(),env=pmrem.fromScene(room,.04);world.environment=env.texture;room.dispose();pmrem.dispose();
  world.add(new T.HemisphereLight(0xbedee8,0x05101a,1.4));const key=new T.DirectionalLight(0xd5f5ff,3.2);key.position.set(-4,7,6);world.add(key);const warm=new T.DirectionalLight(0xffb96c,3);warm.position.set(5,2,-4);world.add(warm);const rim=new T.PointLight(0x50dbe9,22,35,2);rim.position.set(-5,3,3);world.add(rim);
- const floor=new T.Mesh(new T.PlaneGeometry(180,180),new T.MeshStandardMaterial({color:0x091923,metalness:.55,roughness:.42}));floor.rotation.x=-Math.PI/2;floor.position.y=-4.8;world.add(floor);
- const grid=new T.GridHelper(100,70,0x143441,0x102a36);grid.position.y=-4.78;(grid.material as T.Material).transparent=true;(grid.material as T.Material).opacity=.34;world.add(grid);
+ const floor=new T.Mesh(new T.PlaneGeometry(180,180),new T.MeshBasicMaterial({color:0x061019}));floor.rotation.x=-Math.PI/2;floor.position.y=-4.8;world.add(floor);
+ const grid=new T.GridHelper(100,45,0x102935,0x0b1c27);grid.position.y=-4.78;(grid.material as T.Material).transparent=true;(grid.material as T.Material).opacity=.16;world.add(grid);
  const dust=K.particles(240);world.add(dust);
  const builders=[A.opening,A.rules,A.learning,A.attention,A.training,A.reasoning,A.agent,A.frontier,A.ending];const actors=builders.map(f=>f());actors.forEach(a=>{world.add(a.root);a.root.visible=false;});
  const continuity=K.ball(.12,K.C.gold),continuityHalo=K.halo(K.C.gold,2.4,.8);continuity.add(continuityHalo);world.add(continuity);
@@ -28,7 +28,7 @@ export async function createScene({width,height}:SceneOptions):Promise<Scene>{
   actors.forEach((a,i)=>{a.root.visible=i===index;});const active=actors[index];active.update(local);
   const incoming=index===0?0:1-K.ease(local/.95),outgoing=index===8?0:K.ease((local-len+.8)/.8);active.root.position.x+=(incoming-outgoing)*15;active.root.position.z=-incoming*3-outgoing*1.4;
   if(index!==8)active.root.position.x=(incoming-outgoing)*15;
-  const camZ=[17.5,19.2,19.8,19.2,18.4,18.8,20,15.5,17.2][index];const travel=index===7?.25:1.2;camera.position.set(Math.sin(t*.075)*.42,1.6+Math.sin(t*.11)*.16,camZ-travel*K.ease(p));camera.lookAt(index===0?.45:index===8?.65:0,-.55,0);camera.updateMatrixWorld();
+  const camZ=[17.5,16.9,17.8,16.4,16.2,16.9,17.7,14.3,17.2][index];const travel=index===7?.65:1.35;camera.position.set(Math.sin(t*.13)*.62,1.45+Math.sin(t*.16)*.19,camZ-travel*K.ease(p));camera.lookAt(index===0?.45:index===8?.65:0,-.55,0);camera.updateMatrixWorld();
   dust.rotation.y=t*.012;dust.rotation.z=Math.sin(t*.03)*.015;
   continuity.visible=index!==0&&(local<1.2||local>len-1.2);const q=local<1.2?local/1.2:(local-len+1.2)/1.2;continuity.position.set(K.mix(-9,9,K.ease(q)),.6-Math.sin(q*Math.PI)*.7,3.2);
   renderer.render(world,camera);ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(renderer.domElement,0,0,width,height);ctx.drawImage(glowCanvas,0,0,width,height);ctx.scale(width/1920,height/1080);
