@@ -1,5 +1,21 @@
 {
   "schemaVersion": 1,
   "background": "transparent",
-  "clips": []
+  "clips": [
+    {
+      "id": "tides",
+      "source": {
+        "kind": "scene",
+        "module": "tides",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 24,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    }
+  ]
 }

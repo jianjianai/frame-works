@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    { "id": "surf", "kind": "generated", "module": "surf", "trackId": "main", "engine": "web-audio" },
+    { "id": "pad", "kind": "generated", "module": "pad", "trackId": "main", "engine": "web-audio" }
+  ],
+  "tracks": [
+    { "id": "sea", "name": "海浪", "gain": 0.9, "output": "master" },
+    { "id": "drone", "name": "低频衬底", "gain": 0.7, "output": "musicBus" }
+  ],
+  "clips": [
+    {
+      "id": "surfFull",
+      "track": "sea",
+      "source": "surf",
+      "start": 0,
+      "duration": 24,
+      "fadeIn": 2,
+      "fadeOut": 2.5
+    },
+    {
+      "id": "padFull",
+      "track": "drone",
+      "source": "pad",
+      "start": 0,
+      "duration": 24,
+      "fadeIn": 3,
+      "fadeOut": 3
+    }
+  ],
+  "buses": [
+    {
+      "id": "musicBus",
+      "name": "音乐总线",
+      "processors": [{ "type": "reverb", "seconds": 2.2, "decay": 3.5, "mix": 0.25, "seed": 3 }]
+    }
+  ],
+  "master": { "gain": 0.9, "processors": [{ "type": "limiter", "ceiling": -1.5 }] },
+  "linkedVideo": true
+}
