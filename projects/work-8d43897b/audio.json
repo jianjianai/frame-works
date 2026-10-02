@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "narration-01",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/d96690a772239a6556a7.wav"
+    },
+    {
+      "id": "narration-02",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/14374cd5cb20a8eedeca.wav"
+    },
+    {
+      "id": "narration-03",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/805d448a6afbf0e996db.wav"
+    },
+    {
+      "id": "narration-04",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/349949f2a10b6a46c719.wav"
+    },
+    {
+      "id": "narration-05",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/d338d2285beb2624b864.wav"
+    },
+    {
+      "id": "narration-06",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/54f72696ce3808907cbb.wav"
+    },
+    {
+      "id": "narration-07",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/46554cd2c9000dd1fda5.wav"
+    },
+    {
+      "id": "narration-08",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/4343f4da4aec0f1db865.wav"
+    },
+    {
+      "id": "narration-09",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/95bd220ba008efcb2c73.wav"
+    },
+    {
+      "id": "narration-10",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/d419fb4e2ddd5a05635c.wav"
+    },
+    {
+      "id": "narration-11",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/803bb652272d4140ee09.wav"
+    },
+    {
+      "id": "narration-12",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/1e331ae50093359f461b.wav"
+    },
+    {
+      "id": "narration-13",
+      "kind": "file",
+      "src": "films/work-8d43897b/imports/e0c143f760b246e53eaf.wav"
+    },
+    {
+      "id": "music",
+      "kind": "generated",
+      "module": "legacy",
+      "trackId": "music",
+      "engine": "custom"
+    },
+    {
+      "id": "foley",
+      "kind": "generated",
+      "module": "legacy",
+      "trackId": "foley",
+      "engine": "custom"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "voice",
+      "name": "中文旁白",
+      "gain": 0.92,
+      "output": "master"
+    },
+    {
+      "id": "score",
+      "name": "原创电子配乐",
+      "gain": 0.62,
+      "output": "master",
+      "processors": [
+        {
+          "type": "duck",
+          "track": "voice",
+          "amount": 0.48,
+          "attack": 0.025,
+          "release": 0.24
+        }
+      ]
+    },
+    {
+      "id": "foley",
+      "name": "动作与环境音效",
+      "gain": 0.56,
+      "output": "master"
+    }
+  ],
+  "clips": [
+    {
+      "id": "narration-01",
+      "track": "voice",
+      "source": "narration-01",
+      "start": 0.25,
+      "duration": 5.375,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-02",
+      "track": "voice",
+      "source": "narration-02",
+      "start": 7.2,
+      "duration": 5.4,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-03",
+      "track": "voice",
+      "source": "narration-03",
+      "start": 18.2,
+      "duration": 7.9,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-04",
+      "track": "voice",
+      "source": "narration-04",
+      "start": 32.2,
+      "duration": 7.175,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-05",
+      "track": "voice",
+      "source": "narration-05",
+      "start": 43.2,
+      "duration": 6.925,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-06",
+      "track": "voice",
+      "source": "narration-06",
+      "start": 52.2,
+      "duration": 8.75,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-07",
+      "track": "voice",
+      "source": "narration-07",
+      "start": 66.2,
+      "duration": 8.275,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-08",
+      "track": "voice",
+      "source": "narration-08",
+      "start": 79.2,
+      "duration": 7.675,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-09",
+      "track": "voice",
+      "source": "narration-09",
+      "start": 13.6,
+      "duration": 3.55,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-10",
+      "track": "voice",
+      "source": "narration-10",
+      "start": 27,
+      "duration": 3.675,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-11",
+      "track": "voice",
+      "source": "narration-11",
+      "start": 39.45,
+      "duration": 3.65,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-12",
+      "track": "voice",
+      "source": "narration-12",
+      "start": 61.5,
+      "duration": 3.675,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "narration-13",
+      "track": "voice",
+      "source": "narration-13",
+      "start": 75.2,
+      "duration": 3.5,
+      "fadeIn": 0.012,
+      "fadeOut": 0.035
+    },
+    {
+      "id": "music",
+      "track": "score",
+      "source": "music",
+      "start": 0,
+      "duration": 90,
+      "fadeIn": 0.12,
+      "fadeOut": 1.6
+    },
+    {
+      "id": "foley",
+      "track": "foley",
+      "source": "foley",
+      "start": 0,
+      "duration": 90,
+      "fadeIn": 0.12,
+      "fadeOut": 1.6
+    }
+  ],
+  "buses": [],
+  "master": {
+    "gain": 0.9,
+    "processors": [
+      {
+        "type": "limiter",
+        "ceiling": -1.4
+      }
+    ]
+  },
+  "linkedVideo": false
+}
