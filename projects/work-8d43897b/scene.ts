@@ -1,4 +1,5 @@
 /* All motion is a pure function of absolute film time. No RAF, media, or external assets. */
+import { captions } from './captions';
 type Mood = 'tired' | 'happy' | 'angry' | 'wonder' | 'blank' | 'calm' | 'resolve';
 type HeroPose = { mood?: Mood; walk?: number; reach?: number; lean?: number; squash?: number; gaze?: number; cup?: number; stretch?: number; blink?: number; seated?: boolean; hand?: [number, number] };
 const PI = Math.PI;
@@ -18,6 +19,7 @@ export function createScene({ width = 1080, height = 1920, quality = 'high' }: a
   if (!ctx) throw new Error('Canvas2D is required');
   const particleCount = quality === 'low' ? 25 : 56;
   let filmTime = 0;
+  let subtitlesVisible = true;
   const C = { ink: '#050b19', blue: '#102039', cyan: '#65f8ef', gold: '#ffc969', cream: '#fff2cc', pink: '#fc77a6', mute: '#4f7185' };
 
   function rr(x: number, y: number, w: number, h: number, r = 12) {
@@ -43,7 +45,7 @@ export function createScene({ width = 1080, height = 1920, quality = 'high' }: a
     ellipse(x, y, rx, ry, g); ctx.restore();
   }
   function text(label: string, x: number, y: number, size = 18, color = C.cream) {
-    ctx.font = `600 ${size}px "Noto Sans SC", "Microsoft YaHei", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color; ctx.fillText(label, x, y);
+    ctx.font = `600 ${size}px "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = color; ctx.fillText(label, x, y);
   }
   function star(x: number, y: number, size: number, color: string, rot = 0) {
     ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.beginPath();
@@ -389,8 +391,23 @@ export function createScene({ width = 1080, height = 1920, quality = 'high' }: a
     // Optical edge falloff, kept clear of subtitle placement.
     const vignette = ctx.createRadialGradient(270, 460, 170, 270, 480, 590); vignette.addColorStop(0, '#02071400'); vignette.addColorStop(.75, '#02071410'); vignette.addColorStop(1, '#020714b0'); ctx.fillStyle = vignette; ctx.fillRect(0, 0, 540, 960);
     const bottom = ctx.createLinearGradient(0, 793, 0, 960); bottom.addColorStop(0, '#050b1900'); bottom.addColorStop(.42, '#050b1999'); bottom.addColorStop(1, '#050b19ee'); ctx.fillStyle = bottom; ctx.fillRect(0, 793, 540, 167);
+    if (subtitlesVisible) {
+      const cue = captions.find(c => filmTime >= c.start && filmTime < c.end);
+      if (cue) {
+        const lines = cue.text.split('\n');
+        ctx.font = '600 24px "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif';
+        const boxWidth = Math.min(478, Math.max(...lines.map(l => ctx.measureText(l).width)) + 32);
+        const boxHeight = lines.length * 34 + 18;
+        const boxTop = 828 - boxHeight / 2;
+        fillRound(270 - boxWidth / 2, boxTop, boxWidth, boxHeight, 10, '#050c18d9');
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#fff6df'; ctx.shadowColor = '#000000'; ctx.shadowBlur = 3;
+        lines.forEach((label, i) => ctx.fillText(label, 270, boxTop + 26 + i * 34));
+        ctx.shadowBlur = 0;
+      }
+    }
     ctx.restore();
   }
   render(0);
-  return { canvas, render, dispose() { canvas.width = 1; canvas.height = 1; } };
+  return { canvas, render, setSubtitles(visible: boolean) { subtitlesVisible = visible; }, dispose() { canvas.width = 1; canvas.height = 1; } };
 }
