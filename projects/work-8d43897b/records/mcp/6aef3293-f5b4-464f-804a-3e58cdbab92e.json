@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "transaction": "6aef3293-f5b4-464f-804a-3e58cdbab92e",
+  "time": "2026-10-02T10:55:04.720Z",
+  "changes": [
+    {
+      "path": "project.ts",
+      "operation": "replace",
+      "beforeSha256": "11e920772f401281392472f88d796a32ce2cab2aa7a712fcaaf4f60c4e387a6c",
+      "afterSha256": "44c75902a8189e1638b9760b1ba52863b20fcda183d909e7c756d7ec98759e43"
+    },
+    {
+      "path": "scene.ts",
+      "operation": "replace",
+      "beforeSha256": "eb9fbc598dc7f771df0941ce737a578f945ab7676422e8c8e6e7ccaa21572a8f",
+      "afterSha256": "7b6e5a4406d5270a094e1944274b9f37bfcfd7bf65aada03e3c05207b8aea84c"
+    },
+    {
+      "path": "captions.ts",
+      "operation": "create",
+      "beforeSha256": null,
+      "afterSha256": "256cf9a314c8fb272784d7cf9b87fdcc818bb79f7ea4916ea661a09a54152f1c"
+    },
+    {
+      "path": "README.md",
+      "operation": "replace",
+      "beforeSha256": "7b4d9e0692adaa283f0070fcdeff0098ef80b2ef6ccc03ded727076098c39f21",
+      "afterSha256": "0bfd23bdb59fa279cd7909038888e60400adbc93c2b7146b530accfb1661293b"
+    }
+  ],
+  "validation": {
+    "passed": true,
+    "errors": 0,
+    "warnings": 0
+  }
+}
