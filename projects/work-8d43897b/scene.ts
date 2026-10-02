@@ -12,7 +12,7 @@ const fract = (v: number) => v - Math.floor(v);
 const hash = (v: number) => fract(Math.sin(v * 127.1 + 311.7) * 43758.5453123);
 
 export function createScene({ width = 1080, height = 1920, quality = 'high' }: any) {
-  const canvas: HTMLCanvasElement | OffscreenCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : new OffscreenCanvas(width, height);
+  const canvas = (typeof document !== 'undefined' ? document.createElement('canvas') : new OffscreenCanvas(width, height)) as HTMLCanvasElement;
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext('2d', { alpha: false }) as CanvasRenderingContext2D;
   if (!ctx) throw new Error('Canvas2D is required');
@@ -60,7 +60,7 @@ export function createScene({ width = 1080, height = 1920, quality = 'high' }: a
     }
     ctx.restore();
   }
-  function backdrop(t: number, warmth = 0) {
+  function backdrop(_t: number, warmth = 0) {
     const g = ctx.createLinearGradient(0, 0, 500, 960); g.addColorStop(0, '#081425'); g.addColorStop(.55, warmth > .4 ? '#172033' : '#0b172a'); g.addColorStop(1, '#050b15');
     ctx.fillStyle = g; ctx.fillRect(-160, -160, 860, 1280);
     glow(420, 310, 340, warmth > .4 ? '#ffb94f' : '#2ea3bb', warmth > .4 ? .14 : .11);
