@@ -1,0 +1,132 @@
+[
+  {
+    "start": 0.25,
+    "end": 7,
+    "text": "刷了一晚上，怎么还是没休息够？你本来，只想躺十分钟。",
+    "index": 1,
+    "asset": "057b3630-5117-44d9-aa54-b256fd4c890a",
+    "sha": "d96690a772239a6556a72c7a1c8b0c9fab20b7a2943b788ef7e51f2e7bde002b",
+    "path": "public/imports/d96690a772239a6556a7.wav",
+    "duration": 5.375
+  },
+  {
+    "start": 7.2,
+    "end": 18,
+    "text": "手机亮了。搞笑，争吵，逆袭。每一条，都像是最后一条。",
+    "index": 2,
+    "asset": "26c4cc57-8548-4d61-9ab5-c651e506d052",
+    "sha": "14374cd5cb20a8eedecab8579bfeed26abf3c053d68708257bfe95125200c4e8",
+    "path": "public/imports/14374cd5cb20a8eedeca.wav",
+    "duration": 5.4
+  },
+  {
+    "start": 18.2,
+    "end": 32,
+    "text": "可你接上的，是一条没有终点的传送带。手指一滑，时间就走一格。画面不停换，情绪也跟着换。",
+    "index": 3,
+    "asset": "fddd7067-e3a4-4a47-adad-1cea861cf78a",
+    "sha": "805d448a6afbf0e996db43218ee2beef079a6419867d15a1f639d3367ee7e527",
+    "path": "public/imports/805d448a6afbf0e996db.wav",
+    "duration": 7.9
+  },
+  {
+    "start": 32.2,
+    "end": 43,
+    "text": "最好笑的，还没刷到。最想知道的，还没揭晓。于是你总觉得，再来一条，就能满足。",
+    "index": 4,
+    "asset": "42d87ec1-a19e-4cbf-905e-07850f06752f",
+    "sha": "349949f2a10b6a46c719fe46122d783d43dac04497f118e56e4ed5e29fa027fb",
+    "path": "public/imports/349949f2a10b6a46c719.wav",
+    "duration": 7.175
+  },
+  {
+    "start": 43.2,
+    "end": 52,
+    "text": "你一直在找，却没真正投入。一些实验发现，不停切换视频，反而更容易无聊。",
+    "index": 5,
+    "asset": "e558fa3c-a26b-4706-8f22-08dd4d8d82e6",
+    "sha": "d338d2285beb2624b864dcfb3f81a3c3e995d4080c16edddf96559669b9ab412",
+    "path": "public/imports/d338d2285beb2624b864.wav",
+    "duration": 6.925
+  },
+  {
+    "start": 52.2,
+    "end": 66,
+    "text": "别等刷到满足才停。打开前，先给这次休息一个结尾。定个十分钟的提醒，到点，就把手机放远一点。",
+    "index": 6,
+    "asset": "c0ef24bf-34ea-48e8-9760-2d81b090ba95",
+    "sha": "54f72696ce3808907cbb165a1436abc00c781b015dd680af80b2f115d75cfe65",
+    "path": "public/imports/54f72696ce3808907cbb.wav",
+    "duration": 8.75
+  },
+  {
+    "start": 66.2,
+    "end": 79,
+    "text": "然后，试着留几分钟，没有新内容。喝口水，走两步，看一会儿窗外。让自己不用追着下一条跑。",
+    "index": 7,
+    "asset": "b3380ac1-03a0-40f1-b2ce-50fba6d177c0",
+    "sha": "46554cd2c9000dd1fda5acb38706c5b979b54f3acdd75f2ba9ca5240315c4a2b",
+    "path": "public/imports/46554cd2c9000dd1fda5.wav",
+    "duration": 8.275
+  },
+  {
+    "start": 79.2,
+    "end": 89.5,
+    "text": "刷视频可以很开心。但开心，不一定等于休息。把结尾握在自己手里。今天，就到这里。",
+    "index": 8,
+    "asset": "8018af71-3f35-449a-8866-8efee65fe726",
+    "sha": "4343f4da4aec0f1db865166094b79736e064d9e50c451d9b6e500e14569c1a2b",
+    "path": "public/imports/4343f4da4aec0f1db865.wav",
+    "duration": 7.675
+  },
+  {
+    "start": 13.6,
+    "end": 17.8,
+    "text": "明明不想看了，手指却还在动。",
+    "index": 9,
+    "asset": "9a3fccef-f2ae-4107-a814-92cd1337a2cf",
+    "sha": "95bd220ba008efcb2c734b56b8a334ba8c4066652d04e6305c5a1624e84fa40f",
+    "path": "public/imports/95bd220ba008efcb2c73.wav",
+    "duration": 3.55
+  },
+  {
+    "start": 27,
+    "end": 31.8,
+    "text": "一转眼，十分钟变成了一个小时。",
+    "index": 10,
+    "asset": "6760fa55-9e13-4a74-ab63-741dd1c2103b",
+    "sha": "d419fb4e2ddd5a05635c123bf0c7c7b7f2ac50c69dfb5ddd8ac32db1f61e4f9f",
+    "path": "public/imports/d419fb4e2ddd5a05635c.wav",
+    "duration": 3.675
+  },
+  {
+    "start": 39.45,
+    "end": 43.15,
+    "text": "你追的，是下一条会更好的期待。",
+    "index": 11,
+    "asset": "ea49cbde-d80b-475c-90c3-29730ba58310",
+    "sha": "803bb652272d4140ee0956932532d4b24051187ac164bea207f28f2201d6ff20",
+    "path": "public/imports/803bb652272d4140ee09.wav",
+    "duration": 3.65
+  },
+  {
+    "start": 61.5,
+    "end": 65.8,
+    "text": "提醒是一个出口，别顺手划掉它。",
+    "index": 12,
+    "asset": "a588fd71-8c0c-438d-8df4-b4e8609ad1c4",
+    "sha": "1e331ae50093359f461b7ef8d8bd8ed8ffb70f0c9fc68af9e19e4bd5f597391f",
+    "path": "public/imports/1e331ae50093359f461b.wav",
+    "duration": 3.675
+  },
+  {
+    "start": 75.2,
+    "end": 78.9,
+    "text": "先问问自己，现在更轻松了吗？",
+    "index": 13,
+    "asset": "75f38347-3953-4012-bf56-58821b31202a",
+    "sha": "e0c143f760b246e53eaf93928d155a440ba5dc88c0b8a2691b68b6369c9433d5",
+    "path": "public/imports/e0c143f760b246e53eaf.wav",
+    "duration": 3.5
+  }
+]

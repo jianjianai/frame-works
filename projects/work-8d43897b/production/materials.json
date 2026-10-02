@@ -1,0 +1,100 @@
+[
+  {
+    "asset": "057b3630-5117-44d9-aa54-b256fd4c890a",
+    "path": "public/imports/d96690a772239a6556a7.wav",
+    "sha256": "d96690a772239a6556a72c7a1c8b0c9fab20b7a2943b788ef7e51f2e7bde002b",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "旁白·01·开场.wav"
+  },
+  {
+    "asset": "26c4cc57-8548-4d61-9ab5-c651e506d052",
+    "path": "public/imports/14374cd5cb20a8eedeca.wav",
+    "sha256": "14374cd5cb20a8eedecab8579bfeed26abf3c053d68708257bfe95125200c4e8",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937610878.wav"
+  },
+  {
+    "asset": "fddd7067-e3a4-4a47-adad-1cea861cf78a",
+    "path": "public/imports/805d448a6afbf0e996db.wav",
+    "sha256": "805d448a6afbf0e996db43218ee2beef079a6419867d15a1f639d3367ee7e527",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937616766.wav"
+  },
+  {
+    "asset": "42d87ec1-a19e-4cbf-905e-07850f06752f",
+    "path": "public/imports/349949f2a10b6a46c719.wav",
+    "sha256": "349949f2a10b6a46c719fe46122d783d43dac04497f118e56e4ed5e29fa027fb",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937621974.wav"
+  },
+  {
+    "asset": "d3615556-d89f-4029-899e-55fd9a95b911",
+    "path": "public/imports/3fb84b961afd2b559c1c.wav",
+    "sha256": "3fb84b961afd2b559c1c8f19ea2e9eb78f823e2e11da6e9e5e7d80dc1343d424",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937627134.wav"
+  },
+  {
+    "asset": "c0ef24bf-34ea-48e8-9760-2d81b090ba95",
+    "path": "public/imports/54f72696ce3808907cbb.wav",
+    "sha256": "54f72696ce3808907cbb165a1436abc00c781b015dd680af80b2f115d75cfe65",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937633592.wav"
+  },
+  {
+    "asset": "b3380ac1-03a0-40f1-b2ce-50fba6d177c0",
+    "path": "public/imports/46554cd2c9000dd1fda5.wav",
+    "sha256": "46554cd2c9000dd1fda5acb38706c5b979b54f3acdd75f2ba9ca5240315c4a2b",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937639376.wav"
+  },
+  {
+    "asset": "8018af71-3f35-449a-8866-8efee65fe726",
+    "path": "public/imports/4343f4da4aec0f1db865.wav",
+    "sha256": "4343f4da4aec0f1db865166094b79736e064d9e50c451d9b6e500e14569c1a2b",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937644677.wav"
+  },
+  {
+    "asset": "9a3fccef-f2ae-4107-a814-92cd1337a2cf",
+    "path": "public/imports/95bd220ba008efcb2c73.wav",
+    "sha256": "95bd220ba008efcb2c734b56b8a334ba8c4066652d04e6305c5a1624e84fa40f",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937689373.wav"
+  },
+  {
+    "asset": "6760fa55-9e13-4a74-ab63-741dd1c2103b",
+    "path": "public/imports/d419fb4e2ddd5a05635c.wav",
+    "sha256": "d419fb4e2ddd5a05635c123bf0c7c7b7f2ac50c69dfb5ddd8ac32db1f61e4f9f",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937691904.wav"
+  },
+  {
+    "asset": "ea49cbde-d80b-475c-90c3-29730ba58310",
+    "path": "public/imports/803bb652272d4140ee09.wav",
+    "sha256": "803bb652272d4140ee0956932532d4b24051187ac164bea207f28f2201d6ff20",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937694604.wav"
+  },
+  {
+    "asset": "a588fd71-8c0c-438d-8df4-b4e8609ad1c4",
+    "path": "public/imports/1e331ae50093359f461b.wav",
+    "sha256": "1e331ae50093359f461b7ef8d8bd8ed8ffb70f0c9fc68af9e19e4bd5f597391f",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937697433.wav"
+  },
+  {
+    "asset": "75f38347-3953-4012-bf56-58821b31202a",
+    "path": "public/imports/e0c143f760b246e53eaf.wav",
+    "sha256": "e0c143f760b246e53eaf93928d155a440ba5dc88c0b8a2691b68b6369c9433d5",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790937699941.wav"
+  },
+  {
+    "asset": "e558fa3c-a26b-4706-8f22-08dd4d8d82e6",
+    "path": "public/imports/d338d2285beb2624b864.wav",
+    "sha256": "d338d2285beb2624b864dcfb3f81a3c3e995d4080c16edddf96559669b9ab412",
+    "source": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "name": "speech-1790938222634.wav"
+  }
+]
