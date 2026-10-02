@@ -6,10 +6,10 @@ const project:AnimationProject={
  accent:'#b91224',poster:'films/work-b6ee56e9/poster.svg',posterTime:89,
  tags:['原创短片','空间折叠','电影感电子','无对白'],status:'film',
  audioTracks:[
-  {id:'rhythm',name:'RHYTHM · 128 BPM / 鼓与打击',kind:'generated',gain:1.632},
-  {id:'bass',name:'WEIGHT · 低频与脉冲',kind:'generated',gain:1.7},
-  {id:'harmony',name:'FLIGHT · 和声与主题旋律',kind:'generated',gain:1.7},
-  {id:'foley',name:'CREASE · 纸张、冲击与过渡',kind:'generated',gain:1.53}
+  {id:'rhythm',name:'RHYTHM · 128 BPM / 鼓与打击',kind:'file',src:'films/work-b6ee56e9/imports/e2fa80cf4b76ef0a02fe.m4a',gain:1.632},
+  {id:'bass',name:'WEIGHT · 低频与脉冲',kind:'file',src:'films/work-b6ee56e9/imports/658602394e75656765c3.m4a',gain:1.7},
+  {id:'harmony',name:'FLIGHT · 和声与主题旋律',kind:'file',src:'films/work-b6ee56e9/imports/2feaa6829212a6fee562.m4a',gain:1.7},
+  {id:'foley',name:'CREASE · 纸张、冲击与过渡',kind:'file',src:'films/work-b6ee56e9/imports/45c11478ea9828688073.m4a',gain:1.53}
  ],
  beats:[
   {id:'sheet',at:0,title:'一张纸',detail:'微距触感；第一次折痕带动镜头撤离'},
@@ -34,7 +34,7 @@ const project:AnimationProject={
   {start:98.6,end:102.5,text:'你不必，长成标准答案。'},
   {start:112.5,end:117.5,text:'把折痕，折成翅膀。'}
  ],
- credits:['原创场景、乐谱、合成器与拟音：本工程自有源码','画面使用 Three.js；音频使用 Web Audio / PCM Worker；无外部视听素材'],
- load:()=>import('./scene'),loadAudio:()=>import('./audio')
+ credits:['原创场景、乐谱、合成器与拟音：本工程自有源码','画面使用 Three.js；音乐为代码合成，成片采用 AAC 多轨；无外部视听素材'],
+ load:()=>import('./scene')
 };
 export default project;

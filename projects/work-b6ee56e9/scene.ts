@@ -68,7 +68,7 @@ function texture() {
 }
 function planeGeometry() {
   const flat: V[]=[[0,0,-3],[-3,0,-3],[-3,0,3],[0,0,3],[3,0,3],[3,0,-3],[-1.1,0,1.4],[1.1,0,1.4]];
-  const folded: V[]=[[0,0,-3],[-3.7,.05,2],[-.85,-.13,2.45],[0,.65,2.4],[.85,-.13,2.45],[3.7,.05,2],[-.55,-.22,.9],[.55,-.22,.9]];
+  const folded: V[]=[[0,0,-3],[-3.7,.02,2],[-3.7,.02,2],[0,-.3,1.8],[3.7,.02,2],[3.7,.02,2],[-.5,-.08,1.0],[.5,-.08,1.0]];
   const faces=[[0,1,6],[1,2,6],[2,3,6],[3,0,6],[0,7,5],[5,7,4],[4,7,3],[3,7,0]];
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(72),3));
   geometry.setAttribute('uv',new THREE.Float32BufferAttribute(faces.flatMap(f=>f.flatMap(i=>[(flat[i][0]+3)/6,(flat[i][2]+3)/6])),2));
