@@ -7,8 +7,9 @@ import {
 const lerpColor = (a: number[], b: number[], t: number) =>
   `rgb(${Math.round(mix(a[0], b[0], t))},${Math.round(mix(a[1], b[1], t))},${Math.round(mix(a[2], b[2], t))})`;
 
-// ============ A 雨夜城市：快速推进一扇亮着的窗（0 – 1.0） ============
-const CITY_LEN = 1.0;
+// ============ A 进房间（0 – 1.2）：雨夜大楼 → 快速推近那扇窗 → 穿过挂满雨珠的玻璃 → 屋里：他坐在床边看手机，越过肩膀推向屏幕 ============
+const CITY_LEN = 1.2;
+const T_GLASS = 0.66, T_IN = 0.8; // 穿过玻璃、进入屋内
 export const city: ShotFactory = () => {
   const r = seeded(11);
   type B = { x: number; w: number; top: number; lit: boolean[] };
@@ -35,10 +36,71 @@ export const city: ShotFactory = () => {
         for (let x = b.x + 16; x + ww < b.x + b.w - 10; x += gx) if (b.lit[k++ % 80]) ctx.fillRect(x, y, ww, wh);
     }
   };
+  const drops = Array.from({ length: 34 }, () => ({ x: r() * DW, y: r() * DH, r: 6 + r() * 14, sp: 200 + r() * 500, trail: 20 + r() * 120 }));
+  // 屋里：他坐在床边，手机的光照着他；地上是从公司搬回来的纸箱
+  const PH_X = 700, PH_Y = 990;
+  const interior = (ctx: CanvasRenderingContext2D, t: number) => {
+    const k = easeIn(phase(t, T_IN - 0.05, CITY_LEN));
+    ctx.save();
+    camera(ctx, mix(1.0, 2.8, k), mix(560, PH_X, k), mix(1000, PH_Y, k), 540, mix(980, 900, k));
+    vgrad(ctx, -300, -300, DW + 600, DH + 600, [[0, "#0d0e10"], [1, "#060607"]]);
+    // 身后那扇窗：外面就是刚才的雨夜
+    vgrad(ctx, 60, 420, 300, 460, [[0, "#2a2d33"], [1, "#16181c"]]);
+    rain(ctx, t, { count: 30, seed: 41, alpha: 0.3, len: 40, speed: 900, slant: 0.05, x0: 60, x1: 360, y0: 420, y1: 880 });
+    for (let i = 0; i < 8; i++) glow(ctx, 90 + i * 35, 700 + Math.sin(i * 3) * 120, 18, "rgba(200,200,190,1)", 0.25);
+    ctx.fillStyle = "#050506";
+    ctx.fillRect(60, 420, 300, 12);
+    ctx.fillRect(60, 868, 300, 12);
+    ctx.fillRect(204, 420, 12, 460);
+    // 床
+    ctx.fillStyle = "#18191c";
+    ctx.fillRect(-100, 1180, 900, 120);
+    ctx.fillStyle = "#24252a";
+    ctx.beginPath();
+    ctx.moveTo(-100, 1180);
+    ctx.bezierCurveTo(200, 1130, 500, 1170, 820, 1150);
+    ctx.lineTo(820, 1200);
+    ctx.lineTo(-100, 1200);
+    ctx.fill();
+    ctx.fillStyle = "#0a0a0b";
+    ctx.fillRect(-300, 1300, DW + 600, 800);
+    // 纸箱（工牌搭在上面）
+    ctx.fillStyle = "#2c2925";
+    ctx.fillRect(820, 1180, 210, 130);
+    ctx.fillStyle = "#38342e";
+    ctx.fillRect(810, 1170, 230, 20);
+    ctx.fillStyle = "#c9c6bf";
+    ctx.fillRect(880, 1150, 56, 74);
+    ctx.fillStyle = "#111";
+    ctx.fillRect(890, 1162, 36, 26);
+    // 手机的光
+    glow(ctx, PH_X, PH_Y, 520, "rgba(225,232,245,1)", 0.45);
+    drawPerson(ctx, {
+      x: 560, y: 1300, h: 760, sit: 1, stoop: 0.5, head: 0.55, dir: 1,
+      handF: { x: PH_X + 4, y: PH_Y + 12 }, handB: { x: PH_X - 6, y: PH_Y + 20 },
+      rim: { color: "rgba(230,236,248,0.95)", dx: 5, dy: 2, blur: 3 },
+    });
+    // 手机屏幕（背对我们，只看到亮光）
+    ctx.save();
+    ctx.translate(PH_X, PH_Y);
+    ctx.rotate(-0.5);
+    ctx.fillStyle = "#e9edf5";
+    roundRect(ctx, -16, -28, 32, 56, 6);
+    ctx.fill();
+    ctx.restore();
+    glow(ctx, PH_X, PH_Y, 120, "rgba(255,255,255,1)", 0.6 + 0.4 * k);
+    // 推到最后，屏幕的白光铺满画面，接下一个镜头
+    ctx.restore();
+    const white = easeIn(phase(t, CITY_LEN - 0.12, CITY_LEN));
+    if (white > 0) {
+      ctx.fillStyle = `rgba(235,238,245,${white * 0.8})`;
+      ctx.fillRect(0, 0, DW, DH);
+    }
+  };
   return {
     draw(ctx, t) {
-      // 1 秒内快速推进那扇窗
-      const p = clamp(t / CITY_LEN);
+      // 0.8 秒内快速推进那扇窗
+      const p = clamp(t / T_IN);
       const Z = 30;
       const z = Math.exp(Math.log(Z) * (0.12 * p + 0.88 * Math.pow(p, 3)));
       const cy = mix(1120, 960, easeInOut(p));
@@ -82,7 +144,11 @@ export const city: ShotFactory = () => {
       glow(ctx, TX + 6, TY + 14, 30, "rgba(255,255,255,0.9)", 0.9);
       ctx.fillStyle = "#3a3833";
       ctx.fillRect(TX - 27, TY + 26, 54, 16);
+      // 窗里的小人：快到玻璃前淡出，避免和屋内的他重影
+      ctx.save();
+      ctx.globalAlpha = 1 - smooth(phase(t, T_GLASS - 0.16, T_GLASS - 0.04));
       drawPerson(ctx, { x: TX + 2, y: TY + 34, h: 46, sit: 1, stoop: 0.5, head: 0.5, handF: { x: TX + 9, y: TY + 18 }, handB: { x: TX + 7, y: TY + 20 } });
+      ctx.restore();
       glow(ctx, TX + 9, TY + 17, 6, "#fff", 1);
       // 窗帘
       ctx.fillStyle = "rgba(20,20,20,0.85)";
@@ -96,8 +162,47 @@ export const city: ShotFactory = () => {
       // 雨
       rain(ctx, t, { count: 150, seed: 3, alpha: 0.28, len: 70, speed: 2600, slant: 0.1, width: 2 });
       rain(ctx, t, { count: 40, seed: 4, alpha: 0.18, len: 160, speed: 4200, slant: 0.1, width: 4 });
+      // 穿过玻璃：雨珠贴在镜头前
+      const glass = bump(t, T_GLASS - 0.12, T_GLASS, T_IN, T_IN + 0.12);
+      // 屋内
+      const inside = smooth(phase(t, T_GLASS + 0.04, T_IN + 0.04));
+      if (inside > 0) {
+        ctx.save();
+        ctx.globalAlpha = inside;
+        interior(ctx, t);
+        ctx.restore();
+      }
+      if (glass > 0) {
+        ctx.save();
+        ctx.globalAlpha = glass;
+        ctx.fillStyle = "rgba(200,205,215,0.12)";
+        ctx.fillRect(0, 0, DW, DH);
+        for (const d of drops) {
+          const yy = d.y + Math.max(0, t - T_GLASS + 0.1) * d.sp;
+          ctx.fillStyle = "rgba(235,240,245,0.35)";
+          ctx.beginPath();
+          ctx.ellipse(d.x, yy, d.r * 2.2, d.r * 2.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(255,255,255,0.8)";
+          ctx.beginPath();
+          ctx.arc(d.x - d.r * 0.6, yy - d.r, d.r * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(235,240,245,0.25)";
+          ctx.lineWidth = d.r * 0.8;
+          ctx.beginPath();
+          ctx.moveTo(d.x, yy - d.r * 2.6);
+          ctx.lineTo(d.x + 2, yy - d.r * 2.6 - d.trail);
+          ctx.stroke();
+        }
+        // 窗框从画面两边掠过
+        const fr = easeIn(phase(t, T_GLASS - 0.08, T_IN));
+        ctx.fillStyle = "#08080a";
+        ctx.fillRect(-DW * fr * 1.2, 0, 160, DH);
+        ctx.fillRect(DW - 160 + DW * fr * 1.2, 0, 160, DH);
+        ctx.restore();
+      }
       // 钩子文案（第一帧就在）
-      const ca = 1 - smooth(phase(t, 0.55, 0.8));
+      const ca = 1 - smooth(phase(t, 0.45, 0.68));
       if (ca > 0) {
         ctx.save();
         ctx.globalAlpha = ca;
@@ -111,25 +216,26 @@ export const city: ShotFactory = () => {
         ctx.restore();
       }
     },
-    // 先看文案 → 那扇窗
+    // 先看文案 → 那扇窗 → 屋里他手里的手机
     focus: (t) => {
-      const w = smooth(phase(t, 0.3, 0.7));
-      const cy = mix(1120, 960, easeInOut(clamp(t / CITY_LEN)));
-      return { x: 540, y: mix(470, cy, w), r: mix(470, 280, w), a: mix(0.3, 0.55, w) };
+      const w = smooth(phase(t, 0.25, 0.6));
+      const cy = mix(1120, 960, easeInOut(clamp(t / T_IN)));
+      const inn = smooth(phase(t, T_IN, T_IN + 0.15));
+      return { x: 540, y: mix(mix(470, cy, w), 900, inn), r: mix(mix(470, 280, w), 340, inn), a: mix(0.3, 0.5, w) };
     },
   };
 };
 
-// ============ B 手机（1.0 – 9.2）：一直是他手里这部手机 ============
-// 本地时间（作品时间 − 1.0）：
-// 0     邮件里的「解除劳动合同通知书」，0.3 红线划过「与您解除劳动合同」
-// 0.42  顶部弹出「妈妈：国庆节回家吗？」—— 他没理，横幅收起
-// 0.95  妈妈的微信语音通话打进来 → 1.5 他按了挂断，回到和妈妈的聊天
-// 聊天记录：妈妈「国庆节回家吗？」→ 妈妈「语音通话 未接听」(1.62) → 我「工作太忙了，不回了」(打字 2.0，停顿，3.05 发送) → 妈妈的语音
-// 3.3   标题变「对方正在讲话…」（歌曲停顿，他在等）
-// 4.85  歌里的微信提示音：语音出现在他那句回复下面 → 5.16 点开播放 → 7.3 播完
-// 8.12  眼泪落在这条语音上
-export const PHONE_LEN = 8.2;
+// ============ B 手机（1.2 – 9.2）：一直是他手里这部手机 ============
+// 本地时间（作品时间 − 1.2）：
+// 0     邮件里的「解除劳动合同通知书」（镜头更近，慢慢往下滑），0.3 红线划过「与您解除劳动合同」
+// 0.85  顶部弹出「妈妈：国庆节回家吗？」—— 他没理，横幅收起（只占顶部，不挡正文）
+// 1.6   妈妈的微信语音通话打进来 → 2.1 他按了挂断，回到和妈妈的聊天
+// 聊天记录：妈妈「国庆节回家吗？」→ 妈妈「语音通话 未接听」(2.2) → 我「工作太忙了，不回了」(打字 2.35，停顿，3.35 发送) → 妈妈的语音
+// 3.55  标题变「对方正在讲话…」（歌曲停顿，他在等）
+// 4.65  歌里的微信提示音（作品 5.85s）：语音出现在他那句回复下面 → 4.96 点开播放 → 7.1 播完
+// 7.92  眼泪落在这条语音上（作品 9.12s）
+export const PHONE_LEN = 8.0;
 export const phone: ShotFactory = (env) => {
   const r = seeded(21);
   const bokeh = Array.from({ length: 26 }, () => ({ x: r() * DW, y: r() * 900, rad: 30 + r() * 90, a: 0.05 + r() * 0.12 }));
@@ -138,8 +244,8 @@ export const phone: ShotFactory = (env) => {
   const { canvas: avatar, ctx: ag } = offscreen(140, 140);
   ag.drawImage(photo, 150, 120, 380, 380, 0, 0, 140, 140);
   const reply1 = "工作太忙了", reply2 = "，不回了", reply = reply1 + reply2;
-  const T_UL = 0.3, T_N1 = 0.42, T_N1_OUT = 0.88, T_RING = 0.95, T_HANG = 1.5, T_MISS = 1.62, T_TYPE = 2.0, T_TYPE2 = 2.7, T_SEND = 3.05, T_SPEAK = 3.3;
-  const T_DING = 4.85, T_PLAY = 5.16, T_VEND = 7.3, T_TEAR = 8.12;
+  const T_UL = 0.3, T_N1 = 0.85, T_N1_OUT = 1.35, T_RING = 1.6, T_HANG = 2.1, T_MISS = 2.2, T_TYPE = 2.35, T_TYPE2 = 2.95, T_SEND = 3.35, T_SPEAK = 3.55;
+  const T_DING = 4.65, T_PLAY = 4.96, T_VEND = 7.1, T_TEAR = 7.92;
   const x0 = 540 - PW / 2, y0 = 880 - PH / 2;
   const Q = { y: y0 + 300 }, M = { y: y0 + 430 }, A = { y: y0 + 560 };
   const vb = { x: x0 + 128, y: y0 + 690, w: 330, h: 70 };
@@ -159,7 +265,7 @@ export const phone: ShotFactory = (env) => {
     ctx.fillRect(x0, y0, PW, PH);
     statusBar(ctx, false);
     text(ctx, "‹ 收件箱", x0 + 30, y0 + 130, 30, { font: SANS, weight: 500, color: "#1a7cff", align: "left" });
-    const sc = -easeInOut(phase(t, 0.1, 0.9)) * 60;
+    const sc = -easeInOut(phase(t, 0.2, 1.5)) * 90;
     ctx.save();
     ctx.beginPath();
     ctx.rect(x0, y0 + 170, PW, PH - 170);
@@ -419,7 +525,7 @@ export const phone: ShotFactory = (env) => {
       ctx.save();
       // 镜头跟着视线走（world y）
       const keys: [number, number][] = [
-        [0, 760], [T_UL, 760], [T_N1, 800], [T_N1 + 0.15, banner.y + 160], [T_N1_OUT - 0.1, banner.y + 160], [T_N1_OUT + 0.05, 840], [T_RING, 840], [T_RING + 0.2, 880],
+        [0, 700], [T_UL, 720], [T_N1 - 0.1, 790], [T_N1, 800], [T_N1 + 0.15, banner.y + 160], [T_N1_OUT - 0.1, banner.y + 160], [T_N1_OUT + 0.05, 840], [T_RING, 840], [T_RING + 0.2, 880],
         [T_HANG, 880], [T_HANG + 0.2, M.y - 20], [T_TYPE, M.y - 20], [T_TYPE + 0.25, 960], [T_SEND, 960], [T_SEND + 0.2, A.y + 35], [T_SPEAK, A.y + 35], [T_SPEAK + 0.25, y0 + 330],
         [T_DING, y0 + 330], [T_DING + 0.2, vb.y + 35],
       ];
@@ -429,7 +535,8 @@ export const phone: ShotFactory = (env) => {
       }
       const push = easeInOut(phase(t, T_PLAY, T_TEAR));
       const wait = smooth(phase(t, T_SPEAK, T_DING)) * 0.06; // 等语音的那几秒，慢慢推近
-      const z = mix(1.1, 1.06, easeInOut(phase(t, 0, 1.5))) * (1 + wait) * mix(1, 1.5, push);
+      const read = 1 + 0.16 * (1 - easeInOut(phase(t, 1.2, 1.6))); // 看合同时镜头更近
+      const z = mix(1.1, 1.06, easeInOut(phase(t, 0, 1.5))) * read * (1 + wait) * mix(1, 1.5, push);
       const fx = mix(540, vb.x + vb.w / 2, push), fy = mix(look, vb.y + vb.h / 2, push);
       camera(ctx, z, fx, fy, 540 + wobble(t, 1) * 6 + Math.sin(t * 90) * 7 * buzz, 900 + wobble(t, 4) * 6, -0.03 * (1 - push * 0.6) + wobble(t, 2) * 0.006);
       ctx.fillStyle = "#151515";
@@ -499,7 +606,7 @@ export const phone: ShotFactory = (env) => {
         const k = bump(t, a, b, c, d);
         th = { x: mix(th.x, p.x, k), y: mix(th.y, p.y, k) };
       };
-      toward({ x: x0 + PW / 2 + 60, y: y0 + 800 - easeInOut(phase(t, 0.1, 0.9)) * 120 }, 0, 0.1, 0.8, 1.0);
+      toward({ x: x0 + PW / 2 + 60, y: y0 + 820 - easeInOut(phase(t, 0.2, 1.5)) * 140 }, 0, 0.15, 1.4, 1.6);
       toward({ x: hangBtn.x + 20, y: hangBtn.y + 40 }, T_HANG - 0.35, T_HANG - 0.04, T_HANG + 0.04, T_HANG + 0.35);
       const typing = (t > T_TYPE && t < T_TYPE + 0.45) || (t > T_TYPE2 && t < T_SEND - 0.1);
       const kx = x0 + PW / 2 + Math.sin(t * 11) * 180, kyy = ky + 140 + Math.abs(Math.sin(t * 24)) * 16;

@@ -2,7 +2,7 @@ import type { Scene, SceneOptions } from "../../../src/engine/types";
 import { DW, DH, SANS, clamp, phase, smooth, seeded, hash, makeEnv, loadFonts, offscreen, END, text } from "./lib";
 
 // 全片最上层：胶片颗粒、暗角、切镜闪白、歌曲署名。time = 作品时间
-const CUTS = [1.0, 13.94, 17.01, 20.65, 23.7, 27.39, 30.69, 34.27];
+const CUTS = [1.2, 13.94, 17.01, 20.65, 23.7, 27.39, 30.69, 34.27];
 const BIG = [9.2, 37.61];
 
 export async function createScene({ width: W, height: H, quality }: SceneOptions): Promise<Scene> {

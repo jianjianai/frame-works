@@ -71,8 +71,8 @@
       "automation": [],
       "offset": 0,
       "id": "buzzStart",
-      "start": 1.95,
-      "duration": 0.55
+      "start": 2.8,
+      "duration": 0.5
     },
     {
       "track": "sfx",
@@ -109,7 +109,7 @@
       "automation": [],
       "offset": 0,
       "id": "buzzMsg",
-      "start": 1.42,
+      "start": 2.05,
       "duration": 0.3
     }
   ],

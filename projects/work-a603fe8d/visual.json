@@ -4,14 +4,14 @@
   "clips": [
     {
       "id": "city",
-      "name": "雨夜·推进窗口",
+      "name": "进房间",
       "source": {
         "kind": "scene",
         "module": "city",
         "engine": "canvas"
       },
       "start": 0,
-      "duration": 1
+      "duration": 1.2
     },
     {
       "id": "phone",
@@ -21,8 +21,8 @@
         "module": "phone",
         "engine": "canvas"
       },
-      "start": 1,
-      "duration": 8.2
+      "start": 1.2,
+      "duration": 8
     },
     {
       "id": "grow",
