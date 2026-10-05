@@ -12,13 +12,22 @@ const CN_MAX_W = 900;
 const ROW_H = 68;
 const CN_ROW_H = 78;
 
+interface CnRow {
+  text: string;
+  /** index of the first character in the full line */
+  start: number;
+  w: number;
+  /** left offset and width of every character */
+  xs: number[];
+  cw: number[];
+}
 /** Split a Chinese line at the space that balances the two halves best, if it is too wide. */
-const cnCache = new Map<string, string[]>();
-function cnLines(ctx: Ctx, s: string, size: number): string[] {
+const cnCache = new Map<string, CnRow[]>();
+function cnLines(ctx: Ctx, s: string, size: number): CnRow[] {
   const key = size + s;
   const hit = cnCache.get(key);
   if (hit) return hit;
-  let out = [s];
+  let parts: [string, number][] = [[s, 0]];
   if (measure(ctx, s, size, F.cn) > CN_MAX_W) {
     let best = Infinity;
     for (let i = 0; i < s.length; i++)
@@ -28,10 +37,22 @@ function cnLines(ctx: Ctx, s: string, size: number): string[] {
         const d = Math.abs(measure(ctx, a, size, F.cn) - measure(ctx, b, size, F.cn));
         if (d < best) {
           best = d;
-          out = [a, b];
+          parts = [[a, 0], [b, i + 1]];
         }
       }
   }
+  const out = parts.map(([text, start]) => {
+    // lay out character by character; the space between phrases is half a character wide
+    const chars = Array.from(text);
+    const cw = chars.map((ch) => (ch === " " ? size * 0.5 : measure(ctx, ch, size, F.cn)));
+    const xs: number[] = [];
+    let x = 0;
+    for (const w of cw) {
+      xs.push(x);
+      x += w;
+    }
+    return { text, start, w: x, xs, cw };
+  });
   cnCache.set(key, out);
   return out;
 }
@@ -108,9 +129,9 @@ function drawLine(ctx: Ctx, li: number, abs: number) {
     const sung = abs >= ws;
     const active = sung && abs < ws + Math.max(wd, 0.18);
     const pop = sung ? backOut(phase(abs, ws, ws + 0.18)) : 0;
-    const sc = active ? 1 + 0.12 * (1 - phase(abs, ws, ws + 0.3)) : 1;
+    const sc = active ? 1 + 0.06 * (1 - phase(abs, ws, ws + 0.3)) : 1;
     ctx.save();
-    ctx.translate(p.x + p.w / 2, y - (active ? 6 * (1 - phase(abs, ws, ws + 0.3)) : 0));
+    ctx.translate(p.x + p.w / 2, y - (active ? 3 * (1 - phase(abs, ws, ws + 0.3)) : 0));
     ctx.scale(sc, sc);
     ctx.lineWidth = 11;
     ctx.lineJoin = "round";
@@ -127,24 +148,62 @@ function drawLine(ctx: Ctx, li: number, abs: number) {
     for (const p of placed)
       if (line.fix.en.includes(p.index)) strike(ctx, p.x, p.x + p.w, top + p.row * rowH + 2, sp, 40 + p.index);
   }
-  // Chinese (wraps at the space nearest the middle when a line is too wide)
+  // Chinese (wraps at the space nearest the middle when a line is too wide); each character
+  // lights up while the English words it translates are being sung
   const cnSize = big ? 76 : CN_SIZE;
   const cnRows = cnLines(ctx, line.cn, cnSize);
   const cnY = top + (rows - 1) * rowH + (big ? 104 : 88);
   const cnA = phase(abs, line.start - 0.1, line.start + 0.35);
+  const cnDone = bridge ? "#ffe0ec" : "#ffffff";
+  ctx.font = font(cnSize, F.cn);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  cnRows.forEach((row, r) => {
+    const y = cnY + r * CN_ROW_H;
+    const x0 = W / 2 - row.w / 2;
+    // horizontal extent of each word in this row, so a word pops as one piece
+    const span = new Map<number, [number, number]>();
+    Array.from(row.text).forEach((ch, j) => {
+      const id = line.cnTimes[row.start + j]?.[2] ?? -1;
+      if (ch === " " || id < 0) return;
+      const sp = span.get(id);
+      const a = row.xs[j],
+        b = row.xs[j] + row.cw[j];
+      span.set(id, sp ? [Math.min(sp[0], a), Math.max(sp[1], b)] : [a, b]);
+    });
+    Array.from(row.text).forEach((ch, j) => {
+      if (ch === " ") return;
+      const [cs, cd, id] = line.cnTimes[row.start + j] ?? [-1, 0, -1];
+      const sung = cs >= 0 && abs >= cs;
+      const active = sung && abs < cs + Math.max(cd, 0.18);
+      const k = active ? 1 - phase(abs, cs, cs + 0.25) : 0;
+      const [wa, wb] = span.get(id) ?? [row.xs[j], row.xs[j] + row.cw[j]];
+      const wc = x0 + (wa + wb) / 2;
+      ctx.save();
+      ctx.translate(wc, y - 3 * k);
+      ctx.scale(1 + 0.08 * k, 1 + 0.08 * k);
+      ctx.globalAlpha = alpha * cnA;
+      ctx.lineWidth = 11;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(14,12,18,0.92)";
+      const lx = x0 + row.xs[j] - wc;
+      ctx.strokeText(ch, lx, 0);
+      ctx.fillStyle = active ? accent : sung ? cnDone : "rgba(255,255,255,0.5)";
+      ctx.fillText(ch, lx, 0);
+      ctx.restore();
+    });
+  });
   ctx.globalAlpha = alpha * cnA;
-  cnRows.forEach((row, r) =>
-    text(ctx, row, W / 2, cnY + r * CN_ROW_H, { size: cnSize, font: F.cn, fill: bridge ? "#ffe0ec" : "#fff", stroke: "rgba(14,12,18,0.92)", lw: 11 }),
-  );
   if (line.fix) {
     const f = line.fix;
-    let r = cnRows.findIndex((row) => row.includes(f.cn));
+    let r = cnRows.findIndex((row) => row.text.includes(f.cn));
     if (r < 0) r = 0;
-    const row = cnRows[r];
-    const i = Math.max(0, row.indexOf(f.cn));
-    const total = measure(ctx, row, cnSize, F.cn);
-    const x0 = W / 2 - total / 2 + measure(ctx, row.slice(0, i), cnSize, F.cn);
-    const x1 = x0 + measure(ctx, row.includes(f.cn) ? f.cn : row, cnSize, F.cn);
+    const cr = cnRows[r];
+    const i = Math.max(0, cr.text.indexOf(f.cn));
+    const end = cr.text.includes(f.cn) ? i + f.cn.length : cr.text.length;
+    const left = W / 2 - cr.w / 2;
+    const x0 = left + cr.xs[i];
+    const x1 = left + (end < cr.xs.length ? cr.xs[end] : cr.w);
     const rowY = cnY + r * CN_ROW_H;
     const sp = phase(abs, f.at + 0.12, f.at + 0.5);
     strike(ctx, x0, x1, rowY, sp, 77, 9);
