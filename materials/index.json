@@ -54,6 +54,15 @@
     "deleted": true
   },
   {
+    "id": "5c9d90d7-c06b-4646-a8a7-a60499713485",
+    "name": "poster.svg",
+    "sha": "096f5c6243c191ee1fc708d67b02b92d845967c5b4d83829f79d2de29f13a36f",
+    "mime": "image/svg+xml",
+    "license": "来自作品 work-8d43897b；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
     "id": "ae40925a-c2f7-4e62-b340-28a03c2b81da",
     "name": "foreground.svg",
     "sha": "12f78284298e72d97389e34daa33bcb1bdb8effe197f1c4dafc37776f9415a5e",
@@ -72,12 +81,30 @@
     "deleted": false
   },
   {
+    "id": "26c4cc57-8548-4d61-9ab5-c651e506d052",
+    "name": "speech-1790937610878.wav",
+    "sha": "14374cd5cb20a8eedecab8579bfeed26abf3c053d68708257bfe95125200c4e8",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
     "id": "c3542a3b-0436-45a3-b613-072988c5eb93",
     "name": "qa.wav",
     "sha": "1950e53a17796ebe7a57bce112f5792d983db9b23ece9469ce652a52c8820166",
     "mime": "audio/wav",
     "license": "来自作品 work-517610f2；来源与许可见作品制作资料",
     "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "a588fd71-8c0c-438d-8df4-b4e8609ad1c4",
+    "name": "speech-1790937697433.wav",
+    "sha": "1e331ae50093359f461b7ef8d8bd8ed8ffb70f0c9fc68af9e19e4bd5f597391f",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
     "deleted": false
   },
   {
@@ -126,6 +153,15 @@
     "deleted": false
   },
   {
+    "id": "e481aa39-9ac2-4918-a35c-60e2e8351af2",
+    "name": "fold-harmony.m4a",
+    "sha": "2feaa6829212a6fee5626be649cf7af95763e389c704c738a5ea77f918a3c919",
+    "mime": "audio/mp4",
+    "license": "本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts",
+    "tags": "",
+    "deleted": false
+  },
+  {
     "id": "b94526d5-1618-453a-812c-30cbffeb04c6",
     "name": "speech-1790620489270.wav",
     "sha": "30306d80c97d0c0d53a5b9d0244ce72340b27a5d92582295b98d4bef3fd9fe84",
@@ -153,6 +189,33 @@
     "deleted": false
   },
   {
+    "id": "42d87ec1-a19e-4cbf-905e-07850f06752f",
+    "name": "speech-1790937621974.wav",
+    "sha": "349949f2a10b6a46c719fe46122d783d43dac04497f118e56e4ed5e29fa027fb",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
+    "id": "d3615556-d89f-4029-899e-55fd9a95b911",
+    "name": "speech-1790937627134.wav",
+    "sha": "3fb84b961afd2b559c1c8f19ea2e9eb78f823e2e11da6e9e5e7d80dc1343d424",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
+    "id": "8018af71-3f35-449a-8866-8efee65fe726",
+    "name": "speech-1790937644677.wav",
+    "sha": "4343f4da4aec0f1db865166094b79736e064d9e50c451d9b6e500e14569c1a2b",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
     "id": "2f9d98f5-dcd4-4b9c-80c8-7f4eb9256e7c",
     "name": "r2-master.wav",
     "sha": "43ce68b455a2130676ac3d60db94d51a60d4f16960565789ba39dedbb34788d9",
@@ -177,6 +240,24 @@
     "mime": "image/svg+xml",
     "license": "来自作品 work-6daf59d2；来源与许可见作品制作资料",
     "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "7245af9b-2d1e-44a7-8652-aff8ba3ee790",
+    "name": "fold-foley.m4a",
+    "sha": "45c11478ea9828688073e3e974c41663a8be5a609e62cd964a865585151cc88a",
+    "mime": "audio/mp4",
+    "license": "本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts",
+    "tags": "",
+    "deleted": false
+  },
+  {
+    "id": "b3380ac1-03a0-40f1-b2ce-50fba6d177c0",
+    "name": "speech-1790937639376.wav",
+    "sha": "46554cd2c9000dd1fda5acb38706c5b979b54f3acdd75f2ba9ca5240315c4a2b",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
     "deleted": false
   },
   {
@@ -213,6 +294,24 @@
     "mime": "audio/wav",
     "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
     "tags": "",
+    "deleted": false
+  },
+  {
+    "id": "c0ef24bf-34ea-48e8-9760-2d81b090ba95",
+    "name": "speech-1790937633592.wav",
+    "sha": "54f72696ce3808907cbb165a1436abc00c781b015dd680af80b2f115d75cfe65",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
+    "id": "7af3f721-e089-46f7-918e-c4a7b2096179",
+    "name": "poster.svg",
+    "sha": "5843421e55fae975ce88f6dadd129c6ffffb861069b64d39f2753b9fbf9e5662",
+    "mime": "image/svg+xml",
+    "license": "来自作品 work-71cf91d0；来源与许可见作品制作资料",
+    "tags": "作品导入",
     "deleted": false
   },
   {
@@ -258,6 +357,15 @@
     "mime": "audio/mpeg",
     "license": "'Emergent' by Scott Buckley. Released under CC BY 4.0. Source: https://www.scottbuckley.com.au/library/emergent/ . Attribution must accompany publication. Used as edited soundtrack, not claimed as original composition.",
     "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "975ed254-83f3-4877-a3b6-250d3d2bb4f1",
+    "name": "fold-bass.m4a",
+    "sha": "658602394e75656765c3a98bf4c181e01474fb731cd21a40ab65e15d980a4276",
+    "mime": "audio/mp4",
+    "license": "本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts",
+    "tags": "",
     "deleted": false
   },
   {
@@ -321,6 +429,24 @@
     "mime": "image/svg+xml",
     "license": "来自作品 work-02c36028；来源与许可见作品制作资料",
     "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "ea49cbde-d80b-475c-90c3-29730ba58310",
+    "name": "speech-1790937694604.wav",
+    "sha": "803bb652272d4140ee0956932532d4b24051187ac164bea207f28f2201d6ff20",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
+    "id": "fddd7067-e3a4-4a47-adad-1cea861cf78a",
+    "name": "speech-1790937616766.wav",
+    "sha": "805d448a6afbf0e996db43218ee2beef079a6419867d15a1f639d3367ee7e527",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
     "deleted": false
   },
   {
@@ -450,6 +576,15 @@
     "deleted": false
   },
   {
+    "id": "9a3fccef-f2ae-4107-a814-92cd1337a2cf",
+    "name": "speech-1790937689373.wav",
+    "sha": "95bd220ba008efcb2c734b56b8a334ba8c4066652d04e6305c5a1624e84fa40f",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
     "id": "6b55892f-36aa-4fb2-b7a3-89bb21a0106e",
     "name": "speech-1790776070087.wav",
     "sha": "9783ddbb45026e765910c8455e68d59eb3abc99b62f4f9257d4e8a4faf55cbe7",
@@ -501,6 +636,15 @@
     "mime": "image/svg+xml",
     "license": "来自作品 work-517610f2；来源与许可见作品制作资料",
     "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "4c95c2b4-e57c-4513-94ae-001b3ab8ad4e",
+    "name": "折叠_THE_IMPOSSIBLE_FOLD_720p.mp4",
+    "sha": "b31e180325e7651afd2ef7dcacd2327e094d0e55cf39b1ab0f5fdad7a430818f",
+    "mime": "video/mp4",
+    "license": "原创三维场景及原创乐谱代码生成；Frame作品 work-b6ee56e9 的最终成片，无外部视听素材。",
+    "tags": "",
     "deleted": false
   },
   {
@@ -612,6 +756,15 @@
     "deleted": false
   },
   {
+    "id": "e558fa3c-a26b-4706-8f22-08dd4d8d82e6",
+    "name": "speech-1790938222634.wav",
+    "sha": "d338d2285beb2624b864dcfb3f81a3c3e995d4080c16edddf96559669b9ab412",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
     "id": "4af2a99f-e3fb-47d6-ab89-32e78673bd1e",
     "name": "poster.svg",
     "sha": "d3b7203c42fecb875480cccc277885032717d2e7370234ea2f646b790228890b",
@@ -621,12 +774,39 @@
     "deleted": false
   },
   {
+    "id": "6760fa55-9e13-4a74-ab63-741dd1c2103b",
+    "name": "speech-1790937691904.wav",
+    "sha": "d419fb4e2ddd5a05635c123bf0c7c7b7f2ac50c69dfb5ddd8ac32db1f61e4f9f",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
     "id": "52e3a0d0-24e9-4dc0-9dd0-4aa3b3d47d3a",
     "name": "poster.svg",
     "sha": "d4aacaed7cf8159972c95055bfb796cf9454c7f7052f035801bb79995c95afbf",
     "mime": "image/svg+xml",
     "license": "来自作品 work-82a35080；来源与许可见作品制作资料",
     "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "df49faef-cb39-4624-a37e-ab953c78d278",
+    "name": "poster.svg",
+    "sha": "d8e98a64355a9a72ac380fab3ab835570a0f8bfb0a2c5921fa841ead9621485c",
+    "mime": "image/svg+xml",
+    "license": "来自作品 work-b6ee56e9；来源与许可见作品制作资料",
+    "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "057b3630-5117-44d9-aa54-b256fd4c890a",
+    "name": "旁白·01·开场.wav",
+    "sha": "d96690a772239a6556a72c7a1c8b0c9fab20b7a2943b788ef7e51f2e7bde002b",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
     "deleted": false
   },
   {
@@ -648,12 +828,30 @@
     "deleted": false
   },
   {
+    "id": "75f38347-3953-4012-bf56-58821b31202a",
+    "name": "speech-1790937699941.wav",
+    "sha": "e0c143f760b246e53eaf93928d155a440ba5dc88c0b8a2691b68b6369c9433d5",
+    "mime": "audio/wav",
+    "license": "Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M",
+    "tags": "",
+    "deleted": false
+  },
+  {
     "id": "2e82c175-929b-44d4-b921-114e3c452041",
     "name": "landscape.svg",
     "sha": "e262796fb830ff0ed8ef9443d8c997ba2c6048416468fe959198929f23f71fc6",
     "mime": "image/svg+xml",
     "license": "项目原创 / Original project asset",
     "tags": "作品导入",
+    "deleted": false
+  },
+  {
+    "id": "1d653d60-a03e-46fb-9547-8a0df31c3329",
+    "name": "fold-rhythm.m4a",
+    "sha": "e2fa80cf4b76ef0a02fe17c2685adb570f07b365ba7c5ac8ce1f9ce95e940ead",
+    "mime": "audio/mp4",
+    "license": "本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts",
+    "tags": "",
     "deleted": false
   },
   {
