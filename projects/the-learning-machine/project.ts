@@ -17,29 +17,6 @@ const project:AnimationProject={...{
     "三维科技",
     "Scott Buckley配乐"
   ],
-  "audioTracks": [
-    {
-      "id": "voice",
-      "name": "解说 · 云扬 AI合成",
-      "kind": "file",
-      "src": "films/the-learning-machine/audio-r3/voice.wav",
-      "gain": 1
-    },
-    {
-      "id": "music",
-      "name": "Emergent · Scott Buckley · CC BY 4.0",
-      "kind": "file",
-      "src": "films/the-learning-machine/audio-r3/score.wav",
-      "gain": 1
-    },
-    {
-      "id": "foley",
-      "name": "动作与空间声音",
-      "kind": "file",
-      "src": "films/the-learning-machine/audio-r3/foley.wav",
-      "gain": 1
-    }
-  ],
   "beats": [
     {
       "at": 0,
@@ -257,5 +234,6 @@ const project:AnimationProject={...{
     "史实、原论文、教学简化及授权说明见本项目 r3-sources.md 与 r3-direction.md。",
     "不使用参考视频的画面、台词、音乐、标识或模型。"
   ]
-},load:()=>import('./scene')};
+},load:()=>import('./scene'),
+  loadAudioDocument: () => import("./audio.json"),};
 export default project;

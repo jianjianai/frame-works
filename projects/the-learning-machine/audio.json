@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "src_voice",
+      "kind": "file",
+      "src": "films/the-learning-machine/audio-r3/voice.wav"
+    },
+    {
+      "id": "src_music",
+      "kind": "file",
+      "src": "films/the-learning-machine/audio-r3/score.wav"
+    },
+    {
+      "id": "src_foley",
+      "kind": "file",
+      "src": "films/the-learning-machine/audio-r3/foley.wav"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "voice",
+      "name": "解说 · 云扬 AI合成",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "music",
+      "name": "Emergent · Scott Buckley · CC BY 4.0",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "foley",
+      "name": "动作与空间声音",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    }
+  ],
+  "clips": [
+    {
+      "id": "clip_voice",
+      "track": "voice",
+      "source": "src_voice",
+      "name": "解说 · 云扬 AI合成",
+      "start": 0,
+      "duration": 156,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_music",
+      "track": "music",
+      "source": "src_music",
+      "name": "Emergent · Scott Buckley · CC BY 4.0",
+      "start": 0,
+      "duration": 156,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_foley",
+      "track": "foley",
+      "source": "src_foley",
+      "name": "动作与空间声音",
+      "start": 0,
+      "duration": 156,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    }
+  ],
+  "buses": [],
+  "master": {
+    "gain": 1,
+    "processors": []
+  },
+  "linkedVideo": true
+}
