@@ -3,15 +3,158 @@
   "background": "#000000",
   "clips": [
     {
-      "id": "mv",
-      "name": "歌词 MV",
+      "id": "city",
+      "name": "雨夜·没接的电话",
       "source": {
         "kind": "scene",
-        "module": "mv",
+        "module": "city",
         "engine": "canvas"
       },
       "start": 0,
-      "duration": 39
+      "duration": 2.9
+    },
+    {
+      "id": "phone",
+      "name": "手机·妈妈的消息",
+      "source": {
+        "kind": "scene",
+        "module": "phone",
+        "engine": "canvas"
+      },
+      "start": 2.9,
+      "duration": 3.26
+    },
+    {
+      "id": "photo",
+      "name": "老照片·眼泪",
+      "source": {
+        "kind": "scene",
+        "module": "photo",
+        "engine": "canvas"
+      },
+      "start": 6.16,
+      "duration": 3.04
+    },
+    {
+      "id": "grow",
+      "name": "时光·牵手长大",
+      "source": {
+        "kind": "scene",
+        "module": "grow",
+        "engine": "canvas"
+      },
+      "start": 9.2,
+      "duration": 4.74
+    },
+    {
+      "id": "mute",
+      "name": "分屏·疼了不说",
+      "source": {
+        "kind": "scene",
+        "module": "mute",
+        "engine": "canvas"
+      },
+      "start": 13.94,
+      "duration": 3.07
+    },
+    {
+      "id": "cake",
+      "name": "生日蛋糕",
+      "source": {
+        "kind": "scene",
+        "module": "cake",
+        "engine": "canvas"
+      },
+      "start": 17.01,
+      "duration": 3.64
+    },
+    {
+      "id": "fold",
+      "name": "折护身符",
+      "source": {
+        "kind": "scene",
+        "module": "fold",
+        "engine": "canvas"
+      },
+      "start": 20.65,
+      "duration": 3.05
+    },
+    {
+      "id": "door",
+      "name": "离家·春节",
+      "source": {
+        "kind": "scene",
+        "module": "door",
+        "engine": "canvas"
+      },
+      "start": 23.7,
+      "duration": 3.69
+    },
+    {
+      "id": "call",
+      "name": "电话·挺好的",
+      "source": {
+        "kind": "scene",
+        "module": "call",
+        "engine": "canvas"
+      },
+      "start": 27.39,
+      "duration": 3.3
+    },
+    {
+      "id": "ward",
+      "name": "病房·心电图",
+      "source": {
+        "kind": "scene",
+        "module": "ward",
+        "engine": "canvas"
+      },
+      "start": 30.69,
+      "duration": 3.58
+    },
+    {
+      "id": "rewind",
+      "name": "倒带",
+      "source": {
+        "kind": "scene",
+        "module": "rewind",
+        "engine": "canvas"
+      },
+      "start": 34.27,
+      "duration": 3.34
+    },
+    {
+      "id": "ending",
+      "name": "结尾·光里的妈妈",
+      "source": {
+        "kind": "scene",
+        "module": "ending",
+        "engine": "canvas"
+      },
+      "start": 37.61,
+      "duration": 2.39
+    },
+    {
+      "id": "lyrics",
+      "name": "歌词",
+      "source": {
+        "kind": "scene",
+        "module": "lyrics",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 40
+    },
+    {
+      "id": "fx",
+      "name": "胶片特效",
+      "source": {
+        "kind": "scene",
+        "module": "fx",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 40
     }
   ]
 }

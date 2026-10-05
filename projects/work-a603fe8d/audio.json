@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sources": [],
+  "tracks": [],
+  "clips": [],
+  "buses": [],
+  "master": {
+    "gain": 1,
+    "processors": []
+  },
+  "linkedVideo": true
+}

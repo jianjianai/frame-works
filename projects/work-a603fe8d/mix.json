@@ -34,8 +34,8 @@
       "gain": 1,
       "pan": 0,
       "muted": false,
-      "fadeIn": 0.4,
-      "fadeOut": 1,
+      "fadeIn": 0.3,
+      "fadeOut": 1.2,
       "fadeOffset": 0,
       "automation": []
     }
