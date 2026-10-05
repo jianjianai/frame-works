@@ -12,10 +12,6 @@ const project: AnimationProject = {
     accent: "#b9cfa4",
   poster: "films/sunny-rail/poster.webp",
   posterTime: 10.5,
-    audioTracks: [
-      { id: "music", name: "采样配乐", kind: "generated", gain: 1 },
-      { id: "foley", name: "动作音效", kind: "generated", gain: 1 },
-    ],
     tags: ["3D 微缩场景", "轨道摄影机", "光照与阴影"],
     status: "demo",
     beats: [
@@ -70,5 +66,6 @@ const project: AnimationProject = {
   },
   load: () => import("./scene"),
   loadAudio: () => import("./audio"),
+  loadAudioDocument: () => import("./audio.json"),
 };
 export default project;
