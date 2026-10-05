@@ -174,7 +174,21 @@ export const phone: ShotFactory = (env) => {
         // ---- 锁屏 + 微信通知 ----
         ctx.drawImage(wall, x0, y0, PW, PH);
         text(ctx, "00:48", x0 + PW / 2, y0 + 250, 150, { font: SANS, weight: 300, color: "#fff" });
-        text(ctx, "10月5日 星期日", x0 + PW / 2, y0 + 140, 30, { font: SANS, weight: 500, color: "#eee" });
+        text(ctx, "10月5日 星期一", x0 + PW / 2, y0 + 140, 30, { font: SANS, weight: 500, color: "#eee" });
+        // 三小时前的那封邮件，一直压在锁屏上（他不接电话的原因）
+        ctx.fillStyle = "rgba(235,235,235,0.82)";
+        roundRect(ctx, x0 + 30, y0 + mix(380, 540, easeOut(phase(t, T_DING, T_DING + 0.2))), PW - 60, 130, 28);
+        ctx.fill();
+        {
+          const ey = y0 + mix(380, 540, easeOut(phase(t, T_DING, T_DING + 0.2)));
+          ctx.fillStyle = "#3478f6";
+          roundRect(ctx, x0 + 60, ey + 22, 40, 40, 10);
+          ctx.fill();
+          text(ctx, "✉", x0 + 80, ey + 43, 26, { font: SANS, weight: 700, color: "#fff" });
+          text(ctx, "邮件", x0 + 116, ey + 42, 24, { font: SANS, weight: 500, color: "#666", align: "left" });
+          text(ctx, "3 小时前", x0 + PW - 60, ey + 42, 22, { font: SANS, weight: 400, color: "#888", align: "right" });
+          text(ctx, "人事部：关于解除劳动合同的通知", x0 + 60, ey + 92, 28, { font: SANS, weight: 600, color: "#222", align: "left" });
+        }
         const np = easeOut(phase(t, T_DING, T_DING + 0.2));
         const ny = mix(y0 - 120, y0 + 380, np);
         ctx.save();
@@ -326,6 +340,24 @@ export const phone: ShotFactory = (env) => {
           ctx.fill();
           text(ctx, "按住 说话", x0 + PW / 2, y0 + PH - 92, 28, { font: SANS, weight: 600, color: "#333" });
         }
+      }
+      // 看消息时，顶部弹下来一封邮件（他不敢接电话的原因）
+      const mail = easeOut(phase(t, 0.85, 1.05)) * (1 - easeIn(phase(t, 2.0, 2.2)));
+      if (mail > 0 && !lock && !chat2) {
+        const my = mix(y0 - 160, y0 + 24, mail);
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = 30;
+        ctx.fillStyle = "rgba(250,250,250,0.97)";
+        roundRect(ctx, x0 + 20, my, PW - 40, 150, 28);
+        ctx.fill();
+        ctx.restore();
+        ctx.fillStyle = "#3478f6";
+        roundRect(ctx, x0 + 48, my + 26, 40, 40, 10);
+        ctx.fill();
+        text(ctx, "✉", x0 + 68, my + 47, 26, { font: SANS, weight: 700, color: "#fff" });
+        text(ctx, "邮件 · 人事部", x0 + 104, my + 46, 24, { font: SANS, weight: 500, color: "#666", align: "left" });
+        text(ctx, "关于解除劳动合同的通知", x0 + 48, my + 104, 32, { font: SANS, weight: 700, color: "#111", align: "left" });
       }
       // 熄屏 / 变暗
       if (screenOn < 1) {
@@ -664,12 +696,12 @@ export const grow: ShotFactory = (env) => {
       // 母子
       const kidH = mix(240, 610, a);
       const child = 1 - smooth(phase(a, 0.12, 0.7));
-      const momStoop = mix(0, 0.5, smooth(phase(a, 0.3, 1)));
+      const momStoop = mix(0, 0.32, smooth(phase(a, 0.3, 1)));
       const kidX = 440, momX = 650;
       const holdY = GROUND - mix(215, 300, a) + Math.sin(t * 7.5) * 4;
       const hold = { x: (kidX + momX) / 2 + mix(10, -15, a), y: holdY };
-      const hair = Math.round(mix(7, 165, smooth(phase(a, 0.35, 1))));
-      const mom = drawPerson(ctx, { x: momX, y: GROUND, h: mix(560, 545, a), mom: true, walk: t * mix(7.5, 6, a), stride: mix(1, 0.55, a), stoop: momStoop, handB: hold, cane: a > 0.78, hair: `rgb(${hair},${hair},${hair})` });
+      const hair = Math.round(mix(7, 120, smooth(phase(a, 0.45, 1))));
+      const mom = drawPerson(ctx, { x: momX, y: GROUND, h: mix(560, 545, a), mom: true, walk: t * mix(7.5, 6, a), stride: mix(1, 0.7, a), stoop: momStoop, handB: hold, hair: `rgb(${hair},${hair},${hair})` });
       const kid = drawPerson(ctx, { x: kidX, y: GROUND, h: kidH, child, walk: t * mix(11, 6, a) + 1, stride: mix(1.2, 0.6, a), handF: hold });
       drift(ctx, t, { count: 70, seed: 7, kind: "snow", alpha: 0.9 * winter, speed: 140, wind: -90, color: "#fff", size: 0.9 });
       // 年龄标签
@@ -688,12 +720,12 @@ export const grow: ShotFactory = (env) => {
       };
       const tagA = smooth(phase(t, 0.3, 0.6));
       ctx.globalAlpha = tagA;
-      tag(`我 · ${Math.round(mix(3, 33, a))}岁`, kid.head.x, kid.head.y - kid.headR - 60);
-      tag(`妈妈 · ${Math.round(mix(27, 57, a))}岁`, mom.head.x, mom.head.y - mom.headR - 60);
+      tag(`我 · ${Math.round(mix(3, 30, a))}岁`, kid.head.x, kid.head.y - kid.headR - 60);
+      tag(`妈妈 · ${Math.round(mix(31, 58, a))}岁`, mom.head.x, mom.head.y - mom.headR - 60);
       ctx.globalAlpha = 1;
       ctx.restore();
       // 年份
-      const year = Math.round(mix(1996, 2026, a));
+      const year = Math.round(mix(1999, 2026, a));
       text(ctx, String(year), DW / 2, 290, 170, { weight: 300, color: RED, spacing: 10, shadow: "rgba(0,0,0,0.35)", blur: 20 });
       const cap = smooth(phase(t, 2.6, 3.0));
       if (cap > 0) text(ctx, "这条路，她走得越来越慢", DW / 2, 410, 42, { weight: 600, color: PAPER, alpha: cap, shadow: "rgba(0,0,0,0.8)", blur: 14 });
@@ -744,7 +776,7 @@ export const mute: ShotFactory = () => {
           ctx.stroke();
         }
         ctx.save();
-        ctx.translate(hx + 230 + (hash(Math.floor(t * 30)) - 0.5) * 10, hy - 170);
+        ctx.translate(hx - 120 + (hash(Math.floor(t * 30)) - 0.5) * 10, hy - 230);
         ctx.rotate(-0.12);
         text(ctx, "哇——", 0, 0, 120, { weight: 900, color: "#111", alpha: cry });
         ctx.restore();
@@ -794,6 +826,18 @@ export const mute: ShotFactory = () => {
         x: 470, y: 760, h: 560, sit: 1, stoop: 0.45, head: 0.45,
         handF: { x: 610, y: 600 }, handB: { x: 600, y: 610 },
       });
+      // 脚边：从公司收拾回来的纸箱
+      ctx.fillStyle = "#3a3630";
+      ctx.fillRect(660, 640, 190, 120);
+      ctx.fillStyle = "#2a2722";
+      ctx.fillRect(650, 630, 210, 22);
+      ctx.fillStyle = "#151515";
+      ctx.fillRect(690, 590, 40, 50);
+      ctx.beginPath();
+      ctx.ellipse(710, 575, 34, 24, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(760, 560, 60, 80);
+      text(ctx, "工牌", 790, 600, 18, { font: SANS, weight: 600, color: "#777" });
       // 封住的嘴
       const tape = easeOut(phase(t, 1.95, 2.15));
       if (tape > 0) {
@@ -841,7 +885,7 @@ export const mute: ShotFactory = () => {
         ctx.restore();
       };
       label("6岁 · 疼了会哭", 60, smooth(phase(t, 0.3, 0.5)), true);
-      label("26岁 · 疼了不说", by + 60, smooth(phase(t, 0.45, 0.65)), false);
+      label("30岁 · 疼了不说", by + 60, smooth(phase(t, 0.45, 0.65)), false);
     },
   };
 };
@@ -850,10 +894,10 @@ export const mute: ShotFactory = () => {
 export const cake: ShotFactory = () => {
   const STEP = 0.91;
   const cuts = [
-    { n: "35", kid: "small", hair: 10, stoop: 0 },
-    { n: "48", kid: "teen", hair: 60, stoop: 0.1 },
-    { n: "62", kid: "video", hair: 120, stoop: 0.3 },
-    { n: "100", kid: "none", hair: 200, stoop: 0.55 },
+    { n: "32", kid: "small", hair: 10, stoop: 0 },
+    { n: "45", kid: "teen", hair: 50, stoop: 0.08 },
+    { n: "58", kid: "video", hair: 110, stoop: 0.25 },
+    { n: "100", kid: "none", hair: 210, stoop: 0.55 },
   ] as const;
   return {
     draw(ctx, t) {
@@ -988,7 +1032,7 @@ export const cake: ShotFactory = () => {
         ctx.fillStyle = `rgba(255,255,255,${f})`;
         ctx.fillRect(0, 0, DW, DH);
       }
-      text(ctx, ["她的 35 岁", "她的 48 岁", "她的 62 岁", "她的 100 岁？"][k], DW / 2, 300, 52, { weight: 600, color: PAPER, shadow: "rgba(0,0,0,0.9)", blur: 16, alpha: smooth(clamp(tk / 0.15)) });
+      text(ctx, ["她的 32 岁", "她的 45 岁", "她的 58 岁 · 今年", "她能等到 100 岁吗？"][k], DW / 2, 300, 52, { weight: 600, color: PAPER, shadow: "rgba(0,0,0,0.9)", blur: 16, alpha: smooth(clamp(tk / 0.15)) });
     },
   };
 };

@@ -123,10 +123,10 @@ export const fold: ShotFactory = () => ({
 export const door: ShotFactory = () => {
   const STEP = 0.92;
   const steps = [
-    { year: "2016", stoop: 0.12, hair: 70 },
-    { year: "2019", stoop: 0.28, hair: 130 },
-    { year: "2022", stoop: 0.45, hair: 180 },
-    { year: "2026", stoop: 0.62, hair: 225 },
+    { year: "2016", stoop: 0.05, hair: 40 },
+    { year: "2019", stoop: 0.14, hair: 70 },
+    { year: "2022", stoop: 0.24, hair: 100 },
+    { year: "2026", stoop: 0.34, hair: 130 },
   ];
   return {
     draw(ctx, t) {
@@ -192,7 +192,7 @@ export const door: ShotFactory = () => {
       const wave = Math.sin(t * 7) * mix(50, 18, k / 3);
       drawPerson(ctx, {
         x: 545 + jx, y: G, h: 420, mom: true, dir: -1, stoop: s.stoop, hair: `rgb(${s.hair},${s.hair},${s.hair})`,
-        handF: { x: 545 + jx - 70 + wave, y: G - mix(470, 330, k / 3) }, cane: k === 3,
+        handF: { x: 545 + jx - 70 + wave, y: G - mix(470, 380, k / 3) },
       });
       // 地面
       ctx.fillStyle = "#08080a";
@@ -233,66 +233,76 @@ export const door: ShotFactory = () => {
   };
 };
 
-// ============ I 电话：她问吃了没，他说挺好的（27.39 – 30.69） ============
+// ============ I 电话（反转）：他说挺好的（今天被裁员），她说在家都好（其实在病床上，明早手术）（27.39 – 30.69） ============
 export const call: ShotFactory = () => {
   const PH = 900, STRIP = 120;
   return {
     draw(ctx, t) {
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, DW, DH);
-      // 上：妈妈在厨房
+      // 上：妈妈接电话。先是特写，看起来像在家；镜头拉开才发现她躺在病床上
       const inTop = easeOut(phase(t, 0, 0.3));
       ctx.save();
       ctx.beginPath();
       ctx.rect(0, 0, DW, PH);
       ctx.clip();
       ctx.translate(0, -(1 - inTop) * PH);
-      vgrad(ctx, 0, 0, DW, PH, [[0, "#1d1b19"], [1, "#0d0c0b"]]);
-      const cone = ctx.createLinearGradient(0, 140, 0, PH);
-      cone.addColorStop(0, "rgba(238,230,212,0.6)");
-      cone.addColorStop(1, "rgba(238,230,212,0.08)");
-      ctx.fillStyle = cone;
+      const reveal = easeInOut(phase(t, 1.85, 2.35));
+      ctx.save();
+      camera(ctx, mix(2.3, 1.0, reveal), mix(600, 540, reveal), mix(430, 450, reveal), 540, 450);
+      vgrad(ctx, -200, -200, DW + 400, PH + 400, [[0, "#15181c"], [1, "#0a0b0d"]]);
+      // 病房的窗
+      vgrad(ctx, 90, 90, 520, 520, [[0, "#6c7580"], [1, "#b3bac2"]]);
+      ctx.fillStyle = "#0d0f12";
+      ctx.fillRect(90, 90, 520, 14);
+      ctx.fillRect(90, 596, 520, 14);
+      ctx.fillRect(90, 90, 14, 520);
+      ctx.fillRect(596, 90, 14, 520);
+      ctx.fillRect(343, 90, 14, 520);
+      // 输液架
+      ctx.strokeStyle = "#0d0f12";
+      ctx.lineWidth = 9;
       ctx.beginPath();
-      ctx.moveTo(730, 150);
-      ctx.lineTo(810, 150);
-      ctx.lineTo(1080, PH);
-      ctx.lineTo(420, PH);
+      ctx.moveTo(250, PH);
+      ctx.lineTo(250, 230);
+      ctx.lineTo(310, 230);
+      ctx.stroke();
+      ctx.fillStyle = "#0d0f12";
+      roundRect(ctx, 282, 238, 56, 100, 12);
       ctx.fill();
-      ctx.strokeStyle = "#333";
+      ctx.strokeStyle = "#0d0f12";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(770, 0);
-      ctx.lineTo(770, 110);
+      ctx.moveTo(310, 338);
+      ctx.bezierCurveTo(320, 520, 460, 600, 560, 640);
       ctx.stroke();
-      ctx.fillStyle = "#222";
-      ctx.beginPath();
-      ctx.moveTo(710, 155);
-      ctx.lineTo(830, 155);
-      ctx.lineTo(790, 105);
-      ctx.lineTo(750, 105);
+      // 病床
+      ctx.fillStyle = "#0b0c0e";
+      ctx.fillRect(380, 560, 30, 340);
+      ctx.fillRect(380, 700, 760, 50);
+      ctx.fillStyle = "#7d8186";
+      roundRect(ctx, 470, 470, 70, 240, 24);
       ctx.fill();
-      glow(ctx, 770, 160, 120, "rgba(255,250,235,1)", 0.9);
-      // 灶台、碗
-      ctx.fillStyle = "#0a0a0a";
-      ctx.fillRect(480, 690, 600, 210);
-      ctx.fillStyle = "#e8e2d4";
+      drawPerson(ctx, { x: 600, y: 720, h: 560, mom: true, dir: 1, sit: 1, stoop: 0.15, head: 0.25, hair: "rgb(140,140,140)", earF: true, handB: { x: 700, y: 640 } });
+      ctx.fillStyle = "#8e9196";
       ctx.beginPath();
-      ctx.ellipse(880, 690, 70, 18, 0, 0, Math.PI * 2);
+      ctx.moveTo(560, 705);
+      ctx.bezierCurveTo(640, 600, 860, 610, 1080, 650);
+      ctx.lineTo(1080, 710);
+      ctx.lineTo(560, 710);
       ctx.fill();
-      for (let i = 0; i < 3; i++) {
-        ctx.strokeStyle = `rgba(230,230,230,${0.3 - i * 0.08})`;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        for (let s = 0; s < 14; s++) {
-          const x = 860 + i * 20 + Math.sin(s * 0.7 + t * 3 + i) * 10, y = 670 - s * 12;
-          if (s === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      }
-      drawPerson(ctx, { x: 760, y: PH + 20, h: 660, mom: true, dir: -1, stoop: 0.4, hair: "rgb(150,150,150)", earF: true, handB: { x: 830, y: PH - 215 } });
-      bubble(ctx, "吃饭了没？", 90, 230, { side: "left", p: clamp((t - 0.25) / 0.3), size: 40 });
-      bubble(ctx, "工作累不累啊？", 90, 360, { side: "left", p: clamp((t - 1.0) / 0.3), size: 40 });
+      ctx.fillStyle = "#08090a";
+      ctx.fillRect(-200, 750, DW + 400, 400);
+      ctx.restore();
+      bubble(ctx, "吃饭了没？", 90, 200, { side: "left", p: clamp((t - 0.25) / 0.3), size: 40 });
+      bubble(ctx, "妈在家呢，都挺好", 90, 330, { side: "left", p: clamp((t - 1.0) / 0.3), size: 40 });
       text(ctx, `通话中 00:${String(23 + Math.floor(t)).padStart(2, "0")}`, DW - 50, 60, 26, { font: SANS, weight: 500, color: "#9a9a9a", align: "right" });
+      const lie = smooth(phase(t, 2.4, 2.7));
+      if (lie > 0) {
+        text(ctx, "（明早 8 点手术）", 640, 820, 44, { weight: 700, color: RED, alpha: lie, shadow: "rgba(0,0,0,0.9)", blur: 16 });
+        ctx.fillStyle = RED;
+        ctx.fillRect(470, 852, 340 * smooth(phase(t, 2.55, 2.85)), 4);
+      }
       ctx.restore();
       // 下：他在公司楼下的台阶上
       const by = PH + STRIP;
@@ -331,7 +341,7 @@ export const call: ShotFactory = () => {
       rain(ctx, t, { count: 80, seed: 19, alpha: 0.3, len: 60, speed: 2000, slant: 0.06, y1: PH });
       drawPerson(ctx, { x: 360, y: 710, h: 560, sit: 1, stoop: 0.35, head: 0.25, earF: true, handB: { x: 520, y: 600 } });
       bubble(ctx, "吃了，挺好的", 990, 200, { side: "right", p: clamp((t - 0.6) / 0.3), size: 40, bg: "#95ec69" });
-      bubble(ctx, "不累，妈你早点睡", 990, 330, { side: "right", p: clamp((t - 1.45) / 0.3), size: 40, bg: "#95ec69" });
+      bubble(ctx, "工作也挺顺利的", 990, 330, { side: "right", p: clamp((t - 1.45) / 0.3), size: 40, bg: "#95ec69" });
       const truth = smooth(phase(t, 2.15, 2.45));
       if (truth > 0) {
         text(ctx, "（今天，被裁员了）", 640, 520, 44, { weight: 700, color: RED, alpha: truth, shadow: "rgba(255,0,0,0.5)", blur: 16 });
@@ -446,6 +456,7 @@ export const ward: ShotFactory = (env) => {
         ctx.fillRect(560, 1150, 160, 18);
         drawPerson(ctx, { x: 640, y: 1300, h: 760, sit: 1, stoop: 0.6, head: 0.55, dir: -1, handF: { x: 480, y: 1110 }, handB: { x: 500, y: 1118 } });
         ctx.restore();
+        text(ctx, "第二天，他还是知道了", DW / 2, 230, 50, { weight: 700, color: PAPER, alpha: smooth(phase(t, 0.1, 0.4)) * (1 - smooth(phase(t, 1.6, 1.85))), shadow: "rgba(0,0,0,0.9)", blur: 16 });
       } else {
         // 特写：两只手
         const tt = t - 1.9;
@@ -548,7 +559,7 @@ export const rewind: ShotFactory = async (env) => {
       for (let y = 0; y < DH; y += 6) ctx.fillRect(0, y, DW, 2);
       // OSD
       text(ctx, "◀◀  REW", 70, 120, 54, { font: `"Courier New", monospace`, weight: 700, color: "#fff", align: "left", shadow: "rgba(0,0,0,0.8)", blur: 6 });
-      const year = Math.round(mix(2026, 1996, easeIn(clamp(t / 3.1))));
+      const year = Math.round(mix(2026, 1999, easeIn(clamp(t / 3.1))));
       text(ctx, `${year}`, DW - 70, 120, 54, { font: `"Courier New", monospace`, weight: 700, color: "#fff", align: "right", shadow: "rgba(0,0,0,0.8)", blur: 6 });
       // 最后冲进白光
       const bloom = smooth(phase(t, 3.0, 3.34));
