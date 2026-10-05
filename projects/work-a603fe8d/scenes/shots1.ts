@@ -123,10 +123,11 @@ export const city: ShotFactory = () => {
 // ============ B 手机（1.0 – 9.2）：一直是他手里这部手机 ============
 // 本地时间（作品时间 − 1.0）：
 // 0     邮件里的「解除劳动合同通知书」，0.3 红线划过「与您解除劳动合同」
-// 0.95  妈妈的微信语音通话打进来 → 1.5 他按了挂断
-// 2.02  回到通知书，顶部弹出「妈妈：国庆节回家吗？」→ 2.35 点开 → 2.45 进入聊天
-// 2.7   打字「工作太忙了，不回了」→ 3.52 发送 → 3.8 标题变「对方正在讲话…」（歌曲停顿，他在等）
-// 4.85  歌里的微信提示音：语音直接出现在他那句回复下面 → 5.16 点开播放 → 7.3 播完
+// 0.42  顶部弹出「妈妈：国庆节回家吗？」—— 他没理，横幅收起
+// 0.95  妈妈的微信语音通话打进来 → 1.5 他按了挂断，回到和妈妈的聊天
+// 聊天记录：妈妈「国庆节回家吗？」→ 妈妈「语音通话 未接听」(1.62) → 我「工作太忙了，不回了」(打字 2.0，停顿，3.05 发送) → 妈妈的语音
+// 3.3   标题变「对方正在讲话…」（歌曲停顿，他在等）
+// 4.85  歌里的微信提示音：语音出现在他那句回复下面 → 5.16 点开播放 → 7.3 播完
 // 8.12  眼泪落在这条语音上
 export const PHONE_LEN = 8.2;
 export const phone: ShotFactory = (env) => {
@@ -136,12 +137,12 @@ export const phone: ShotFactory = (env) => {
   const photo = buildPhoto();
   const { canvas: avatar, ctx: ag } = offscreen(140, 140);
   ag.drawImage(photo, 150, 120, 380, 380, 0, 0, 140, 140);
-  const reply = "工作太忙了，不回了";
-  const T_UL = 0.3, T_RING = 0.95, T_HANG = 1.5, T_N1 = 2.02, T_TAP1 = 2.35, T_OPEN1 = 2.45, T_TYPE = 2.7, T_SEND = 3.52, T_SPEAK = 3.8;
+  const reply1 = "工作太忙了", reply2 = "，不回了", reply = reply1 + reply2;
+  const T_UL = 0.3, T_N1 = 0.42, T_N1_OUT = 0.88, T_RING = 0.95, T_HANG = 1.5, T_MISS = 1.62, T_TYPE = 2.0, T_TYPE2 = 2.7, T_SEND = 3.05, T_SPEAK = 3.3;
   const T_DING = 4.85, T_PLAY = 5.16, T_VEND = 7.3, T_TEAR = 8.12;
   const x0 = 540 - PW / 2, y0 = 880 - PH / 2;
-  const Q = { y: y0 + 330 }, A = { y: y0 + 470 };
-  const vb = { x: x0 + 128, y: y0 + 620, w: 330, h: 70 };
+  const Q = { y: y0 + 300 }, M = { y: y0 + 430 }, A = { y: y0 + 560 };
+  const vb = { x: x0 + 128, y: y0 + 690, w: 330, h: 70 };
   const ky = y0 + PH - 430;
   const sendBtn = { x: x0 + PW - 72, y: ky - 57 };
   const hangBtn = { x: x0 + 150, y: y0 + PH - 230 };
@@ -252,12 +253,37 @@ export const phone: ShotFactory = (env) => {
     text(ctx, speaking ? `对方正在讲话${dots}` : "妈妈", x0 + PW / 2, y0 + 140, speaking ? 32 : 38, { font: SANS, weight: speaking ? 500 : 700, color: speaking ? "#555" : "#111" });
     ctx.fillStyle = "#d2d0ca";
     ctx.fillRect(x0, y0 + 190, PW, 2);
-    ctx.fillStyle = "#e2e0db";
-    roundRect(ctx, x0 + PW / 2 - 170, y0 + 222, 340, 50, 25);
-    ctx.fill();
-    text(ctx, "你已挂断语音通话", x0 + PW / 2, y0 + 248, 26, { font: SANS, weight: 500, color: "#888" });
-    text(ctx, "00:47", x0 + PW / 2, Q.y - 22, 20, { font: SANS, weight: 400, color: "#9a9893" });
+    text(ctx, "00:46", x0 + PW / 2, Q.y - 24, 20, { font: SANS, weight: 400, color: "#9a9893" });
     textBubble(ctx, "国庆节回家吗？", Q.y, false, 1);
+    // 妈妈打来、被他挂掉的那通语音
+    const mp = clamp((t - T_MISS) / 0.22);
+    if (mp > 0) {
+      text(ctx, "00:47", x0 + PW / 2, M.y - 24, 20, { font: SANS, weight: 400, color: "#9a9893", alpha: clamp(mp * 2) });
+      ctx.save();
+      ctx.globalAlpha = clamp(mp * 2);
+      const by = M.y + 4 + (1 - easeOut(mp)) * 20, bx = x0 + 128, bw = 300;
+      ctx.fillStyle = "#ffffff";
+      roundRect(ctx, bx, by, bw, 66, 14);
+      ctx.fill();
+      // 听筒
+      ctx.save();
+      ctx.translate(bx + 40, by + 34);
+      ctx.rotate(-0.6);
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(0, 8, 14, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "#111";
+      ctx.font = `500 32px ${SANS}`;
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "left";
+      ctx.fillText("语音通话 未接听", bx + 68, by + 34);
+      ctx.restore();
+      avatarAt(ctx, M.y);
+    }
     textBubble(ctx, reply, A.y, true, clamp((t - T_SEND) / 0.22));
     // 妈妈的语音：就在他那句回复下面
     if (t >= T_DING) {
@@ -322,11 +348,12 @@ export const phone: ShotFactory = (env) => {
     ctx.fillStyle = "#fff";
     roundRect(ctx, x0 + 24, ky - 92, PW - 160, 70, 14);
     ctx.fill();
-    const shown = t < T_SEND ? typed(reply, t, T_TYPE, 12) : "";
+    // 先打「工作太忙了」，停了一下，才打完「，不回了」
+    const shown = t >= T_SEND ? "" : t < T_TYPE2 ? typed(reply1, t, T_TYPE, 11) : reply1 + typed(reply2, t, T_TYPE2, 12);
     text(ctx, shown, x0 + 46, ky - 56, 32, { font: SANS, weight: 500, color: "#111", align: "left" });
     ctx.font = `500 32px ${SANS}`;
     const cw = ctx.measureText(shown).width;
-    if (Math.floor(t * 2.2) % 2 === 0 || (t > T_TYPE && t < T_SEND)) {
+    if (Math.floor(t * 2.2) % 2 === 0 || (t > T_TYPE && t < T_TYPE + 0.5) || (t > T_TYPE2 && t < T_SEND)) {
       ctx.fillStyle = "#1a7cff";
       ctx.fillRect(x0 + 48 + cw, ky - 78, 3, 42);
     }
@@ -355,7 +382,7 @@ export const phone: ShotFactory = (env) => {
   };
   // 顶部弹下来的微信消息横幅
   const wxBanner = (ctx: CanvasRenderingContext2D, t: number) => {
-    const p = easeOut(phase(t, T_N1, T_N1 + 0.2)) * (1 - easeIn(phase(t, T_OPEN1 - 0.05, T_OPEN1 + 0.05)));
+    const p = easeOut(phase(t, T_N1, T_N1 + 0.2)) * (1 - easeIn(phase(t, T_N1_OUT - 0.15, T_N1_OUT)));
     if (p <= 0) return;
     const by = mix(y0 - 180, banner.y, p);
     ctx.save();
@@ -392,9 +419,9 @@ export const phone: ShotFactory = (env) => {
       ctx.save();
       // 镜头跟着视线走（world y）
       const keys: [number, number][] = [
-        [0, 760], [T_UL, 760], [T_UL + 0.4, 840], [T_RING, 840], [T_RING + 0.2, 880], [T_N1, 880], [T_N1 + 0.2, banner.y + 75], [T_OPEN1, banner.y + 75],
-        [T_OPEN1 + 0.2, Q.y + 35], [T_TYPE, Q.y + 35], [T_TYPE + 0.25, 960], [T_SEND, 960], [T_SEND + 0.2, A.y + 35], [T_SPEAK, A.y + 35], [T_SPEAK + 0.25, y0 + 300],
-        [T_DING, y0 + 300], [T_DING + 0.2, vb.y + 35],
+        [0, 760], [T_UL, 760], [T_N1, 800], [T_N1 + 0.15, banner.y + 160], [T_N1_OUT - 0.1, banner.y + 160], [T_N1_OUT + 0.05, 840], [T_RING, 840], [T_RING + 0.2, 880],
+        [T_HANG, 880], [T_HANG + 0.2, M.y - 20], [T_TYPE, M.y - 20], [T_TYPE + 0.25, 960], [T_SEND, 960], [T_SEND + 0.2, A.y + 35], [T_SPEAK, A.y + 35], [T_SPEAK + 0.25, y0 + 330],
+        [T_DING, y0 + 330], [T_DING + 0.2, vb.y + 35],
       ];
       let look = keys[keys.length - 1][1];
       for (let i = 0; i < keys.length - 1; i++) {
@@ -411,9 +438,15 @@ export const phone: ShotFactory = (env) => {
       ctx.save();
       roundRect(ctx, x0, y0, PW, PH, 70);
       ctx.clip();
-      if (t < T_RING || (t >= T_HANG && t < T_OPEN1)) contract(ctx, t);
+      if (t < T_RING) contract(ctx, t);
       else if (t < T_HANG) incoming(ctx, t);
       else chat(ctx, t);
+      // 来电界面关掉的一下
+      const close = t >= T_HANG ? Math.exp(-(t - T_HANG) / 0.06) * 0.5 : 0;
+      if (close > 0.01) {
+        ctx.fillStyle = `rgba(0,0,0,${close})`;
+        ctx.fillRect(x0, y0, PW, PH);
+      }
       wxBanner(ctx, t);
       if (screenOn < 1) {
         ctx.fillStyle = `rgba(0,0,0,${1 - screenOn})`;
@@ -459,7 +492,7 @@ export const phone: ShotFactory = (env) => {
         }
       }
       ctx.restore();
-      // 右手拇指：滑动看通知书 → 挂断 → 点开消息 → 打字 → 发送 → 点开语音
+      // 右手拇指：滑动看通知书 → 挂断 → 打字（停顿）→ 发送 → 点开语音
       const restP = { x: x0 + PW + 40, y: y0 + PH - 30 };
       let th = { ...restP };
       const toward = (p: { x: number; y: number }, a: number, b: number, c: number, d: number) => {
@@ -468,10 +501,11 @@ export const phone: ShotFactory = (env) => {
       };
       toward({ x: x0 + PW / 2 + 60, y: y0 + 800 - easeInOut(phase(t, 0.1, 0.9)) * 120 }, 0, 0.1, 0.8, 1.0);
       toward({ x: hangBtn.x + 20, y: hangBtn.y + 40 }, T_HANG - 0.35, T_HANG - 0.04, T_HANG + 0.04, T_HANG + 0.35);
-      toward({ x: x0 + PW / 2 + 60, y: banner.y + 110 }, T_N1 + 0.1, T_TAP1, T_TAP1 + 0.05, T_OPEN1 + 0.2);
-      const typing = t > T_TYPE && t < T_SEND - 0.1;
+      const typing = (t > T_TYPE && t < T_TYPE + 0.45) || (t > T_TYPE2 && t < T_SEND - 0.1);
       const kx = x0 + PW / 2 + Math.sin(t * 11) * 180, kyy = ky + 140 + Math.abs(Math.sin(t * 24)) * 16;
       toward({ x: kx, y: kyy }, T_TYPE - 0.15, T_TYPE, T_SEND - 0.12, T_SEND - 0.1);
+      // 停顿时手指悬在键盘上
+      if (t >= T_TYPE + 0.45 && t <= T_TYPE2) th = { x: x0 + PW / 2 + 60, y: ky + 120 };
       if (typing) th = { x: kx, y: kyy };
       toward({ x: sendBtn.x, y: sendBtn.y + 30 }, T_SEND - 0.12, T_SEND - 0.04, T_SEND + 0.04, T_SEND + 0.3);
       toward({ x: vb.x + 150, y: vb.y + 60 }, T_DING + 0.05, T_PLAY - 0.03, T_PLAY + 0.05, T_PLAY + 0.4);
