@@ -1,22 +1,24 @@
-# 研究依据与原创边界
+# 事实与素材依据
 
-资料核查：2026-09-28。主线是从规则、搜索到学习、深度网络和多模态；不是完整人物年表，不声称这些路线按时间互相替代。最新具名历史节点到2024年，不对2026年的模型能力排名。
+核查日期：2026-09-28。影片历史节点到2024年；不冒充2026年最新型号/能力综述。旁白为原创概括，未复制参考片台词。
 
-## 参考片
-- 用户指定：https://www.bilibili.com/video/BV1N4t96aEVK/ ，《AI时代的国之重器，超节点决胜算力》，2026-09-03，B站原站接口报告时长866秒。
-- 本次直接取得原站视频缩略图索引并检查12个样本：浅灰/薄荷绿、半透明技术模型、硬件拆解、服务器阵列和仓库运输比喻。参考图只用于制作研究，不进入成片，不复制央视网标识、台词、音乐、模型、具体镜头构图。没有把抽帧查看写成完整动态/听觉审阅。
+- 开篇“算轨道”与“手写识别”是不同任务类型的对比，非对某一台计算机/年代的能力测评。笔迹、数字、规则机器为原创教学例子，不宣称真实规则系统均按这几个条件工作。
+- 1956达特茅斯项目作为领域起点：https://home.dartmouth.edu/about/artificial-intelligence-ai-coined-dartmouth 。没有否定之前的计算/神经网络研究。
+- 1986反向传播代表作：D. Rumelhart, G. Hinton, R. Williams, Learning representations by back-propagating errors, Nature 323, 533–536, https://www.nature.com/articles/323533a0 。只说推动该路线，未说1986首次发明反向传播。梯度不保证每次更新都提升泛化；数字与误差曲线为示意，不是模型测试分数。
+- 2012 AlexNet与GPU、数据：A. Krizhevsky et al., ImageNet Classification with Deep Convolutional Neural Networks, https://papers.nips.cc/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html 。图示四层仅说明组合机制，不复刻实际网络结构。帆船图片与特征纹理为原创概念图，不是网络实测激活。
+- AlphaGo结合深度网络、搜索、强化学习，2016年对李世石4–1：https://deepmind.google/research/alphago/ 。围棋位置为原创说明例子，不冒充历史某一手。策略和价值不是简单固定分数表。
+- Transformer最初提交2017-06-12，注意力和并行训练：https://arxiv.org/abs/1706.03762 。不声称注意力在2017年首次发明。省略多头、归一化、残差等属于明确的教学简化。
+- ChatGPT于2022-11-30推出及指令/反馈训练、流畅错误回答的限制：https://openai.com/index/chatgpt/ 。不把它写作世界第一个聊天机器人。语言模型训练和使用阶段区分，不表示用户每次对话都实时训练权重。
+- 多模态历史例子GPT-4o（2024）：https://openai.com/index/hello-gpt-4o/ 。不是只有该路线或该公司实现多模态。
+- 原创结尾关于核验、权限与人类责任是创作主张，不是某种技术已经完全可靠的事实断言。
 
-## 事实到镜头的对应
-- 26–32秒，Turing, Computing Machinery and Intelligence, Mind 59(236), 1950, 433–460. DOI: https://doi.org/10.1093/mind/LIX.236.433 。以问题引入，不将图灵测试等同于意识判定。
-- 32–40秒，达特茅斯：1955年提案、1956年夏季研究项目。https://home.dartmouth.edu/about/artificial-intelligence-ai-coined-dartmouth ；原始提案作者重刊：https://ojs.aaai.org/aimagazine/index.php/aimagazine/article/view/1904/0 。旁白是概括，不宣称人类此前没有智能机器研究。
-- 48–76秒，规则分流装置属于原创说明性比喻；不是历史硬件复刻。1997年Deep Blue战胜在任世界冠军的六局比赛：IBM作者技术论文 https://research.ibm.com/publications/deep-blue ，历史页 https://www.ibm.com/history/deep-blue 。不把Deep Blue描述成现代深度学习系统。
-- 76–114秒，Rumelhart, Hinton & Williams, Learning representations by back-propagating errors, Nature 323, 533–536 (1986). https://www.nature.com/articles/323533a0 。强调该研究推动传播与应用，不声称1986年首次发明反向传播。立体单元和返回脉冲是权重优化示意，不是生物大脑或硬件内部实拍。
-- 114–144秒，Krizhevsky, Sutskever & Hinton, ImageNet Classification with Deep Convolutional Neural Networks, NIPS 2012. https://papers.nips.cc/paper/2012/hash/c399862d3b9d6b76c8436e924a68c45b-Abstract.html 。AlexNet/GPU/训练数据事实来自原论文；猫模型、激活图和相机扫描为原创概念示意，不冒充实测激活。
-- 144–170秒，AlphaGo, March 2016, 4–1 vs Lee Sedol. https://deepmind.google/research/alphago/ 。棋盘落点是原创建模，不声称复现某一局或第37手；网络、搜索、强化学习的说明不简化为纯暴力穷举。
-- 170–206秒，Vaswani et al., Attention Is All You Need, submitted 12 June 2017. https://arxiv.org/abs/1706.03762 。token连线只示意信息加权，不是实测attention权重；不声称注意力本身始于2017。可视化为教学简化，实际还有多头、前馈、残差、归一化等结构。
-- 206–234秒，ChatGPT发布于2022-11-30；指令与人类反馈训练来自发布说明。https://openai.com/index/chatgpt/ 。不声称首次出现聊天机器人或生成式AI。
-- 233–239秒，多模态系统的一个核实例子：GPT-4o, 2024-05-13. https://openai.com/index/hello-gpt-4o/ 。没有将该历史发布写成当下最新型号或唯一多模态路线。
-- 239–264秒，错误、虚构事实等局限见ChatGPT发布说明同页；末尾属于原创创作立意，不作意识或AGI已实现的断言。
+## 音乐
 
-## 资产与声音
-所有场景几何、纹理、程序配乐、音效与分镜为本项目原创代码生成。没有使用商业录音或参考片音轨。旁白使用已配置的Edge云希合成声，片尾明确标注AI合成旁白；不克隆或模仿可识别真人声线。通用Three.js/引擎由工作台提供，项目不修改公共依赖。研究缩略图权利属于原片权利人，不属于本片可分发素材。
+'Emergent' by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au
+曲目/作者页：https://www.scottbuckley.com.au/library/emergent/
+许可：https://creativecommons.org/licenses/by/4.0/
+本片对音乐做节选、剪接、音量与声像混合。音乐不是本项目原创；片尾和发布说明均保留署名。作者页面明确要求YouTube发布时在简介署名；发布到其他平台也保留同样说明。原曲仅作为本片配乐，交付不包含单独可再售的音乐包。
+
+## 其他素材
+
+所有可见模型、字迹、帆船、数据纹理、镜头、动画与说明为本作品原创代码生成。旁白为Edge zh-CN-YunyangNeural合成，不模仿或克隆某一真人。仅研究用户指定BV1N4t96aEVK的科学可视化语法，不使用其画面、声音、品牌标识或模型。

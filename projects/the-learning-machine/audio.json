@@ -4,17 +4,17 @@
     {
       "id": "src_voice",
       "kind": "file",
-      "src": "films/the-learning-machine/audio-r3/voice.wav"
+      "src": "films/the-learning-machine/audio/voice.wav"
     },
     {
       "id": "src_music",
       "kind": "file",
-      "src": "films/the-learning-machine/audio-r3/score.wav"
+      "src": "films/the-learning-machine/audio/score.wav"
     },
     {
       "id": "src_foley",
       "kind": "file",
-      "src": "films/the-learning-machine/audio-r3/foley.wav"
+      "src": "films/the-learning-machine/audio/foley.wav"
     }
   ],
   "tracks": [

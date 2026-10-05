@@ -14,7 +14,7 @@ import {C,clamp,ramp} from './math';
 import type {Rig,Annotation} from './rig-types';
 
 const FONT='"Microsoft YaHei", "Noto Sans CJK SC", sans-serif';
-/** R3 uses one absolute-time scene for playback, reverse seeks and offline export. */
+/** One absolute-time scene for playback, reverse seeks and offline export. */
 export function createScene({width,height,quality}:SceneOptions):Scene{
  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
  const ctx=canvas.getContext('2d',{alpha:false});if(!ctx)throw new Error('Canvas compositing is unavailable.');

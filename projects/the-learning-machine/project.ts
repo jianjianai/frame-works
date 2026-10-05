@@ -3,7 +3,7 @@ const project:AnimationProject={...{
   "id": "the-learning-machine",
   "title": "不是突然变聪明｜AI 的七十年",
   "subtitle": "算得快，为什么不等于看得懂？",
-  "description": "R3 返工版。用156秒追踪人工智能从规则、样本学习到视觉、决策、注意力与多模态的因果链；重新设计三维技术场景，停用橘猫和旧版自制音乐。配乐使用Scott Buckley的Emergent（CC BY 4.0），已按叙事节选与混音；不是本项目原创曲目。中文旁白为AI合成。原理示意非模型实测。",
+  "description": "用156秒追踪人工智能从规则、样本学习到视觉、决策、注意力与多模态的因果链；原创三维技术场景。配乐使用Scott Buckley的Emergent（CC BY 4.0），已按叙事节选与混音；不是本项目原创曲目。中文旁白为AI合成。原理示意非模型实测。",
   "renderer": "three",
   "duration": 156,
   "fps": 30,
@@ -12,7 +12,6 @@ const project:AnimationProject={...{
   "poster": "films/the-learning-machine/poster.svg",
   "posterTime": 9.2,
   "tags": [
-    "R3返工",
     "AI发展",
     "三维科技",
     "Scott Buckley配乐"
@@ -229,9 +228,9 @@ const project:AnimationProject={...{
   "credits": [
     "'Emergent' by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
     "音乐已节选、交叉淡化与混音；曲目不是本项目原创。发布时保留配乐署名与许可说明。",
-    "三维场景、原始纹理、叙事与动作：本项目R3原创制作。",
+    "三维场景、原始纹理、叙事与动作：本作品原创。",
     "旁白：AI合成 zh-CN-YunyangNeural；非真人声音克隆。",
-    "史实、原论文、教学简化及授权说明见本项目 r3-sources.md 与 r3-direction.md。",
+    "史实、原论文与教学简化说明见 production/sources.md。",
     "不使用参考视频的画面、台词、音乐、标识或模型。"
   ]
 },load:()=>import('./scene'),
