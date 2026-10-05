@@ -40,9 +40,33 @@ export interface Env {
   start: number;
   beat(t: number): number;
 }
+export interface Focus { x: number; y: number; r: number; a?: number }
 export interface Shot {
   draw(ctx: CanvasRenderingContext2D, t: number): void;
+  /** 视线焦点（画面坐标）：焦点外轻微压暗，按剧情顺序移动，引导观众先看哪里 */
+  focus?(t: number): Focus | null;
   dispose?(): void;
+}
+
+/** 焦点轨道：[时间, x, y, 半径, 压暗强度?]，相邻关键帧之间平滑过渡 */
+export function focusTrack(keys: [number, number, number, number, number?][]) {
+  return (t: number): Focus => {
+    let i = 0;
+    while (i < keys.length - 1 && t >= keys[i + 1][0]) i++;
+    const a = keys[i], b = keys[Math.min(i + 1, keys.length - 1)];
+    const p = b[0] > a[0] ? easeInOut(clamp((t - a[0]) / (b[0] - a[0]))) : 0;
+    const k = i === keys.length - 1 ? 0 : p;
+    return { x: mix(a[1], b[1], k), y: mix(a[2], b[2], k), r: mix(a[3], b[3], k), a: mix(a[4] ?? 0.5, b[4] ?? 0.5, k) };
+  };
+}
+
+export function drawFocus(ctx: CanvasRenderingContext2D, f: Focus | null | undefined) {
+  if (!f || (f.a ?? 0.5) <= 0) return;
+  const g = ctx.createRadialGradient(f.x, f.y, f.r * 0.55, f.x, f.y, f.r * 1.7);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, `rgba(0,0,0,${f.a ?? 0.5})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(-200, -200, DW + 400, DH + 400);
 }
 export type ShotFactory = (env: Env) => Shot | Promise<Shot>;
 
@@ -84,6 +108,9 @@ export async function createShotScene(options: SceneOptions, factory: ShotFactor
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, DW, DH);
       shot.draw(ctx, t);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      drawFocus(ctx, shot.focus?.(t));
     },
     dispose() {
       shot.dispose?.();
