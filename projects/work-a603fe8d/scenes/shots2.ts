@@ -846,11 +846,11 @@ export const ending: ShotFactory = async (env) => {
       ctx.fillStyle = `rgba(255,255,255,${(1 - fadeIn) * 0.9})`;
       ctx.fillRect(0, 0, DW, DH);
       // 结尾卡片
-      const card = smooth(phase(t, 1.0, 1.4));
+      const card = smooth(phase(t, 0.95, 1.25)) * (1 - smooth(phase(t, 1.95, 2.06))); // 接回开头前先收掉卡片
       if (card > 0) {
         vgrad(ctx, 0, 1150, DW, DH - 1150, [[0, "rgba(0,0,0,0)"], [0.35, `rgba(0,0,0,${0.75 * card})`], [1, `rgba(0,0,0,${0.9 * card})`]]);
         text(ctx, "别等来不及", DW / 2, 1390, 46, { weight: 400, color: PAPER, alpha: card, spacing: 14 });
-        const c2 = smooth(phase(t, 1.3, 1.7));
+        const c2 = smooth(phase(t, 1.12, 1.32)) * (1 - smooth(phase(t, 1.95, 2.06)));
         text(ctx, "今天，给妈妈打个电话吧", DW / 2, 1490, 62, { weight: 900, color: "#fff", alpha: c2, shadow: "rgba(255,42,54,0.6)", blur: 22 });
         // 电话图标 + 振铃
         const ring = Math.sin(t * 40) * 0.12 * c2;
@@ -879,7 +879,7 @@ export const ending: ShotFactory = async (env) => {
         ctx.globalAlpha = 1;
       }
       // 循环：妈妈又打来了
-      const loop = smooth(phase(t, 1.72, 2.02));
+      const loop = smooth(phase(t, 2.04, 2.36));
       if (loop > 0) {
         ctx.save();
         ctx.globalAlpha = loop;
@@ -888,7 +888,7 @@ export const ending: ShotFactory = async (env) => {
       }
     },
     // 「妈妈」→ 妈妈的手落在他头上 → 结尾卡片 → 回到开头的焦点（循环无缝）
-    focus: focusTrack([[0, 540, 420, 440, 0.25], [0.7, 640, 820, 470, 0.3], [1.25, 540, 1460, 520, 0.3], [1.72, 540, 1460, 520, 0.3], [2.02, 540, 470, 470, 0.3]]),
+    focus: focusTrack([[0, 540, 420, 440, 0.25], [0.7, 640, 820, 470, 0.3], [1.25, 540, 1460, 520, 0.3], [2.04, 540, 1460, 520, 0.3], [2.36, 540, 470, 470, 0.3]]),
     dispose() { opening.dispose?.(); },
   };
 };
