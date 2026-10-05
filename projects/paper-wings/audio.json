@@ -4,14 +4,14 @@
     {
       "id": "src_music",
       "kind": "generated",
-      "module": "legacy",
+      "module": "score",
       "trackId": "music",
       "engine": "custom"
     },
     {
       "id": "src_foley",
       "kind": "generated",
-      "module": "legacy",
+      "module": "score",
       "trackId": "foley",
       "engine": "custom"
     }

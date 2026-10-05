@@ -11,7 +11,6 @@ const audio = createSampledScoreAudio({
   bank: "films/paper-wings/music/GeneralUser-GS.sf2",
   sha256: "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe",
 });
-export const prepareAudio = audio.prepareAudio;
-export const prepareSegment = audio.prepareSegment;
+// audio.json selects this generator as module "score"; its trackId picks "music" or "foley".
+export const generators = { score: audio };
 export const createAudio = audio.createAudio;
-export const disposeAudio = audio.disposeAudio;
