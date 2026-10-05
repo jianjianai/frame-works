@@ -1108,7 +1108,7 @@ export const mute: ShotFactory = () => {
     ctx.fillRect(784, G - 196, 40, 30);
     text(ctx, "工牌", 804, G - 146, 18, { font: SANS, weight: 700, color: "#333" });
     // 封住的嘴（唱到「哑巴」）
-    const tape = easeOut(phase(t, 2.02, 2.2));
+    const tape = easeOut(phase(t, 2.5, 2.66)); // 落在「哑」上（作品 16.48s）
     if (tape > 0) {
       const mx = man.head.x + man.headR * 0.55, my = man.head.y + man.headR * 0.45;
       ctx.save();
