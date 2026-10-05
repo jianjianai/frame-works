@@ -341,6 +341,8 @@ export interface Person {
   armF?: number; armB?: number; // 无目标时手臂角度（0 下垂，正值向前）
   color?: string; hair?: string; cane?: boolean;
   earF?: boolean; // 前手拿手机贴在耳边
+  /** 轮廓光：先用亮色在偏移处画一遍（柔化），再盖上剪影，留下一圈逆光描边 */
+  rim?: { color: string; dx: number; dy: number; blur?: number };
 }
 
 function ik(S: Pt, T: Pt, l1: number, l2: number, bend: number): [Pt, Pt] {
@@ -357,7 +359,17 @@ function ik(S: Pt, T: Pt, l1: number, l2: number, bend: number): [Pt, Pt] {
 const dirPt = (o: Pt, ang: number, len: number): Pt => ({ x: o.x + Math.sin(ang) * len, y: o.y + Math.cos(ang) * len });
 
 /** 侧面剪影人物，脚底在 (x, y)，面朝 dir（1 向右） */
-export function drawPerson(ctx: CanvasRenderingContext2D, p: Person) {
+export function drawPerson(ctx: CanvasRenderingContext2D, p: Person): ReturnType<typeof drawPersonBody> {
+  if (p.rim) {
+    ctx.save();
+    if (p.rim.blur) ctx.filter = `blur(${p.rim.blur}px)`;
+    drawPersonBody(ctx, { ...p, x: p.x + p.rim.dx, y: p.y + p.rim.dy, color: p.rim.color, hair: p.rim.color, rim: undefined });
+    ctx.restore();
+  }
+  return drawPersonBody(ctx, p);
+}
+
+function drawPersonBody(ctx: CanvasRenderingContext2D, p: Person) {
   const c = p.child ?? 0, h = p.h, dir = p.dir ?? 1;
   const headR = h * mix(0.068, 0.105, c);
   const legL = h * mix(0.48, 0.38, c);
@@ -421,6 +433,10 @@ export function drawPerson(ctx: CanvasRenderingContext2D, p: Person) {
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+    ctx.lineWidth = w * 0.76;
+    ctx.beginPath();
+    ctx.moveTo(b.x, b.y);
     ctx.lineTo(cc.x, cc.y);
     ctx.stroke();
   };
@@ -515,8 +531,15 @@ export function shake(ctx: CanvasRenderingContext2D, t: number, amount: number) 
   ctx.translate((hash(f + 0.3) - 0.5) * amount, (hash(f + 7.9) - 0.5) * amount);
 }
 
-// 一只手的剪影（手背朝上），wrinkle 为皱纹强度
-export function drawHand(ctx: CanvasRenderingContext2D, x: number, y: number, ang: number, s: number, o: { wrinkle?: number; curl?: number; color?: string; arm?: boolean; mirror?: boolean; small?: boolean } = {}) {
+// 一只手的剪影（手背朝上，手指朝 -y）。wrinkle 皱纹强度，curl 手指弯曲，rim 轮廓光颜色
+export function drawHand(ctx: CanvasRenderingContext2D, x: number, y: number, ang: number, s: number, o: { wrinkle?: number; curl?: number; color?: string; arm?: boolean; mirror?: boolean; small?: boolean; rim?: string } = {}) {
+  if (o.rim) {
+    ctx.save();
+    ctx.filter = "blur(3px)";
+    const c = Math.cos(ang), sn = Math.sin(ang);
+    drawHand(ctx, x - 4 * c + 4 * sn, y - 4 * sn - 4 * c, ang, s, { ...o, rim: undefined, wrinkle: 0, color: o.rim });
+    ctx.restore();
+  }
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(ang);
@@ -525,59 +548,91 @@ export function drawHand(ctx: CanvasRenderingContext2D, x: number, y: number, an
   ctx.fillStyle = col;
   ctx.strokeStyle = col;
   ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   if (o.arm !== false) {
-    ctx.lineWidth = 150;
+    // 手腕到小臂，越往外越粗
     ctx.beginPath();
-    ctx.moveTo(0, 80);
-    ctx.lineTo(0, 900);
-    ctx.stroke();
+    ctx.moveTo(-62, 60);
+    ctx.quadraticCurveTo(-70, 300, -95, 900);
+    ctx.lineTo(95, 900);
+    ctx.quadraticCurveTo(70, 300, 62, 60);
+    ctx.closePath();
+    ctx.fill();
   }
+  // 手掌
   ctx.beginPath();
-  ctx.ellipse(0, 0, 92, 110, 0, 0, Math.PI * 2);
+  ctx.moveTo(-70, 70);
+  ctx.quadraticCurveTo(-98, -10, -78, -70);
+  ctx.quadraticCurveTo(0, -95, 78, -64);
+  ctx.quadraticCurveTo(96, 0, 66, 72);
+  ctx.closePath();
   ctx.fill();
   const curl = o.curl ?? 0;
-  const fingers = [[-58, 150, -0.12], [-20, 175, -0.03], [20, 168, 0.04], [56, 135, 0.13]];
-  ctx.lineWidth = 40;
-  for (const [fx, len, a] of fingers) {
-    const l = len * (1 - curl * 0.55);
+  const fingers: [number, number, number, number][] = [[-56, 150, -0.13, 36], [-19, 172, -0.04, 39], [19, 165, 0.04, 38], [54, 132, 0.14, 33]];
+  const joints: { x: number; y: number; a: number; w: number }[] = [];
+  for (const [fx, len, a0, w] of fingers) {
+    const l1 = len * 0.55, l2 = len * 0.45 * (1 - curl * 0.35);
+    const a1 = a0, a2 = a0 + curl * 0.9;
+    const jx = fx + Math.sin(a1) * l1, jy = -66 - Math.cos(a1) * l1;
+    const tx = jx + Math.sin(a2) * l2, ty = jy - Math.cos(a2) * l2;
+    ctx.lineWidth = w;
     ctx.beginPath();
     ctx.moveTo(fx, -60);
-    ctx.lineTo(fx + Math.sin(a) * l, -60 - Math.cos(a) * l);
+    ctx.lineTo(jx, jy);
     ctx.stroke();
+    ctx.lineWidth = w * 0.82;
+    ctx.beginPath();
+    ctx.moveTo(jx, jy);
+    ctx.lineTo(tx, ty);
+    ctx.stroke();
+    joints.push({ x: fx + Math.sin(a1) * l1 * 0.18, y: -66 - Math.cos(a1) * l1 * 0.18, a: a1, w }, { x: jx, y: jy, a: a2, w });
   }
+  // 拇指
   ctx.lineWidth = 46;
   ctx.beginPath();
-  ctx.moveTo(-70, 20);
-  ctx.lineTo(-150 + curl * 50, -60);
+  ctx.moveTo(-62, 30);
+  ctx.lineTo(-118 + curl * 30, -24);
+  ctx.stroke();
+  ctx.lineWidth = 38;
+  ctx.beginPath();
+  ctx.moveTo(-118 + curl * 30, -24);
+  ctx.lineTo(-150 + curl * 60, -82 + curl * 20);
   ctx.stroke();
   const w = o.wrinkle ?? 0;
   if (w > 0) {
-    ctx.strokeStyle = `rgba(255,255,255,${0.32 * w})`;
-    ctx.lineWidth = 2.2;
-    for (const [fx, len, a] of fingers) {
-      for (const k of [0.45, 0.75]) {
-        const px = fx + Math.sin(a) * len * k * (1 - curl * 0.55), py = -60 - Math.cos(a) * len * k * (1 - curl * 0.55);
-        for (let j = -1; j <= 1; j++) {
-          ctx.beginPath();
-          ctx.moveTo(px - 13, py + j * 6);
-          ctx.quadraticCurveTo(px, py + j * 6 + 4, px + 13, py + j * 6);
-          ctx.stroke();
-        }
+    ctx.lineCap = "round";
+    // 指节的褶皱
+    ctx.strokeStyle = `rgba(255,250,240,${0.28 * w})`;
+    ctx.lineWidth = 2;
+    for (const j of joints) {
+      for (let k = -1; k <= 1; k++) {
+        ctx.save();
+        ctx.translate(j.x, j.y + k * 5);
+        ctx.rotate(j.a);
+        ctx.beginPath();
+        ctx.moveTo(-j.w * 0.32, 0);
+        ctx.quadraticCurveTo(0, 3 + Math.abs(k) * 1.5, j.w * 0.32, 0);
+        ctx.stroke();
+        ctx.restore();
       }
     }
-    for (let i = 0; i < 5; i++) {
+    // 手背的细纹与青筋
+    ctx.strokeStyle = `rgba(255,250,240,${0.16 * w})`;
+    ctx.lineWidth = 1.6;
+    for (let i = 0; i < 6; i++) {
       ctx.beginPath();
-      ctx.moveTo(-60, -20 + i * 18);
-      ctx.bezierCurveTo(-20, -10 + i * 18, 20, -30 + i * 18, 60, -14 + i * 18);
+      ctx.moveTo(-58, -40 + i * 18);
+      ctx.bezierCurveTo(-20, -30 + i * 18 + Math.sin(i) * 4, 20, -46 + i * 18, 58, -32 + i * 18);
       ctx.stroke();
     }
-    // 青筋
-    ctx.strokeStyle = `rgba(255,255,255,${0.18 * w})`;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(-10, 100);
-    ctx.bezierCurveTo(-30, 40, 10, 0, -10, -50);
-    ctx.stroke();
+    ctx.strokeStyle = `rgba(255,250,240,${0.2 * w})`;
+    ctx.lineWidth = 3.5;
+    for (const vx of [-24, 18]) {
+      ctx.beginPath();
+      ctx.moveTo(vx * 0.6, 90);
+      ctx.bezierCurveTo(vx - 18, 40, vx + 12, 0, vx, -54);
+      ctx.stroke();
+    }
   }
   ctx.restore();
 }
@@ -645,5 +700,38 @@ export function drawCallBanner(ctx: CanvasRenderingContext2D, t: number, o: { y:
   const fade = 1 - missed;
   btn(x + w - 230, RED, Math.PI * 0.78, 1 + press * 0.25 - press * press * 0.35, fade);
   btn(x + w - 100, "#34c759", 0, 1 + Math.sin(t * 12) * 0.05 * o.ring, fade);
+  ctx.restore();
+}
+
+/** 体积光：从 (x1,y1) 宽 w1 照到 (x2,y2) 宽 w2 的光柱，带飘浮的灰尘 */
+export function lightShaft(ctx: CanvasRenderingContext2D, t: number, o: { x1: number; y1: number; w1: number; x2: number; y2: number; w2: number; alpha: number; color?: string; dust?: number; seed?: number }) {
+  const col = o.color ?? "235,235,228";
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  const g = ctx.createLinearGradient(o.x1, o.y1, o.x2, o.y2);
+  g.addColorStop(0, `rgba(${col},${o.alpha})`);
+  g.addColorStop(1, `rgba(${col},${o.alpha * 0.15})`);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(o.x1 - o.w1 / 2, o.y1);
+  ctx.lineTo(o.x1 + o.w1 / 2, o.y1);
+  ctx.lineTo(o.x2 + o.w2 / 2, o.y2);
+  ctx.lineTo(o.x2 - o.w2 / 2, o.y2);
+  ctx.closePath();
+  ctx.fill();
+  // 光里的灰尘
+  const n = o.dust ?? 26;
+  const r = seeded(o.seed ?? 3);
+  ctx.fillStyle = `rgba(${col},1)`;
+  for (let i = 0; i < n; i++) {
+    const u = r(), v = (r() + t * (0.03 + r() * 0.04)) % 1, ph = r() * 6;
+    const y = mix(o.y1, o.y2, v);
+    const w = mix(o.w1, o.w2, v);
+    const x = mix(o.x1, o.x2, v) + (u - 0.5) * w * 0.9 + Math.sin(t * 0.8 + ph) * 8;
+    ctx.globalAlpha = (0.25 + 0.5 * Math.abs(Math.sin(t * 1.5 + ph))) * Math.min(1, o.alpha * 3);
+    ctx.beginPath();
+    ctx.arc(x, y, 1.5 + r() * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }

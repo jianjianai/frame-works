@@ -1,6 +1,6 @@
 import {
   DW, DH, RED, INK, PAPER, SERIF, SANS, COVER, clamp, mix, phase, smooth, easeInOut, easeOut, easeIn, seeded, hash, wobble,
-  vgrad, glow, text, rain, drift, roundRect, drawPerson, drawHand, camera, offscreen, loadImage, bubble,
+  vgrad, glow, text, rain, drift, roundRect, drawPerson, drawHand, camera, offscreen, loadImage, bubble, lightShaft, focusTrack,
   type ShotFactory, type Shot, type Env,
 } from "./lib";
 import { city, phone, grow, mute, cake } from "./shots1";
@@ -11,6 +11,7 @@ export const fold: ShotFactory = () => ({
     ctx.fillStyle = "#0e0d0c";
     ctx.fillRect(0, 0, DW, DH);
     glow(ctx, 540, 1000, 1000, "rgba(214,207,192,1)", 0.75, "source-over");
+    lightShaft(ctx, t, { x1: 540, y1: -50, w1: 260, x2: 540, y2: 1500, w2: 1100, alpha: 0.14, seed: 21, dust: 24 });
     // 木纹
     ctx.strokeStyle = "rgba(0,0,0,0.12)";
     ctx.lineWidth = 3;
@@ -102,8 +103,8 @@ export const fold: ShotFactory = () => ({
     const lx = s3 > 0 ? mix(mix(C.x - R + 40, C.x + R * 0.1, s2), C.x - 170, s3) : mix(C.x - R + 40, C.x + R * 0.1, s2);
     const ly = C.y + 40 - Math.sin(s2 * Math.PI) * 80 - Math.sin(s1 * Math.PI) * 40;
     const rx = s3 > 0 ? mix(C.x + R - 30, C.x + 170, s3) : C.x + R - 30;
-    drawHand(ctx, lx, ly + 150, mix(0.9, 0.45, s3), 1.0, { wrinkle: 1 });
-    drawHand(ctx, rx, C.y + 190, mix(-0.85, -0.45, s3), 1.0, { wrinkle: 1, mirror: true });
+    drawHand(ctx, lx, ly + 150, mix(0.9, 0.45, s3), 1.0, { wrinkle: 1, color: "#1a1714", rim: "rgba(255,240,215,0.75)" });
+    drawHand(ctx, rx, C.y + 190, mix(-0.85, -0.45, s3), 1.0, { wrinkle: 1, mirror: true, color: "#1a1714", rim: "rgba(255,240,215,0.75)" });
     ctx.restore();
     // 一只小手从上方伸来接住
     const kid = easeOut(phase(t, 2.0, 2.5));
@@ -112,10 +113,18 @@ export const fold: ShotFactory = () => ({
       ctx.save();
       ctx.translate(C.x + 10, mix(-300, 470, kid));
       ctx.rotate(Math.PI);
-      drawHand(ctx, 0, 0, 0, 0.62, { curl, color: "#0c0c0c" });
+      drawHand(ctx, 0, 0, 0, 0.62, { curl, color: "#0c0c0c", rim: "rgba(255,240,215,0.75)" });
       ctx.restore();
     }
     ctx.restore();
+    // 交代时间：这是回忆
+    const cap = smooth(phase(t, 0.1, 0.4)) * (1 - smooth(phase(t, 1.7, 2.0)));
+    if (cap > 0) text(ctx, "他第一次离家上学那年", DW / 2, 560, 46, { weight: 700, color: PAPER, alpha: cap, shadow: "rgba(0,0,0,0.9)", blur: 16 });
+  },
+  // 视线跟着那张红纸走：折 → 变成护身符 → 被举起交到小手里
+  focus: (t) => {
+    const lift = easeInOut(phase(t, 2.05, 2.55));
+    return { x: 540, y: mix(1000, 720, lift), r: mix(420, 380, lift), a: 0.45 };
   },
 });
 
@@ -212,6 +221,16 @@ export const door: ShotFactory = () => {
       const mx = mix(620, 230, p), my = mix(1330, 1960, p);
       const h = 520 * sc;
       const caseX = mx + h * 0.32, caseY = my;
+      // 雪地上一路的脚印和箱子轮印
+      ctx.fillStyle = "rgba(10,10,12,0.55)";
+      for (let q = 0.02; q < p - 0.03; q += 0.035) {
+        const fx2 = mix(620, 230, q), fy2 = mix(1330, 1960, q), sc2 = mix(0.75, 1.9, q);
+        const side = Math.round(q / 0.035) % 2 ? 1 : -1;
+        ctx.beginPath();
+        ctx.ellipse(fx2 + side * 10 * sc2, fy2 - 4, 16 * sc2, 6 * sc2, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(fx2 + 520 * sc2 * 0.32 - 3 * sc2, fy2 - 3 * sc2, 6 * sc2, 6 * sc2);
+      }
       ctx.fillStyle = INK;
       roundRect(ctx, caseX - h * 0.13, caseY - h * 0.42, h * 0.26, h * 0.4, h * 0.03);
       ctx.fill();
@@ -224,132 +243,185 @@ export const door: ShotFactory = () => {
       drawPerson(ctx, {
         x: mx, y: my, h, dir: turn ? 1 : -1, walk: turn ? undefined : t * 7, stride: 0.8, head: turn ? -0.1 : 0.05,
         handB: turn ? null : { x: caseX - h * 0.12, y: caseY - h * 0.56 },
+        rim: { color: "rgba(245,238,222,0.9)", dx: 4, dy: -5, blur: 2.5 },
       });
       drift(ctx, t, { count: 60, seed: 9, kind: "snow", alpha: mix(0.3, 0.9, k / 3), speed: 120, wind: -40, size: 0.8 });
       // 文案
-      text(ctx, "每年春节 · 回家 3 天", DW / 2, 240, 46, { weight: 600, color: PAPER, shadow: "rgba(0,0,0,0.9)", blur: 14, alpha: smooth(phase(t, 0.1, 0.4)) });
-      text(ctx, s.year, DW / 2, 345, 96, { weight: 300, color: RED, spacing: 8, alpha: smooth(clamp(tk / 0.12)) });
+      text(ctx, "每年春节 · 回家 3 天", DW / 2, 420, 46, { weight: 600, color: PAPER, shadow: "rgba(0,0,0,0.9)", blur: 14, alpha: smooth(phase(t, 0.1, 0.4)) });
+      text(ctx, s.year, DW / 2, 510, 80, { weight: 300, color: RED, spacing: 8, alpha: smooth(clamp(tk / 0.12)) });
+    },
+    // 文案 → 门口的妈妈 → 越走越近的他（他回头时两个人都在焦点里）
+    focus: (t) => {
+      const p = easeInOut(clamp(t / 3.69));
+      const sc = mix(0.75, 1.9, p);
+      const sx = mix(620, 230, p), sy = mix(1330, 1960, p) - 520 * sc * 0.55;
+      const w = smooth(phase(t, 1.0, 1.9));
+      const door = { x: 540, y: mix(700, 900, smooth(phase(t, 0.4, 0.9))) };
+      return { x: mix(door.x, (door.x + sx) / 2, w), y: mix(door.y, (door.y + sy) / 2, w), r: mix(420, 620, w), a: 0.4 };
     },
   };
 };
 
-// ============ I 电话（反转）：他说挺好的（今天被裁员），她说在家都好（其实在病床上，明早手术）（27.39 – 30.69） ============
+// ============ I 电话（反转）（27.39 – 30.69）：先看他 → 信号光甩镜 → 再看她 ============
+// 0–1.45 他：妈妈问「吃饭了没？」→「吃了，挺好的」→「工作也挺顺利的」→（今天，被裁员了）
+// 1.45–1.75 一道信号光从他的手机飞出去，镜头向上甩
+// 1.75–3.3 她：特写「妈在家呢，都挺好」→ 拉开：病床、吊瓶 →（明早 8 点手术）
 export const call: ShotFactory = () => {
-  const PH = 900, STRIP = 120;
+  const T_WHIP = 1.45, T_WHIP_END = 1.75;
+  const pill = (ctx: CanvasRenderingContext2D, t: number, y: number, a: number) => {
+    if (a <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = "rgba(20,20,22,0.85)";
+    roundRect(ctx, DW / 2 - 150, y - 30, 300, 60, 30);
+    ctx.fill();
+    ctx.fillStyle = "#34c759";
+    ctx.beginPath();
+    ctx.arc(DW / 2 - 112, y, 9, 0, Math.PI * 2);
+    ctx.fill();
+    text(ctx, `通话中 00:${String(23 + Math.floor(t)).padStart(2, "0")}`, DW / 2 + 14, y + 1, 28, { font: SANS, weight: 600, color: "#eee" });
+    ctx.restore();
+  };
+  const sonScene = (ctx: CanvasRenderingContext2D, t: number) => {
+    vgrad(ctx, -300, -300, DW + 600, DH + 600, [[0, "#0b0c0f"], [1, "#040405"]]);
+    for (let j = 0; j < 7; j++)
+      for (let i = 0; i < 9; i++) {
+        if (hash(i * 13 + j * 7) < 0.5) continue;
+        ctx.fillStyle = `rgba(200,205,210,${0.04 + hash(i + j * 3) * 0.08})`;
+        ctx.fillRect(40 + i * 115, 120 + j * 70, 70, 40);
+      }
+    // 便利店的玻璃门在他身后亮着
+    vgrad(ctx, 150, 600, 460, 470, [[0, "#e2e4e1"], [1, "#a9aca9"]]);
+    glow(ctx, 380, 840, 620, "rgba(230,235,232,1)", 0.35);
+    ctx.fillStyle = "#0b0c0f";
+    ctx.fillRect(372, 600, 16, 470);
+    ctx.fillRect(150, 600, 460, 16);
+    ctx.fillStyle = "rgba(0,0,0,0.2)";
+    for (let k = 0; k < 4; k++) ctx.fillRect(176, 680 + k * 90, 170, 8);
+    text(ctx, "24H", 500, 650, 32, { font: SANS, weight: 800, color: "#333" });
+    ctx.fillStyle = "#141518";
+    for (let s = 0; s < 4; s++) ctx.fillRect(-300, 1070 + s * 66, DW + 600, 60);
+    lightShaft(ctx, t, { x1: 380, y1: 1070, w1: 460, x2: 420, y2: 1330, w2: 760, alpha: 0.16, dust: 0 });
+    rain(ctx, t, { count: 90, seed: 19, alpha: 0.28, len: 60, speed: 2000, slant: 0.06, x0: -200, x1: DW + 200, y0: -200, y1: 1400 });
+    return drawPerson(ctx, {
+      x: 380, y: 1150, h: 620, sit: 1, stoop: 0.35, head: 0.25, earF: true, handB: { x: 560, y: 1010 },
+      rim: { color: "rgba(235,240,236,0.95)", dx: -5, dy: -3, blur: 2 },
+    });
+  };
+  const momScene = (ctx: CanvasRenderingContext2D, t: number) => {
+    vgrad(ctx, -300, -300, DW + 600, DH + 600, [[0, "#15181c"], [1, "#08090b"]]);
+    // 病房的窗（月光）
+    vgrad(ctx, 90, 420, 560, 560, [[0, "#68717c"], [1, "#b3bac2"]]);
+    lightShaft(ctx, t, { x1: 370, y1: 980, w1: 560, x2: 600, y2: 1300, w2: 900, alpha: 0.12, dust: 14, seed: 8 });
+    ctx.fillStyle = "#0d0f12";
+    ctx.fillRect(90, 420, 560, 14);
+    ctx.fillRect(90, 966, 560, 14);
+    ctx.fillRect(90, 420, 14, 560);
+    ctx.fillRect(636, 420, 14, 560);
+    ctx.fillRect(363, 420, 14, 560);
+    // 吊瓶
+    ctx.strokeStyle = "#0d0f12";
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(250, 1300); ctx.lineTo(250, 560); ctx.lineTo(310, 560);
+    ctx.stroke();
+    ctx.fillStyle = "#0d0f12";
+    roundRect(ctx, 282, 568, 56, 110, 12);
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(310, 678);
+    ctx.bezierCurveTo(320, 880, 470, 960, 570, 1010);
+    ctx.stroke();
+    // 病床
+    ctx.fillStyle = "#0b0c0e";
+    ctx.fillRect(380, 930, 30, 380);
+    ctx.fillRect(380, 1080, 800, 54);
+    ctx.fillStyle = "#6f737a";
+    roundRect(ctx, 470, 840, 74, 250, 24);
+    ctx.fill();
+    const mom = drawPerson(ctx, {
+      x: 610, y: 1100, h: 600, mom: true, dir: 1, sit: 1, stoop: 0.15, head: 0.25, hair: "rgb(140,140,140)", earF: true, handB: { x: 720, y: 1010 },
+      rim: { color: "rgba(220,228,236,0.9)", dx: -5, dy: -3, blur: 2 },
+    });
+    ctx.fillStyle = "#8e9196";
+    ctx.beginPath();
+    ctx.moveTo(570, 1085);
+    ctx.bezierCurveTo(660, 980, 880, 990, 1180, 1030);
+    ctx.lineTo(1180, 1090);
+    ctx.lineTo(570, 1090);
+    ctx.fill();
+    ctx.fillStyle = "#08090a";
+    ctx.fillRect(-300, 1134, DW + 600, 800);
+    // 床头的病历卡
+    ctx.fillStyle = "#d9dcdf";
+    ctx.fillRect(392, 980, 70, 90);
+    ctx.fillStyle = RED;
+    ctx.fillRect(392, 980, 70, 14);
+    return mom;
+  };
   return {
     draw(ctx, t) {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, DW, DH);
-      // 上：妈妈接电话。先是特写，看起来像在家；镜头拉开才发现她躺在病床上
-      const inTop = easeOut(phase(t, 0, 0.3));
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, DW, PH);
-      ctx.clip();
-      ctx.translate(0, -(1 - inTop) * PH);
-      const reveal = easeInOut(phase(t, 1.85, 2.35));
-      ctx.save();
-      camera(ctx, mix(2.3, 1.0, reveal), mix(600, 540, reveal), mix(430, 450, reveal), 540, 450);
-      vgrad(ctx, -200, -200, DW + 400, PH + 400, [[0, "#15181c"], [1, "#0a0b0d"]]);
-      // 病房的窗
-      vgrad(ctx, 90, 90, 520, 520, [[0, "#6c7580"], [1, "#b3bac2"]]);
-      ctx.fillStyle = "#0d0f12";
-      ctx.fillRect(90, 90, 520, 14);
-      ctx.fillRect(90, 596, 520, 14);
-      ctx.fillRect(90, 90, 14, 520);
-      ctx.fillRect(596, 90, 14, 520);
-      ctx.fillRect(343, 90, 14, 520);
-      // 输液架
-      ctx.strokeStyle = "#0d0f12";
-      ctx.lineWidth = 9;
-      ctx.beginPath();
-      ctx.moveTo(250, PH);
-      ctx.lineTo(250, 230);
-      ctx.lineTo(310, 230);
-      ctx.stroke();
-      ctx.fillStyle = "#0d0f12";
-      roundRect(ctx, 282, 238, 56, 100, 12);
-      ctx.fill();
-      ctx.strokeStyle = "#0d0f12";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(310, 338);
-      ctx.bezierCurveTo(320, 520, 460, 600, 560, 640);
-      ctx.stroke();
-      // 病床
-      ctx.fillStyle = "#0b0c0e";
-      ctx.fillRect(380, 560, 30, 340);
-      ctx.fillRect(380, 700, 760, 50);
-      ctx.fillStyle = "#7d8186";
-      roundRect(ctx, 470, 470, 70, 240, 24);
-      ctx.fill();
-      drawPerson(ctx, { x: 600, y: 720, h: 560, mom: true, dir: 1, sit: 1, stoop: 0.15, head: 0.25, hair: "rgb(140,140,140)", earF: true, handB: { x: 700, y: 640 } });
-      ctx.fillStyle = "#8e9196";
-      ctx.beginPath();
-      ctx.moveTo(560, 705);
-      ctx.bezierCurveTo(640, 600, 860, 610, 1080, 650);
-      ctx.lineTo(1080, 710);
-      ctx.lineTo(560, 710);
-      ctx.fill();
-      ctx.fillStyle = "#08090a";
-      ctx.fillRect(-200, 750, DW + 400, 400);
-      ctx.restore();
-      bubble(ctx, "吃饭了没？", 90, 200, { side: "left", p: clamp((t - 0.25) / 0.3), size: 40 });
-      bubble(ctx, "妈在家呢，都挺好", 90, 330, { side: "left", p: clamp((t - 1.0) / 0.3), size: 40 });
-      text(ctx, `通话中 00:${String(23 + Math.floor(t)).padStart(2, "0")}`, DW - 50, 60, 26, { font: SANS, weight: 500, color: "#9a9a9a", align: "right" });
-      const lie = smooth(phase(t, 2.4, 2.7));
-      if (lie > 0) {
-        text(ctx, "（明早 8 点手术）", 640, 820, 44, { weight: 700, color: RED, alpha: lie, shadow: "rgba(0,0,0,0.9)", blur: 16 });
-        ctx.fillStyle = RED;
-        ctx.fillRect(470, 852, 340 * smooth(phase(t, 2.55, 2.85)), 4);
-      }
-      ctx.restore();
-      // 下：他在公司楼下的台阶上
-      const by = PH + STRIP;
-      const inBot = easeOut(phase(t, 0.08, 0.38));
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, by, DW, PH);
-      ctx.clip();
-      ctx.translate(0, by + (1 - inBot) * PH);
-      vgrad(ctx, 0, 0, DW, PH, [[0, "#0b0c0f"], [1, "#050506"]]);
-      // 写字楼的窗
-      for (let j = 0; j < 8; j++)
-        for (let i = 0; i < 9; i++) {
-          if (hash(i * 13 + j * 7) < 0.45) continue;
-          ctx.fillStyle = `rgba(200,205,210,${0.05 + hash(i + j * 3) * 0.1})`;
-          ctx.fillRect(40 + i * 115, 30 + j * 70, 70, 40);
+      const whip = easeInOut(phase(t, T_WHIP, T_WHIP_END));
+      if (whip < 1) {
+        ctx.save();
+        ctx.translate(0, whip * DH);
+        ctx.save();
+        camera(ctx, mix(1.0, 1.08, easeInOut(clamp(t / 1.45))), 540, 900, 540, 900);
+        sonScene(ctx, t);
+        ctx.restore();
+        pill(ctx, t, 300, smooth(phase(t, 0, 0.15)));
+        // 一行一行读：妈妈问 → 他答 → 他答 → 真相
+        text(ctx, "妈妈", 620, 390, 26, { font: SANS, weight: 600, color: "#aaa", align: "left", alpha: smooth(phase(t, 0.08, 0.2)) });
+        bubble(ctx, "吃饭了没？", 640, 420, { side: "left", p: clamp((t - 0.1) / 0.25), size: 40 });
+        bubble(ctx, "吃了，挺好的", 1000, 560, { side: "right", p: clamp((t - 0.42) / 0.25), size: 40, bg: "#95ec69" });
+        bubble(ctx, "工作也挺顺利的", 1000, 690, { side: "right", p: clamp((t - 0.75) / 0.25), size: 40, bg: "#95ec69" });
+        const truth = smooth(phase(t, 1.0, 1.2));
+        if (truth > 0) {
+          text(ctx, "（今天，被裁员了）", 780, 870, 46, { weight: 800, color: RED, alpha: truth, shadow: "rgba(255,0,0,0.5)", blur: 16 });
+          ctx.fillStyle = RED;
+          ctx.fillRect(600, 905, 360 * smooth(phase(t, 1.1, 1.35)), 4);
         }
-      // 便利店的玻璃门在他身后亮着
-      vgrad(ctx, 170, 230, 420, 420, [[0, "#dcdedb"], [1, "#a9aca9"]]);
-      glow(ctx, 380, 450, 520, "rgba(230,235,232,1)", 0.35);
-      ctx.fillStyle = "#0b0c0f";
-      ctx.fillRect(372, 230, 16, 420);
-      ctx.fillRect(170, 230, 420, 14);
-      ctx.fillStyle = "rgba(0,0,0,0.25)";
-      for (let k = 0; k < 4; k++) ctx.fillRect(190, 300 + k * 80, 160, 8);
-      text(ctx, "24H", 480, 280, 30, { font: SANS, weight: 700, color: "#222" });
-      ctx.fillStyle = "#141518";
-      for (let s = 0; s < 4; s++) ctx.fillRect(0, 640 + s * 66, DW, 66 - 6);
-      ctx.fillStyle = "rgba(220,224,220,0.12)";
-      ctx.beginPath();
-      ctx.moveTo(170, 650);
-      ctx.lineTo(590, 650);
-      ctx.lineTo(760, 900);
-      ctx.lineTo(60, 900);
-      ctx.fill();
-      rain(ctx, t, { count: 80, seed: 19, alpha: 0.3, len: 60, speed: 2000, slant: 0.06, y1: PH });
-      drawPerson(ctx, { x: 360, y: 710, h: 560, sit: 1, stoop: 0.35, head: 0.25, earF: true, handB: { x: 520, y: 600 } });
-      bubble(ctx, "吃了，挺好的", 990, 200, { side: "right", p: clamp((t - 0.6) / 0.3), size: 40, bg: "#95ec69" });
-      bubble(ctx, "工作也挺顺利的", 990, 330, { side: "right", p: clamp((t - 1.45) / 0.3), size: 40, bg: "#95ec69" });
-      const truth = smooth(phase(t, 2.15, 2.45));
-      if (truth > 0) {
-        text(ctx, "（今天，被裁员了）", 640, 520, 44, { weight: 700, color: RED, alpha: truth, shadow: "rgba(255,0,0,0.5)", blur: 16 });
-        ctx.fillStyle = RED;
-        ctx.fillRect(460, 552, 360 * smooth(phase(t, 2.3, 2.6)), 4);
+        ctx.restore();
       }
-      ctx.restore();
+      if (whip > 0) {
+        ctx.save();
+        ctx.translate(0, -DH + whip * DH);
+        const reveal = easeInOut(phase(t, 2.2, 2.7));
+        ctx.save();
+        camera(ctx, mix(2.0, 1.0, reveal), mix(650, 560, reveal), mix(760, 900, reveal), 540, mix(820, 900, reveal));
+        momScene(ctx, t);
+        ctx.restore();
+        pill(ctx, t, 300, 1);
+        bubble(ctx, "妈在家呢，都挺好", 80, 470, { side: "left", p: clamp((t - 1.8) / 0.25), size: 44 });
+        const lie = smooth(phase(t, 2.7, 2.9));
+        if (lie > 0) {
+          text(ctx, "（明早 8 点手术）", 540, 1240, 48, { weight: 800, color: RED, alpha: lie, shadow: "rgba(0,0,0,0.9)", blur: 16 });
+          ctx.fillStyle = RED;
+          ctx.fillRect(360, 1276, 360 * smooth(phase(t, 2.8, 3.05)), 4);
+        }
+        ctx.restore();
+      }
+      // 甩镜：速度线 + 一道信号光
+      const v = Math.sin(phase(t, T_WHIP, T_WHIP_END) * Math.PI);
+      if (v > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = v * 0.5;
+        ctx.fillStyle = "#fff";
+        for (let i = 0; i < 40; i++) {
+          const x = hash(i * 3.1) * DW, y = ((hash(i * 7.3) + t * 6) % 1) * DH;
+          ctx.fillRect(x, y, 2 + hash(i) * 3, 200 + hash(i * 2) * 400);
+        }
+        ctx.restore();
+      }
+      const sig = phase(t, T_WHIP - 0.1, T_WHIP_END);
+      if (sig > 0 && sig < 1) {
+        const sy = mix(900, -100, easeIn(sig));
+        for (let k = 0; k < 8; k++) glow(ctx, 470, sy + k * 40, 60 - k * 5, "rgba(120,255,170,1)", 0.7 - k * 0.08);
+        glow(ctx, 470, sy, 26, "#ffffff", 1);
+      }
     },
+    focus: focusTrack([[0, 760, 420, 280, 0.3], [0.45, 820, 600, 320, 0.4], [1.0, 760, 860, 360, 0.45], [1.45, 540, 900, 600, 0.2], [1.8, 560, 620, 360, 0.45], [2.25, 560, 620, 360, 0.45], [2.7, 540, 1000, 560, 0.35], [3.0, 540, 1150, 520, 0.35]]),
   };
 };
 
@@ -454,9 +526,10 @@ export const ward: ShotFactory = (env) => {
         // 椅子
         ctx.fillRect(700, 1060, 20, 240);
         ctx.fillRect(560, 1150, 160, 18);
-        drawPerson(ctx, { x: 640, y: 1300, h: 760, sit: 1, stoop: 0.6, head: 0.55, dir: -1, handF: { x: 480, y: 1110 }, handB: { x: 500, y: 1118 } });
+        lightShaft(ctx, t, { x1: 540, y1: 1090, w1: 840, x2: 600, y2: 1310, w2: 1150, alpha: 0.1, dust: 0 });
+        drawPerson(ctx, { x: 640, y: 1300, h: 760, sit: 1, stoop: 0.6, head: 0.55, dir: -1, handF: { x: 480, y: 1110 }, handB: { x: 500, y: 1118 }, rim: { color: "rgba(220,230,240,0.9)", dx: -4, dy: -5, blur: 2.5 } });
         ctx.restore();
-        text(ctx, "第二天，他还是知道了", DW / 2, 230, 50, { weight: 700, color: PAPER, alpha: smooth(phase(t, 0.1, 0.4)) * (1 - smooth(phase(t, 1.6, 1.85))), shadow: "rgba(0,0,0,0.9)", blur: 16 });
+        text(ctx, "第二天，他还是知道了", DW / 2, 262, 50, { weight: 700, color: PAPER, alpha: smooth(phase(t, 0.1, 0.4)) * (1 - smooth(phase(t, 1.6, 1.85))), shadow: "rgba(0,0,0,0.9)", blur: 16 });
       } else {
         // 特写：两只手
         const tt = t - 1.9;
@@ -473,7 +546,7 @@ export const ward: ShotFactory = (env) => {
         }
         glow(ctx, 900, 400, 700, "rgba(235,245,240,1)", 0.12 + beat * 0.2);
         const twitch = Math.sin(phase(tt, 0.7, 1.1) * Math.PI) * 0.5;
-        drawHand(ctx, 470, 1020, -1.35, 1.25, { wrinkle: 1, curl: twitch, color: "#151514" });
+        drawHand(ctx, 470, 1020, -1.35, 1.25, { wrinkle: 1, curl: twitch, color: "#151514", rim: "rgba(225,235,240,0.7)" });
         // 输液胶布
         ctx.save();
         ctx.translate(560, 1000);
@@ -481,7 +554,7 @@ export const ward: ShotFactory = (env) => {
         ctx.fillStyle = "rgba(235,235,230,0.85)";
         ctx.fillRect(-60, -30, 120, 40);
         ctx.restore();
-        drawHand(ctx, 680, 1150, -2.0, 1.15, { color: "#050505" });
+        drawHand(ctx, 680, 1150, -2.0, 1.15, { color: "#050505", rim: "rgba(225,235,240,0.6)" });
         ctx.restore();
         // 画面上方的心电图
         ecg(ctx, t, 60, 220, 960, 180, "rgba(255,255,255,0.85)");
@@ -491,6 +564,8 @@ export const ward: ShotFactory = (env) => {
         }
       }
     },
+    // 字幕 → 床边的他和她 → 心电图 → 切特写：两只手
+    focus: focusTrack([[0, 540, 520, 500, 0.3], [0.5, 520, 1040, 430, 0.45], [1.15, 520, 1040, 430, 0.45], [1.5, 720, 860, 480, 0.4], [1.9, 560, 1020, 460, 0.4], [3.58, 560, 1020, 420, 0.45]]),
   };
 };
 
@@ -613,14 +688,14 @@ export const ending: ShotFactory = async (env) => {
       // 结尾卡片
       const card = smooth(phase(t, 1.0, 1.4));
       if (card > 0) {
-        vgrad(ctx, 0, 1350, DW, DH - 1350, [[0, "rgba(0,0,0,0)"], [0.4, `rgba(0,0,0,${0.75 * card})`], [1, `rgba(0,0,0,${0.9 * card})`]]);
-        text(ctx, "别等来不及", DW / 2, 1580, 46, { weight: 400, color: PAPER, alpha: card, spacing: 14 });
+        vgrad(ctx, 0, 1150, DW, DH - 1150, [[0, "rgba(0,0,0,0)"], [0.35, `rgba(0,0,0,${0.75 * card})`], [1, `rgba(0,0,0,${0.9 * card})`]]);
+        text(ctx, "别等来不及", DW / 2, 1390, 46, { weight: 400, color: PAPER, alpha: card, spacing: 14 });
         const c2 = smooth(phase(t, 1.3, 1.7));
-        text(ctx, "今天，给妈妈打个电话吧", DW / 2, 1680, 62, { weight: 900, color: "#fff", alpha: c2, shadow: "rgba(255,42,54,0.6)", blur: 22 });
+        text(ctx, "今天，给妈妈打个电话吧", DW / 2, 1490, 62, { weight: 900, color: "#fff", alpha: c2, shadow: "rgba(255,42,54,0.6)", blur: 22 });
         // 电话图标 + 振铃
         const ring = Math.sin(t * 40) * 0.12 * c2;
         ctx.save();
-        ctx.translate(DW / 2, 1800);
+        ctx.translate(DW / 2, 1610);
         ctx.rotate(ring);
         ctx.globalAlpha = c2;
         ctx.fillStyle = RED;
@@ -635,10 +710,10 @@ export const ending: ShotFactory = async (env) => {
           const q = ((t * 1.6) % 1);
           ctx.globalAlpha = c2 * (1 - q * 0.5);
           ctx.beginPath();
-          ctx.arc(DW / 2, 1800, 50 + i * 22 + q * 10, -0.6, 0.6);
+          ctx.arc(DW / 2, 1610, 50 + i * 22 + q * 10, -0.6, 0.6);
           ctx.stroke();
           ctx.beginPath();
-          ctx.arc(DW / 2, 1800, 50 + i * 22 + q * 10, Math.PI - 0.6, Math.PI + 0.6);
+          ctx.arc(DW / 2, 1610, 50 + i * 22 + q * 10, Math.PI - 0.6, Math.PI + 0.6);
           ctx.stroke();
         }
         ctx.globalAlpha = 1;
@@ -652,6 +727,8 @@ export const ending: ShotFactory = async (env) => {
         ctx.restore();
       }
     },
+    // 「妈妈」→ 妈妈的手落在他头上 → 结尾卡片 → 回到开头的焦点（循环无缝）
+    focus: focusTrack([[0, 540, 420, 440, 0.25], [0.7, 640, 820, 470, 0.3], [1.25, 540, 1460, 520, 0.3], [1.72, 540, 1460, 520, 0.3], [2.02, 540, 470, 470, 0.3]]),
     dispose() { opening.dispose?.(); },
   };
 };

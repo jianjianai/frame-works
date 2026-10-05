@@ -1,6 +1,6 @@
 import {
   DW, DH, RED, INK, PAPER, SERIF, SANS, clamp, mix, phase, smooth, easeInOut, easeOut, easeIn, seeded, hash, wobble,
-  bump, vgrad, glow, text, typed, rain, drift, roundRect, drawPerson, drawHand, drawCallBanner, camera, offscreen, shake,
+  bump, vgrad, glow, text, typed, rain, drift, roundRect, drawPerson, drawHand, drawCallBanner, camera, offscreen, shake, lightShaft, focusTrack,
   type ShotFactory,
 } from "./lib";
 
@@ -65,7 +65,12 @@ export const city: ShotFactory = () => {
           ctx.fillStyle = hash(j * 7 + k) < 0.18 ? "rgba(150,150,145,0.5)" : "#0d0e10";
           ctx.fillRect(x - 27, y - 42, 54, 84);
         }
-      // 那扇窗：屋里的他坐在床边，手机的光
+      // 那扇窗：整栋楼唯一亮着暖光的窗，光晕随推镜变强，把视线拉过去
+      glow(ctx, TX, TY, 120, "rgba(255,248,230,1)", 0.35 + 0.4 * smooth(phase(t, 1.2, 2.2)));
+      ctx.fillStyle = "rgba(255,248,230,0.08)";
+      ctx.beginPath();
+      ctx.moveTo(TX - 27, TY + 42); ctx.lineTo(TX + 27, TY + 42); ctx.lineTo(TX + 70, TY + 260); ctx.lineTo(TX - 70, TY + 260);
+      ctx.fill();
       ctx.save();
       ctx.beginPath();
       ctx.rect(TX - 27, TY - 42, 54, 84);
@@ -115,6 +120,12 @@ export const city: ShotFactory = () => {
       const finger = easeOut(phase(t, 0.2, 0.5)) * (1 - easeIn(phase(t, 0.68, 0.95)));
       if (finger > 0) drawHand(ctx, mix(960, 801, finger), mix(1500, 744, finger) + bump(t, 0.42, 0.5, 0.58, 0.66) * 14, 0, 0.55, { color: "#0b0b0b" });
     },
+    // 先看文案+来电 → 横幅收起后看那扇窗
+    focus: (t) => {
+      const w = smooth(phase(t, 1.35, 1.9));
+      const cy = mix(1120, 960, easeInOut(clamp(t / 2.9)));
+      return { x: 540, y: mix(470, cy, w), r: mix(470, 280, w), a: mix(0.3, 0.55, w) };
+    },
   };
 };
 
@@ -160,8 +171,10 @@ export const phone: ShotFactory = (env) => {
       const vb = { x: x0 + 128, y: y0 + 770, w: 330, h: 70 }; // 语音气泡
       ctx.save();
       const push = easeInOut(phase(t, T_OPEN + 0.05, T_TEAR));
-      const z = mix(1, 1.07, easeInOut(clamp(t / 3.2))) * mix(1, 1.5, push);
-      const fx = mix(540, vb.x + vb.w / 2, push), fy = mix(880, vb.y + vb.h / 2, push);
+      // 镜头跟着视线：先看消息 → 抬头看邮件 → 低头看输入框 → 锁屏回中
+      const look = t < 0.82 ? 800 : t < 1.58 ? mix(800, 690, easeInOut(phase(t, 0.82, 1.0))) : t < 2.6 ? mix(690, 980, easeInOut(phase(t, 1.58, 1.8))) : mix(980, 880, easeInOut(phase(t, 2.6, 3.0)));
+      const z = mix(1, 1.07, easeInOut(clamp(t / 3.2))) * (1 + 0.05 * bump(t, 1.6, 1.9, 2.4, 2.7)) * mix(1, 1.5, push);
+      const fx = mix(540, vb.x + vb.w / 2, push), fy = mix(look, vb.y + vb.h / 2, push);
       camera(ctx, z, fx, fy, 540 + wobble(t, 1) * 6 + Math.sin(t * 90) * 7 * buzz, 900 + wobble(t, 4) * 6, -0.035 * (1 - push * 0.6) + wobble(t, 2) * 0.006);
       ctx.fillStyle = "#151515";
       roundRect(ctx, x0 - 16, y0 - 16, PW + 32, PH + 32, 86);
@@ -264,11 +277,11 @@ export const phone: ShotFactory = (env) => {
           ctx.fillStyle = "#fff";
           roundRect(ctx, x0 + 24, ky - 92, PW - 160, 70, 14);
           ctx.fill();
-          const shown = t < 2.05 ? typed(draft, t, 1.15, 8) : [...draft].slice(0, Math.max(0, draft.length - Math.floor((t - 2.05) * 16))).join("");
+          const shown = t < 2.3 ? typed(draft, t, 1.62, 9) : [...draft].slice(0, Math.max(0, draft.length - Math.floor((t - 2.3) * 24))).join("");
           text(ctx, shown, x0 + 46, ky - 56, 32, { font: SANS, weight: 500, color: "#111", align: "left" });
           ctx.font = `500 32px ${SANS}`;
           const cw = ctx.measureText(shown).width;
-          if (Math.floor(t * 2.2) % 2 === 0 || (t > 1.15 && t < 2.5)) {
+          if (Math.floor(t * 2.2) % 2 === 0 || (t > 1.6 && t < 2.55)) {
             ctx.fillStyle = "#1a7cff";
             ctx.fillRect(x0 + 48 + cw, ky - 78, 3, 42);
           }
@@ -342,7 +355,7 @@ export const phone: ShotFactory = (env) => {
         }
       }
       // 看消息时，顶部弹下来一封邮件（他不敢接电话的原因）
-      const mail = easeOut(phase(t, 0.85, 1.05)) * (1 - easeIn(phase(t, 2.0, 2.2)));
+      const mail = easeOut(phase(t, 0.85, 1.05)) * (1 - easeIn(phase(t, 1.45, 1.62)));
       if (mail > 0 && !lock && !chat2) {
         const my = mix(y0 - 160, y0 + 24, mail);
         ctx.save();
@@ -428,7 +441,7 @@ export const phone: ShotFactory = (env) => {
       }
       ctx.restore();
       // 手
-      const typing = t > 1.1 && t < 2.5;
+      const typing = t > 1.58 && t < 2.55;
       const tap = typing ? Math.abs(Math.sin(t * 22)) : 0;
       const ky = y0 + PH - 430;
       let thumbX = x0 + PW - 120 + (typing ? Math.sin(t * 9) * 140 - 60 : 0);
@@ -464,6 +477,7 @@ export const phone: ShotFactory = (env) => {
       ctx.restore();
       if (off > 0) glow(ctx, 540, 900, 500, "rgba(120,125,135,1)", 0.06 * off);
     },
+    focus: focusTrack([[0, 540, 840, 420, 0.35], [0.8, 540, 840, 420, 0.35], [0.95, 540, 560, 380, 0.45], [1.55, 540, 560, 380, 0.45], [1.7, 540, 900, 360, 0.45], [2.55, 540, 900, 360, 0.45], [2.95, 540, 730, 380, 0.45], [3.3, 540, 900, 330, 0.5], [6.3, 540, 900, 300, 0.5]]),
   };
 };
 
@@ -622,6 +636,11 @@ export const grow: ShotFactory = (env) => {
       // 太阳慢慢落下
       const sunY = mix(720, 1120, a);
       glow(ctx, 760, sunY, 520, "rgba(255,252,240,1)", mix(0.8, 0.35, a));
+      // 夕阳的光束扫向母子
+      for (let k = 0; k < 3; k++) {
+        const sw = Math.sin(t * 0.6 + k * 2.1) * 60;
+        lightShaft(ctx, t, { x1: 760, y1: sunY, w1: 30, x2: 200 + k * 260 + sw, y2: GROUND, w2: 160, alpha: mix(0.14, 0.05, a), dust: 0 });
+      }
       ctx.fillStyle = `rgba(255,253,246,${mix(0.95, 0.5, a)})`;
       ctx.beginPath();
       ctx.arc(760, sunY, 120, 0, Math.PI * 2);
@@ -701,8 +720,8 @@ export const grow: ShotFactory = (env) => {
       const holdY = GROUND - mix(215, 300, a) + Math.sin(t * 7.5) * 4;
       const hold = { x: (kidX + momX) / 2 + mix(10, -15, a), y: holdY };
       const hair = Math.round(mix(7, 120, smooth(phase(a, 0.45, 1))));
-      const mom = drawPerson(ctx, { x: momX, y: GROUND, h: mix(560, 545, a), mom: true, walk: t * mix(7.5, 6, a), stride: mix(1, 0.7, a), stoop: momStoop, handB: hold, hair: `rgb(${hair},${hair},${hair})` });
-      const kid = drawPerson(ctx, { x: kidX, y: GROUND, h: kidH, child, walk: t * mix(11, 6, a) + 1, stride: mix(1.2, 0.6, a), handF: hold });
+      const mom = drawPerson(ctx, { x: momX, y: GROUND, h: mix(560, 545, a), mom: true, walk: t * mix(7.5, 6, a), stride: mix(1, 0.7, a), stoop: momStoop, handB: hold, hair: `rgb(${hair},${hair},${hair})`, rim: { color: "rgba(255,252,240,0.9)", dx: 4, dy: -3, blur: 2 } });
+      const kid = drawPerson(ctx, { x: kidX, y: GROUND, h: kidH, child, walk: t * mix(11, 6, a) + 1, stride: mix(1.2, 0.6, a), handF: hold, rim: { color: "rgba(255,252,240,0.9)", dx: 4, dy: -3, blur: 2 } });
       drift(ctx, t, { count: 70, seed: 7, kind: "snow", alpha: 0.9 * winter, speed: 140, wind: -90, color: "#fff", size: 0.9 });
       // 年龄标签
       const tag = (str: string, x: number, y: number) => {
@@ -726,167 +745,215 @@ export const grow: ShotFactory = (env) => {
       ctx.restore();
       // 年份
       const year = Math.round(mix(1999, 2026, a));
-      text(ctx, String(year), DW / 2, 290, 170, { weight: 300, color: RED, spacing: 10, shadow: "rgba(0,0,0,0.35)", blur: 20 });
+      text(ctx, String(year), DW / 2, 470, 150, { weight: 300, color: RED, spacing: 10, shadow: "rgba(0,0,0,0.35)", blur: 20 });
       const cap = smooth(phase(t, 2.6, 3.0));
-      if (cap > 0) text(ctx, "这条路，她走得越来越慢", DW / 2, 410, 42, { weight: 600, color: PAPER, alpha: cap, shadow: "rgba(0,0,0,0.8)", blur: 14 });
+      if (cap > 0) text(ctx, "这条路，她走得越来越慢", DW / 2, 345, 44, { weight: 600, color: PAPER, alpha: cap, shadow: "rgba(0,0,0,0.8)", blur: 14 });
     },
+    focus: focusTrack([[0, 540, 640, 520, 0.3], [0.9, 545, 900, 440, 0.38], [2.5, 545, 900, 440, 0.38], [2.8, 545, 760, 520, 0.32], [4.74, 545, 800, 500, 0.32]]),
   };
 };
 
-// ============ E 分屏：6岁疼了会哭 / 26岁疼了不说（13.94 – 17.01） ============
+// ============ E 疼了会哭 → 疼了不说（13.94 – 17.01）：全屏顺序叙事，动作匹配转场 ============
+// 0–1.45 6岁：摔倒大哭，妈妈跑来抱住，哭声停 → 1.45–1.75 雨幕从上往下扫过（同一位置同一姿势）→ 30岁：路灯下一个人，嘴被封住，镜头拉开看到纸箱
 export const mute: ShotFactory = () => {
-  const PH = 900, STRIP = 120;
+  const G = 1250;
+  const T_WIPE = 1.45, T_WIPE_END = 1.75;
+  const label = (ctx: CanvasRenderingContext2D, str: string, y: number, a: number, dark: boolean) => {
+    if (a <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = `700 46px ${SERIF}`;
+    const w = ctx.measureText(str).width + 60;
+    const x = DW / 2 - w / 2 + (1 - easeOut(a)) * -40;
+    ctx.fillStyle = dark ? "rgba(10,10,10,0.82)" : "rgba(255,255,255,0.1)";
+    roundRect(ctx, x, y - 42, w, 84, 10);
+    ctx.fill();
+    ctx.fillStyle = RED;
+    ctx.fillRect(x, y - 42, 8, 84);
+    ctx.fillStyle = "#fff";
+    ctx.textBaseline = "middle";
+    ctx.fillText(str, x + 32, y + 2);
+    ctx.restore();
+  };
+  const kidScene = (ctx: CanvasRenderingContext2D, t: number) => {
+    vgrad(ctx, -300, -300, DW + 600, G + 300, [[0, "#cfc9bd"], [1, "#f1ede4"]]);
+    glow(ctx, 800, 560, 520, "rgba(255,255,250,1)", 0.75);
+    // 远处的秋千与滑梯（交代：游乐场）
+    ctx.strokeStyle = "#a9a398";
+    ctx.lineWidth = 12;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(760, G); ctx.lineTo(840, G - 330); ctx.lineTo(920, G);
+    ctx.moveTo(840, G - 330); ctx.lineTo(1140, G - 330);
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(960, G - 330); ctx.lineTo(960 + Math.sin(t * 2) * 10, G - 120);
+    ctx.moveTo(1030, G - 330); ctx.lineTo(1030 + Math.sin(t * 2) * 10, G - 120);
+    ctx.stroke();
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(950 + Math.sin(t * 2) * 10, G - 118); ctx.lineTo(1040 + Math.sin(t * 2) * 10, G - 118);
+    ctx.stroke();
+    ctx.fillStyle = "#b3ada3";
+    ctx.beginPath();
+    ctx.moveTo(60, G); ctx.lineTo(120, G - 260); ctx.lineTo(170, G - 260); ctx.lineTo(330, G); ctx.fill();
+    vgrad(ctx, -300, G, DW + 600, DH, [[0, "#2c2a27"], [1, "#121110"]]);
+    // 跑 → 绊倒 → 坐起来哭
+    const fall = smooth(phase(t, 0.3, 0.45));
+    const sitUp = smooth(phase(t, 0.52, 0.66));
+    const kx = mix(120, 470, easeOut(phase(t, 0, 0.4)));
+    ctx.save();
+    ctx.translate(kx, G);
+    ctx.rotate(fall * (1 - sitUp) * 1.3);
+    drawPerson(ctx, {
+      x: 0, y: 0, h: 330, child: 1, walk: sitUp > 0 ? undefined : t * 15, sit: sitUp, head: sitUp * -0.45,
+      handF: sitUp > 0.5 ? { x: 48, y: -190 } : null, handB: sitUp > 0.5 ? { x: 38, y: -180 } : null,
+    });
+    ctx.restore();
+    // 摔倒的一下：尘土
+    const dust = phase(t, 0.42, 0.75);
+    if (dust > 0 && dust < 1) {
+      for (let i = 0; i < 9; i++) {
+        const a = Math.PI + (i / 8) * Math.PI;
+        ctx.fillStyle = `rgba(120,112,100,${0.5 * (1 - dust)})`;
+        ctx.beginPath();
+        ctx.arc(kx + 120 + Math.cos(a) * dust * 120, G - 10 + Math.sin(a) * dust * 50, 10 + dust * 14, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    const cry = smooth(phase(t, 0.6, 0.7)) * (1 - smooth(phase(t, 1.05, 1.3)));
+    const hx = kx + 40, hy = G - 220;
+    if (cry > 0) {
+      for (let i = 0; i < 4; i++) {
+        const q = (t * 2 + i * 0.25) % 1;
+        ctx.strokeStyle = `rgba(20,20,20,${(1 - q) * 0.7 * cry})`;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(hx, hy, 50 + q * 200, -2.6, -1.6);
+        ctx.stroke();
+      }
+      ctx.save();
+      ctx.translate(hx - 150 + (hash(Math.floor(t * 30)) - 0.5) * 12, hy - 210 + (hash(Math.floor(t * 30) + 3) - 0.5) * 12);
+      ctx.rotate(-0.12);
+      const s = 1 + 0.25 * (1 - easeOut(phase(t, 0.6, 0.75)));
+      ctx.scale(s, s);
+      text(ctx, "哇——", 0, 0, 130, { weight: 900, color: "#111", alpha: cry });
+      ctx.restore();
+    }
+    // 妈妈跑过来，蹲下抱住
+    const run = easeOut(phase(t, 0.68, 1.0));
+    if (run > 0) {
+      const kneel = smooth(phase(t, 0.95, 1.15));
+      drawPerson(ctx, {
+        x: mix(1250, kx + 230, run), y: G, h: 600, mom: true, dir: -1, walk: kneel > 0.5 ? undefined : t * 13, sit: kneel * 0.7, stoop: kneel * 0.62, head: kneel * 0.35,
+        handF: kneel > 0.3 ? { x: kx + 15, y: G - 190 } : null, handB: kneel > 0.3 ? { x: kx + 60, y: G - 150 } : null,
+      });
+    }
+    return { kx };
+  };
+  const manScene = (ctx: CanvasRenderingContext2D, t: number) => {
+    ctx.fillStyle = "#0a0b0d";
+    ctx.fillRect(-300, -300, DW + 600, DH + 600);
+    // 远处模糊的车灯
+    for (let i = 0; i < 6; i++) glow(ctx, 80 + i * 190 + Math.sin(i) * 40, 980 + Math.cos(i * 2) * 30, 70, "rgba(200,200,205,1)", 0.12);
+    // 路灯 + 光柱
+    ctx.fillStyle = "#1a1b1d";
+    ctx.fillRect(830, 380, 18, G - 380);
+    ctx.fillRect(700, 380, 148, 24);
+    lightShaft(ctx, t, { x1: 735, y1: 410, w1: 70, x2: 560, y2: G, w2: 780, alpha: 0.42, seed: 12, dust: 30 });
+    glow(ctx, 735, 410, 150, "rgba(255,255,245,1)", 0.95);
+    ctx.fillStyle = "#1a1b1e";
+    ctx.fillRect(-300, G, DW + 600, 40);
+    ctx.fillStyle = "#050506";
+    ctx.fillRect(-300, G + 40, DW + 600, 800);
+    // 路面的反光
+    ctx.fillStyle = "rgba(230,228,220,0.07)";
+    ctx.fillRect(330, G + 60, 460, 300);
+    rain(ctx, t, { count: 110, seed: 12, alpha: 0.32, len: 70, speed: 2300, slant: 0.08, x0: -200, x1: DW + 200, y0: -200, y1: G + 300 });
+    const man = drawPerson(ctx, {
+      x: 470, y: G, h: 600, sit: 1, stoop: 0.45, head: 0.45, handF: { x: 620, y: G - 170 }, handB: { x: 610, y: G - 160 },
+      rim: { color: "rgba(240,238,228,0.95)", dx: 5, dy: -5, blur: 2 },
+    });
+    // 脚边：从公司收拾回来的纸箱
+    ctx.fillStyle = "#3a3630";
+    ctx.fillRect(670, G - 125, 200, 125);
+    ctx.fillStyle = "#4a453d";
+    ctx.fillRect(660, G - 136, 220, 22);
+    ctx.fillStyle = "#121212";
+    ctx.fillRect(700, G - 185, 40, 50);
+    ctx.beginPath();
+    ctx.ellipse(720, G - 200, 36, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#d8d6cf";
+    ctx.fillRect(772, G - 210, 64, 86);
+    ctx.fillStyle = "#121212";
+    ctx.fillRect(784, G - 196, 40, 30);
+    text(ctx, "工牌", 804, G - 146, 18, { font: SANS, weight: 700, color: "#333" });
+    // 封住的嘴（唱到「哑巴」）
+    const tape = easeOut(phase(t, 2.02, 2.2));
+    if (tape > 0) {
+      const mx = man.head.x + man.headR * 0.55, my = man.head.y + man.headR * 0.45;
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.scale(mix(2.4, 1, tape), mix(2.4, 1, tape));
+      ctx.globalAlpha = clamp(tape * 2);
+      ctx.strokeStyle = RED;
+      ctx.lineWidth = 12;
+      ctx.lineCap = "round";
+      ctx.shadowColor = "rgba(255,30,40,0.8)";
+      ctx.shadowBlur = 16;
+      for (const s of [1, -1]) {
+        ctx.beginPath();
+        ctx.moveTo(-28, -22 * s);
+        ctx.lineTo(28, 22 * s);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    return { man };
+  };
+  const cam = (t: number) => {
+    // 6岁：慢推 → 推近拥抱；30岁：从同样的近景拉开
+    if (t < T_WIPE_END) {
+      const z = mix(1.0, 1.12, easeInOut(phase(t, 0, 1.2))) * mix(1, 1.35, easeIn(phase(t, 1.15, T_WIPE_END)));
+      return { z, fx: mix(420, 560, easeInOut(phase(t, 0.6, 1.3))), fy: 1080 };
+    }
+    const p = easeInOut(phase(t, 1.85, 2.6));
+    return { z: mix(1.5, 1.05, p), fx: mix(520, 600, p), fy: mix(1060, 1020, p) };
+  };
   return {
     draw(ctx, t) {
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, DW, DH);
-      // ---- 上：童年 ----
-      const inTop = easeOut(phase(t, 0, 0.3));
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, 0, DW, PH);
-      ctx.clip();
-      ctx.translate(-(1 - inTop) * DW, 0);
-      vgrad(ctx, 0, 0, DW, PH, [[0, "#d8d3c8"], [1, "#f1ede4"]]);
-      glow(ctx, 820, 200, 380, "rgba(255,255,250,1)", 0.8);
-      const G = 760;
-      ctx.fillStyle = "#2a2826";
-      ctx.fillRect(0, G, DW, PH - G);
-      const fall = smooth(phase(t, 0.45, 0.7));
-      const sitUp = smooth(phase(t, 0.85, 1.05));
-      const kx = mix(160, 470, easeOut(phase(t, 0, 0.6)));
-      ctx.save();
-      ctx.translate(kx, G);
-      ctx.rotate(fall * (1 - sitUp) * 1.25);
-      const kid = drawPerson(ctx, {
-        x: 0, y: 0, h: 260, child: 1, walk: sitUp > 0 ? undefined : t * 14, sit: sitUp, head: sitUp * -0.5,
-        handF: sitUp > 0.5 ? { x: 40, y: -150 } : null, handB: sitUp > 0.5 ? { x: 30, y: -140 } : null,
-      });
-      ctx.restore();
-      // 哭声
-      const cry = smooth(phase(t, 0.95, 1.1)) * (1 - smooth(phase(t, 1.85, 2.15)));
-      if (cry > 0) {
-        const hx = kx + 30, hy = G - 175;
-        for (let i = 0; i < 4; i++) {
-          const q = ((t * 1.8 + i * 0.25) % 1);
-          ctx.strokeStyle = `rgba(20,20,20,${(1 - q) * 0.7 * cry})`;
-          ctx.lineWidth = 5;
-          ctx.beginPath();
-          ctx.arc(hx, hy, 40 + q * 220, -1.2, 0.2);
-          ctx.stroke();
+      const wipe = easeInOut(phase(t, T_WIPE, T_WIPE_END));
+      const c = cam(t);
+      if (wipe < 1) {
+        ctx.save();
+        camera(ctx, c.z, c.fx, c.fy, 540, 1000);
+        kidScene(ctx, t);
+        ctx.restore();
+        label(ctx, "6岁 · 疼了会哭", 560, smooth(phase(t, 0.05, 0.3)) * (1 - smooth(phase(t, 0.75, 0.9))), true);
+      }
+      if (wipe > 0) {
+        const wy = mix(-60, DH + 60, wipe);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, DW, wy);
+        ctx.clip();
+        ctx.save();
+        const c2 = t < T_WIPE_END ? { z: 1.5, fx: 520, fy: 1060 } : c;
+        camera(ctx, c2.z, c2.fx, c2.fy, 540, 1000);
+        manScene(ctx, t);
+        ctx.restore();
+        ctx.restore();
+        if (wipe < 1) {
+          // 雨幕的边缘
+          rain(ctx, t, { count: 60, seed: 44, alpha: 0.6, len: 120, speed: 3200, slant: 0.05, y0: wy - 260, y1: wy + 40 });
+          vgrad(ctx, 0, wy - 30, DW, 60, [[0, "rgba(255,255,255,0)"], [0.5, "rgba(255,255,255,0.35)"], [1, "rgba(255,255,255,0)"]]);
         }
-        ctx.save();
-        ctx.translate(hx - 120 + (hash(Math.floor(t * 30)) - 0.5) * 10, hy - 230);
-        ctx.rotate(-0.12);
-        text(ctx, "哇——", 0, 0, 120, { weight: 900, color: "#111", alpha: cry });
-        ctx.restore();
+        label(ctx, "30岁 · 疼了不说", 560, smooth(phase(t, 1.8, 2.05)), false);
       }
-      void kid;
-      // 妈妈跑过来抱住
-      const run = easeOut(phase(t, 1.2, 1.75));
-      if (run > 0) {
-        const kneel = smooth(phase(t, 1.7, 1.95));
-        drawPerson(ctx, {
-          x: mix(1200, kx + 215, run), y: G, h: 560, mom: true, dir: -1, walk: kneel > 0.5 ? undefined : t * 12, sit: kneel * 0.7, stoop: kneel * 0.6, head: kneel * 0.3,
-          handF: kneel > 0.3 ? { x: kx + 10, y: G - 150 } : null, handB: kneel > 0.3 ? { x: kx + 50, y: G - 120 } : null,
-        });
-      }
-      ctx.restore();
-      // ---- 下：成年 ----
-      const inBot = easeOut(phase(t, 0.08, 0.4));
-      const by = PH + STRIP;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(0, by, DW, PH);
-      ctx.clip();
-      ctx.translate((1 - inBot) * DW, by);
-      ctx.fillStyle = "#0b0c0e";
-      ctx.fillRect(0, 0, DW, PH);
-      // 路灯光锥
-      const cone = ctx.createLinearGradient(0, 80, 0, 780);
-      cone.addColorStop(0, "rgba(235,232,222,0.55)");
-      cone.addColorStop(1, "rgba(235,232,222,0.12)");
-      ctx.fillStyle = cone;
-      ctx.beginPath();
-      ctx.moveTo(700, 90);
-      ctx.lineTo(760, 90);
-      ctx.lineTo(1000, 780);
-      ctx.lineTo(260, 780);
-      ctx.fill();
-      ctx.fillStyle = "#1c1c1e";
-      ctx.fillRect(820, 60, 18, 800);
-      ctx.fillRect(700, 60, 140, 26);
-      glow(ctx, 730, 92, 120, "rgba(255,255,245,1)", 0.9);
-      ctx.fillStyle = "#18191b";
-      ctx.fillRect(0, 760, DW, 40);
-      ctx.fillStyle = "#050505";
-      ctx.fillRect(0, 800, DW, 100);
-      rain(ctx, t, { count: 90, seed: 12, alpha: 0.35, len: 60, speed: 2200, slant: 0.08, y1: PH });
-      const man = drawPerson(ctx, {
-        x: 470, y: 760, h: 560, sit: 1, stoop: 0.45, head: 0.45,
-        handF: { x: 610, y: 600 }, handB: { x: 600, y: 610 },
-      });
-      // 脚边：从公司收拾回来的纸箱
-      ctx.fillStyle = "#3a3630";
-      ctx.fillRect(660, 640, 190, 120);
-      ctx.fillStyle = "#2a2722";
-      ctx.fillRect(650, 630, 210, 22);
-      ctx.fillStyle = "#151515";
-      ctx.fillRect(690, 590, 40, 50);
-      ctx.beginPath();
-      ctx.ellipse(710, 575, 34, 24, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillRect(760, 560, 60, 80);
-      text(ctx, "工牌", 790, 600, 18, { font: SANS, weight: 600, color: "#777" });
-      // 封住的嘴
-      const tape = easeOut(phase(t, 1.95, 2.15));
-      if (tape > 0) {
-        const mx = man.head.x + man.headR * 0.55, my = man.head.y + man.headR * 0.45;
-        ctx.save();
-        ctx.translate(mx, my);
-        ctx.scale(mix(2, 1, tape), mix(2, 1, tape));
-        ctx.globalAlpha = clamp(tape * 2);
-        ctx.strokeStyle = RED;
-        ctx.lineWidth = 12;
-        ctx.lineCap = "round";
-        for (const s of [1, -1]) {
-          ctx.beginPath();
-          ctx.moveTo(-26, -20 * s);
-          ctx.lineTo(26, 20 * s);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-      // 一条平直的“静音”声波
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = 3;
-      ctx.setLineDash([14, 12]);
-      ctx.beginPath();
-      ctx.moveTo(man.head.x + 90, man.head.y + 30);
-      ctx.lineTo(man.head.x + 330, man.head.y + 30);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-      // 标签
-      const label = (str: string, y: number, a: number, dark: boolean) => {
-        ctx.save();
-        ctx.globalAlpha = a;
-        ctx.font = `700 38px ${SERIF}`;
-        const w = ctx.measureText(str).width + 44;
-        ctx.fillStyle = dark ? "rgba(0,0,0,0.75)" : "rgba(255,255,255,0.12)";
-        const lx = DW - 50 - w;
-        roundRect(ctx, lx, y, w, 70, 8);
-        ctx.fill();
-        ctx.fillStyle = "#fff";
-        ctx.textBaseline = "middle";
-        ctx.fillText(str, lx + 22, y + 37);
-        ctx.fillStyle = RED;
-        ctx.fillRect(DW - 58, y, 8, 70);
-        ctx.restore();
-      };
-      label("6岁 · 疼了会哭", 60, smooth(phase(t, 0.3, 0.5)), true);
-      label("30岁 · 疼了不说", by + 60, smooth(phase(t, 0.45, 0.65)), false);
     },
+    focus: focusTrack([[0, 420, 1050, 360, 0.35], [0.7, 520, 1050, 400, 0.35], [1.3, 560, 1040, 360, 0.45], [1.8, 520, 1000, 330, 0.5], [2.6, 600, 1000, 520, 0.4]]),
   };
 };
 
@@ -916,9 +983,9 @@ export const cake: ShotFactory = () => {
       const TABLE = 1300;
       // 人物（桌后）
       const hair = c.hair;
-      drawPerson(ctx, { x: 690, y: TABLE + 60, h: 820, mom: true, dir: -1, sit: 1, stoop: c.stoop + blow * 0.15, head: 0.15, hair: `rgb(${hair},${hair},${hair})`, handF: { x: 600, y: TABLE - 30 }, handB: { x: 630, y: TABLE - 20 } });
+      drawPerson(ctx, { x: 690, y: TABLE + 60, h: 820, mom: true, dir: -1, sit: 1, stoop: c.stoop + blow * 0.15, head: 0.15, hair: `rgb(${hair},${hair},${hair})`, handF: { x: 600, y: TABLE - 30 }, handB: { x: 630, y: TABLE - 20 }, rim: { color: "rgba(255,238,210,0.85)", dx: -3, dy: -4, blur: 3 } });
       if (c.kid === "small") {
-        const kidP = drawPerson(ctx, { x: 330, y: TABLE - 60, h: 420, child: 1, dir: 1, sit: 0.8, armF: 2.7, armB: 2.3 });
+        const kidP = drawPerson(ctx, { x: 330, y: TABLE - 60, h: 420, child: 1, dir: 1, sit: 0.8, armF: 2.7, armB: 2.3, rim: { color: "rgba(255,238,210,0.85)", dx: -3, dy: -4, blur: 3 } });
         ctx.fillStyle = "#070707";
         const hx = kidP.head.x, hy = kidP.head.y - kidP.headR * 0.7;
         ctx.beginPath();
@@ -928,7 +995,7 @@ export const cake: ShotFactory = () => {
         ctx.fill();
         glow(ctx, hx + 4, hy - 92, 16, "#fff", 0.9);
       } else if (c.kid === "teen") {
-        drawPerson(ctx, { x: 300, y: TABLE + 60, h: 800, child: 0.1, dir: 1, sit: 1, stoop: 0.35, head: 0.6, handF: { x: 420, y: TABLE - 190 }, handB: { x: 405, y: TABLE - 180 } });
+        drawPerson(ctx, { x: 300, y: TABLE + 60, h: 800, child: 0.1, dir: 1, sit: 1, stoop: 0.35, head: 0.6, handF: { x: 420, y: TABLE - 190 }, handB: { x: 405, y: TABLE - 180 }, rim: { color: "rgba(255,238,210,0.85)", dx: -3, dy: -4, blur: 3 } });
         ctx.fillStyle = "#fff";
         ctx.fillRect(408, TABLE - 215, 28, 46);
         glow(ctx, 420, TABLE - 195, 110, "rgba(255,255,255,1)", 0.5);
@@ -940,7 +1007,7 @@ export const cake: ShotFactory = () => {
         ctx.fillRect(250, TABLE - 230, 160, 12);
       }
       // 桌子
-      vgrad(ctx, -100, TABLE, DW + 200, DH - TABLE + 200, [[0, "#d9d4c8"], [0.08, "#8f8a80"], [1, "#1a1918"]]);
+      vgrad(ctx, -100, TABLE, DW + 200, DH - TABLE + 200, [[0, "#8a857b"], [0.05, "#4a4741"], [1, "#121110"]]);
       ctx.globalAlpha = light;
       glow(ctx, 540, TABLE + 40, 600, "rgba(255,248,230,1)", 0.4);
       ctx.globalAlpha = 1;
@@ -1032,7 +1099,11 @@ export const cake: ShotFactory = () => {
         ctx.fillStyle = `rgba(255,255,255,${f})`;
         ctx.fillRect(0, 0, DW, DH);
       }
-      text(ctx, ["她的 32 岁", "她的 45 岁", "她的 58 岁 · 今年", "她能等到 100 岁吗？"][k], DW / 2, 300, 52, { weight: 600, color: PAPER, shadow: "rgba(0,0,0,0.9)", blur: 16, alpha: smooth(clamp(tk / 0.15)) });
+      text(ctx, ["她的 32 岁", "她的 45 岁", "她的 58 岁 · 今年", "她能等到 100 岁吗？"][k], DW / 2, 560, 52, { weight: 600, color: PAPER, shadow: "rgba(0,0,0,0.9)", blur: 16, alpha: smooth(clamp(tk / 0.15)) });
+    },
+    focus: (t) => {
+      const k = Math.min(3, Math.floor(t / 0.91));
+      return [{ x: 520, y: 950, r: 460, a: 0.35 }, { x: 500, y: 950, r: 460, a: 0.35 }, { x: 420, y: 1000, r: 470, a: 0.38 }, { x: 560, y: 980, r: 380, a: 0.5 }][k];
     },
   };
 };
