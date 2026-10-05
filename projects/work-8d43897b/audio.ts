@@ -428,3 +428,6 @@ export function createAudio(options: AudioRequest | any) {
   source.start(Number.isFinite(options.when) ? options.when : context.currentTime);
   return { dispose };
 }
+
+// audio.json selects this generator as module "score"; its trackId picks "music" or "foley".
+export const generators = { score: { createAudio } };

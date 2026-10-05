@@ -4,79 +4,79 @@
     {
       "id": "narration-01",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/d96690a772239a6556a7.wav"
+      "src": "films/work-8d43897b/voice/01.wav"
     },
     {
       "id": "narration-02",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/14374cd5cb20a8eedeca.wav"
+      "src": "films/work-8d43897b/voice/02.wav"
     },
     {
       "id": "narration-03",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/805d448a6afbf0e996db.wav"
+      "src": "films/work-8d43897b/voice/04.wav"
     },
     {
       "id": "narration-04",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/349949f2a10b6a46c719.wav"
+      "src": "films/work-8d43897b/voice/06.wav"
     },
     {
       "id": "narration-05",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/d338d2285beb2624b864.wav"
+      "src": "films/work-8d43897b/voice/08.wav"
     },
     {
       "id": "narration-06",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/54f72696ce3808907cbb.wav"
+      "src": "films/work-8d43897b/voice/09.wav"
     },
     {
       "id": "narration-07",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/46554cd2c9000dd1fda5.wav"
+      "src": "films/work-8d43897b/voice/11.wav"
     },
     {
       "id": "narration-08",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/4343f4da4aec0f1db865.wav"
+      "src": "films/work-8d43897b/voice/13.wav"
     },
     {
       "id": "narration-09",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/95bd220ba008efcb2c73.wav"
+      "src": "films/work-8d43897b/voice/03.wav"
     },
     {
       "id": "narration-10",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/d419fb4e2ddd5a05635c.wav"
+      "src": "films/work-8d43897b/voice/05.wav"
     },
     {
       "id": "narration-11",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/803bb652272d4140ee09.wav"
+      "src": "films/work-8d43897b/voice/07.wav"
     },
     {
       "id": "narration-12",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/1e331ae50093359f461b.wav"
+      "src": "films/work-8d43897b/voice/10.wav"
     },
     {
       "id": "narration-13",
       "kind": "file",
-      "src": "films/work-8d43897b/imports/e0c143f760b246e53eaf.wav"
+      "src": "films/work-8d43897b/voice/12.wav"
     },
     {
       "id": "music",
       "kind": "generated",
-      "module": "legacy",
+      "module": "score",
       "trackId": "music",
       "engine": "custom"
     },
     {
       "id": "foley",
       "kind": "generated",
-      "module": "legacy",
+      "module": "score",
       "trackId": "foley",
       "engine": "custom"
     }
