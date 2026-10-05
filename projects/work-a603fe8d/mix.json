@@ -11,6 +11,12 @@
       "kind": "generated",
       "module": "buzz",
       "trackId": "main"
+    },
+    {
+      "id": "stormSrc",
+      "kind": "generated",
+      "module": "storm",
+      "trackId": "main"
     }
   ],
   "tracks": [
@@ -71,8 +77,8 @@
       "automation": [],
       "offset": 0,
       "id": "buzzStart",
-      "start": 2.8,
-      "duration": 0.5
+      "start": 2.35,
+      "duration": 0.7
     },
     {
       "track": "sfx",
@@ -109,8 +115,46 @@
       "automation": [],
       "offset": 0,
       "id": "buzzMsg",
-      "start": 2.05,
+      "start": 1.55,
       "duration": 0.3
+    },
+    {
+      "track": "sfx",
+      "source": "buzzSrc",
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": [],
+      "offset": 0,
+      "id": "buzzRing2",
+      "start": 3.05,
+      "duration": 0.5
+    },
+    {
+      "track": "sfx",
+      "source": "stormSrc",
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.7,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": [],
+      "offset": 0,
+      "id": "storm",
+      "start": 0,
+      "duration": 1.6
     }
   ],
   "buses": [],

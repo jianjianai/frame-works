@@ -128,6 +128,173 @@ export const fold: ShotFactory = () => ({
   },
 });
 
+// 家门口随年份的变化：门、春联、灯笼、树、墙、门口的车……一眼看出过了很多年
+const HOUSE = [
+  { up: "春回大地", down: "福满人间", banner: "万事如意", red: "#d0161f", door: "wood", fu: false, led: false, tree: 0.25, crack: 0, thing: "bike", rail: false, broken: false },
+  { up: "年年有余", down: "岁岁平安", banner: "合家欢乐", red: "#cc1520", door: "wood", fu: true, led: false, tree: 0.5, crack: 0.4, thing: "scooter", rail: false, broken: false },
+  { up: "出入平安", down: "四季康宁", banner: "平安是福", red: "#c0141e", door: "iron", fu: true, led: true, tree: 0.75, crack: 0.7, thing: "scooter", rail: false, broken: false },
+  { up: "天增岁月", down: "人盼团圆", banner: "盼儿归来", red: "#8f2a2c", door: "smart", fu: false, led: true, tree: 1, crack: 1, thing: "stool", rail: true, broken: true },
+] as const;
+function drawHouse(ctx: CanvasRenderingContext2D, t: number, k: number, flick: number, G: number) {
+  const h = HOUSE[k];
+  // 墙：越往后越旧
+  ctx.fillStyle = ["#141517", "#141416", "#131313", "#121110"][k];
+  ctx.fillRect(140, 520, 800, G - 520);
+  if (k === 3) {
+    ctx.fillStyle = "rgba(255,255,255,0.025)";
+    for (let i = 0; i < 9; i++) ctx.fillRect(160 + hash(i) * 740, 560 + hash(i + 9) * 600, 40 + hash(i + 3) * 90, 20 + hash(i + 5) * 60);
+  }
+  // 屋顶 + 积雪
+  ctx.fillStyle = "#0a0a0b";
+  ctx.beginPath();
+  ctx.moveTo(100, 540); ctx.lineTo(540, 330); ctx.lineTo(980, 540);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(230,230,235,0.5)";
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(110, 534); ctx.lineTo(540, 338); ctx.lineTo(970, 534);
+  ctx.stroke();
+  // 屋檐彩灯（2022 起）
+  if (h.led) {
+    for (let i = 0; i < 18; i++) {
+      const u = i / 17;
+      const x = mix(130, 950, u), y = u < 0.5 ? mix(548, 345, u * 2) : mix(345, 548, (u - 0.5) * 2);
+      const on = (Math.floor(t * 4) + i) % 3 !== 0 && !(k === 3 && i % 4 === 1);
+      glow(ctx, x, y + 14, 22, on ? "rgba(255,210,150,1)" : "rgba(80,80,80,1)", on ? 0.9 : 0.2);
+    }
+  }
+  // 墙上的裂缝
+  if (h.crack > 0) {
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.lineWidth = 3;
+    for (const [cx, cy, dir] of [[250, 600, 1], [860, 720, -1]] as const) {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      let x = cx, y = cy;
+      const n = Math.round(6 * h.crack);
+      for (let i = 0; i < n; i++) { x += dir * (10 + hash(i + cx) * 14); y += 26 + hash(i * 3 + cy) * 20; ctx.lineTo(x, y); }
+      ctx.stroke();
+    }
+  }
+  // 门洞里的光
+  vgrad(ctx, 430, 780, 220, G - 780, [[0, `rgba(240,235,222,${flick})`], [1, `rgba(210,204,190,${flick})`]]);
+  glow(ctx, 540, 1000, 600, "rgba(240,232,215,1)", 0.35 * flick);
+  // 门扇：老木门 → 木门贴福 → 防盗门 → 防盗门 + 智能锁
+  ctx.save();
+  ctx.fillStyle = h.door === "wood" ? "#3d2617" : "#4b4e53";
+  ctx.beginPath();
+  ctx.moveTo(596, 790); ctx.lineTo(650, 780); ctx.lineTo(650, G); ctx.lineTo(596, G - 14);
+  ctx.fill();
+  if (h.door === "wood") {
+    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+    ctx.lineWidth = 2;
+    for (const y of [880, 1000, 1120]) { ctx.strokeRect(604, y - 50, 38, 90); }
+  } else {
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 3;
+    for (let x = 606; x < 650; x += 10) { ctx.beginPath(); ctx.moveTo(x, 800); ctx.lineTo(x, G - 20); ctx.stroke(); }
+  }
+  if (h.door === "smart") {
+    ctx.fillStyle = "#16181b";
+    roundRect(ctx, 606, 1010, 26, 60, 6);
+    ctx.fill();
+    glow(ctx, 619, 1030, 16, "rgba(90,170,255,1)", 0.9);
+  }
+  if (h.fu) {
+    ctx.translate(623, 900);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = h.red;
+    ctx.fillRect(-22, -22, 44, 44);
+    ctx.rotate(-Math.PI / 4 + Math.PI); // 倒贴的福
+    text(ctx, "福", 0, 0, 30, { weight: 900, color: "#f2c94c" });
+  }
+  ctx.restore();
+  // 门头灯：灯泡 → LED
+  if (!h.led) {
+    ctx.fillStyle = "#fff6dc";
+    ctx.beginPath(); ctx.arc(540, 715, 10, 0, Math.PI * 2); ctx.fill();
+    glow(ctx, 540, 715, 90, "rgba(255,230,180,1)", 0.7);
+  } else {
+    ctx.fillStyle = k === 3 ? "#c9ccd2" : "#eef2f7";
+    ctx.fillRect(505, 708, 70, 12);
+    glow(ctx, 540, 716, 110, "rgba(230,240,255,1)", k === 3 ? 0.35 + 0.15 * Math.sin(t * 30) : 0.6);
+  }
+  // 春联（越往后颜色越旧，最后一年褪色卷边）
+  ctx.fillStyle = h.red;
+  ctx.fillRect(366, 800, 56, 400);
+  ctx.fillRect(658, 800, 56, 400);
+  ctx.fillRect(430, 732, 220, 46);
+  if (h.broken) {
+    ctx.fillStyle = "#121110";
+    ctx.beginPath(); ctx.moveTo(366, 1200); ctx.lineTo(422, 1200); ctx.lineTo(366, 1150); ctx.fill();
+  }
+  const ink = k === 3 ? "#c9a24a" : "#f2c94c";
+  [...h.up].forEach((c, i) => text(ctx, c, 394, 852 + i * 96, 40, { weight: 900, color: ink }));
+  [...h.down].forEach((c, i) => text(ctx, c, 686, 852 + i * 96, 40, { weight: 900, color: ink }));
+  text(ctx, h.banner, 540, 756, 34, { weight: 900, color: ink, spacing: 6 });
+  // 门边的树：一年比一年高（冬天，枝上有雪）
+  {
+    const s = mix(0.35, 1.25, h.tree);
+    ctx.save();
+    ctx.translate(190, G);
+    ctx.scale(s, s);
+    ctx.strokeStyle = "#0d0d0e";
+    ctx.lineCap = "round";
+    const branch = (x: number, y: number, a: number, len: number, w: number, d: number) => {
+      const x2 = x + Math.sin(a) * len, y2 = y - Math.cos(a) * len;
+      ctx.lineWidth = w;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x2, y2); ctx.stroke();
+      if (d > 0) { branch(x2, y2, a - 0.45, len * 0.7, w * 0.65, d - 1); branch(x2, y2, a + 0.4, len * 0.72, w * 0.65, d - 1); }
+      else { ctx.fillStyle = "rgba(235,235,240,0.7)"; ctx.beginPath(); ctx.arc(x2, y2, 4 / s, 0, Math.PI * 2); ctx.fill(); }
+    };
+    branch(0, 0, 0.05, 170, 22, 4);
+    ctx.restore();
+  }
+  // 灯笼：纸灯笼 → LED 灯笼；最后一年只亮一盏，另一盏坏了没人修
+  for (const [lx, ph, idx] of [[300, 0, 0], [780, 1.3, 1]] as const) {
+    const dead = h.broken && idx === 1;
+    ctx.save();
+    ctx.translate(lx, 640);
+    ctx.rotate(dead ? 0.22 : Math.sin(t * 2.2 + ph) * 0.07);
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(0, -40); ctx.lineTo(0, 30); ctx.stroke();
+    if (!dead) glow(ctx, 0, 100, h.led ? 240 : 200, h.led ? "rgba(255,70,60,1)" : "rgba(255,60,50,1)", h.led ? 0.65 : 0.5);
+    ctx.fillStyle = dead ? "#3a1214" : RED;
+    ctx.beginPath(); ctx.ellipse(0, 100, 62, 72, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = h.led ? "#d9b04a" : "#7a0c12";
+    ctx.fillRect(-30, 26, 60, 12);
+    ctx.fillRect(-30, 164, 60, 12);
+    ctx.strokeStyle = dead ? "#4a1a1c" : "#ff6b5a";
+    ctx.beginPath(); ctx.moveTo(0, 176); ctx.lineTo(0, 230); ctx.stroke();
+    ctx.restore();
+  }
+  // 门口的东西：自行车 → 电动车 → 一张小板凳；最后一年墙上装了扶手
+  ctx.save();
+  ctx.strokeStyle = "#0b0b0c";
+  ctx.fillStyle = "#0b0b0c";
+  ctx.lineWidth = 7;
+  if (h.thing === "bike") {
+    for (const wx of [800, 920]) { ctx.beginPath(); ctx.arc(wx, G - 45, 45, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(800, G - 45); ctx.lineTo(850, G - 120); ctx.lineTo(920, G - 45); ctx.moveTo(850, G - 120); ctx.lineTo(900, G - 120); ctx.lineTo(920, G - 45); ctx.moveTo(840, G - 135); ctx.lineTo(865, G - 135); ctx.moveTo(900, G - 120); ctx.lineTo(905, G - 150); ctx.stroke();
+  } else if (h.thing === "scooter") {
+    for (const wx of [790, 930]) { ctx.beginPath(); ctx.arc(wx, G - 32, 32, 0, Math.PI * 2); ctx.fill(); }
+    roundRect(ctx, 780, G - 120, 160, 70, 20); ctx.fill();
+    ctx.fillRect(800, G - 140, 70, 18);
+    ctx.beginPath(); ctx.moveTo(925, G - 110); ctx.lineTo(950, G - 210); ctx.lineTo(980, G - 210); ctx.stroke();
+  } else {
+    ctx.fillRect(760, G - 70, 90, 14);
+    ctx.fillRect(768, G - 60, 10, 60);
+    ctx.fillRect(832, G - 60, 10, 60);
+  }
+  if (h.rail) {
+    ctx.strokeStyle = "#8d9196";
+    ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.moveTo(720, 1060); ctx.lineTo(900, 1060); ctx.moveTo(730, 1060); ctx.lineTo(730, G); ctx.moveTo(890, 1060); ctx.lineTo(890, G); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 // ============ H 每年春节回家（23.7 – 27.39）：2016/2019/2022/2026 四次回家，每次妈妈老一点、他大一点 ============
 export const door: ShotFactory = () => {
   const STEP = 0.92;
@@ -153,56 +320,8 @@ export const door: ShotFactory = () => {
       camera(ctx, mix(1.18, 1.0, easeOut(t / 3.7)), 540, 1150, 540, 1050);
       vgrad(ctx, -200, -200, DW + 400, DH + 400, [[0, "#050506"], [1, "#101113"]]);
       const G = 1250;
-      // 墙与门
-      ctx.fillStyle = "#121315";
-      ctx.fillRect(140, 520, 800, G - 520);
-      ctx.fillStyle = "#0a0a0b";
-      ctx.beginPath();
-      ctx.moveTo(100, 540);
-      ctx.lineTo(540, 330);
-      ctx.lineTo(980, 540);
-      ctx.fill();
       const flick = 1 - 0.5 * Math.exp(-tk / 0.05) * (k > 0 ? 1 : 0);
-      vgrad(ctx, 430, 780, 220, G - 780, [[0, `rgba(240,235,222,${flick})`], [1, `rgba(210,204,190,${flick})`]]);
-      glow(ctx, 540, 1000, 600, "rgba(240,232,215,1)", 0.35 * flick);
-      // 门口洒下的光
-      ctx.fillStyle = `rgba(230,224,210,${0.22 * flick})`;
-      ctx.beginPath();
-      ctx.moveTo(430, G);
-      ctx.lineTo(650, G);
-      ctx.lineTo(860, DH + 300);
-      ctx.lineTo(120, DH + 300);
-      ctx.fill();
-      // 春联与灯笼
-      ctx.fillStyle = "#b5121d";
-      ctx.fillRect(372, 800, 44, 400);
-      ctx.fillRect(664, 800, 44, 400);
-      ctx.fillRect(445, 735, 190, 36);
-      for (const [lx, ph] of [[300, 0], [780, 1.3]] as const) {
-        ctx.save();
-        ctx.translate(lx, 640);
-        ctx.rotate(Math.sin(t * 2.2 + ph) * 0.07);
-        ctx.strokeStyle = "#222";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(0, -40);
-        ctx.lineTo(0, 30);
-        ctx.stroke();
-        glow(ctx, 0, 100, 200, "rgba(255,60,50,1)", 0.5);
-        ctx.fillStyle = RED;
-        ctx.beginPath();
-        ctx.ellipse(0, 100, 62, 72, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#7a0c12";
-        ctx.fillRect(-30, 26, 60, 12);
-        ctx.fillRect(-30, 164, 60, 12);
-        ctx.strokeStyle = "#ff6b5a";
-        ctx.beginPath();
-        ctx.moveTo(0, 176);
-        ctx.lineTo(0, 230);
-        ctx.stroke();
-        ctx.restore();
-      }
+      drawHouse(ctx, t, k, flick, G);
       // 雪地 + 门口洒出的光
       ctx.fillStyle = "#0b0b0d";
       ctx.fillRect(-300, G, DW + 600, DH);
@@ -279,7 +398,7 @@ export const door: ShotFactory = () => {
         ctx.fillText(str, x, y + 1);
         ctx.restore();
       };
-      const ta = smooth(phase(tk, 0.12, 0.3));
+      const ta = smooth(phase(tk, 0.08, 0.22)) * (1 - smooth(phase(tk, 0.52, 0.64))); // 走到门口就收起标签，让横批露出来
       tag(`妈妈 · ${s.mom}岁`, mom.head.x + 80, mom.head.y - mom.headR - 46, ta);
       tag(`我 · ${son.age}岁`, me.head.x - 80, me.head.y - me.headR - 46, ta);
       // 地面
@@ -620,8 +739,8 @@ export const rewind: ShotFactory = async (env) => {
   await add("cake", cake, 3.64);
   await add("mute", mute, 3.07);
   await add("grow", grow, 4.74);
-    await add("phone", phone, 8.0);
-  await add("city", city, 1.2);
+    await add("phone", phone, 8.45);
+  await add("city", city, 0.75);
   const seq: [string, number][] = [
     ["ward", 0.42], ["call", 0.36], ["door", 0.36], ["fold", 0.3], ["cake", 0.3], ["mute", 0.26], ["grow", 0.5], ["phone", 0.44], ["city", 0.2],
   ];
