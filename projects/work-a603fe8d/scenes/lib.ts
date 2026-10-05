@@ -74,7 +74,8 @@ export async function createShotScene(options: SceneOptions, factory: ShotFactor
       ctx.globalCompositeOperation = "source-over";
       ctx.filter = "none";
       // 入镜：轻微的推镜冲击
-      const k = 1 + 0.06 * (1 - easeOut(t / 0.22));
+      // 第一个镜头不推（保证片尾回到第一帧时完全一致）
+      const k = absStart > 0 ? 1 + 0.06 * (1 - easeOut(t / 0.22)) : 1;
       if (k > 1.0005) {
         ctx.translate(DW / 2, DH / 2);
         ctx.scale(k, k);
@@ -554,3 +555,68 @@ export function drawHand(ctx: CanvasRenderingContext2D, x: number, y: number, an
   ctx.restore();
 }
 
+
+/** 手机来电横幅（开头钩子 & 结尾循环用同一个）。ring 振动强度，press 按下拒绝，missed 变成未接来电 */
+export function drawCallBanner(ctx: CanvasRenderingContext2D, t: number, o: { y: number; ring: number; press?: number; missed?: number; alpha?: number }) {
+  const a = o.alpha ?? 1;
+  if (a <= 0) return;
+  const missed = o.missed ?? 0, press = o.press ?? 0;
+  const x = 60, w = DW - 120, h = 190, y = o.y;
+  ctx.save();
+  ctx.globalAlpha *= a;
+  ctx.translate(Math.sin(t * 95) * 9 * o.ring, 0);
+  ctx.shadowColor = "rgba(0,0,0,0.6)";
+  ctx.shadowBlur = 40;
+  ctx.fillStyle = "rgba(28,28,30,0.92)";
+  roundRect(ctx, x, y, w, h, 48);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  // 头像
+  ctx.fillStyle = "#8f8a80";
+  ctx.beginPath();
+  ctx.arc(x + 100, y + h / 2, 56, 0, Math.PI * 2);
+  ctx.fill();
+  text(ctx, "妈", x + 100, y + h / 2 + 2, 56, { weight: 900, color: "#fff" });
+  text(ctx, "妈妈", x + 186, y + 66, 46, { font: SANS, weight: 700, color: "#fff", align: "left" });
+  ctx.save();
+  ctx.globalAlpha *= 1 - missed;
+  text(ctx, "邀请你语音通话…", x + 186, y + 128, 32, { font: SANS, weight: 400, color: "#b9b9b9", align: "left" });
+  ctx.restore();
+  if (missed > 0) {
+    ctx.save();
+    ctx.globalAlpha *= missed;
+    text(ctx, "未接来电 (3)", x + 186, y + 128, 34, { font: SANS, weight: 600, color: RED, align: "left" });
+    ctx.restore();
+  }
+  // 拒绝 / 接听
+  const btn = (bx: number, col: string, rot: number, scale: number, alpha: number) => {
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.translate(bx, y + h / 2);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(0, 0, 50, 0, Math.PI * 2);
+    ctx.fill();
+    // 听筒
+    ctx.rotate(rot);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 13;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(0, 16, 24, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(s * 21, 6, 9, 6, s * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  };
+  const fade = 1 - missed;
+  btn(x + w - 230, RED, Math.PI * 0.78, 1 + press * 0.25 - press * press * 0.35, fade);
+  btn(x + w - 100, "#34c759", 0, 1 + Math.sin(t * 12) * 0.05 * o.ring, fade);
+  ctx.restore();
+}

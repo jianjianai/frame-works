@@ -67,7 +67,7 @@ export async function createScene({ width: W, height: H, quality }: SceneOptions
         ctx.fillRect(0, 0, DW, DH);
       }
       // 歌曲署名
-      const credit = smooth(phase(t, 0.3, 0.8)) * (1 - smooth(phase(t, 34.0, 34.27)));
+      const credit = smooth(phase(t, 1.6, 2.0)) * (1 - smooth(phase(t, 34.0, 34.27)));
       if (credit > 0) {
         ctx.save();
         ctx.globalAlpha = credit * 0.75;
@@ -82,12 +82,7 @@ export async function createScene({ width: W, height: H, quality }: SceneOptions
         ctx.restore();
         text(ctx, "可是，妈妈 - 6moon9", 112, 150, 28, { font: SANS, weight: 500, color: "#fff", align: "left", alpha: credit * 0.75, shadow: "rgba(0,0,0,0.8)", blur: 6 });
       }
-      // 首尾
-      const black = Math.max(1 - smooth(phase(t, 0, 0.35)), smooth(phase(t, END - 0.4, END)));
-      if (black > 0) {
-        ctx.fillStyle = `rgba(0,0,0,${black})`;
-        ctx.fillRect(0, 0, DW, DH);
-      }
+      // 首尾不压黑：结尾会接回开头的来电画面，循环播放无缝
     },
     dispose() {
       for (const g of grains) g.width = g.height = 1;

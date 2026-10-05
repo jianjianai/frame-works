@@ -105,7 +105,7 @@ export async function createScene({ width: W, height: H, quality }: SceneOptions
             sc *= 1 + pulse * 0.06;
           }
           if (final) {
-            a = smooth(clamp(local / 0.5)) * (1 - smooth(phase(t, END - 0.5, END)));
+            a = smooth(clamp(local / 0.5)) * (1 - smooth(phase(t, END - 0.68, END - 0.4)));
             sc = mix(1.3, 1, easeOut(clamp(local / 1.2)));
           }
           if (a <= 0.001) continue;

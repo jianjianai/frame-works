@@ -5,6 +5,12 @@
       "id": "mama",
       "kind": "file",
       "src": "films/work-a603fe8d/song.flac"
+    },
+    {
+      "id": "buzzSrc",
+      "kind": "generated",
+      "module": "buzz",
+      "trackId": "main"
     }
   ],
   "tracks": [
@@ -12,6 +18,16 @@
       "id": "music",
       "name": "音乐",
       "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "sfx",
+      "name": "音效",
+      "gain": 0.75,
       "pan": 0,
       "muted": false,
       "processors": [],
@@ -34,10 +50,48 @@
       "gain": 1,
       "pan": 0,
       "muted": false,
-      "fadeIn": 0.3,
+      "fadeIn": 0.15,
       "fadeOut": 1.2,
       "fadeOffset": 0,
       "automation": []
+    },
+    {
+      "track": "sfx",
+      "source": "buzzSrc",
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": [],
+      "offset": 0,
+      "id": "buzzStart",
+      "start": 0,
+      "duration": 0.7
+    },
+    {
+      "track": "sfx",
+      "source": "buzzSrc",
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": [],
+      "offset": 0,
+      "id": "buzzEnd",
+      "start": 39.3,
+      "duration": 0.7
     }
   ],
   "buses": [],

@@ -563,8 +563,9 @@ export const rewind: ShotFactory = async (env) => {
 };
 
 // ============ L 结尾：回到封面里的孩子，光里有妈妈（37.61 – 40） ============
-export const ending: ShotFactory = async () => {
+export const ending: ShotFactory = async (env) => {
   const img = await loadImage(COVER);
+  const opening = await city(env); // 结尾最后 0.3 秒回到开头第一帧，形成循环
   const S = 2048;
   const { canvas: cov, ctx: g } = offscreen(S, S);
   g.filter = "contrast(1.25)";
@@ -632,7 +633,16 @@ export const ending: ShotFactory = async () => {
         }
         ctx.globalAlpha = 1;
       }
+      // 循环：妈妈又打来了
+      const loop = smooth(phase(t, 1.72, 2.02));
+      if (loop > 0) {
+        ctx.save();
+        ctx.globalAlpha = loop;
+        opening.draw(ctx, 0);
+        ctx.restore();
+      }
     },
+    dispose() { opening.dispose?.(); },
   };
 };
 

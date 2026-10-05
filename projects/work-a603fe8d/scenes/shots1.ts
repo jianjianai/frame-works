@@ -1,6 +1,6 @@
 import {
   DW, DH, RED, INK, PAPER, SERIF, SANS, clamp, mix, phase, smooth, easeInOut, easeOut, easeIn, seeded, hash, wobble,
-  bump, vgrad, glow, text, typed, rain, drift, roundRect, drawPerson, drawHand, camera, offscreen, shake,
+  bump, vgrad, glow, text, typed, rain, drift, roundRect, drawPerson, drawHand, drawCallBanner, camera, offscreen, shake,
   type ShotFactory,
 } from "./lib";
 
@@ -88,17 +88,32 @@ export const city: ShotFactory = () => {
       // 雨
       rain(ctx, t, { count: 150, seed: 3, alpha: 0.28, len: 70, speed: 2600, slant: 0.1, width: 2 });
       rain(ctx, t, { count: 40, seed: 4, alpha: 0.18, len: 160, speed: 4200, slant: 0.1, width: 4 });
-      // 文案
-      const ca = smooth(phase(t, 0.15, 0.5)) * (1 - smooth(phase(t, 2.2, 2.55)));
+      // 钩子：第一帧就有来电和文案
+      const ca = 1 - smooth(phase(t, 2.2, 2.55));
       if (ca > 0) {
         ctx.save();
         ctx.globalAlpha = ca;
-        text(ctx, "00:47", DW / 2, 300, 150, { font: SANS, weight: 200, color: PAPER, spacing: 6 });
-        text(ctx, typed("第 3 次，没接妈妈的电话", t, 0.4, 16), DW / 2, 420, 46, { weight: 600, color: PAPER, shadow: "rgba(0,0,0,0.9)" });
-        ctx.fillStyle = RED;
-        ctx.fillRect(DW / 2 - 30, 480, 60 * smooth(phase(t, 1.2, 1.5)), 4);
+        text(ctx, "00:47", DW / 2, 260, 130, { font: SANS, weight: 200, color: PAPER, spacing: 6, shadow: "rgba(0,0,0,0.8)", blur: 20 });
+        ctx.font = `900 58px ${SERIF}`;
+        const p1 = "第 3 次", p2 = "，没接妈妈的电话";
+        const w1 = ctx.measureText(p1).width, w2 = ctx.measureText(p2).width;
+        const lx = DW / 2 - (w1 + w2) / 2;
+        const pop = 1 + 0.25 * (1 - easeOut(phase(t, 0.55, 0.8))) * (t > 0.55 ? 1 : 0);
+        ctx.translate(DW / 2, 385);
+        ctx.scale(pop, pop);
+        ctx.translate(-DW / 2, -385);
+        text(ctx, p1, lx, 385, 58, { weight: 900, color: RED, align: "left", shadow: "rgba(255,30,40,0.7)", blur: 18 });
+        text(ctx, p2, lx + w1, 385, 58, { weight: 900, color: "#fff", align: "left", shadow: "rgba(0,0,0,0.9)", blur: 16 });
         ctx.restore();
       }
+      // 来电横幅：振动 → 手指按下拒绝 → 未接来电 → 收起
+      const away = easeIn(phase(t, 1.35, 1.75));
+      drawCallBanner(ctx, t, {
+        y: 500 - away * 260, ring: t < 0.5 ? 1 : 0, press: bump(t, 0.42, 0.52, 0.6, 0.72),
+        missed: smooth(phase(t, 0.6, 0.8)), alpha: 1 - away,
+      });
+      const finger = easeOut(phase(t, 0.2, 0.5)) * (1 - easeIn(phase(t, 0.68, 0.95)));
+      if (finger > 0) drawHand(ctx, mix(960, 801, finger), mix(1500, 744, finger) + bump(t, 0.42, 0.5, 0.58, 0.66) * 14, 0, 0.55, { color: "#0b0b0b" });
     },
   };
 };

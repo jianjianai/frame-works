@@ -20,5 +20,6 @@ const project: AnimationProject = {
   load: () => import("./scene"),
   loadVisual: () => import("./visual.json"),
   loadAudioDocument: () => import("./mix.json"),
+  loadAudio: () => import("./audio"),
 };
 export default project;
