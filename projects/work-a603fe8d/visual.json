@@ -14,26 +14,15 @@
       "duration": 1
     },
     {
-      "id": "room",
-      "name": "屋里·通知书·挂断电话",
-      "source": {
-        "kind": "scene",
-        "module": "room",
-        "engine": "canvas"
-      },
-      "start": 1,
-      "duration": 1.9
-    },
-    {
       "id": "phone",
-      "name": "手机·国庆节回家吗·语音",
+      "name": "手机·通知书→挂断→国庆节回家吗→语音",
       "source": {
         "kind": "scene",
         "module": "phone",
         "engine": "canvas"
       },
-      "start": 2.9,
-      "duration": 6.3
+      "start": 1,
+      "duration": 8.2
     },
     {
       "id": "grow",

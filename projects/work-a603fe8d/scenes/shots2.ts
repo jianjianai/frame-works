@@ -280,8 +280,8 @@ export const door: ShotFactory = () => {
         ctx.restore();
       };
       const ta = smooth(phase(tk, 0.12, 0.3));
-      tag(`妈妈 · ${s.mom}岁`, mom.head.x, mom.head.y - mom.headR - 46, ta);
-      tag(`我 · ${son.age}岁`, me.head.x, me.head.y - me.headR - 46, ta);
+      tag(`妈妈 · ${s.mom}岁`, mom.head.x + 80, mom.head.y - mom.headR - 46, ta);
+      tag(`我 · ${son.age}岁`, me.head.x - 80, me.head.y - me.headR - 46, ta);
       // 地面
       ctx.restore();
       drift(ctx, t, { count: 60, seed: 9, kind: "snow", alpha: mix(0.4, 0.9, k / 3), speed: 120, wind: -40, size: 0.8 });
@@ -620,7 +620,7 @@ export const rewind: ShotFactory = async (env) => {
   await add("cake", cake, 3.64);
   await add("mute", mute, 3.07);
   await add("grow", grow, 4.74);
-    await add("phone", phone, 6.3);
+    await add("phone", phone, 8.2);
   await add("city", city, 1.0);
   const seq: [string, number][] = [
     ["ward", 0.42], ["call", 0.36], ["door", 0.36], ["fold", 0.3], ["cake", 0.3], ["mute", 0.26], ["grow", 0.5], ["phone", 0.44], ["city", 0.2],
