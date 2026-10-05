@@ -342,15 +342,21 @@ export async function createScene({ width: W, height: H, quality }: SceneOptions
         const last = chars[chars.length - 1];
         const sp = easeInOut(phase(t, last.at + 0.35, last.at + 0.7)) * (1 - exitP);
         if (sp > 0) {
+          // 封住「哑巴」两个字
           const size = rowSize[lastRow];
-          const len = line.rows[lastRow].length * size * 1.08 + 40 * u;
+          const row = line.rows[lastRow];
+          const track = size * 1.08;
+          const i0 = row.indexOf("哑巴");
+          const left = (i0 - (row.length - 1) / 2 - 0.5) * track - 14 * u;
+          const len = 2 * track + 28 * u;
           ctx.save();
           ctx.translate(W / 2, rowY[lastRow]);
-          ctx.rotate(-0.06);
+          ctx.rotate(-0.05);
           ctx.fillStyle = "#050505";
-          ctx.fillRect(-len / 2, -size * 0.2, len * sp, size * 0.4);
+          ctx.fillRect(left, -size * 0.52, len * sp, size * 1.04);
           ctx.fillStyle = RED;
-          ctx.fillRect(-len / 2, -size * 0.2, len * sp, 4 * u);
+          ctx.fillRect(left, -size * 0.52, len * sp, 5 * u);
+          ctx.fillRect(left, size * 0.52 - 5 * u, len * sp, 5 * u);
           ctx.restore();
         }
       }

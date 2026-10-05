@@ -19,6 +19,6 @@ const project: AnimationProject = {
   credits: [],
   load: () => import("./scene"),
   loadVisual: () => import("./visual.json"),
-  loadAudioDocument: () => import("./audio.json"),
+  loadAudioDocument: () => import("./mix.json"),
 };
 export default project;
