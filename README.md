@@ -1,3 +1,3 @@
 # 折叠｜THE IMPOSSIBLE FOLD
 
-FRAME work branch: works/work-b6ee56e9
+FRAME 作品。使用 FRAME Studio 打开、预览和导出。

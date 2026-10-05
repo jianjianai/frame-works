@@ -4,22 +4,22 @@
     {
       "id": "src_rhythm",
       "kind": "file",
-      "src": "films/work-b6ee56e9/imports/e2fa80cf4b76ef0a02fe.m4a"
+      "src": "films/work-b6ee56e9/music/rhythm.m4a"
     },
     {
       "id": "src_bass",
       "kind": "file",
-      "src": "films/work-b6ee56e9/imports/658602394e75656765c3.m4a"
+      "src": "films/work-b6ee56e9/music/bass.m4a"
     },
     {
       "id": "src_harmony",
       "kind": "file",
-      "src": "films/work-b6ee56e9/imports/2feaa6829212a6fee562.m4a"
+      "src": "films/work-b6ee56e9/music/harmony.m4a"
     },
     {
       "id": "src_foley",
       "kind": "file",
-      "src": "films/work-b6ee56e9/imports/45c11478ea9828688073.m4a"
+      "src": "films/work-b6ee56e9/music/foley.m4a"
     }
   ],
   "tracks": [
