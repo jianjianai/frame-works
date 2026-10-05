@@ -842,7 +842,8 @@ export const ending: ShotFactory = async (env) => {
         ctx.restore();
       }
       ctx.restore();
-      ctx.fillStyle = `rgba(0,0,0,${1 - fadeIn})`;
+      // 从倒带的白光里直接显影（不经过黑场，避免发灰）
+      ctx.fillStyle = `rgba(255,255,255,${(1 - fadeIn) * 0.9})`;
       ctx.fillRect(0, 0, DW, DH);
       // 结尾卡片
       const card = smooth(phase(t, 1.0, 1.4));

@@ -59,7 +59,7 @@ export async function createScene({ width: W, height: H, quality }: SceneOptions
       // 切镜闪白
       let flash = 0;
       for (const c of CUTS) if (t >= c) flash = Math.max(flash, Math.exp(-(t - c) / 0.07) * 0.45);
-      for (const c of BIG) if (t >= c) flash = Math.max(flash, Math.exp(-(t - c) / 0.3));
+      for (const c of BIG) if (t >= c) flash = Math.max(flash, Math.exp(-(t - c) / (c > 30 ? 0.15 : 0.3)));
       // 副歌里随鼓点的曝光闪动
       if (t > 9.2 && t < 37.5) flash = Math.max(flash, env.pulse(t) * 0.07);
       if (flash > 0.01) {

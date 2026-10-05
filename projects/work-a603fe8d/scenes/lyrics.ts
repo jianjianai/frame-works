@@ -13,6 +13,8 @@ interface Line {
   at: number[];
   dur: number[];
 }
+// 镜头切换点（与 visual.json 一致）
+const CUTS = [13.94, 17.01, 20.65, 23.7, 27.39, 30.69, 34.27, 37.61];
 const LINES: Line[] = [
   { rows: ["妈", "我觉得我才是你", "一直没有赎完的罪"], keys: ["赎完的罪"], y: 0.78,
     at: [0.968, 1.838, 1.998, 2.126, 2.309, 2.502, 2.663, 2.822, 3.006, 3.206, 3.422, 3.574, 3.718, 3.895, 4.038, 4.23],
@@ -75,7 +77,11 @@ export async function createScene({ width: W, height: H, quality }: SceneOptions
         k++;
       });
     });
-    return { line, chars, next, start };
+    // 上一句在镜头切换处就收干净：切镜早于下一句开唱时，按切镜时间退场
+    const last = line.at[line.at.length - 1];
+    const cut = CUTS.find((c) => c > last + 0.1) ?? Infinity;
+    const end = Math.min(next, cut);
+    return { line, chars, next: end, start };
   });
 
   return {
@@ -86,9 +92,9 @@ export async function createScene({ width: W, height: H, quality }: SceneOptions
       ctx.setTransform(s, 0, 0, s, 0, 0);
       const pulse = env.pulse(t);
       for (const { line, chars, next, start } of layouts) {
-        if (t < start - 0.1 || t > next + 0.35) continue;
+        if (t < start - 0.1 || t > next + 0.02) continue;
         const final = line === LINES[LINES.length - 1];
-        const exitP = final ? 0 : phase(t, next - 0.18, next + 0.12);
+        const exitP = final ? 0 : phase(t, next - 0.22, next);
         const base = line.size ?? 80;
         const rowSize = line.rows.map((_, ri) => (line.big?.includes(ri) ? base * (final ? 1.25 : 1.6) : base));
         const heights = rowSize.map((v) => v * 1.3);
@@ -124,7 +130,7 @@ export async function createScene({ width: W, height: H, quality }: SceneOptions
           const singing = local >= 0 && local < c.dur + 0.04 ? Math.sin(clamp(local / (c.dur + 0.04)) * Math.PI) : 0;
           sc *= 1 + 0.08 * singing;
           if (final) {
-            a = smooth(clamp(local / 0.5)) * (1 - smooth(phase(t, END - 0.68, END - 0.4)));
+            a = smooth(clamp(local / 0.5)) * (1 - smooth(phase(t, END - 0.95, END - 0.72))); // 在接回开头之前收掉
             sc = mix(1.3, 1, easeOut(clamp(local / 1.2)));
           }
           if (a <= 0.001) continue;
