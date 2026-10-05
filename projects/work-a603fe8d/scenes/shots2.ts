@@ -128,15 +128,22 @@ export const fold: ShotFactory = () => ({
   },
 });
 
-// ============ H 家门口：他拖着行李离开，身后的妈妈一年年变老（23.7 – 27.39） ============
+// ============ H 每年春节回家（23.7 – 27.39）：2016/2019/2022/2026 四次回家，每次妈妈老一点、他大一点 ============
 export const door: ShotFactory = () => {
   const STEP = 0.92;
   const steps = [
-    { year: "2016", stoop: 0.05, hair: 40 },
-    { year: "2019", stoop: 0.14, hair: 70 },
-    { year: "2022", stoop: 0.24, hair: 100 },
-    { year: "2026", stoop: 0.34, hair: 130 },
+    { year: "2016", stoop: 0.05, hair: 40, mom: 48 },
+    { year: "2019", stoop: 0.14, hair: 70, mom: 51 },
+    { year: "2022", stoop: 0.24, hair: 100, mom: 54 },
+    { year: "2026", stoop: 0.34, hair: 130, mom: 58 },
   ];
+  // 他：20 岁背书包 → 23 → 26 → 30 岁，个子更高、背更沉
+  const sons = [
+    { age: 20, h: 0.92, child: 0.12, stoop: 0, head: -0.05, bag: "pack" },
+    { age: 23, h: 0.97, child: 0.04, stoop: 0.03, head: 0, bag: "case" },
+    { age: 26, h: 1.0, child: 0, stoop: 0.1, head: 0.1, bag: "case" },
+    { age: 30, h: 1.02, child: 0, stoop: 0.18, head: 0.2, bag: "case" },
+  ] as const;
   return {
     draw(ctx, t) {
       const k = Math.min(3, Math.floor(t / STEP));
@@ -196,68 +203,101 @@ export const door: ShotFactory = () => {
         ctx.stroke();
         ctx.restore();
       }
-      // 门口挥手的妈妈（跳切变老）
-      const jx = [0, 14, -10, 6][k];
-      const wave = Math.sin(t * 7) * mix(50, 18, k / 3);
-      drawPerson(ctx, {
-        x: 545 + jx, y: G, h: 420, mom: true, dir: -1, stoop: s.stoop, hair: `rgb(${s.hair},${s.hair},${s.hair})`,
-        handF: { x: 545 + jx - 70 + wave, y: G - mix(470, 380, k / 3) },
-      });
-      // 地面
-      ctx.fillStyle = "#08080a";
-      ctx.fillRect(-200, G, DW + 400, DH);
-      ctx.fillStyle = `rgba(230,224,210,${0.4 * flick})`;
+      // 雪地 + 门口洒出的光
+      ctx.fillStyle = "#0b0b0d";
+      ctx.fillRect(-300, G, DW + 600, DH);
+      ctx.fillStyle = "rgba(225,222,215,0.08)";
+      ctx.fillRect(-300, G, DW + 600, 30);
+      ctx.fillStyle = `rgba(230,224,210,${0.38 * flick})`;
       ctx.beginPath();
       ctx.moveTo(430, G);
       ctx.lineTo(650, G);
       ctx.lineTo(860, DH + 300);
       ctx.lineTo(120, DH + 300);
       ctx.fill();
-      ctx.restore();
-      // 他：拖着行李走向镜头
-      const turn = t > 2.25 && t < 2.85;
-      const p = easeInOut(clamp(t / 3.69));
-      const sc = mix(0.75, 1.9, p);
-      const mx = mix(620, 230, p), my = mix(1330, 1960, p);
-      const h = 520 * sc;
-      const caseX = mx + h * 0.32, caseY = my;
-      // 雪地上一路的脚印和箱子轮印
+      // 每一年：他从远处走回家，门口的妈妈迎上来（妈妈老一点，他也大一点）
+      const son = sons[k];
+      const q = easeOut(clamp(tk / 0.68));
+      const sc = mix(1.55, 0.86, q) * son.h;
+      const sx = mix(300, 470, q), sy = mix(1880, G + 30, q);
+      const sh = 560 * sc;
+      // 雪地上这一趟的脚印
       ctx.fillStyle = "rgba(10,10,12,0.55)";
-      for (let q = 0.02; q < p - 0.03; q += 0.035) {
-        const fx2 = mix(620, 230, q), fy2 = mix(1330, 1960, q), sc2 = mix(0.75, 1.9, q);
-        const side = Math.round(q / 0.035) % 2 ? 1 : -1;
+      for (let u = 0.04; u < q - 0.04; u += 0.07) {
+        const fx2 = mix(300, 470, u), fy2 = mix(1880, G + 30, u), sc2 = mix(1.55, 0.86, u) * son.h;
+        const side = Math.round(u / 0.07) % 2 ? 1 : -1;
         ctx.beginPath();
         ctx.ellipse(fx2 + side * 10 * sc2, fy2 - 4, 16 * sc2, 6 * sc2, 0.3, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillRect(fx2 + 520 * sc2 * 0.32 - 3 * sc2, fy2 - 3 * sc2, 6 * sc2, 6 * sc2);
       }
-      ctx.fillStyle = INK;
-      roundRect(ctx, caseX - h * 0.13, caseY - h * 0.42, h * 0.26, h * 0.4, h * 0.03);
-      ctx.fill();
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = h * 0.014;
-      ctx.beginPath();
-      ctx.moveTo(caseX - h * 0.05, caseY - h * 0.42);
-      ctx.lineTo(caseX - h * 0.12, caseY - h * 0.56);
-      ctx.stroke();
-      drawPerson(ctx, {
-        x: mx, y: my, h, dir: turn ? 1 : -1, walk: turn ? undefined : t * 7, stride: 0.8, head: turn ? -0.1 : 0.05,
-        handB: turn ? null : { x: caseX - h * 0.12, y: caseY - h * 0.56 },
+      const arrived = q > 0.96;
+      const hug = smooth(phase(tk, 0.62, 0.8));
+      // 妈妈：先挥手，等他走近就伸手去接
+      const wave = Math.sin(t * 7) * mix(46, 18, k / 3);
+      const mom = drawPerson(ctx, {
+        x: 560, y: G, h: mix(420, 405, k / 3), mom: true, dir: -1, stoop: s.stoop + hug * 0.08, hair: `rgb(${s.hair},${s.hair},${s.hair})`,
+        handF: hug > 0 ? { x: mix(560 - 70 + wave, sx + 30, hug), y: mix(G - mix(470, 380, k / 3), G - sh * 0.62, hug) } : { x: 560 - 70 + wave, y: G - mix(470, 380, k / 3) },
+        handB: hug > 0.3 ? { x: sx + 50, y: G - sh * 0.55 } : null,
+      });
+      // 他的行李：大学时背着书包，后来拖着行李箱
+      const caseX = sx - sh * 0.3;
+      if (son.bag === "case") {
+        ctx.fillStyle = INK;
+        roundRect(ctx, caseX - sh * 0.13, sy - sh * 0.42, sh * 0.26, sh * 0.4, sh * 0.03);
+        ctx.fill();
+        ctx.strokeStyle = INK;
+        ctx.lineWidth = sh * 0.014;
+        ctx.beginPath();
+        ctx.moveTo(caseX + sh * 0.05, sy - sh * 0.42);
+        ctx.lineTo(caseX + sh * 0.12, sy - sh * 0.56);
+        ctx.stroke();
+      }
+      const me = drawPerson(ctx, {
+        x: sx, y: sy, h: sh, dir: 1, child: son.child, walk: arrived ? undefined : t * 8, stride: 0.8, stoop: son.stoop, head: son.head,
+        handB: son.bag === "case" && !arrived ? { x: caseX + sh * 0.12, y: sy - sh * 0.56 } : null,
+        handF: arrived ? { x: 560 - 20, y: G - sh * 0.6 } : null,
         rim: { color: "rgba(245,238,222,0.9)", dx: 4, dy: -5, blur: 2.5 },
       });
-      drift(ctx, t, { count: 60, seed: 9, kind: "snow", alpha: mix(0.3, 0.9, k / 3), speed: 120, wind: -40, size: 0.8 });
-      // 文案
+      if (son.bag === "pack") {
+        ctx.fillStyle = INK;
+        roundRect(ctx, me.shoulder.x - sh * 0.15, me.shoulder.y + sh * 0.02, sh * 0.11, sh * 0.2, sh * 0.03);
+        ctx.fill();
+      }
+      // 年龄标签
+      const tag = (str: string, x: number, y: number, a: number) => {
+        if (a <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.font = `600 28px ${SANS}`;
+        const w = ctx.measureText(str).width + 34;
+        ctx.fillStyle = "rgba(0,0,0,0.65)";
+        roundRect(ctx, x - w / 2, y - 24, w, 48, 24);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(str, x, y + 1);
+        ctx.restore();
+      };
+      const ta = smooth(phase(tk, 0.12, 0.3));
+      tag(`妈妈 · ${s.mom}岁`, mom.head.x, mom.head.y - mom.headR - 46, ta);
+      tag(`我 · ${son.age}岁`, me.head.x, me.head.y - me.headR - 46, ta);
+      // 地面
+      ctx.restore();
+      drift(ctx, t, { count: 60, seed: 9, kind: "snow", alpha: mix(0.4, 0.9, k / 3), speed: 120, wind: -40, size: 0.8 });
       text(ctx, "每年春节 · 回家 3 天", DW / 2, 420, 46, { weight: 600, color: PAPER, shadow: "rgba(0,0,0,0.9)", blur: 14, alpha: smooth(phase(t, 0.1, 0.4)) });
       text(ctx, s.year, DW / 2, 510, 80, { weight: 300, color: RED, spacing: 8, alpha: smooth(clamp(tk / 0.12)) });
     },
-    // 文案 → 门口的妈妈 → 越走越近的他（他回头时两个人都在焦点里）
+    // 年份 → 走回家的他 → 门口迎上来的妈妈
     focus: (t) => {
-      const p = easeInOut(clamp(t / 3.69));
-      const sc = mix(0.75, 1.9, p);
-      const sx = mix(620, 230, p), sy = mix(1330, 1960, p) - 520 * sc * 0.55;
-      const w = smooth(phase(t, 1.0, 1.9));
-      const door = { x: 540, y: mix(700, 900, smooth(phase(t, 0.4, 0.9))) };
-      return { x: mix(door.x, (door.x + sx) / 2, w), y: mix(door.y, (door.y + sy) / 2, w), r: mix(420, 620, w), a: 0.4 };
+      const k = Math.min(3, Math.floor(t / STEP));
+      const tk = t - k * STEP;
+      const q = easeOut(clamp(tk / 0.68));
+      const z = mix(1.18, 1.0, easeOut(t / 3.7));
+      const wx = mix(300, 470, q), wy = mix(1880, 1280, q) - 300 * mix(1.55, 0.86, q);
+      const toScreen = (x: number, y: number) => ({ x: 540 + (x - 540) * z, y: 1050 + (y - 1150) * z });
+      const p1 = toScreen(wx, wy), p2 = toScreen(560, 1060);
+      return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2, r: mix(560, 380, q), a: 0.4 };
     },
   };
 };

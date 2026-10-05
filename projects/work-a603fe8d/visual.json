@@ -4,18 +4,29 @@
   "clips": [
     {
       "id": "city",
-      "name": "雨夜·没接的电话",
+      "name": "雨夜·推进窗口",
       "source": {
         "kind": "scene",
         "module": "city",
         "engine": "canvas"
       },
       "start": 0,
-      "duration": 2.9
+      "duration": 1
+    },
+    {
+      "id": "room",
+      "name": "屋里·通知书·挂断电话",
+      "source": {
+        "kind": "scene",
+        "module": "room",
+        "engine": "canvas"
+      },
+      "start": 1,
+      "duration": 1.9
     },
     {
       "id": "phone",
-      "name": "手机·妈妈的语音",
+      "name": "手机·国庆节回家吗·语音",
       "source": {
         "kind": "scene",
         "module": "phone",

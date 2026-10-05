@@ -9,6 +9,7 @@ const shot = (name: string) => () =>
 export function createScene(options: SceneOptions) {
   return createCompositionScene(options, visual, {
     city: shot("city"),
+    room: shot("room"),
     phone: shot("phone"),
     photo: shot("photo"),
     grow: shot("grow"),
