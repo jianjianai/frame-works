@@ -75,20 +75,6 @@ const project: AnimationProject = {
     }
   ],
   "subtitles": [],
-  "audioTracks": [
-    {
-      "id": "music",
-      "name": "原创电子配乐",
-      "kind": "generated",
-      "gain": 0.62
-    },
-    {
-      "id": "foley",
-      "name": "动作与环境音效",
-      "kind": "generated",
-      "gain": 0.56
-    }
-  ],
   "credits": [
     "视觉、动画、音乐与音效：本工程原创",
     "中文旁白：Kokoro zm_yunxi（Apache-2.0）",

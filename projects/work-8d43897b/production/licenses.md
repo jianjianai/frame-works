@@ -1,0 +1,14 @@
+- public/imports/d96690a772239a6556a7.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 旁白·01·开场.wav）
+- public/imports/14374cd5cb20a8eedeca.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937610878.wav）
+- public/imports/805d448a6afbf0e996db.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937616766.wav）
+- public/imports/349949f2a10b6a46c719.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937621974.wav）
+- public/imports/3fb84b961afd2b559c1c.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937627134.wav）
+- public/imports/54f72696ce3808907cbb.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937633592.wav）
+- public/imports/46554cd2c9000dd1fda5.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937639376.wav）
+- public/imports/4343f4da4aec0f1db865.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937644677.wav）
+- public/imports/95bd220ba008efcb2c73.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937689373.wav）
+- public/imports/d419fb4e2ddd5a05635c.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937691904.wav）
+- public/imports/803bb652272d4140ee09.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937694604.wav）
+- public/imports/1e331ae50093359f461b.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937697433.wav）
+- public/imports/e0c143f760b246e53eaf.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790937699941.wav）
+- public/imports/d338d2285beb2624b864.wav: Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M（原文件名 speech-1790938222634.wav）
