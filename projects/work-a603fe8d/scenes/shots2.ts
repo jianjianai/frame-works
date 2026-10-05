@@ -3,7 +3,7 @@ import {
   vgrad, glow, text, rain, drift, roundRect, drawPerson, drawHand, camera, offscreen, loadImage, bubble,
   type ShotFactory, type Shot, type Env,
 } from "./lib";
-import { city, phone, photo, grow, mute, cake } from "./shots1";
+import { city, phone, grow, mute, cake } from "./shots1";
 
 // ============ G 皱纹的手，把红纸折成护身符（20.65 – 23.7） ============
 export const fold: ShotFactory = () => ({
@@ -494,11 +494,10 @@ export const rewind: ShotFactory = async (env) => {
   await add("cake", cake, 3.64);
   await add("mute", mute, 3.07);
   await add("grow", grow, 4.74);
-  await add("photo", photo, 2.4);
-  await add("phone", phone, 2.5);
+    await add("phone", phone, 6.3);
   await add("city", city, 2.6);
   const seq: [string, number][] = [
-    ["ward", 0.42], ["call", 0.36], ["door", 0.36], ["fold", 0.3], ["cake", 0.3], ["mute", 0.26], ["grow", 0.5], ["photo", 0.24], ["phone", 0.2], ["city", 0.2],
+    ["ward", 0.42], ["call", 0.36], ["door", 0.36], ["fold", 0.3], ["cake", 0.3], ["mute", 0.26], ["grow", 0.5], ["phone", 0.44], ["city", 0.2],
   ];
   const { canvas: noise, ctx: ng } = offscreen(270, 480);
   const r = seeded(77);

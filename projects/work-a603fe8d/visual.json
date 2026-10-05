@@ -15,25 +15,14 @@
     },
     {
       "id": "phone",
-      "name": "手机·妈妈的消息",
+      "name": "手机·妈妈的语音",
       "source": {
         "kind": "scene",
         "module": "phone",
         "engine": "canvas"
       },
       "start": 2.9,
-      "duration": 3.26
-    },
-    {
-      "id": "photo",
-      "name": "老照片·眼泪",
-      "source": {
-        "kind": "scene",
-        "module": "photo",
-        "engine": "canvas"
-      },
-      "start": 6.16,
-      "duration": 3.04
+      "duration": 6.3
     },
     {
       "id": "grow",

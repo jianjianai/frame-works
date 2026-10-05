@@ -118,114 +118,220 @@ export const city: ShotFactory = () => {
   };
 };
 
-// ============ B 手机：妈妈的消息，打字又删掉（2.9 – 6.16） ============
-export const phone: ShotFactory = () => {
+// ============ B 手机（2.9 – 9.2）：消息 → 打字又删 → 锁屏 → 微信提示音亮屏 → 妈妈的语音 → 眼泪落在屏幕上 ============
+// 本地时间关键点（作品时间 − 2.9）：锁屏 2.6；提示音 2.95（歌里 5.85s 起，6.05s 最响）；点开语音 3.26；语音结束 5.4；眼泪 6.22
+export const phone: ShotFactory = (env) => {
   const r = seeded(21);
   const bokeh = Array.from({ length: 26 }, () => ({ x: r() * DW, y: r() * 900, rad: 30 + r() * 90, a: 0.05 + r() * 0.12 }));
   const PW = 600, PH = 1220;
+  const photo = buildPhoto();
+  // 头像：照片里妈妈的上半身
+  const { canvas: avatar, ctx: ag } = offscreen(140, 140);
+  ag.drawImage(photo, 150, 120, 380, 380, 0, 0, 140, 140);
+  // 锁屏壁纸：同一张照片，压暗
+  const { canvas: wall, ctx: wg } = offscreen(PW, PH);
+  wg.filter = "blur(3px) brightness(0.55)";
+  wg.drawImage(photo, -((PH * (PWd / PHt)) - PW) / 2, 0, PH * (PWd / PHt), PH);
+  wg.filter = "none";
   const msgs = [
     { at: 0.1, text: "睡了吗？", time: "23:12" },
     { at: 0.4, text: "降温了，记得多穿点", time: "23:40" },
     { at: 0.7, text: "妈不打扰你了，早点睡", time: "00:31" },
   ];
   const draft = "妈，我想你了";
+  const T_OFF = 2.58, T_DING = 2.95, T_OPEN = 3.26, T_VEND = 5.4, T_TEAR = 6.22;
   return {
     draw(ctx, t) {
-      const screenOn = 1 - smooth(phase(t, 2.58, 2.7));
+      const off = smooth(phase(t, T_OFF, T_OFF + 0.12)) * (1 - smooth(phase(t, T_DING, T_DING + 0.06)));
+      const dim = 0.5 * smooth(phase(t, T_VEND, T_VEND + 0.5));
+      const screenOn = (1 - off) * (1 - dim);
+      const lock = t >= T_DING && t < T_OPEN;
+      const chat2 = t >= T_OPEN;
+      const playing = t >= T_OPEN && t < T_VEND;
+      const buzz = t >= T_DING && t < T_DING + 0.35 ? 1 - (t - T_DING) / 0.35 : 0;
+
       ctx.fillStyle = "#040405";
       ctx.fillRect(0, 0, DW, DH);
-      // 背后的雨窗散景
       for (const b of bokeh) glow(ctx, b.x, b.y + t * 6, b.rad, "rgba(200,205,215,1)", b.a * (0.4 + 0.6 * screenOn));
       rain(ctx, t, { count: 50, seed: 8, alpha: 0.08, len: 90, speed: 900, slant: 0.05, y1: 900 });
       glow(ctx, 540, 900, 1100, "rgba(230,232,240,1)", 0.22 * screenOn);
-      ctx.save();
-      const z = mix(1, 1.07, easeInOut(clamp(t / 3.2)));
-      camera(ctx, z, 540, 880, 540 + wobble(t, 1) * 6, 900 + wobble(t, 4) * 6, -0.035 + wobble(t, 2) * 0.006);
+
       const x0 = 540 - PW / 2, y0 = 880 - PH / 2;
-      // 机身
+      const vb = { x: x0 + 128, y: y0 + 770, w: 330, h: 70 }; // 语音气泡
+      ctx.save();
+      const push = easeInOut(phase(t, T_OPEN + 0.05, T_TEAR));
+      const z = mix(1, 1.07, easeInOut(clamp(t / 3.2))) * mix(1, 1.5, push);
+      const fx = mix(540, vb.x + vb.w / 2, push), fy = mix(880, vb.y + vb.h / 2, push);
+      camera(ctx, z, fx, fy, 540 + wobble(t, 1) * 6 + Math.sin(t * 90) * 7 * buzz, 900 + wobble(t, 4) * 6, -0.035 * (1 - push * 0.6) + wobble(t, 2) * 0.006);
       ctx.fillStyle = "#151515";
       roundRect(ctx, x0 - 16, y0 - 16, PW + 32, PH + 32, 86);
       ctx.fill();
       ctx.save();
       roundRect(ctx, x0, y0, PW, PH, 70);
       ctx.clip();
-      ctx.fillStyle = "#f2f1ed";
-      ctx.fillRect(x0, y0, PW, PH);
-      // 状态栏 + 标题
-      text(ctx, "00:47", x0 + 70, y0 + 52, 28, { font: SANS, weight: 600, color: "#111", align: "left" });
-      ctx.fillStyle = "#111";
-      ctx.fillRect(x0 + PW - 110, y0 + 42, 50, 22);
-      ctx.fillStyle = "#e9e8e4";
-      ctx.fillRect(x0, y0 + 90, PW, 100);
-      text(ctx, "‹", x0 + 40, y0 + 140, 56, { font: SANS, weight: 400, color: "#111" });
-      text(ctx, "妈妈", x0 + PW / 2, y0 + 140, 38, { font: SANS, weight: 700, color: "#111" });
-      ctx.fillStyle = "#d2d0ca";
-      ctx.fillRect(x0, y0 + 190, PW, 2);
-      // 未接来电
-      const missA = smooth(phase(t, 0, 0.2));
-      ctx.globalAlpha = missA;
-      ctx.fillStyle = "#e2e0db";
-      roundRect(ctx, x0 + PW / 2 - 170, y0 + 222, 340, 50, 25);
-      ctx.fill();
-      text(ctx, "未接语音通话 × 3", x0 + PW / 2, y0 + 248, 26, { font: SANS, weight: 500, color: RED });
-      ctx.globalAlpha = 1;
-      // 妈妈的消息
-      msgs.forEach((m, i) => {
-        const mp = clamp((t - m.at) / 0.25);
-        if (mp <= 0) return;
-        const y = y0 + 320 + i * 150;
-        ctx.globalAlpha = mp;
-        text(ctx, m.time, x0 + PW / 2, y - 22, 20, { font: SANS, weight: 400, color: "#9a9893" });
-        ctx.fillStyle = "#9c9890";
-        roundRect(ctx, x0 + 30, y, 70, 70, 12);
-        ctx.fill();
-        text(ctx, "妈", x0 + 65, y + 36, 34, { font: SERIF, weight: 900, color: "#fff" });
-        ctx.globalAlpha = 1;
-        const bx = x0 + 128, by = y + 4 + (1 - easeOut(mp)) * 20;
+
+      if (lock) {
+        // ---- 锁屏 + 微信通知 ----
+        ctx.drawImage(wall, x0, y0, PW, PH);
+        text(ctx, "00:48", x0 + PW / 2, y0 + 250, 150, { font: SANS, weight: 300, color: "#fff" });
+        text(ctx, "10月5日 星期日", x0 + PW / 2, y0 + 140, 30, { font: SANS, weight: 500, color: "#eee" });
+        const np = easeOut(phase(t, T_DING, T_DING + 0.2));
+        const ny = mix(y0 - 120, y0 + 380, np);
         ctx.save();
-        ctx.globalAlpha = mp;
-        ctx.font = `500 32px ${SANS}`;
-        const w = ctx.measureText(m.text).width + 48;
-        ctx.fillStyle = "#ffffff";
-        roundRect(ctx, bx, by, w, 66, 14);
+        ctx.translate(x0 + PW / 2, ny + 70);
+        const pop = 1 + 0.06 * Math.sin(phase(t, T_DING + 0.12, T_DING + 0.3) * Math.PI);
+        ctx.scale(pop, pop);
+        ctx.fillStyle = "rgba(245,245,245,0.94)";
+        roundRect(ctx, -270, -70, 540, 140, 30);
         ctx.fill();
-        ctx.fillStyle = "#111";
-        ctx.textBaseline = "middle";
-        ctx.fillText(m.text, bx + 24, by + 34);
+        ctx.fillStyle = "#07c160";
+        roundRect(ctx, -240, -48, 40, 40, 10);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.ellipse(-225, -31, 10, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(-214, -23, 8, 6.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        text(ctx, "微信", -186, -28, 24, { font: SANS, weight: 500, color: "#666", align: "left" });
+        text(ctx, "现在", 245, -28, 22, { font: SANS, weight: 400, color: "#888", align: "right" });
+        text(ctx, "妈妈", -240, 26, 30, { font: SANS, weight: 700, color: "#111", align: "left" });
+        text(ctx, "[语音] 12''", -166, 26, 30, { font: SANS, weight: 400, color: "#333", align: "left" });
         ctx.restore();
-      });
-      // 输入框 + 键盘
-      const ky = y0 + PH - 430;
-      ctx.fillStyle = "#e6e4df";
-      ctx.fillRect(x0, ky - 110, PW, 540);
-      ctx.fillStyle = "#fff";
-      roundRect(ctx, x0 + 24, ky - 92, PW - 160, 70, 14);
-      ctx.fill();
-      let shown = "";
-      if (t < 2.05) shown = typed(draft, t, 1.15, 8);
-      else shown = [...draft].slice(0, Math.max(0, draft.length - Math.floor((t - 2.05) * 16))).join("");
-      text(ctx, shown, x0 + 46, ky - 56, 32, { font: SANS, weight: 500, color: "#111", align: "left" });
-      ctx.font = `500 32px ${SANS}`;
-      const cw = ctx.measureText(shown).width;
-      if (Math.floor(t * 2.2) % 2 === 0 || (t > 1.15 && t < 2.5)) {
-        ctx.fillStyle = "#1a7cff";
-        ctx.fillRect(x0 + 48 + cw, ky - 78, 3, 42);
-      }
-      ctx.fillStyle = shown ? "#2b2b2b" : "#c9c7c1";
-      roundRect(ctx, x0 + PW - 120, ky - 88, 96, 62, 12);
-      ctx.fill();
-      text(ctx, "发送", x0 + PW - 72, ky - 57, 26, { font: SANS, weight: 600, color: "#fff" });
-      for (let row = 0; row < 4; row++)
-        for (let k = 0; k < 10; k++) {
-          ctx.fillStyle = "#fbfaf8";
-          roundRect(ctx, x0 + 14 + k * 57.5, ky + row * 92, 50, 78, 10);
+      } else {
+        // ---- 聊天界面 ----
+        ctx.fillStyle = "#f2f1ed";
+        ctx.fillRect(x0, y0, PW, PH);
+        text(ctx, chat2 ? "00:48" : "00:47", x0 + 70, y0 + 52, 28, { font: SANS, weight: 600, color: "#111", align: "left" });
+        ctx.fillStyle = "#111";
+        ctx.fillRect(x0 + PW - 110, y0 + 42, 50, 22);
+        ctx.fillStyle = "#e9e8e4";
+        ctx.fillRect(x0, y0 + 90, PW, 100);
+        text(ctx, "‹", x0 + 40, y0 + 140, 56, { font: SANS, weight: 400, color: "#111" });
+        text(ctx, "妈妈", x0 + PW / 2, y0 + 140, 38, { font: SANS, weight: 700, color: "#111" });
+        ctx.fillStyle = "#d2d0ca";
+        ctx.fillRect(x0, y0 + 190, PW, 2);
+        ctx.globalAlpha = smooth(phase(t, 0, 0.2));
+        ctx.fillStyle = "#e2e0db";
+        roundRect(ctx, x0 + PW / 2 - 170, y0 + 222, 340, 50, 25);
+        ctx.fill();
+        text(ctx, "未接语音通话 × 3", x0 + PW / 2, y0 + 248, 26, { font: SANS, weight: 500, color: RED });
+        ctx.globalAlpha = 1;
+        const avatarAt = (y: number) => {
+          ctx.save();
+          roundRect(ctx, x0 + 30, y, 70, 70, 12);
+          ctx.clip();
+          ctx.drawImage(avatar, x0 + 30, y, 70, 70);
+          ctx.restore();
+        };
+        msgs.forEach((m, i) => {
+          const mp = chat2 ? 1 : clamp((t - m.at) / 0.25);
+          if (mp <= 0) return;
+          const y = y0 + 320 + i * 150;
+          ctx.globalAlpha = mp;
+          text(ctx, m.time, x0 + PW / 2, y - 22, 20, { font: SANS, weight: 400, color: "#9a9893" });
+          avatarAt(y);
+          const bx = x0 + 128, by = y + 4 + (1 - easeOut(mp)) * 20;
+          ctx.font = `500 32px ${SANS}`;
+          const w = ctx.measureText(m.text).width + 48;
+          ctx.fillStyle = "#ffffff";
+          roundRect(ctx, bx, by, w, 66, 14);
           ctx.fill();
+          ctx.fillStyle = "#111";
+          ctx.textBaseline = "middle";
+          ctx.textAlign = "left";
+          ctx.fillText(m.text, bx + 24, by + 34);
+          ctx.globalAlpha = 1;
+        });
+        if (!chat2) {
+          // 输入框 + 键盘
+          const ky = y0 + PH - 430;
+          ctx.fillStyle = "#e6e4df";
+          ctx.fillRect(x0, ky - 110, PW, 540);
+          ctx.fillStyle = "#fff";
+          roundRect(ctx, x0 + 24, ky - 92, PW - 160, 70, 14);
+          ctx.fill();
+          const shown = t < 2.05 ? typed(draft, t, 1.15, 8) : [...draft].slice(0, Math.max(0, draft.length - Math.floor((t - 2.05) * 16))).join("");
+          text(ctx, shown, x0 + 46, ky - 56, 32, { font: SANS, weight: 500, color: "#111", align: "left" });
+          ctx.font = `500 32px ${SANS}`;
+          const cw = ctx.measureText(shown).width;
+          if (Math.floor(t * 2.2) % 2 === 0 || (t > 1.15 && t < 2.5)) {
+            ctx.fillStyle = "#1a7cff";
+            ctx.fillRect(x0 + 48 + cw, ky - 78, 3, 42);
+          }
+          ctx.fillStyle = shown ? "#2b2b2b" : "#c9c7c1";
+          roundRect(ctx, x0 + PW - 120, ky - 88, 96, 62, 12);
+          ctx.fill();
+          text(ctx, "发送", x0 + PW - 72, ky - 57, 26, { font: SANS, weight: 600, color: "#fff" });
+          for (let row = 0; row < 4; row++)
+            for (let k = 0; k < 10; k++) {
+              ctx.fillStyle = "#fbfaf8";
+              roundRect(ctx, x0 + 14 + k * 57.5, ky + row * 92, 50, 78, 10);
+              ctx.fill();
+            }
+        } else {
+          // 新来的语音
+          text(ctx, "00:48", x0 + PW / 2, vb.y - 22, 20, { font: SANS, weight: 400, color: "#9a9893" });
+          avatarAt(vb.y);
+          if (playing) {
+            const lv = env.beat(t);
+            for (let i = 0; i < 3; i++) {
+              const q = ((t - T_OPEN) * 1.4 + i / 3) % 1;
+              ctx.strokeStyle = `rgba(7,193,96,${(1 - q) * 0.35 * (0.5 + lv)})`;
+              ctx.lineWidth = 4;
+              roundRect(ctx, vb.x - q * 60, vb.y - q * 40, vb.w + q * 120, vb.h + q * 80, 14 + q * 40);
+              ctx.stroke();
+            }
+          }
+          ctx.fillStyle = playing ? "#eaf7ef" : "#ffffff";
+          roundRect(ctx, vb.x, vb.y, vb.w, vb.h, 14);
+          ctx.fill();
+          // 喇叭（播放时三道弧依次闪）
+          const sx = vb.x + 36, sy = vb.y + vb.h / 2;
+          ctx.fillStyle = "#111";
+          ctx.beginPath();
+          ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#111";
+          ctx.lineWidth = 4;
+          ctx.lineCap = "round";
+          const step = Math.floor((t - T_OPEN) * 3) % 3;
+          for (let i = 1; i <= 2; i++) {
+            ctx.globalAlpha = !playing || step >= i ? 1 : 0.2;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 10 + i * 10, -0.8, 0.8);
+            ctx.stroke();
+          }
+          ctx.globalAlpha = 1;
+          // 声波条
+          for (let i = 0; i < 14; i++) {
+            const lv = playing ? env.beat(t - i * 0.04) : 0;
+            const h = 8 + (playing ? (Math.abs(Math.sin(t * 13 + i * 1.7)) * 18 + lv * 22) : 4 + Math.abs(Math.sin(i * 2.3)) * 10);
+            ctx.fillStyle = playing ? "#07c160" : "#bdbdbd";
+            roundRect(ctx, vb.x + 82 + i * 12, sy - h / 2, 6, h, 3);
+            ctx.fill();
+          }
+          text(ctx, "12''", vb.x + vb.w + 18, sy, 28, { font: SANS, weight: 500, color: "#8a8a8a", align: "left" });
+          // 未读红点（点开前）
+          if (t < T_OPEN + 0.05) {
+            ctx.fillStyle = RED;
+            ctx.beginPath();
+            ctx.arc(vb.x + vb.w + 90, sy, 8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          // 底部输入栏
+          ctx.fillStyle = "#e6e4df";
+          ctx.fillRect(x0, y0 + PH - 150, PW, 150);
+          ctx.fillStyle = "#fff";
+          roundRect(ctx, x0 + 90, y0 + PH - 128, PW - 180, 70, 14);
+          ctx.fill();
+          text(ctx, "按住 说话", x0 + PW / 2, y0 + PH - 92, 28, { font: SANS, weight: 600, color: "#333" });
         }
-      // 锁屏
+      }
+      // 熄屏 / 变暗
       if (screenOn < 1) {
         ctx.fillStyle = `rgba(0,0,0,${1 - screenOn})`;
         ctx.fillRect(x0, y0, PW, PH);
-        ctx.globalAlpha = (1 - screenOn) * 0.12;
+        ctx.globalAlpha = off * 0.12;
         const g = ctx.createLinearGradient(x0, y0, x0 + PW, y0 + PH);
         g.addColorStop(0.3, "rgba(255,255,255,0)");
         g.addColorStop(0.45, "rgba(255,255,255,1)");
@@ -234,12 +340,74 @@ export const phone: ShotFactory = () => {
         ctx.fillRect(x0, y0, PW, PH);
         ctx.globalAlpha = 1;
       }
+      // 亮屏的一下闪光
+      const wake = t >= T_DING ? Math.exp(-(t - T_DING) / 0.08) * 0.6 : 0;
+      if (wake > 0.01) {
+        ctx.fillStyle = `rgba(255,255,255,${wake})`;
+        ctx.fillRect(x0, y0, PW, PH);
+      }
+      // 眼泪：落在屏幕上的那条语音上
+      const fall = phase(t, T_TEAR - 0.42, T_TEAR);
+      const tx = vb.x + 140, ty = vb.y + 30;
+      if (fall > 0 && fall < 1) {
+        const yy = mix(ty - 1000, ty, fall * fall);
+        ctx.save();
+        ctx.translate(tx, yy);
+        ctx.fillStyle = "rgba(220,230,240,0.9)";
+        ctx.beginPath();
+        ctx.moveTo(0, -40);
+        ctx.bezierCurveTo(12, -14, 18, 0, 18, 10);
+        ctx.arc(0, 10, 18, 0, Math.PI);
+        ctx.bezierCurveTo(-18, 0, -12, -14, 0, -40);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(-6, 6, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      if (t >= T_TEAR) {
+        const k = t - T_TEAR;
+        // 留在玻璃上的水珠（放大下面的字）
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(tx, ty, 46, 40, 0, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.translate(tx, ty);
+        ctx.scale(1.25, 1.25);
+        ctx.translate(-tx, -ty);
+        ctx.fillStyle = "rgba(255,255,255,0.18)";
+        ctx.fillRect(tx - 60, ty - 60, 120, 120);
+        ctx.restore();
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(tx, ty, 46, 40, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        glow(ctx, tx - 14, ty - 14, 16, "#fff", 0.9);
+        for (let i = 0; i < 8; i++) {
+          const a = i / 8 * Math.PI * 2 + 0.3;
+          const d = 40 + k * 900;
+          ctx.fillStyle = `rgba(230,240,250,${Math.max(0, 0.8 - k * 6)})`;
+          ctx.beginPath();
+          ctx.arc(tx + Math.cos(a) * d, ty + Math.sin(a) * d * 0.7, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
       ctx.restore();
-      // 手：拇指打字
+      // 手
       const typing = t > 1.1 && t < 2.5;
       const tap = typing ? Math.abs(Math.sin(t * 22)) : 0;
-      const thumbX = x0 + PW - 120 + (typing ? Math.sin(t * 9) * 140 - 60 : 0);
-      const thumbY = ky + 120 + tap * 18;
+      const ky = y0 + PH - 430;
+      let thumbX = x0 + PW - 120 + (typing ? Math.sin(t * 9) * 140 - 60 : 0);
+      let thumbY = ky + 120 + tap * 18;
+      // 点开通知
+      const reach = bump(t, T_DING + 0.12, T_OPEN - 0.04, T_OPEN + 0.05, T_OPEN + 0.35);
+      thumbX = mix(thumbX, x0 + PW / 2 + 40, reach);
+      thumbY = mix(thumbY, y0 + 470, reach);
+      const rest = smooth(phase(t, T_OPEN + 0.2, T_OPEN + 0.6));
+      thumbX = mix(thumbX, x0 + PW + 30, rest);
+      thumbY = mix(thumbY, y0 + PH - 40, rest);
       ctx.fillStyle = INK;
       ctx.strokeStyle = INK;
       ctx.lineCap = "round";
@@ -248,7 +416,6 @@ export const phone: ShotFactory = () => {
       ctx.moveTo(x0 + PW + 160, y0 + PH + 260);
       ctx.quadraticCurveTo(x0 + PW + 40, ky + 300, thumbX, thumbY);
       ctx.stroke();
-      // 左侧握着机身的指尖
       for (let i = 0; i < 3; i++) {
         ctx.beginPath();
         ctx.ellipse(x0 - 4, y0 + PH - 420 + i * 105, 34, 46, 0.25, 0, Math.PI * 2);
@@ -263,15 +430,14 @@ export const phone: ShotFactory = () => {
       ctx.ellipse(540, y0 + PH + 260, 560, 300, -0.15, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-      // 熄屏后：只剩黑暗里的一点反光
-      if (screenOn < 1) glow(ctx, 540, 900, 500, "rgba(120,125,135,1)", 0.06 * (1 - screenOn));
+      if (off > 0) glow(ctx, 540, 900, 500, "rgba(120,125,135,1)", 0.06 * off);
     },
   };
 };
 
-// ============ C 老照片 + 一滴眼泪（6.16 – 9.2） ============
-export const photo: ShotFactory = () => {
-  const PWd = 720, PHt = 900;
+// 老照片：'98 宝宝一周岁（妈妈的头像、锁屏壁纸、倒带里都用它）
+const PWd = 720, PHt = 900;
+export function buildPhoto() {
   const { canvas: pc, ctx: g } = offscreen(PWd, PHt);
   // 照片本体
   g.fillStyle = "#e9e4d8";
@@ -320,6 +486,12 @@ export const photo: ShotFactory = () => {
   g.textAlign = "center";
   g.fillText("宝宝一周岁", PWd / 2, PHt - 72);
 
+  return pc;
+}
+
+// ============ C 老照片 + 一滴眼泪（6.16 – 9.2） ============
+export const photo: ShotFactory = () => {
+  const pc = buildPhoto();
   const C = { x: 540, y: 840 };
   const face = { x: C.x - 33, y: C.y - 168 }; // 照片里妈妈的脸（大致）
   return {
