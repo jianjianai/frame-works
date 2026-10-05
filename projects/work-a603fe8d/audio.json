@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "mama",
+      "kind": "file",
+      "src": "films/work-a603fe8d/song.flac"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "music",
+      "name": "音乐",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    }
+  ],
+  "clips": [
+    {
+      "id": "songClip",
+      "track": "music",
+      "source": "mama",
+      "start": 0,
+      "duration": 39,
+      "offset": 41,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0.4,
+      "fadeOut": 1,
+      "fadeOffset": 0,
+      "automation": []
+    }
+  ],
+  "buses": [],
+  "master": {
+    "gain": 1,
+    "processors": [
+      {
+        "type": "limiter",
+        "bypass": false,
+        "ceiling": -1,
+        "release": 0.1
+      }
+    ]
+  },
+  "linkedVideo": true
+}

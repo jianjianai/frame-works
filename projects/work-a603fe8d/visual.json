@@ -1,19 +1,17 @@
 {
   "schemaVersion": 1,
-  "background": "#101418",
+  "background": "#000000",
   "clips": [
     {
-      "id": "title",
-      "name": "标题",
+      "id": "mv",
+      "name": "歌词 MV",
       "source": {
         "kind": "scene",
-        "module": "title",
+        "module": "mv",
         "engine": "canvas"
       },
       "start": 0,
-      "duration": 30,
-      "fadeIn": 1,
-      "fadeOut": 1
+      "duration": 39
     }
   ]
 }
