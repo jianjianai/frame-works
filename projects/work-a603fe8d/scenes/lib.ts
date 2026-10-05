@@ -160,27 +160,49 @@ export function offscreen(w: number, h: number) {
 const ENV_FPS = 60;
 interface Envelope { pulse: Float32Array; }
 let envelope: Promise<Envelope | null> | null = null;
-export function analyzeSong(): Promise<Envelope | null> {
-  envelope ??= (async () => {
+let mono: Promise<{ data: Float32Array; rate: number } | null> | null = null;
+/** 解码歌曲，取作品时间 0..END 对应的单声道采样（22050Hz），全片共用一份 */
+export function songMono() {
+  mono ??= (async () => {
     try {
       const buf = await (await fetch(assetUrl(SONG))).arrayBuffer();
       const sr = 22050;
       const audio = await new OfflineAudioContext(1, sr, sr).decodeAudioData(buf);
       const chs = Array.from({ length: audio.numberOfChannels }, (_, i) => audio.getChannelData(i));
       const rate = audio.sampleRate;
+      const start = Math.floor(SONG_OFFSET * rate);
+      const n = Math.ceil((END + 1) * rate);
+      const data = new Float32Array(n);
+      for (let i = 0; i < n; i++) {
+        const idx = start + i;
+        let s = 0;
+        for (const ch of chs) s += idx < ch.length ? ch[idx] : 0;
+        data[i] = s / chs.length;
+      }
+      return { data, rate };
+    } catch (err) {
+      console.warn("[mv] 音频解码失败", err);
+      return null;
+    }
+  })();
+  return mono;
+}
+export function analyzeSong(): Promise<Envelope | null> {
+  envelope ??= (async () => {
+    try {
+      const song = await songMono();
+      if (!song) return null;
+      const { data, rate } = song;
       const hop = Math.round(rate / ENV_FPS);
       const n = Math.ceil(END * ENV_FPS) + 2;
       const bass = new Float32Array(n);
       const a = 1 - Math.exp((-2 * Math.PI * 140) / rate);
       let lp = 0;
-      const start = Math.floor(SONG_OFFSET * rate);
       for (let i = 0; i < n; i++) {
         let eb = 0;
         for (let k = 0; k < hop; k++) {
-          const idx = start + i * hop + k;
-          let s = 0;
-          for (const ch of chs) s += idx < ch.length ? ch[idx] : 0;
-          lp += a * (s / chs.length - lp);
+          const idx = i * hop + k;
+          lp += a * ((idx < data.length ? data[idx] : 0) - lp);
           eb += lp * lp;
         }
         bass[i] = Math.sqrt(eb / hop);
@@ -203,6 +225,91 @@ export function analyzeSong(): Promise<Envelope | null> {
     }
   })();
   return envelope;
+}
+
+// ---------------- 人声起音检测（用于歌词逐字对齐）----------------
+export const FLUX_FPS = 100;
+let flux: Promise<{ vocal: Float32Array; level: Float32Array } | null> | null = null;
+function fft(re: Float32Array, im: Float32Array) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = (-2 * Math.PI) / len;
+    const wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const ar = re[i + k], ai = im[i + k];
+        const br = re[i + k + len / 2] * cr - im[i + k + len / 2] * ci;
+        const bi = re[i + k + len / 2] * ci + im[i + k + len / 2] * cr;
+        re[i + k] = ar + br; im[i + k] = ai + bi;
+        re[i + k + len / 2] = ar - br; im[i + k + len / 2] = ai - bi;
+        const nr = cr * wr - ci * wi;
+        ci = cr * wi + ci * wr;
+        cr = nr;
+      }
+    }
+  }
+}
+function median(arr: Float32Array, n: number) {
+  // 小数组插入排序取中位数
+  for (let i = 1; i < n; i++) { const v = arr[i]; let j = i - 1; while (j >= 0 && arr[j] > v) { arr[j + 1] = arr[j]; j--; } arr[j + 1] = v; }
+  return arr[n >> 1];
+}
+/**
+ * 人声起音：先做谐波/打击分离（时间方向中值 = 持续的音高，频率方向中值 = 鼓），
+ * 只在谐波部分的人声频段（250–3500Hz）求频谱通量；100 帧/秒
+ */
+export function vocalFlux() {
+  flux ??= (async () => {
+    const song = await songMono();
+    if (!song) return null;
+    const { data, rate } = song;
+    const N = 1024, hop = rate / FLUX_FPS;
+    const frames = Math.ceil(END * FLUX_FPS);
+    const win = new Float32Array(N).map((_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / N));
+    const binHz = rate / N;
+    const b0 = Math.round(250 / binHz), b1 = Math.round(3500 / binHz);
+    const B = b1 - b0 + 1;
+    const spec = new Float32Array(frames * B);
+    const re = new Float32Array(N), im = new Float32Array(N);
+    for (let f = 0; f < frames; f++) {
+      const s0 = Math.round(f * hop) - N / 2;
+      for (let i = 0; i < N; i++) { const idx = s0 + i; re[i] = (idx >= 0 && idx < data.length ? data[idx] : 0) * win[i]; im[i] = 0; }
+      fft(re, im);
+      for (let b = 0; b < B; b++) spec[f * B + b] = Math.hypot(re[b0 + b], im[b0 + b]);
+    }
+    // 谐波/打击分离
+    const KT = 17, KF = 17, tmp = new Float32Array(Math.max(KT, KF));
+    const harm = new Float32Array(frames * B);
+    for (let f = 0; f < frames; f++)
+      for (let b = 0; b < B; b++) {
+        for (let k = 0; k < KT; k++) tmp[k] = spec[Math.min(frames - 1, Math.max(0, f + k - (KT >> 1))) * B + b];
+        const H = median(tmp, KT);
+        for (let k = 0; k < KF; k++) tmp[k] = spec[f * B + Math.min(B - 1, Math.max(0, b + k - (KF >> 1)))];
+        const P = median(tmp, KF);
+        const m = (H * H) / (H * H + P * P + 1e-12);
+        harm[f * B + b] = spec[f * B + b] * m;
+      }
+    const vocal = new Float32Array(frames), level = new Float32Array(frames);
+    for (let f = 1; f < frames; f++) {
+      let fx = 0, lv = 0;
+      for (let b = 0; b < B; b++) {
+        const cur = Math.log1p(20 * harm[f * B + b]), prev = Math.log1p(20 * harm[(f - 1) * B + b]);
+        fx += Math.max(0, cur - prev);
+        lv += cur;
+      }
+      vocal[f] = fx / B;
+      level[f] = lv / B;
+    }
+    return { vocal, level };
+  })();
+  return flux;
 }
 
 // ---------------- 绘图工具 ----------------
