@@ -581,7 +581,7 @@ export const rewind: ShotFactory = async (env) => {
   await add("mute", mute, 3.07);
   await add("grow", grow, 4.74);
     await add("phone", phone, 6.3);
-  await add("city", city, 2.6);
+  await add("city", city, 1.0);
   const seq: [string, number][] = [
     ["ward", 0.42], ["call", 0.36], ["door", 0.36], ["fold", 0.3], ["cake", 0.3], ["mute", 0.26], ["grow", 0.5], ["phone", 0.44], ["city", 0.2],
   ];

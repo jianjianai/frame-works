@@ -7,7 +7,8 @@ import {
 const lerpColor = (a: number[], b: number[], t: number) =>
   `rgb(${Math.round(mix(a[0], b[0], t))},${Math.round(mix(a[1], b[1], t))},${Math.round(mix(a[2], b[2], t))})`;
 
-// ============ A 雨夜城市：推进一扇亮着的窗（0 – 2.9） ============
+// ============ A 雨夜城市：快速推进一扇亮着的窗（0 – 1.0） ============
+const CITY_LEN = 1.0;
 export const city: ShotFactory = () => {
   const r = seeded(11);
   type B = { x: number; w: number; top: number; lit: boolean[] };
@@ -36,10 +37,12 @@ export const city: ShotFactory = () => {
   };
   return {
     draw(ctx, t) {
-      const p = clamp(t / 2.9);
+      // 1 秒内快速推进那扇窗
+      const p = clamp(t / CITY_LEN);
       const Z = 30;
-      const z = Math.exp(Math.log(Z) * (0.1 * p + 0.9 * Math.pow(p, 4)));
+      const z = Math.exp(Math.log(Z) * (0.12 * p + 0.88 * Math.pow(p, 3)));
       const cy = mix(1120, 960, easeInOut(p));
+      void drawCallBanner;
       vgrad(ctx, 0, 0, DW, DH, [[0, "#07080b"], [0.6, "#1b1d22"], [1, "#0b0c0e"]]);
       glow(ctx, 800, 360, 360, "rgba(220,225,235,0.5)", 0.6);
       ctx.save();
@@ -93,37 +96,25 @@ export const city: ShotFactory = () => {
       // 雨
       rain(ctx, t, { count: 150, seed: 3, alpha: 0.28, len: 70, speed: 2600, slant: 0.1, width: 2 });
       rain(ctx, t, { count: 40, seed: 4, alpha: 0.18, len: 160, speed: 4200, slant: 0.1, width: 4 });
-      // 钩子：第一帧就有来电和文案
-      const ca = 1 - smooth(phase(t, 2.2, 2.55));
+      // 钩子文案（第一帧就在）
+      const ca = 1 - smooth(phase(t, 0.55, 0.8));
       if (ca > 0) {
         ctx.save();
         ctx.globalAlpha = ca;
-        text(ctx, "00:47", DW / 2, 260, 130, { font: SANS, weight: 200, color: PAPER, spacing: 6, shadow: "rgba(0,0,0,0.8)", blur: 20 });
-        ctx.font = `900 58px ${SERIF}`;
-        const p1 = "第 3 次", p2 = "，没接妈妈的电话";
+        text(ctx, "00:47", DW / 2, 300, 130, { font: SANS, weight: 200, color: PAPER, spacing: 6, shadow: "rgba(0,0,0,0.8)", blur: 20 });
+        ctx.font = `900 56px ${SERIF}`;
+        const p1 = "这是他第 3 次，", p2 = "挂掉妈妈的电话";
         const w1 = ctx.measureText(p1).width, w2 = ctx.measureText(p2).width;
         const lx = DW / 2 - (w1 + w2) / 2;
-        const pop = 1 + 0.25 * (1 - easeOut(phase(t, 0.55, 0.8))) * (t > 0.55 ? 1 : 0);
-        ctx.translate(DW / 2, 385);
-        ctx.scale(pop, pop);
-        ctx.translate(-DW / 2, -385);
-        text(ctx, p1, lx, 385, 58, { weight: 900, color: RED, align: "left", shadow: "rgba(255,30,40,0.7)", blur: 18 });
-        text(ctx, p2, lx + w1, 385, 58, { weight: 900, color: "#fff", align: "left", shadow: "rgba(0,0,0,0.9)", blur: 16 });
+        text(ctx, p1, lx, 425, 56, { weight: 900, color: "#fff", align: "left", shadow: "rgba(0,0,0,0.9)", blur: 16 });
+        text(ctx, p2, lx + w1, 425, 56, { weight: 900, color: RED, align: "left", shadow: "rgba(255,30,40,0.7)", blur: 18 });
         ctx.restore();
       }
-      // 来电横幅：振动 → 手指按下拒绝 → 未接来电 → 收起
-      const away = easeIn(phase(t, 1.35, 1.75));
-      drawCallBanner(ctx, t, {
-        y: 500 - away * 260, ring: t < 0.5 ? 1 : 0, press: bump(t, 0.42, 0.52, 0.6, 0.72),
-        missed: smooth(phase(t, 0.6, 0.8)), alpha: 1 - away,
-      });
-      const finger = easeOut(phase(t, 0.2, 0.5)) * (1 - easeIn(phase(t, 0.68, 0.95)));
-      if (finger > 0) drawHand(ctx, mix(960, 801, finger), mix(1500, 744, finger) + bump(t, 0.42, 0.5, 0.58, 0.66) * 14, 0, 0.55, { color: "#0b0b0b" });
     },
-    // 先看文案+来电 → 横幅收起后看那扇窗
+    // 先看文案 → 那扇窗
     focus: (t) => {
-      const w = smooth(phase(t, 1.35, 1.9));
-      const cy = mix(1120, 960, easeInOut(clamp(t / 2.9)));
+      const w = smooth(phase(t, 0.3, 0.7));
+      const cy = mix(1120, 960, easeInOut(clamp(t / CITY_LEN)));
       return { x: 540, y: mix(470, cy, w), r: mix(470, 280, w), a: mix(0.3, 0.55, w) };
     },
   };
