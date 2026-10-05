@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "src_narration",
+      "kind": "file",
+      "src": "films/work-0560feb5/audio/narration.mp3"
+    },
+    {
+      "id": "src_harmony",
+      "kind": "file",
+      "src": "films/work-0560feb5/audio/harmony.mp3"
+    },
+    {
+      "id": "src_pulse",
+      "kind": "file",
+      "src": "films/work-0560feb5/audio/pulse.mp3"
+    },
+    {
+      "id": "src_drums",
+      "kind": "file",
+      "src": "films/work-0560feb5/audio/drums.mp3"
+    },
+    {
+      "id": "src_fx",
+      "kind": "file",
+      "src": "films/work-0560feb5/audio/fx.mp3"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "narration",
+      "name": "中文旁白",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "harmony",
+      "name": "和声 · 主旋律",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "pulse",
+      "name": "琶音 · 低音",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "drums",
+      "name": "鼓组 · 节奏",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "fx",
+      "name": "转场 · 交互音效",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    }
+  ],
+  "clips": [
+    {
+      "id": "clip_narration",
+      "track": "narration",
+      "source": "src_narration",
+      "name": "中文旁白",
+      "start": 0,
+      "duration": 216,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1.26,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_harmony",
+      "track": "harmony",
+      "source": "src_harmony",
+      "name": "和声 · 主旋律",
+      "start": 0,
+      "duration": 216,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1.4,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_pulse",
+      "track": "pulse",
+      "source": "src_pulse",
+      "name": "琶音 · 低音",
+      "start": 0,
+      "duration": 216,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1.4,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_drums",
+      "track": "drums",
+      "source": "src_drums",
+      "name": "鼓组 · 节奏",
+      "start": 0,
+      "duration": 216,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1.4,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_fx",
+      "track": "fx",
+      "source": "src_fx",
+      "name": "转场 · 交互音效",
+      "start": 0,
+      "duration": 216,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1.4,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    }
+  ],
+  "buses": [],
+  "master": {
+    "gain": 1,
+    "processors": []
+  },
+  "linkedVideo": true
+}

@@ -12,64 +12,10 @@ const project: AnimationProject = { ...{
   },
   "duration": 216,
   "fps": 60,
-  "audioTracks": [
-    {
-      "id": "narration",
-      "name": "中文旁白",
-      "kind": "file",
-      "src": "films/work-0560feb5/audio/narration.mp3",
-      "start": 0,
-      "duration": 216,
-      "gain": 1.26
-    },
-    {
-      "id": "harmony",
-      "name": "和声 · 主旋律",
-      "kind": "file",
-      "src": "films/work-0560feb5/audio/harmony.mp3",
-      "start": 0,
-      "duration": 216,
-      "gain": 1.4
-    },
-    {
-      "id": "pulse",
-      "name": "琶音 · 低音",
-      "kind": "file",
-      "src": "films/work-0560feb5/audio/pulse.mp3",
-      "start": 0,
-      "duration": 216,
-      "gain": 1.4
-    },
-    {
-      "id": "drums",
-      "name": "鼓组 · 节奏",
-      "kind": "file",
-      "src": "films/work-0560feb5/audio/drums.mp3",
-      "start": 0,
-      "duration": 216,
-      "gain": 1.4
-    },
-    {
-      "id": "fx",
-      "name": "转场 · 交互音效",
-      "kind": "file",
-      "src": "films/work-0560feb5/audio/fx.mp3",
-      "start": 0,
-      "duration": 216,
-      "gain": 1.4
-    }
-  ],
   "accent": "#65e5ed",
   "poster": "films/work-0560feb5/poster.png",
   "posterTime": 5,
-  "tags": [
-    "知识科普",
-    "AI",
-    "Agent",
-    "原创音乐",
-    "3D",
-    "中文旁白"
-  ],
+  "tags": ["知识科普","AI","Agent","原创音乐","3D","中文旁白","科技 · AI 原理"],
   "status": "film",
   "beats": [
     {
@@ -456,5 +402,6 @@ const project: AnimationProject = { ...{
     "资料核实日期：2026-10-01；完整来源索引见本作品的制作资料目录",
     "不同系统能力与条件不同，不表示单一模型无所不能"
   ]
-}, load: () => import('./scene') };
+}, load: () => import('./scene'),
+  loadAudioDocument: () => import("./audio.json"), };
 export default project;

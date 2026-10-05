@@ -1,64 +1,0 @@
-Input #0, mp3, from 'public/audio/narration.mp3':
-  Metadata:
-    encoder         : Lavf59.27.100
-  Duration: 00:03:36.02, start: 0.023021, bitrate: 128 kb/s
-  Stream #0:0: Audio: mp3, 48000 Hz, stereo, fltp, 128 kb/s
-    Metadata:
-      encoder         : Lavc59.37
-Input #1, mp3, from 'public/audio/harmony.mp3':
-  Metadata:
-    encoder         : Lavf59.27.100
-  Duration: 00:03:36.02, start: 0.023021, bitrate: 160 kb/s
-  Stream #1:0: Audio: mp3, 48000 Hz, stereo, fltp, 160 kb/s
-    Metadata:
-      encoder         : Lavc59.37
-Input #2, mp3, from 'public/audio/pulse.mp3':
-  Metadata:
-    encoder         : Lavf59.27.100
-  Duration: 00:03:36.02, start: 0.023021, bitrate: 160 kb/s
-  Stream #2:0: Audio: mp3, 48000 Hz, stereo, fltp, 160 kb/s
-    Metadata:
-      encoder         : Lavc59.37
-Input #3, mp3, from 'public/audio/drums.mp3':
-  Metadata:
-    encoder         : Lavf59.27.100
-  Duration: 00:03:36.02, start: 0.023021, bitrate: 160 kb/s
-  Stream #3:0: Audio: mp3, 48000 Hz, stereo, fltp, 160 kb/s
-    Metadata:
-      encoder         : Lavc59.37
-Input #4, mp3, from 'public/audio/fx.mp3':
-  Metadata:
-    encoder         : Lavf59.27.100
-  Duration: 00:03:36.02, start: 0.023021, bitrate: 160 kb/s
-  Stream #4:0: Audio: mp3, 48000 Hz, stereo, fltp, 160 kb/s
-    Metadata:
-      encoder         : Lavc59.37
-Stream mapping:
-  Stream #0:0 (mp3float) -> volume:default
-  Stream #1:0 (mp3float) -> amix
-  Stream #2:0 (mp3float) -> amix
-  Stream #3:0 (mp3float) -> amix
-  Stream #4:0 (mp3float) -> amix
-  loudnorm:default -> Stream #0:0 (pcm_s16le)
-Press [q] to stop, [?] for help
-Output #0, null, to 'pipe:':
-  Metadata:
-    encoder         : Lavf59.27.100
-  Stream #0:0: Audio: pcm_s16le, 192000 Hz, stereo, s16, 6144 kb/s
-    Metadata:
-      encoder         : Lavc59.37.100 pcm_s16le
-size=N/A time=00:00:00.00 bitrate=N/A speed=   0x    size=N/A time=00:00:06.50 bitrate=N/A speed=12.9x    size=N/A time=00:00:14.60 bitrate=N/A speed=14.5x    size=N/A time=00:00:22.00 bitrate=N/A speed=14.6x    size=N/A time=00:00:30.10 bitrate=N/A speed=  15x    size=N/A time=00:00:37.70 bitrate=N/A speed=  15x    size=N/A time=00:00:46.00 bitrate=N/A speed=15.3x    size=N/A time=00:00:53.70 bitrate=N/A speed=15.3x    size=N/A time=00:01:02.10 bitrate=N/A speed=15.5x    size=N/A time=00:01:10.00 bitrate=N/A speed=15.5x    size=N/A time=00:01:18.30 bitrate=N/A speed=15.6x    size=N/A time=00:01:25.20 bitrate=N/A speed=15.4x    size=N/A time=00:01:32.50 bitrate=N/A speed=15.4x    size=N/A time=00:01:39.70 bitrate=N/A speed=15.3x    size=N/A time=00:01:47.70 bitrate=N/A speed=15.3x    size=N/A time=00:01:55.70 bitrate=N/A speed=15.4x    size=N/A time=00:02:03.70 bitrate=N/A speed=15.4x    size=N/A time=00:02:11.60 bitrate=N/A speed=15.4x    size=N/A time=00:02:18.70 bitrate=N/A speed=15.4x    size=N/A time=00:02:26.30 bitrate=N/A speed=15.3x    size=N/A time=00:02:33.80 bitrate=N/A speed=15.3x    size=N/A time=00:02:42.20 bitrate=N/A speed=15.4x    size=N/A time=00:02:50.10 bitrate=N/A speed=15.3x    size=N/A time=00:02:58.20 bitrate=N/A speed=15.4x    size=N/A time=00:03:06.50 bitrate=N/A speed=15.4x    size=N/A time=00:03:14.80 bitrate=N/A speed=15.5x    size=N/A time=00:03:23.50 bitrate=N/A speed=15.5x    size=N/A time=00:03:31.50 bitrate=N/A speed=15.6x    size=N/A time=00:03:36.00 bitrate=N/A speed=15.7x    
-video:0kB audio:162000kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: unknown
-[Parsed_loudnorm_3 @ 0x5fa68b33a800] 
-{
-	"input_i" : "-20.69",
-	"input_tp" : "-4.07",
-	"input_lra" : "4.50",
-	"input_thresh" : "-30.78",
-	"output_i" : "-15.76",
-	"output_tp" : "-1.00",
-	"output_lra" : "4.30",
-	"output_thresh" : "-25.82",
-	"normalization_type" : "dynamic",
-	"target_offset" : "-0.24"
-}
