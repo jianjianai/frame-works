@@ -1,0 +1,4 @@
+- public/imports/e2fa80cf4b76ef0a02fe.m4a: 本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts（原文件名 fold-rhythm.m4a）
+- public/imports/658602394e75656765c3.m4a: 本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts（原文件名 fold-bass.m4a）
+- public/imports/2feaa6829212a6fee562.m4a: 本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts（原文件名 fold-harmony.m4a）
+- public/imports/45c11478ea9828688073.m4a: 本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts（原文件名 fold-foley.m4a）

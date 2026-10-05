@@ -4,13 +4,7 @@ const project:AnimationProject={
  description:'一张红纸，在秩序、挤压和无尽折叠中寻找自己的形状。原创三维视听短片，128 BPM 四轨电子配乐。建议戴耳机、全屏观看。',
  renderer:'three',engineProtocol:1,composition:{width:1920,height:1080},duration:120,fps:30,
  accent:'#b91224',poster:'films/work-b6ee56e9/poster.svg',posterTime:89,
- tags:['原创短片','空间折叠','电影感电子','无对白'],status:'film',
- audioTracks:[
-  {id:'rhythm',name:'RHYTHM · 128 BPM / 鼓与打击',kind:'file',src:'films/work-b6ee56e9/imports/e2fa80cf4b76ef0a02fe.m4a',gain:1.632},
-  {id:'bass',name:'WEIGHT · 低频与脉冲',kind:'file',src:'films/work-b6ee56e9/imports/658602394e75656765c3.m4a',gain:1.7},
-  {id:'harmony',name:'FLIGHT · 和声与主题旋律',kind:'file',src:'films/work-b6ee56e9/imports/2feaa6829212a6fee562.m4a',gain:1.7},
-  {id:'foley',name:'CREASE · 纸张、冲击与过渡',kind:'file',src:'films/work-b6ee56e9/imports/45c11478ea9828688073.m4a',gain:1.53}
- ],
+ tags:["原创短片","空间折叠","电影感电子","无对白","原创视听短片"],status:'film',
  beats:[
   {id:'sheet',at:0,title:'一张纸',detail:'微距触感；第一次折痕带动镜头撤离'},
   {id:'order',at:7.5,title:'秩序',detail:'节拍进入，机械门框逐排升起'},
@@ -35,6 +29,7 @@ const project:AnimationProject={
   {start:112.5,end:117.5,text:'把折痕，折成翅膀。'}
  ],
  credits:['原创场景、乐谱、合成器与拟音：本工程自有源码','画面使用 Three.js；音乐为代码合成，成片采用 AAC 多轨；无外部视听素材'],
- load:()=>import('./scene')
+ load:()=>import('./scene'),
+  loadAudioDocument: () => import("./audio.json"),
 };
 export default project;
