@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "src_music",
+      "kind": "generated",
+      "module": "legacy",
+      "trackId": "music",
+      "engine": "custom"
+    },
+    {
+      "id": "src_foley",
+      "kind": "generated",
+      "module": "legacy",
+      "trackId": "foley",
+      "engine": "custom"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "music",
+      "name": "采样配乐",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "foley",
+      "name": "动作音效",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    }
+  ],
+  "clips": [
+    {
+      "id": "clip_music",
+      "track": "music",
+      "source": "src_music",
+      "name": "采样配乐",
+      "start": 0,
+      "duration": 36,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_foley",
+      "track": "foley",
+      "source": "src_foley",
+      "name": "动作音效",
+      "start": 0,
+      "duration": 36,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    }
+  ],
+  "buses": [],
+  "master": {
+    "gain": 1,
+    "processors": []
+  },
+  "linkedVideo": true
+}

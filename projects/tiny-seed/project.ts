@@ -12,10 +12,6 @@ const project: AnimationProject = {
     accent: "#ebce84",
   poster: "films/tiny-seed/poster.webp",
   posterTime: 26.8,
-    audioTracks: [
-      { id: "music", name: "采样配乐", kind: "generated", gain: 1 },
-      { id: "foley", name: "动作音效", kind: "generated", gain: 1 },
-    ],
     tags: ["矢量形变", "生长动画", "因果叙事"],
     status: "demo",
     beats: [
@@ -70,5 +66,6 @@ const project: AnimationProject = {
   },
   load: () => import("./scene"),
   loadAudio: () => import("./audio"),
+  loadAudioDocument: () => import("./audio.json"),
 };
 export default project;
