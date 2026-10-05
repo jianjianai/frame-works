@@ -107,6 +107,7 @@ export async function createShotScene(options: SceneOptions, factory: ShotFactor
       }
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, DW, DH);
+      CLOCK.t = absStart + t;
       shot.draw(ctx, t);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
@@ -391,27 +392,38 @@ export function drawPerson(ctx: CanvasRenderingContext2D, p: Person): ReturnType
   return drawPersonBody(ctx, p);
 }
 
+/** 全局时钟：由 createShotScene 在每帧绘制前写入作品时间，用于呼吸等细微动作（只依赖 time，可任意跳转） */
+export const CLOCK = { t: 0 };
+
 function drawPersonBody(ctx: CanvasRenderingContext2D, p: Person) {
   const c = p.child ?? 0, h = p.h, dir = p.dir ?? 1;
   const headR = h * mix(0.068, 0.105, c);
   const legL = h * mix(0.48, 0.38, c);
   const thigh = legL * 0.52, shin = legL * 0.5;
   const torso = h * mix(0.3, 0.26, c);
-  const neck = h * 0.03;
+  const neck = h * mix(0.032, 0.02, c);
   const upper = h * mix(0.17, 0.15, c), fore = h * mix(0.165, 0.14, c);
-  const legW = h * mix(0.07, 0.085, c), armW = h * mix(0.052, 0.065, c), bodyW = h * mix(0.15, 0.18, c);
+  const legW = h * mix(0.074, 0.088, c), armW = h * mix(0.054, 0.066, c), bodyW = h * mix(0.15, 0.18, c);
   const stoop = p.stoop ?? 0, sit = p.sit ?? 0;
   const col = p.color ?? INK;
   const stride = p.stride ?? 1;
+  const walking = p.walk !== undefined;
+  const wph = p.walk ?? 0;
+  // 呼吸（站着/坐着时）：每个人相位不同
+  const seed = (p.x * 0.013 + p.h * 0.007) % 6.28;
+  const breath = walking ? 0 : Math.sin(CLOCK.t * 1.9 + seed);
+  // 低头坐着的人：偶尔轻微地发抖
+  const shiver = !walking && sit > 0.5 && (p.head ?? 0) > 0.3 ? Math.sin(CLOCK.t * 23 + seed) * Math.max(0, Math.sin(CLOCK.t * 0.9 + seed)) : 0;
 
-  // 腿
-  const legAngles = (ph: number | undefined, side: number) => {
-    let a1 = 0.03 * side, a2 = 0.03 * side;
-    if (ph !== undefined) {
-      const s = Math.sin(ph + (side > 0 ? 0 : Math.PI));
-      const cph = Math.cos(ph + (side > 0 ? 0 : Math.PI));
-      a1 = 0.45 * s * stride;
-      a2 = a1 - 0.55 * Math.max(0, cph) * stride;
+  // ---- 腿：脚跟着地 → 屈膝 → 蹬地，摆动腿膝盖弯得更多 ----
+  const legAngles = (side: number) => {
+    let a1 = 0.035 * side, a2 = 0.02 * side;
+    if (walking) {
+      const ph = wph + (side > 0 ? 0 : Math.PI);
+      const s = Math.sin(ph), cph = Math.cos(ph);
+      a1 = 0.44 * s * stride;
+      const bend = stride * (0.1 + 0.78 * Math.pow(Math.max(0, cph), 1.4));
+      a2 = a1 - bend;
     }
     a1 = mix(a1, Math.PI / 2 - 0.08 + side * 0.03, sit);
     a2 = mix(a2, 0.08 + side * 0.05, sit);
@@ -419,29 +431,35 @@ function drawPersonBody(ctx: CanvasRenderingContext2D, p: Person) {
   };
   const hip0: Pt = { x: 0, y: 0 };
   const legs = [1, -1].map((side) => {
-    const [a1, a2] = legAngles(p.walk, side);
+    const [a1, a2] = legAngles(side);
     const knee = dirPt(hip0, a1, thigh);
-    const foot = dirPt(knee, a2, shin);
-    return { knee, foot };
+    const ankle = dirPt(knee, a2, shin);
+    return { side, a1, a2, knee, ankle };
   });
-  const dy = -Math.max(legs[0].foot.y, legs[1].foot.y); // 让较低的脚着地
+  const ground = Math.max(legs[0].ankle.y, legs[1].ankle.y);
+  const dy = -ground - legW * 0.32; // 鞋底着地
   const hip: Pt = { x: 0, y: dy };
-  const ta = stoop * 0.75 + sit * 0.12 + (p.lean ?? 0) + (p.walk !== undefined ? 0.05 : 0);
-  const shoulder: Pt = { x: Math.sin(ta) * torso, y: dy - Math.cos(ta) * torso };
-  const ha = ta + stoop * 0.35 + (p.head ?? 0);
+  const ta = stoop * 0.75 + sit * 0.12 + (p.lean ?? 0) + (walking ? 0.06 : 0);
+  const shoulder: Pt = { x: Math.sin(ta) * torso + shiver * h * 0.002, y: dy - Math.cos(ta) * torso - breath * h * 0.0035 };
+  // 走路时头部会稳住身体的起伏
+  const ha = ta + stoop * 0.35 + (p.head ?? 0) - (walking ? 0.04 * Math.sin(2 * wph) : 0);
+  const neckTop: Pt = { x: shoulder.x + Math.sin(ha) * neck * 1.6, y: shoulder.y - Math.cos(ha) * neck * 1.6 };
   const headC: Pt = { x: shoulder.x + Math.sin(ha) * (neck + headR) + headR * 0.12, y: shoulder.y - Math.cos(ha) * (neck + headR) };
 
+  // ---- 手臂：反向摆臂 + 肩膀前后转动 ----
   const toLocal = (q: Pt): Pt => ({ x: (q.x - p.x) * dir, y: q.y - p.y });
-  const arm = (target: Pt | null | undefined, ang: number) => {
-    if (target) return ik(shoulder, toLocal(target), upper, fore, 1);
-    const e = dirPt(shoulder, ang, upper);
-    return [e, dirPt(e, ang + 0.3, fore)] as [Pt, Pt];
+  const swing = walking ? 0.5 * Math.sin(wph) * stride : 0;
+  const shF: Pt = { x: shoulder.x + (walking ? -Math.sin(wph) * h * 0.012 : 0), y: shoulder.y + headR * 0.15 };
+  const shB: Pt = { x: shoulder.x - (walking ? -Math.sin(wph) * h * 0.012 : 0) - headR * 0.1, y: shoulder.y + headR * 0.1 };
+  const arm = (S: Pt, target: Pt | null | undefined, ang: number) => {
+    if (target) return ik(S, toLocal(target), upper, fore, 1);
+    const e = dirPt(S, ang, upper);
+    return [e, dirPt(e, ang + 0.25 + Math.max(0, ang) * 0.5, fore)] as [Pt, Pt];
   };
-  const swing = p.walk !== undefined ? 0.5 * Math.sin(p.walk) * stride : 0;
   const armF = p.earF
-    ? ik(shoulder, { x: headC.x - headR * 0.15, y: headC.y + headR * 0.45 }, upper, fore, 1)
-    : arm(p.handF, p.armF ?? -swing + 0.08);
-  const armB = arm(p.handB, p.armB ?? swing - 0.05);
+    ? ik(shF, { x: headC.x - headR * 0.15, y: headC.y + headR * 0.45 }, upper, fore, 1)
+    : arm(shF, p.handF, p.armF ?? -swing + 0.08 + breath * 0.01);
+  const armB = arm(shB, p.handB, p.armB ?? swing - 0.05 - breath * 0.01);
 
   ctx.save();
   ctx.translate(p.x, p.y);
@@ -450,74 +468,210 @@ function drawPersonBody(ctx: CanvasRenderingContext2D, p: Person) {
   ctx.strokeStyle = col;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  const limb = (a: Pt, b: Pt, cc: Pt, w: number) => {
-    ctx.lineWidth = w;
+  const norm = (a: Pt, b: Pt) => { const l = Math.hypot(b.x - a.x, b.y - a.y) || 1; return { x: -(b.y - a.y) / l, y: (b.x - a.x) / l }; };
+  /** 渐细的肢体段：a 端宽 wa，b 端宽 wb；bulge 让一侧（肌肉）鼓起 */
+  const seg = (a: Pt, b: Pt, wa: number, wb: number, bulge = 0) => {
+    const n = norm(a, b);
+    const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const wm = (wa + wb) / 2;
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-    ctx.lineWidth = w * 0.76;
-    ctx.beginPath();
-    ctx.moveTo(b.x, b.y);
-    ctx.lineTo(cc.x, cc.y);
-    ctx.stroke();
-  };
-  for (const L of legs) {
-    limb(hip, { x: L.knee.x, y: L.knee.y + dy }, { x: L.foot.x, y: L.foot.y + dy }, legW);
-    // 脚
-    ctx.beginPath();
-    ctx.ellipse(L.foot.x + legW * 0.45, L.foot.y + dy - legW * 0.2, legW * 0.75, legW * 0.35, 0, 0, Math.PI * 2);
+    ctx.moveTo(a.x + n.x * wa / 2, a.y + n.y * wa / 2);
+    ctx.quadraticCurveTo(m.x + n.x * (wm / 2 + bulge), m.y + n.y * (wm / 2 + bulge), b.x + n.x * wb / 2, b.y + n.y * wb / 2);
+    ctx.lineTo(b.x - n.x * wb / 2, b.y - n.y * wb / 2);
+    ctx.quadraticCurveTo(m.x - n.x * wm * 0.52, m.y - n.y * wm * 0.52, a.x - n.x * wa / 2, a.y - n.y * wa / 2);
+    ctx.closePath();
     ctx.fill();
-  }
-  limb(shoulder, armB[0], armB[1], armW);
-  // 躯干
-  ctx.lineWidth = bodyW;
-  ctx.beginPath();
-  ctx.moveTo(hip.x, hip.y - bodyW * 0.15);
-  ctx.lineTo(shoulder.x, shoulder.y + bodyW * 0.25);
-  ctx.stroke();
-  if (p.mom && sit < 0.5) {
     ctx.beginPath();
-    ctx.moveTo(hip.x - bodyW * 0.45 + shoulder.x * 0.15, hip.y - torso * 0.25);
-    ctx.lineTo(hip.x + bodyW * 0.45 + shoulder.x * 0.15, hip.y - torso * 0.25);
-    ctx.lineTo(hip.x + bodyW * 0.95, hip.y + thigh * 0.95);
-    ctx.lineTo(hip.x - bodyW * 0.85, hip.y + thigh * 0.95);
+    ctx.arc(a.x, a.y, wa / 2, 0, Math.PI * 2);
+    ctx.arc(b.x, b.y, wb / 2, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  // 鞋：着地的脚放平，离地的脚随小腿翘起或脚尖朝下
+  const shoe = (ankle: Pt, a2: number, lifted: boolean) => {
+    const fl = legW * mix(1.85, 1.5, c);
+    const fa = lifted ? clamp(-a2 * 0.75, -0.55, 0.7) : 0;
+    const f = { x: Math.cos(fa), y: Math.sin(fa) }, up = { x: Math.sin(fa), y: -Math.cos(fa) };
+    const o = { x: ankle.x - up.x * legW * 0.3, y: ankle.y - up.y * legW * 0.3 };
+    const P = (u: number, v: number) => ({ x: o.x + f.x * u + up.x * v, y: o.y + f.y * u + up.y * v });
+    const pts = [P(-0.3 * fl, 0), P(-0.32 * fl, legW * 0.42), P(0.15 * fl, legW * 0.58), P(0.62 * fl, legW * 0.4), P(0.95 * fl, legW * 0.22), P(1.0 * fl, 0.02 * legW)];
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      const q = pts[i], pr = pts[i - 1];
+      ctx.quadraticCurveTo(pr.x, pr.y, (pr.x + q.x) / 2, (pr.y + q.y) / 2);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+    ctx.closePath();
+    ctx.fill();
+  };
+  const leg = (L: (typeof legs)[number]) => {
+    const knee = { x: L.knee.x, y: L.knee.y + dy }, ankle = { x: L.ankle.x, y: L.ankle.y + dy };
+    seg(hip, knee, legW * 1.12, legW * 0.78, legW * 0.08);
+    seg(knee, ankle, legW * 0.78, legW * 0.46, -legW * 0.12); // 小腿肚在后侧
+    shoe(ankle, L.a2, ground - L.ankle.y > legW * 0.15);
+  };
+  const hand = (wrist: Pt, elbow: Pt, holding: boolean) => {
+    const ang = Math.atan2(wrist.y - elbow.y, wrist.x - elbow.x);
+    ctx.save();
+    ctx.translate(wrist.x, wrist.y);
+    ctx.rotate(ang);
+    ctx.beginPath();
+    ctx.ellipse(armW * 0.5, 0, armW * (holding ? 0.62 : 0.78), armW * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 拇指
+    ctx.beginPath();
+    ctx.ellipse(armW * 0.35, -armW * 0.32, armW * 0.32, armW * 0.16, -0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  };
+  const armDraw = (S: Pt, a: [Pt, Pt], holding: boolean) => {
+    seg(S, a[0], armW * 1.08, armW * 0.78, armW * 0.06);
+    seg(a[0], a[1], armW * 0.8, armW * 0.56, armW * 0.06);
+    hand(a[1], a[0], holding);
+  };
+
+  // ---- 远侧：手臂、腿 ----
+  armDraw(shB, armB, !!p.handB);
+  leg(legs[1]);
+
+  // ---- 躯干：背部随驼背弓起，胸口随呼吸起伏 ----
+  {
+    const u = { x: shoulder.x - hip.x, y: shoulder.y - hip.y };
+    const ul = Math.hypot(u.x, u.y) || 1;
+    u.x /= ul; u.y /= ul;
+    const n = { x: -u.y, y: u.x }; // 指向前方
+    const at = (k: number, side: number, w: number) => ({ x: hip.x + u.x * ul * k + n.x * side * w, y: hip.y + u.y * ul * k + n.y * side * w });
+    const wHip = bodyW * mix(0.95, 1.05, c), wChest = bodyW * (1.08 + breath * 0.02 + (p.mom ? 0.04 : 0)), wSh = bodyW * 0.82;
+    const coat = !p.mom && c < 0.5 && sit < 0.5; // 站着/走着才看得到外套下摆
+    const low = coat ? -h * 0.065 : -h * 0.01;
+    const hipFront = { x: hip.x + n.x * wHip / 2 + u.x * low, y: hip.y + n.y * wHip / 2 + u.y * low };
+    const hipBack = { x: hip.x - n.x * wHip / 2 + u.x * low, y: hip.y - n.y * wHip / 2 + u.y * low };
+    ctx.beginPath();
+    ctx.moveTo(hipBack.x, hipBack.y);
+    const backMid = at(0.62, -1, wChest / 2 + stoop * bodyW * 0.28);
+    const backTop = at(1.0, -1, wSh / 2);
+    ctx.quadraticCurveTo(backMid.x, backMid.y, backTop.x, backTop.y);
+    const top = at(1.08, 0, 0);
+    ctx.quadraticCurveTo(top.x, top.y, at(1.0, 1, wSh * 0.4).x, at(1.0, 1, wSh * 0.4).y);
+    const chest = at(0.68, 1, wChest / 2 + (p.mom ? bodyW * 0.06 : 0));
+    const waist = at(0.3, 1, wHip * 0.44);
+    ctx.quadraticCurveTo(chest.x, chest.y, waist.x, waist.y);
+    ctx.quadraticCurveTo(hipFront.x + n.x * bodyW * 0.04, hipFront.y + n.y * bodyW * 0.04, hipFront.x, hipFront.y);
+    ctx.closePath();
+    ctx.fill();
+    if (coat) {
+      // 立领
+      const cb = at(0.98, 0.15, wSh / 2);
+      ctx.beginPath();
+      ctx.moveTo(cb.x - n.x * h * 0.02, cb.y - n.y * h * 0.02);
+      ctx.lineTo(cb.x + u.x * h * 0.018, cb.y + u.y * h * 0.018);
+      ctx.lineTo(cb.x + n.x * h * 0.018, cb.y + n.y * h * 0.018);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  // ---- 妈妈的裙子：A 字裙，下摆比身体慢半拍地摆动 ----
+  if (p.mom) {
+    const waistY = hip.y - torso * 0.22;
+    const sway = walking ? Math.sin(wph - 0.9) * h * 0.016 * stride : breath * h * 0.002;
+    if (sit < 0.5) {
+      const kx = legs.map((L) => L.knee.x);
+      const hemY = hip.y + thigh * 1.02 + (walking ? Math.abs(Math.cos(wph)) * h * 0.004 : 0);
+      const front = Math.max(...kx) + legW * 0.95 + sway;
+      const back = Math.min(...kx) - legW * 0.9 + sway * 1.3;
+      const wx = hip.x + Math.sin(ta) * torso * 0.22;
+      ctx.beginPath();
+      ctx.moveTo(wx - bodyW * 0.48, waistY);
+      ctx.quadraticCurveTo(back + legW * 0.2, hip.y + thigh * 0.4, back, hemY);
+      ctx.quadraticCurveTo((back + front) / 2, hemY + h * 0.012, front, hemY - h * 0.004);
+      ctx.quadraticCurveTo(front - legW * 0.25, hip.y + thigh * 0.35, wx + bodyW * 0.5, waistY);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // 坐着：裙摆盖住大腿，在膝盖处垂下
+      const kn = { x: legs[0].knee.x, y: legs[0].knee.y + dy };
+      seg(hip, kn, legW * 1.7, legW * 1.35, legW * 0.1);
+      ctx.beginPath();
+      ctx.moveTo(kn.x - legW * 0.3, kn.y - legW * 0.5);
+      ctx.lineTo(kn.x + legW * 0.75, kn.y);
+      ctx.lineTo(kn.x + legW * 0.55 + sway, kn.y + h * 0.075);
+      ctx.lineTo(kn.x - legW * 0.25 + sway, kn.y + h * 0.07);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  // ---- 近侧腿 ----
+  leg(legs[0]);
+
+  // ---- 脖子 ----
+  seg({ x: shoulder.x - headR * 0.08, y: shoulder.y + headR * 0.1 }, { x: neckTop.x, y: neckTop.y }, headR * 0.72, headR * 0.6);
+
+  // ---- 头：侧脸轮廓（额头、眉骨、鼻子、嘴唇、下巴） ----
+  const R = headR;
+  const fx = Math.cos(ha), fy = Math.sin(ha), dx2 = -Math.sin(ha), dy2 = Math.cos(ha);
+  const hp = (u: number, v: number) => ({ x: headC.x + fx * u * R + dx2 * v * R, y: headC.y + fy * u * R + dy2 * v * R });
+  {
+    const cr = hp(-0.06, -0.06);
+    ctx.beginPath();
+    ctx.ellipse(cr.x, cr.y, R * mix(1.0, 1.06, c), R * mix(1.04, 1.02, c), ha, 0, Math.PI * 2);
+    ctx.fill();
+    const k = 1 - c * 0.55; // 小孩的五官更平、更小
+    const face = [
+      hp(0.55, -0.82), hp(0.84, -0.48), hp(0.9, -0.28), hp(0.86, -0.18), // 额头 → 眉骨
+      hp(0.9 + 0.3 * k, 0.06), hp(0.92 + 0.22 * k, 0.16), hp(0.9, 0.22), // 鼻子
+      hp(0.95 + 0.06 * k, 0.32), hp(0.9, 0.39), hp(0.96 + 0.04 * k, 0.47), hp(0.9, 0.55), // 上唇、下唇
+      hp(0.88 + 0.04 * k, 0.68), hp(0.72, 0.84), hp(0.4, 0.92), hp(0.05, 0.8), hp(-0.3, 0.6), // 下巴 → 下颌
+    ];
+    ctx.beginPath();
+    ctx.moveTo(hp(0, -0.2).x, hp(0, -0.2).y);
+    for (const q of face) ctx.lineTo(q.x, q.y);
     ctx.closePath();
     ctx.fill();
   }
-  // 脖子 + 头
-  ctx.lineWidth = headR * 0.7;
-  ctx.beginPath();
-  ctx.moveTo(shoulder.x, shoulder.y);
-  ctx.lineTo(headC.x - headR * 0.1, headC.y + headR * 0.4);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(headC.x, headC.y, headR, 0, Math.PI * 2);
-  ctx.fill();
-  // 鼻子
-  ctx.beginPath();
-  ctx.arc(headC.x + Math.cos(ha) * headR * 0.92, headC.y + Math.sin(ha) * headR * 0.92 + headR * 0.08, headR * 0.2, 0, Math.PI * 2);
-  ctx.fill();
+  // 头发
+  const hairCol = p.hair ?? col;
   if (p.mom) {
-    ctx.fillStyle = p.hair ?? col;
+    ctx.fillStyle = hairCol;
+    // 发际线 + 盘起的头发
     ctx.beginPath();
-    ctx.arc(headC.x - Math.cos(ha) * headR * 0.85 + Math.sin(ha) * headR * 0.35, headC.y - Math.sin(ha) * headR * 0.85 - Math.cos(ha) * headR * 0.35, headR * 0.52, 0, Math.PI * 2);
+    // 发际线在额头上方往后梳，不盖住脸
+    const a0 = hp(0.42, -0.93), a1 = hp(-0.1, -1.2), a2 = hp(-0.98, -0.5), a3 = hp(-1.04, 0.22), a4 = hp(-0.66, 0.38), a5 = hp(-0.42, -0.28), a6 = hp(0.18, -0.8);
+    ctx.moveTo(a0.x, a0.y);
+    ctx.quadraticCurveTo(a1.x, a1.y, a2.x, a2.y);
+    ctx.quadraticCurveTo(a3.x, a3.y, a4.x, a4.y);
+    ctx.quadraticCurveTo(a5.x, a5.y, a6.x, a6.y);
+    ctx.closePath();
+    ctx.fill();
+    // 发髻：跟着走路慢半拍地晃
+    const lag = walking ? Math.sin(wph * 2 - 1.2) * 0.06 : breath * 0.01;
+    const bun = hp(-0.92 - lag * 0.5, -0.52 + lag);
+    ctx.beginPath();
+    ctx.ellipse(bun.x, bun.y, R * 0.5, R * 0.44, ha + 0.4, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = col;
   } else if (c > 0.5) {
-    // 小孩的呆毛
-    ctx.lineWidth = headR * 0.14;
+    // 小孩：圆圆的头顶和一撮呆毛
+    ctx.lineWidth = R * 0.14;
+    const s0 = hp(-0.05, -1.0), s1 = hp(0.1, -1.55), s2 = hp(0.45, -1.3);
     ctx.beginPath();
-    ctx.moveTo(headC.x - headR * 0.1, headC.y - headR * 0.95);
-    ctx.quadraticCurveTo(headC.x + headR * 0.1, headC.y - headR * 1.5, headC.x + headR * 0.45, headC.y - headR * 1.3);
+    ctx.moveTo(s0.x, s0.y);
+    ctx.quadraticCurveTo(s1.x, s1.y, s2.x, s2.y);
     ctx.stroke();
-  }
-  limb(shoulder, armF[0], armF[1], armW);
-  for (const hand of [armF[1], armB[1]]) {
+  } else {
+    // 成年男人：短发，头顶和后脑稍微蓬一点
+    ctx.fillStyle = hairCol;
     ctx.beginPath();
-    ctx.arc(hand.x, hand.y, armW * 0.62, 0, Math.PI * 2);
+    const b0 = hp(0.7, -0.72), b1 = hp(0.2, -1.22), b2 = hp(-0.88, -0.78), b3 = hp(-1.12, 0.0), b4 = hp(-0.7, 0.32), b5 = hp(-0.2, -0.45);
+    ctx.moveTo(b0.x, b0.y);
+    ctx.quadraticCurveTo(b1.x, b1.y, b2.x, b2.y);
+    ctx.quadraticCurveTo(b3.x, b3.y, b4.x, b4.y);
+    ctx.quadraticCurveTo(b5.x, b5.y, b0.x, b0.y);
     ctx.fill();
+    ctx.fillStyle = col;
   }
+
+  // ---- 近侧手臂 ----
+  armDraw(shF, armF, !!p.handF || !!p.earF);
   if (p.earF) {
     ctx.save();
     ctx.translate(armF[1].x, armF[1].y);
