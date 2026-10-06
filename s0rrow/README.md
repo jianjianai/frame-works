@@ -14,3 +14,4 @@
 - `fonts/noto-sans-sc-700.woff2`：来源 Google Fonts Noto Sans SC 700（按作品用字子集化）；许可 SIL OFL 1.1
 - `fonts/permanent-marker.woff2`：来源 Google Fonts Permanent Marker（按作品用字子集化）；许可 SIL OFL 1.1
 - `fonts/zcool-kuaile.woff2`：来源 Google Fonts ZCOOL KuaiLe 站酷快乐体（按作品用字子集化）；许可 SIL OFL 1.1
+- `code/draw.ts`：来源 work-bdd5c2f8：手绘笔刷、字体、节拍；许可 自制
