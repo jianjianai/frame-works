@@ -34,3 +34,4 @@
 - `reference/act5.ts`：来源 work-bdd5c2f8 第五幕：飞行模式反转、消息洪水、X脸消失（镜头写法参考）；许可 自制
 - `reference/act6.ts`：来源 work-bdd5c2f8 尾声：分耳机、发送成功、P.S.（镜头写法参考）；许可 自制
 - `templates/lyrics-data.template.ts`：来源 work-bdd5c2f8 的 lyrics-data.ts 去掉歌词后的模板；许可 自制
+- `tools/fetch-krc.mjs`：来源 按酷狗 KRC 协议自写（见经验库）；许可 自制；未经测试的模板，使用前先对一首歌跑通
