@@ -52,3 +52,4 @@
 - `code/sfx-audio.ts`：来源 合并两支作品的合成音效：第一支 typing/send/fail/match/blow/flood/splat/pop/reply + 《unhappy》keys/doorOpen/doorClose/roomDoor/ball/slam/cough/squeak/rain/heartbeat/click/splash/whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps
 - `reference/unhappy/act1.ts`：来源 《unhappy》第一幕参考（小狗视角：钩子、手机照片、门关上+延时、离家出走），只看不拷
 - `reference/unhappy/act2.ts`：来源 《unhappy》第二幕参考（雨夜橱窗倒影、sepia 回忆、心跳暗角、手电筒、抱狗、X 光、拍钱），只看不拷
+- `reference/unhappy/act3.ts`：来源 《unhappy》第三幕参考（倒带切主人视角、便利贴、睡着后摸头、手机三连屏、手术中延时、住院日历翻页、醒来舔手），只看不拷
