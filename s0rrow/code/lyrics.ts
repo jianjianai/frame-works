@@ -12,6 +12,15 @@ const CN_MAX_W = 900;
 const ROW_H = 68;
 const CN_ROW_H = 78;
 
+// ---------------------------------------------------------------- 每支视频要改的
+/** 最后一句歌词最晚在这里消失（尾声文字从这里开始写）。 */
+const LYRICS_END = 84.3;
+/** 按句下标给段落样式：bridge 桥段（粉色），big 全片最大的一句，outro 末段（暖黄）。 */
+function lineStyle(li: number) {
+  return { bridge: li >= 8 && li <= 11, big: li === 11, outro: li >= 16 };
+}
+// 开头钩子和常驻标题胶囊的文案、时间点在下面的 hook() 里，也要改。
+
 interface CnRow {
   text: string;
   /** index of the first character in the full line */
@@ -104,13 +113,12 @@ function drawLine(ctx: Ctx, li: number, abs: number) {
   const next = LINES[li + 1];
   const showFrom = line.start - 0.18;
   // the last line clears before the outro text starts writing
-  const hideAt = Math.min(next ? next.start - 0.06 : 84.3, line.end + (line.fix ? 3 : 1.4));
+  const hideAt = Math.min(next ? next.start - 0.06 : LYRICS_END, line.end + (line.fix ? 3 : 1.4));
   if (abs < showFrom || abs > hideAt) return;
   const aIn = easeOut(phase(abs, showFrom, showFrom + 0.22));
   const aOut = 1 - phase(abs, hideAt - 0.16, hideAt);
   const alpha = aIn * aOut;
-  const bridge = li >= 8 && li <= 11;
-  const big = li === 11;
+  const { bridge, big, outro } = lineStyle(li);
   const size = big ? 84 : EN_SIZE;
   const { placed, rows } = layout(ctx, li, line, size);
   const rowH = big ? 96 : ROW_H;
@@ -122,7 +130,7 @@ function drawLine(ctx: Ctx, li: number, abs: number) {
   ctx.font = font(size, F.en);
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  const accent = li >= 16 ? "#ffd166" : bridge ? "#ff9ec4" : "#ffe45c";
+  const accent = outro ? "#ffd166" : bridge ? "#ff9ec4" : "#ffe45c";
   for (const p of placed) {
     const [ws, wd, word] = p.word;
     const y = top + p.row * rowH;
