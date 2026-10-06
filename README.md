@@ -9,3 +9,4 @@
 - `i-have-no-friends/lyrics-data.ts`：来源 work-bdd5c2f8：酷狗 KRC 逐字时间 + 自译中文（词数与英文一一对应）；许可 歌词版权归原作者；中文翻译为本作品自译
 - `i-have-no-friends/audio-template.json`：来源 work-bdd5c2f8 的混音：歌曲三段 + 65.59–67.07s 低通闷音轨 + 音乐对音效闪避；许可 自制
 - `fonts/gochi-hand.woff2`：来源 Google Fonts Gochi Hand（按作品用字子集化）；许可 SIL OFL 1.1
+- `fonts/long-cang.woff2`：来源 Google Fonts Long Cang 龙藏体（按作品用字子集化）；许可 SIL OFL 1.1
