@@ -1,0 +1,76 @@
+# 共享素材
+
+从原来的共享素材库整理而来，按素材来自的作品分文件夹。引用了它的作品可以直接使用其中的文件：`materials/共享素材/<文件>`。
+
+## 来源与许可
+
+- `work-6daf59d2/network.mp4`：来自作品 work-6daf59d2；来源与许可见作品制作资料；作品导入
+- `work-be2028d4/network.mp4`：来自作品 work-be2028d4；来源与许可见作品制作资料；作品导入
+- `work-71c35301/poster.svg`：来自作品 work-71c35301；来源与许可见作品制作资料；作品导入
+- `work-a786450b/poster.svg`：来自作品 work-a786450b；来源与许可见作品制作资料；作品导入
+- `work-8d43897b/poster.svg`：来自作品 work-8d43897b；来源与许可见作品制作资料；作品导入
+- `work-2107e831/poster.svg`：来自作品 work-2107e831；来源与许可见作品制作资料；作品导入
+- `speech-1790937610878.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-517610f2/qa.wav`：来自作品 work-517610f2；来源与许可见作品制作资料；作品导入
+- `speech-1790937697433.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-0560feb5/poster.png`：来自作品 work-0560feb5；来源与许可见作品制作资料；作品导入
+- `work-7b7399db/network.mp4`：来自作品 work-7b7399db；来源与许可见作品制作资料；作品导入
+- `work-0560feb5/fx.mp3`：来自作品 work-0560feb5；来源与许可见作品制作资料；作品导入
+- `fold-harmony.m4a`：本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts
+- `speech-1790775952797.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-0560feb5/narration.mp3`：来自作品 work-0560feb5；来源与许可见作品制作资料；作品导入
+- `speech-1790937621974.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `speech-1790937627134.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `speech-1790937644677.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-6daf59d2/poster.svg`：来自作品 work-6daf59d2；来源与许可见作品制作资料；作品导入
+- `fold-foley.m4a`：本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts
+- `speech-1790937639376.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-0560feb5/drums.mp3`：来自作品 work-0560feb5；来源与许可见作品制作资料；作品导入
+- `work-388519cc/qa.wav`：来自作品 work-388519cc；来源与许可见作品制作资料；作品导入
+- `speech-1790776061393.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `speech-1790937633592.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-71cf91d0/poster.svg`：来自作品 work-71cf91d0；来源与许可见作品制作资料；作品导入
+- `work-517610f2/poster.svg`：来自作品 work-517610f2；来源与许可见作品制作资料；作品导入
+- `fold-bass.m4a`：本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts
+- `work-0560feb5/harmony.mp3`：来自作品 work-0560feb5；来源与许可见作品制作资料；作品导入
+- `work-02c36028/network.mp4`：来自作品 work-02c36028；来源与许可见作品制作资料；作品导入
+- `work-9df7bcdd/poster.svg`：来自作品 work-9df7bcdd；来源与许可见作品制作资料；作品导入
+- `work-388519cc/poster.svg`：来自作品 work-388519cc；来源与许可见作品制作资料；作品导入
+- `work-02c36028/poster.svg`：来自作品 work-02c36028；来源与许可见作品制作资料；作品导入
+- `speech-1790937694604.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `speech-1790937616766.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `speech-1790668901721.wav`：Generated with Kokoro 中文 · 本地 CPU
+- `work-babd9dfa/poster.svg`：来自作品 work-babd9dfa；来源与许可见作品制作资料；作品导入
+- `work-7b7399db/poster.svg`：来自作品 work-7b7399db；来源与许可见作品制作资料；作品导入
+- `speech-1790776095092.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-7b2360b6/network.mp4`：来自作品 work-7b2360b6；来源与许可见作品制作资料；作品导入
+- `release-750-tone.wav`：Original generated release verification tone
+- `release-751-tone.wav`：Original generated release verification tone
+- `speech-1790937689373.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `speech-1790776070087.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `mir-avatar.png`：Assistant mir saved avatar; used as identity reference in user-requested film.
+- `work-39d8b371/poster.svg`：来自作品 work-39d8b371；来源与许可见作品制作资料；作品导入
+- `work-05636593/poster.svg`：来自作品 work-05636593；来源与许可见作品制作资料；作品导入
+- `speech-1790776103402.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-517610f2/qa.svg`：来自作品 work-517610f2；来源与许可见作品制作资料；作品导入
+- `折叠_THE_IMPOSSIBLE_FOLD_720p.mp4`：原创三维场景及原创乐谱代码生成；Frame作品 work-b6ee56e9 的最终成片，无外部视听素材。
+- `work-80ad03de/poster.svg`：来自作品 work-80ad03de；来源与许可见作品制作资料；作品导入
+- `work-be2028d4/poster.svg`：来自作品 work-be2028d4；来源与许可见作品制作资料；作品导入
+- `work-4702095b/poster.svg`：来自作品 work-4702095b；来源与许可见作品制作资料；作品导入
+- `speech-1790799041309.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-82a35080/network.mp4`：来自作品 work-82a35080；来源与许可见作品制作资料；作品导入
+- `speech-1790938222634.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-a4e3e0ca/poster.svg`：来自作品 work-a4e3e0ca；来源与许可见作品制作资料；作品导入
+- `speech-1790937691904.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-82a35080/poster.svg`：来自作品 work-82a35080；来源与许可见作品制作资料；作品导入
+- `work-b6ee56e9/poster.svg`：来自作品 work-b6ee56e9；来源与许可见作品制作资料；作品导入
+- `旁白·01·开场.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `speech-1790776081060.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `work-a095c88e/poster.svg`：来自作品 work-a095c88e；来源与许可见作品制作资料；作品导入
+- `speech-1790937699941.wav`：Generated with Kokoro 中文; Apache-2.0; https://huggingface.co/hexgrad/Kokoro-82M
+- `fold-rhythm.m4a`：本作品原创程序合成；乐谱与合成器源码：work-b6ee56e9/music/score.ts
+- `work-0560feb5/poster.svg`：来自作品 work-0560feb5；来源与许可见作品制作资料；作品导入
+- `work-0560feb5/pulse.mp3`：来自作品 work-0560feb5；来源与许可见作品制作资料；作品导入
+- `work-de08cf43/poster.svg`：来自作品 work-de08cf43；来源与许可见作品制作资料；作品导入
+- `work-8644ea78/poster.svg`：来自作品 work-8644ea78；来源与许可见作品制作资料；作品导入
+- `work-7b2360b6/poster.svg`：来自作品 work-7b2360b6；来源与许可见作品制作资料；作品导入
