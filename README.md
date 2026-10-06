@@ -1,1 +1,4 @@
-# FRAME material library
+# FRAME 素材库
+
+每个文件夹是一个素材库（图片、视频、音频、字体等），各自的 README 记录素材的来源与许可。
+作品在 FRAME Studio 中引用素材库后直接使用其中的文件，并锁定所用文件的版本。
