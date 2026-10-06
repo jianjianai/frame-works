@@ -20,6 +20,7 @@ const project: AnimationProject = {
   loadVisual: () => import("./visual.json"),
   loadAudioDocument: () => import("./audio.json"),
   loadAudio: () => import("./audio"),
-  experiences: ["剧情音乐短片"],
+  experiences: ["剧情音乐短片","s0rrow"],
+  materials: ["s0rrow"],
 };
 export default project;
