@@ -38,3 +38,4 @@
 - `code/draw.ts`：来源 work-bdd5c2f8：手绘笔刷、字体、节拍（顶部 FONT_DIR、BPM、BEAT0 每支视频要改）；许可 自制
 - `code/lyrics.ts`：来源 work-bdd5c2f8：中英卡拉 OK 歌词图层 + 钩子标题 + 标题胶囊 + 红笔改写（顶部 LYRICS_END、lineStyle 和 hook() 每支视频要改）；许可 自制
 - `tools/fetch-fonts.mjs`：来源 work-bdd5c2f8：按 scenes/ 里用到的字符向 Google Fonts 取字体子集；许可 自制
+- `tools/fetch-krc.mjs`：来源 work-bdd5c2f8：酷狗 KRC 逐词时间 → scenes/lib/krc.ts（已验证，输出与原作品 krc.ts 一致）；许可 自制
