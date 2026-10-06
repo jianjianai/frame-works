@@ -40,3 +40,4 @@
 - `tools/fetch-fonts.mjs`：来源 work-bdd5c2f8：按 scenes/ 里用到的字符向 Google Fonts 取字体子集；许可 自制
 - `tools/fetch-krc.mjs`：来源 work-bdd5c2f8：酷狗 KRC 逐词时间 → scenes/lib/krc.ts（已验证，输出与原作品 krc.ts 一致）；许可 自制
 - `templates/visual.json`：来源 图层时间轴模板：55 秒四幕（钩子/铺垫/反转/尾声，起点按歌曲段落起拍处调整）+ lyrics + grain overlay 0.5；许可 自制
+- `templates/scene.ts`：来源 合成入口模板：四幕 + lyrics + grain；许可 自制
