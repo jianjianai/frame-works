@@ -11,3 +11,4 @@
 - `fonts/gochi-hand.woff2`：来源 Google Fonts Gochi Hand（按作品用字子集化）；许可 SIL OFL 1.1
 - `fonts/long-cang.woff2`：来源 Google Fonts Long Cang 龙藏体（按作品用字子集化）；许可 SIL OFL 1.1
 - `fonts/noto-sans-sc-400.woff2`：来源 Google Fonts Noto Sans SC 400（按作品用字子集化）；许可 SIL OFL 1.1
+- `fonts/noto-sans-sc-700.woff2`：来源 Google Fonts Noto Sans SC 700（按作品用字子集化）；许可 SIL OFL 1.1
