@@ -54,3 +54,4 @@
 - `reference/unhappy/act2.ts`：来源 《unhappy》第二幕参考（雨夜橱窗倒影、sepia 回忆、心跳暗角、手电筒、抱狗、X 光、拍钱），只看不拷
 - `reference/unhappy/act3.ts`：来源 《unhappy》第三幕参考（倒带切主人视角、便利贴、睡着后摸头、手机三连屏、手术中延时、住院日历翻页、醒来舔手），只看不拷
 - `reference/unhappy/act4.ts`：来源 《unhappy》尾声参考（封面的树下、落叶、回扣钩子的金句、回看彩蛋），只看不拷
+- `reference/unhappy/timeline.ts`：来源 《unhappy》的小节和事件时间表（画面和音效共用一份时间），新作品照这个写法
