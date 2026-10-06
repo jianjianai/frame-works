@@ -48,3 +48,4 @@
 - `code/screens.ts`：来源 work-d1187f37 新增手机界面：相册看图（可显示日期说明）、存钱目标、外卖接单；便利贴
 - `code/draw.ts`：来源 work-d1187f37：新增 tubePts（锥形管：四肢/尾巴/发绺）、ik2（两段关节）、shaded（填色+裁剪内上明暗+描边）、lerp2/rotPt、filtered（离屏 CSS 滤镜，如回忆的 sepia）；顶部常量是《unhappy》的值，每支要改
 - `code/lyrics.ts`：来源 work-d1187f37：中英逐词歌词 + 钩子大字→标题胶囊（计数变化弹一下、视角翻转）+ 红笔划掉钩子里的说法并改写 + 反转字幕（带暗底条）；钩子文案和时间点每支要改
+- `tools/fetch-fonts.mjs`：来源 work-d1187f37：符号表加 ✓ ¥
