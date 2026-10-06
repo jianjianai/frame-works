@@ -8,7 +8,12 @@ export const H = 1920;
 export type Ctx = CanvasRenderingContext2D;
 export type Pt = [number, number];
 
+// ---------------------------------------------------------------- 每支视频要改的
+/** 字体目录：fetch-fonts.mjs 写到作品的 public/fonts/，这里写 films/<作品名>/fonts/。 */
+export const FONT_DIR = "films/work-bdd5c2f8/fonts/";
+
 // ---------------------------------------------------------------- music grid
+/** 换歌要改：BPM 和第一拍的时间（秒）。 */
 export const BPM = 115;
 export const BEAT = 60 / BPM;
 export const BEAT0 = 0.265;
@@ -274,7 +279,7 @@ const FONT_FILES: [string, string, string][] = [
 export function loadFonts(): Promise<void> {
   fontsReady ??= Promise.all(
     FONT_FILES.map(async ([family, file, weight]) => {
-      const url = assetUrl("films/work-bdd5c2f8/fonts/" + file);
+      const url = assetUrl(FONT_DIR + file);
       // Load the bytes ourselves first (works where CSS url() font loading is restricted),
       // then fall back to a quoted URL source.
       try {
