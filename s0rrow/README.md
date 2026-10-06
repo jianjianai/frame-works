@@ -22,3 +22,4 @@
 - `code/sets.ts`：来源 work-bdd5c2f8：场景；许可 自制
 - `code/shared.ts`：来源 work-bdd5c2f8：生日书桌；许可 自制
 - `code/grain.ts`：来源 work-bdd5c2f8：胶片颗粒图层；许可 自制
+- `code/fetch-fonts.mjs`：来源 work-bdd5c2f8：按用到的字符向 Google Fonts 取字体子集；许可 自制
