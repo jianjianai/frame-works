@@ -50,3 +50,4 @@
 - `code/lyrics.ts`：来源 work-d1187f37：中英逐词歌词 + 钩子大字→标题胶囊（计数变化弹一下、视角翻转）+ 红笔划掉钩子里的说法并改写 + 反转字幕（带暗底条）；钩子文案和时间点每支要改
 - `tools/fetch-fonts.mjs`：来源 work-d1187f37：符号表加 ✓ ¥
 - `code/sfx-audio.ts`：来源 合并两支作品的合成音效：第一支 typing/send/fail/match/blow/flood/splat/pop/reply + 《unhappy》keys/doorOpen/doorClose/roomDoor/ball/slam/cough/squeak/rain/heartbeat/click/splash/whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps
+- `reference/unhappy/act1.ts`：来源 《unhappy》第一幕参考（小狗视角：钩子、手机照片、门关上+延时、离家出走），只看不拷
