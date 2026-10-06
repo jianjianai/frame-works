@@ -4,3 +4,4 @@
 
 ## 来源与许可
 - `i-have-no-friends/i-have-no-friends.flac`：来源 用户提供：s0rrow - i have no friends（99.1 秒）；许可 用户提供，版权归原作者；仅用于该用户自己的作品
+- `i-have-no-friends/cover.jpg`：来源 用户提供：s0rrow - i have no friends 封面（3000×3000）；许可 用户提供，版权归原作者
