@@ -2,13 +2,136 @@
   "schemaVersion": 1,
   "background": "#0b0e1f",
   "clips": [
-    { "id": "act1", "name": "第一幕 · 一个人的生日", "source": { "kind": "scene", "module": "act1", "engine": "canvas" }, "start": 0, "duration": 16.961 },
-    { "id": "act2", "name": "第二幕 · 没有朋友的一天", "source": { "kind": "scene", "module": "act2", "engine": "canvas" }, "start": 16.961, "duration": 16.425 },
-    { "id": "act3", "name": "第三幕 · 秋千", "source": { "kind": "scene", "module": "act3", "engine": "canvas" }, "start": 33.386, "duration": 17.089 },
-    { "id": "act4", "name": "第四幕 · 发送失败", "source": { "kind": "scene", "module": "act4", "engine": "canvas" }, "start": 50.475, "duration": 16.573 },
-    { "id": "act5", "name": "第五幕 · 飞行模式", "source": { "kind": "scene", "module": "act5", "engine": "canvas" }, "start": 67.048, "duration": 16.696 },
-    { "id": "act6", "name": "尾声 · 分你一只耳机", "source": { "kind": "scene", "module": "act6", "engine": "canvas" }, "start": 83.744, "duration": 15.356 },
-    { "id": "lyrics", "name": "中英歌词", "source": { "kind": "scene", "module": "lyrics", "engine": "canvas" }, "start": 0, "duration": 99.1 },
-    { "id": "grain", "name": "胶片颗粒", "source": { "kind": "scene", "module": "grain", "engine": "canvas" }, "start": 0, "duration": 99.1, "blend": "overlay", "transform": { "opacity": 0.5 } }
+    {
+      "id": "act1",
+      "name": "第一幕 · 一个人的生日",
+      "source": {
+        "kind": "scene",
+        "module": "act1",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 16.961,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act2",
+      "name": "第二幕 · 没有朋友的一天",
+      "source": {
+        "kind": "scene",
+        "module": "act2",
+        "engine": "canvas"
+      },
+      "start": 16.961,
+      "duration": 16.425,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act3",
+      "name": "第三幕 · 秋千",
+      "source": {
+        "kind": "scene",
+        "module": "act3",
+        "engine": "canvas"
+      },
+      "start": 33.386,
+      "duration": 17.089,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act4",
+      "name": "第四幕 · 发送失败",
+      "source": {
+        "kind": "scene",
+        "module": "act4",
+        "engine": "canvas"
+      },
+      "start": 50.475,
+      "duration": 16.573,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act5",
+      "name": "第五幕 · 飞行模式",
+      "source": {
+        "kind": "scene",
+        "module": "act5",
+        "engine": "canvas"
+      },
+      "start": 67.048,
+      "duration": 16.696,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act6",
+      "name": "尾声 · 分你一只耳机",
+      "source": {
+        "kind": "scene",
+        "module": "act6",
+        "engine": "canvas"
+      },
+      "start": 83.744,
+      "duration": 15.356,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "lyrics",
+      "name": "中英歌词",
+      "source": {
+        "kind": "scene",
+        "module": "lyrics",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 99.1,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "grain",
+      "name": "胶片颗粒",
+      "source": {
+        "kind": "scene",
+        "module": "grain",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 99.1,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "transform": {
+        "opacity": 0.5
+      },
+      "fit": "contain",
+      "blend": "overlay"
+    }
   ]
 }
