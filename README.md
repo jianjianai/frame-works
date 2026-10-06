@@ -32,3 +32,4 @@
 - `reference/act3.ts`：来源 work-bdd5c2f8 第三幕：公园秋千、情侣、牵手倒V（镜头写法参考）；许可 自制
 - `reference/act4.ts`：来源 work-bdd5c2f8 第四幕：群聊发送失败、点蜡烛许愿（镜头写法参考）；许可 自制
 - `reference/act5.ts`：来源 work-bdd5c2f8 第五幕：飞行模式反转、消息洪水、X脸消失（镜头写法参考）；许可 自制
+- `reference/act6.ts`：来源 work-bdd5c2f8 尾声：分耳机、发送成功、P.S.（镜头写法参考）；许可 自制
