@@ -1,6 +1,6 @@
 // 用酷狗 KRC 取逐字歌词时间，输出 scenes/lib/krc.ts。
-// 用法：node tools/fetch-krc.mjs "歌手 - 歌名" <音频毫秒数> > scenes/lib/krc.ts
-// 先核对返回的 KRC 时长和本地音频一致；挑几个字用频谱图抽查。
+// 用法：node production/fetch-krc.mjs "歌手 - 歌名" <音频毫秒数> > scenes/lib/krc.ts
+// 先核对 stderr 打印的 KRC 时长和本地音频一致，再抽查几个词的时间。
 import zlib from "node:zlib";
 
 const [keyword, duration = ""] = process.argv.slice(2);
@@ -21,23 +21,33 @@ const raw = Buffer.from(dl.content, "base64").subarray(4);
 for (let i = 0; i < raw.length; i++) raw[i] ^= KEY[i % KEY.length];
 const text = zlib.inflateSync(raw).toString("utf8");
 
-// 行：[lineStartMs,lineDurMs]<offMs,durMs,0>字<offMs,durMs,0>字…（偏移相对行起点）
-// 这里把字合并成英文单词：以空格开头的字是新词的开始。
+// 行：[行起点ms,行时长ms]<偏移ms,时长ms,0>字…（偏移相对行起点）。
+// 空格跟在字后面（"Today " "I "），所以上一个字以空格结尾时开始新词。
+const r3 = (n) => Math.round(n * 1000) / 1000;
 const lines = [];
 for (const m of text.matchAll(/^\[(\d+),(\d+)\](.*)$/gm)) {
   const lineStart = Number(m[1]);
   const words = [];
+  let open = false;
   for (const g of m[3].matchAll(/<(\d+),(\d+),\d+>([^<]*)/g)) {
     const start = (lineStart + Number(g[1])) / 1000;
-    const dur = Number(g[2]) / 1000;
+    const end = start + Number(g[2]) / 1000;
     const str = g[3];
-    if (!words.length || /^\s/.test(str)) words.push([start, dur, str.trim()]);
-    else {
-      const w = words[words.length - 1];
-      w[1] = start + dur - w[0];
-      w[2] += str;
+    if (str.trim()) {
+      if (open) {
+        const w = words[words.length - 1];
+        w[1] = end - w[0];
+        w[2] += str.trim();
+      } else words.push([start, end - start, str.trim()]);
     }
+    open = !/\s$/.test(str) && str.trim() !== "";
   }
-  if (words.length) lines.push(words);
+  const joined = words.map((w) => w[2]).join(" ");
+  // 跳过开头的歌名、作词作曲等信息行
+  if (!words.length || /[：:]|^.* - .*$/.test(joined)) continue;
+  lines.push(words.map(([s, d, w]) => [r3(s), r3(d), w]));
 }
-console.log("export const LYRIC_WORDS: [number, number, string][][] = " + JSON.stringify(lines, null, 1) + ";");
+console.log(`// Word timings from Kugou KRC (${keyword}), seconds in song time. [start, duration, word]`);
+console.log("export const LYRIC_WORDS: [number, number, string][][] = [");
+for (const l of lines) console.log("  " + JSON.stringify(l) + ",");
+console.log("];");
