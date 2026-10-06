@@ -17,3 +17,4 @@
 - `code/draw.ts`：来源 work-bdd5c2f8：手绘笔刷、字体、节拍；许可 自制
 - `code/hand.ts`：来源 work-bdd5c2f8：握手机的手和拇指；许可 自制
 - `code/kid.ts`：来源 work-bdd5c2f8：主角；许可 自制
+- `code/people.ts`：来源 work-bdd5c2f8：同学、X 脸；许可 自制
