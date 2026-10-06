@@ -18,3 +18,4 @@
 - `code/hand.ts`：来源 work-bdd5c2f8：握手机的手和拇指；许可 自制
 - `code/kid.ts`：来源 work-bdd5c2f8：主角；许可 自制
 - `code/people.ts`：来源 work-bdd5c2f8：同学、X 脸；许可 自制
+- `code/phone.ts`：来源 work-bdd5c2f8：手机界面；许可 自制
