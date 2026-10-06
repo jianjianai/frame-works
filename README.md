@@ -36,3 +36,4 @@
 - `templates/lyrics-data.template.ts`：来源 work-bdd5c2f8 的 lyrics-data.ts 去掉歌词后的模板；许可 自制
 - `tools/fetch-krc.mjs`：来源 按酷狗 KRC 协议自写（见经验库）；许可 自制；未经测试的模板，使用前先对一首歌跑通
 - `code/draw.ts`：来源 work-bdd5c2f8：手绘笔刷、字体、节拍（顶部 FONT_DIR、BPM、BEAT0 每支视频要改）；许可 自制
+- `code/lyrics.ts`：来源 work-bdd5c2f8：中英卡拉 OK 歌词图层 + 钩子标题 + 标题胶囊 + 红笔改写（顶部 LYRICS_END、lineStyle 和 hook() 每支视频要改）；许可 自制
