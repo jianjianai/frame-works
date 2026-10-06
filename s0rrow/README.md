@@ -41,3 +41,4 @@
 - `tools/fetch-krc.mjs`：来源 work-bdd5c2f8：酷狗 KRC 逐词时间 → scenes/lib/krc.ts（已验证，输出与原作品 krc.ts 一致）；许可 自制
 - `templates/visual.json`：来源 图层时间轴模板：55 秒四幕（钩子/铺垫/反转/尾声，起点按歌曲段落起拍处调整）+ lyrics + grain overlay 0.5；许可 自制
 - `templates/scene.ts`：来源 合成入口模板：四幕 + lyrics + grain；许可 自制
+- `code/kid.ts`：来源 work-d1187f37《unhappy》精细化重画：分层蓬发+点状纹理、虹膜/高光/眼皮折痕、眉毛、明暗、帽衫口袋抽绳罗纹、关节手臂腿（IK）、真实手型、骑手服/头盔、背面视角；保留派对帽/兜帽/耳机/奶油
