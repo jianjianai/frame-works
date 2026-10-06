@@ -19,3 +19,4 @@
 - `code/kid.ts`：来源 work-bdd5c2f8：主角；许可 自制
 - `code/people.ts`：来源 work-bdd5c2f8：同学、X 脸；许可 自制
 - `code/phone.ts`：来源 work-bdd5c2f8：手机界面；许可 自制
+- `code/sets.ts`：来源 work-bdd5c2f8：场景；许可 自制
