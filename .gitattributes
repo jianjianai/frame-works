@@ -1,3 +1,5 @@
+# 媒体素材用 Git LFS 存储（GitHub 不接受超过 100 MB 的普通文件）
+# 音频
 *.[wW][aA][vV] filter=lfs diff=lfs merge=lfs -text
 *.[mM][pP]3 filter=lfs diff=lfs merge=lfs -text
 *.[mM]4[aA] filter=lfs diff=lfs merge=lfs -text
@@ -7,12 +9,14 @@
 *.[oO][gG][aA] filter=lfs diff=lfs merge=lfs -text
 *.[oO][pP][uU][sS] filter=lfs diff=lfs merge=lfs -text
 *.[wW][eE][bB][aA] filter=lfs diff=lfs merge=lfs -text
+# 视频
 *.[mM][pP]4 filter=lfs diff=lfs merge=lfs -text
 *.[mM]4[vV] filter=lfs diff=lfs merge=lfs -text
 *.[mM][oO][vV] filter=lfs diff=lfs merge=lfs -text
 *.[wW][eE][bB][mM] filter=lfs diff=lfs merge=lfs -text
 *.[mM][kK][vV] filter=lfs diff=lfs merge=lfs -text
 *.[aA][vV][iI] filter=lfs diff=lfs merge=lfs -text
+# 图片
 *.[pP][nN][gG] filter=lfs diff=lfs merge=lfs -text
 *.[jJ][pP][gG] filter=lfs diff=lfs merge=lfs -text
 *.[jJ][pP][eE][gG] filter=lfs diff=lfs merge=lfs -text
@@ -23,16 +27,19 @@
 *.[tT][iI][fF] filter=lfs diff=lfs merge=lfs -text
 *.[tT][iI][fF][fF] filter=lfs diff=lfs merge=lfs -text
 *.[pP][sS][dD] filter=lfs diff=lfs merge=lfs -text
+# 字体
 *.[tT][tT][fF] filter=lfs diff=lfs merge=lfs -text
 *.[oO][tT][fF] filter=lfs diff=lfs merge=lfs -text
 *.[wW][oO][fF][fF] filter=lfs diff=lfs merge=lfs -text
 *.[wW][oO][fF][fF]2 filter=lfs diff=lfs merge=lfs -text
+# 三维与贴图
 *.[gG][lL][bB] filter=lfs diff=lfs merge=lfs -text
 *.[fF][bB][xX] filter=lfs diff=lfs merge=lfs -text
 *.[uU][sS][dD][zZ] filter=lfs diff=lfs merge=lfs -text
 *.[hH][dD][rR] filter=lfs diff=lfs merge=lfs -text
 *.[eE][xX][rR] filter=lfs diff=lfs merge=lfs -text
 *.[kK][tT][xX]2 filter=lfs diff=lfs merge=lfs -text
+# 音色库与其他二进制
 *.[sS][fF]2 filter=lfs diff=lfs merge=lfs -text
 *.[sS][fF]3 filter=lfs diff=lfs merge=lfs -text
 *.[bB][iI][nN] filter=lfs diff=lfs merge=lfs -text
