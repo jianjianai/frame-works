@@ -11,7 +11,6 @@ const project: AnimationProject = {
   duration: 15,
   fps: 30,
   accent: "#7aa2f7",
-  poster: "films/work-d1187f37/poster.svg",
   tags: [],
   status: "draft",
   beats: [],
