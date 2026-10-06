@@ -7,7 +7,7 @@ function walk(d){return fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDi
 let chars=new Set();for(const f of walk(path.join(dir,"scenes")))for(const ch of fs.readFileSync(f,"utf8"))if(ch.codePointAt(0)>127)chars.add(ch);
 for(let c=32;c<127;c++)chars.add(String.fromCharCode(c));
 // 画面里用到、但不在 scenes/ 源码里的符号加在这里
-["‹","·","…","—","“","”","（","）","，","。","！","？","：","♥","✆","❚","◀","▶","ᛒ"].forEach(c=>chars.add(c));
+["‹","·","…","—","“","”","（","）","，","。","！","？","：","♥","✆","❚","◀","▶","ᛒ","✓","¥"].forEach(c=>chars.add(c));
 const text=[...chars].join("");
 console.log("chars",chars.size);
 const UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
