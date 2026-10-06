@@ -26,3 +26,4 @@
 - `code/sfx-audio.ts`：来源 work-bdd5c2f8：代码合成音效（打字、发送、失败、火柴、吹蜡烛、点击、消息轰炸、蛋糕、礼花、回复）；许可 自制
 - `code/lyrics.ts`：来源 work-bdd5c2f8：中英卡拉 OK 歌词图层 + 钩子标题 + 标题胶囊 + 红笔改写（钩子文字和时间是该作品专属，复用时改 hook()）；许可 自制
 - `templates/scene.ts`：来源 work-bdd5c2f8：六幕 + lyrics + grain 的合成入口；许可 自制
+- `templates/visual.json`：来源 work-bdd5c2f8：图层时间轴模板（幕首尾相接 + lyrics + grain overlay 0.5）；许可 自制
