@@ -6,3 +6,4 @@
 - `i-have-no-friends/i-have-no-friends.flac`：来源 用户提供：s0rrow - i have no friends（99.1 秒）；许可 用户提供，版权归原作者；仅用于该用户自己的作品
 - `i-have-no-friends/cover.jpg`：来源 用户提供：s0rrow - i have no friends 封面（3000×3000）；许可 用户提供，版权归原作者
 - `i-have-no-friends/i-have-no-friends.lrc`：来源 用户提供的 LRC（逐行时间）；许可 用户提供，歌词版权归原作者
+- `i-have-no-friends/lyrics-data.ts`：来源 work-bdd5c2f8：酷狗 KRC 逐字时间 + 自译中文（词数与英文一一对应）；许可 歌词版权归原作者；中文翻译为本作品自译
