@@ -28,3 +28,4 @@
 - `templates/scene.ts`：来源 work-bdd5c2f8：六幕 + lyrics + grain 的合成入口；许可 自制
 - `templates/visual.json`：来源 work-bdd5c2f8：图层时间轴模板（幕首尾相接 + lyrics + grain overlay 0.5）；许可 自制
 - `reference/act1.ts`：来源 work-bdd5c2f8 第一幕：冷开场、生日书桌、闪回（镜头写法参考）；许可 自制
+- `reference/act2.ts`：来源 work-bdd5c2f8 第二幕：砸字、查手机、朋友动态、被子盖脸（镜头写法参考）；许可 自制
