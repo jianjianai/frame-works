@@ -22,5 +22,6 @@ const project: AnimationProject = {
   loadAudioDocument: () => import("./audio.json"),
   loadAudio: () => import("./audio"),
   experience: "剧情音乐短片",
+  publishedAt: "2026-10-06T20:27:29.969Z",
 };
 export default project;
