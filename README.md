@@ -30,3 +30,4 @@
 - `reference/act1.ts`：来源 work-bdd5c2f8 第一幕：冷开场、生日书桌、闪回（镜头写法参考）；许可 自制
 - `reference/act2.ts`：来源 work-bdd5c2f8 第二幕：砸字、查手机、朋友动态、被子盖脸（镜头写法参考）；许可 自制
 - `reference/act3.ts`：来源 work-bdd5c2f8 第三幕：公园秋千、情侣、牵手倒V（镜头写法参考）；许可 自制
+- `reference/act4.ts`：来源 work-bdd5c2f8 第四幕：群聊发送失败、点蜡烛许愿（镜头写法参考）；许可 自制
