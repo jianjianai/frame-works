@@ -1,6 +1,7 @@
 import { clamp, phase, smooth } from "../../../../src/engine/math";
-import { C, Ctx, Pt, camera, fillBg, glow, hash } from "./draw";
+import { C, Ctx, Pt, camera, fillBg, filtered, glow, hash } from "./draw";
 import { drawKid } from "./kid";
+import { classroomFront, deskFront, strawberryMilk } from "./places";
 import { heart } from "./sets";
 import { ChatItem, ChatView, chatScreen2 } from "./chat";
 import { FingerPos, HandsLook, heldHands } from "./hand";
@@ -144,6 +145,27 @@ export function hisFaceReading(ctx: Ctx, abs: number) {
     heart(ctx, 540 + Math.sin(i * 2.1) * 330, 700 - t * 320, 20 + (i % 3) * 8, "#ff7fa8", 3930 + i);
     ctx.restore();
   }
+}
+/** Him at his desk, close, from her side of the room: looking down at the strawberry milk he bought for her
+ *  (act 1, after she hides) or smiling at her when their eyes meet (act 3, her memory of the same moment). */
+export function hisClassFace(ctx: Ctx, abs: number, t0: number, mood: "sad" | "smile") {
+  const smile = mood === "smile";
+  ctx.save();
+  camera(ctx, 600, 640, 1.7 + 0.05 * smooth(phase(abs, t0, t0 + 0.6)));
+  filtered(ctx, "blur(3px)", (c) => classroomFront(c, abs, { sun: 0.8 }), "classBack");
+  ctx.restore();
+  glow(ctx, 900, 560, 700, "rgba(255,240,200,0.35)");
+  drawKid(ctx, 540, 900, 1.3, {
+    body: "bust",
+    eyes: smile ? "happy" : "sad",
+    mouth: smile ? "smile" : "flat",
+    brows: smile ? undefined : "sad",
+    blush: smile ? 0.45 : 0,
+    look: smile ? [0, 0] : [-0.2, 0.9],
+    tilt: smile ? -0.05 : 0.04,
+    arms: "down",
+  });
+  deskFront(ctx, 540, 1340, 1.3, 3572, (c) => strawberryMilk(c, -150, -110, 0.7, -0.05, 3592));
 }
 export const phase01 = phase;
 export { C };
