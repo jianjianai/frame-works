@@ -131,20 +131,22 @@ function shotPretty(ctx: Ctx, abs: number) {
 
 // ---------------------------------------------------------------- 2B
 function shotTyping(ctx: Ctx, abs: number) {
-  if (abs < EV.lieDown) {
+  {
     const typing = inWin(abs, EV.typingA) || inWin(abs, EV.typingB);
     // his eyes are fixed on her 「嗯」 (screen 145, 948): a spotlight on it, the camera creeping closer. The clue he
     // misses — 「对方正在输入...」 in the title bar (screen 293, 95) — gets the video's yellow "look here" pulse,
     // but the camera never goes there.
-    const zs = 1 + 0.03 * smooth(phase(abs, EV.uglyEnd, EV.lieDown));
+    const zs = 1 + 0.03 * smooth(phase(abs, EV.uglyEnd, BAR(12)));
     const ux = 390,
       uy = 1182;
     const zx = ux - (145 - 300) * zs,
       zy = uy - (948 - 640) * zs;
     phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing })), { who: "boy", right: REST, cx: zx, cy: zy, s: zs, steady: true });
-    const g = ctx.createRadialGradient(ux, uy, 110, ux, uy, 760);
+    // the darkness keeps closing in until only her 「嗯」 is left in the light
+    const dk = smooth(phase(abs, EV.uglyEnd, BAR(12) - 0.1));
+    const g = ctx.createRadialGradient(ux, uy, 120 - 30 * dk, ux, uy, 760 - 430 * dk);
     g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, `rgba(0,0,0,${0.5 * smooth(phase(abs, EV.uglyEnd, EV.uglyEnd + 0.4))})`);
+    g.addColorStop(1, `rgba(0,0,0,${(0.4 + 0.55 * dk) * smooth(phase(abs, EV.uglyEnd, EV.uglyEnd + 0.3))})`);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
     const tx = zx + (293 - 300) * zs,
@@ -165,19 +167,7 @@ function shotTyping(ctx: Ctx, abs: number) {
         ctx.stroke();
         ctx.restore();
       }
-    return;
   }
-  // lying in bed, phone held above his face
-  fillBg(ctx, "#0a0c1a");
-  ctx.save();
-  camera(ctx, 540, 820, 1.0 + 0.04 * smooth(phase(abs, EV.lieDown, BAR(12))));
-  pillow(ctx, 540, 880, 1.2);
-  drawKid(ctx, 540, 820, 1.25, { body: "head", eyes: "sad", look: [0, -0.9], mouth: "flat", tilt: 0.04 });
-  duvet(ctx, 975);
-  glow(ctx, 540, 380, 700, "rgba(120,150,255,0.35)");
-  lightPool(ctx, 540, 520, 1000, 0.55, "rgba(120,150,255,0.18)");
-  ctx.restore();
-  card(ctx, "00:47", 70, 330, smooth(phase(abs, EV.lieDown + 0.05, EV.lieDown + 0.25)));
 }
 
 // ---------------------------------------------------------------- 2C
