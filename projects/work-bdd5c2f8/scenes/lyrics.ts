@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase } from "../../../src/engine/math";
-import { C, Ctx, F, W, backOut, curve, designScene, easeOut, font, jit, measure, paint, rr, text, writeOn } from "./lib/draw";
+import { clamp, phase, smooth } from "../../../src/engine/math";
+import { BEAT, C, Ctx, F, W, backOut, beatAt, curve, designScene, easeOut, font, jit, measure, paint, rr, sinceBeat, text, writeOn } from "./lib/draw";
 import { LINES, Line } from "./lib/lyrics-data";
 
 /** Lyrics (EN karaoke + CN translation), the hook title and the red-pen corrections. */
@@ -300,9 +300,116 @@ function hook(ctx: Ctx, abs: number) {
   }
 }
 
+// ---------------------------------------------------------------- 重置版的剪法（作品时间 → 歌曲时间）
+/** The music plays as recorded up to 21.10 (chorus 1, then the first line of chorus 2 — the picture has already cut to
+ *  the walk home at 16.96), then jumps 16 bars to the same spot of chorus 3 (a vocal gap on both sides) and runs on in
+ *  song time. The lyrics follow the audio actually playing. */
+const SPLICE = 21.1;
+const JUMP = 16 * 4 * BEAT; // 33.39
+const songTime = (t: number) => (t < SPLICE ? t : t + JUMP);
+const LINES_A = [0, 1, 2, 3, 4];
+const LINES_B = [13, 14, 15, 16, 17, 18, 19];
+
+/** The end card, over the epilogue to the last frame. Like: a double tap in the middle of the screen (two ripples,
+ *  a big heart thrown up, beating with the music) and a line tied to the story; comment: a question answered with one
+ *  number, which also sends people back to 0:12 (「回看：他在第几秒开的飞行模式？」). Song time. */
+const PROMPTS = beatAt(166); // song 86.87 = work 53.48
+const SONG_END = beatAt(172); // song 90.00 = work 56.61
+function endPrompts(ctx: Ctx, abs: number) {
+  const t0 = PROMPTS,
+    t1 = t0 + BEAT / 4; // the double tap: on the beat and the sixteenth after
+  if (abs < t0 || abs > SONG_END) return;
+  const hx = W / 2,
+    hy = 430;
+  ctx.save();
+  ctx.globalAlpha = 1 - phase(abs, SONG_END - 0.5, SONG_END);
+  for (const t of [t0, t1]) {
+    const k = phase(abs, t, t + 0.35);
+    if (k <= 0 || k >= 1) continue;
+    ctx.save();
+    ctx.globalAlpha *= 0.8 * (1 - k);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(hx, hy, 30 + 120 * k, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  const pop = backOut(phase(abs, t1, t0 + 0.45));
+  if (pop > 0) {
+    const burst = phase(abs, t1, t0 + 0.75);
+    if (burst < 1)
+      for (let i = 0; i < 7; i++) {
+        const ang = -Math.PI / 2 + (i - 3) * 0.42;
+        ctx.save();
+        ctx.globalAlpha *= 1 - burst;
+        heartShape(ctx, hx + Math.cos(ang) * (60 + 170 * burst), hy + Math.sin(ang) * (60 + 170 * burst), 16 + (i % 3) * 6, "#ff7fa8");
+        ctx.restore();
+      }
+    heartShape(ctx, hx, hy, 74 * pop * (1 + 0.07 * Math.exp(-7 * sinceBeat(abs))), "#ff4d6d");
+  }
+  const lk = smooth(phase(abs, t0 + 0.3, t0 + 0.55));
+  if (lk > 0) {
+    ctx.save();
+    ctx.globalAlpha *= lk;
+    ctx.translate(0, 24 * (1 - lk));
+    text(ctx, "点赞的人，生日那天消息 99+", W / 2, 565, { size: 58, font: F.cn, fill: "#fff", stroke: C.ink, lw: 12 });
+    ctx.restore();
+  }
+  const ck = smooth(phase(abs, t0 + 0.5, t0 + 0.8));
+  if (ck > 0) {
+    const l1 = "回看：他在第几秒开的飞行模式？",
+      l2 = "答案打在评论区";
+    const w = Math.max(measure(ctx, l1, 40, F.cn), measure(ctx, l2, 46, F.cn) + 60) + 64;
+    ctx.save();
+    ctx.globalAlpha *= ck;
+    ctx.translate(0, 30 * (1 - ck));
+    ctx.fillStyle = "rgba(12,12,18,0.78)";
+    rr(ctx, W / 2 - w / 2, 1392, w, 160, 36);
+    ctx.fill();
+    text(ctx, l1, W / 2, 1442, { size: 40, font: F.cn, fill: "#fff" });
+    const w2 = measure(ctx, l2, 46, F.cn);
+    text(ctx, l2, W / 2 - 22, 1508, { size: 46, font: F.cn, fill: "#ffd166" });
+    // a little arrow down to the comments, nudging on the beat (drawn: the font subsets have no arrow)
+    const ax = W / 2 - 22 + w2 / 2 + 34,
+      ay = 1504 + 6 * Math.exp(-7 * sinceBeat(abs));
+    ctx.strokeStyle = "#ffd166";
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(ax, ay - 18);
+    ctx.lineTo(ax, ay + 14);
+    ctx.moveTo(ax - 12, ay + 2);
+    ctx.lineTo(ax, ay + 16);
+    ctx.lineTo(ax + 12, ay + 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+function heartShape(ctx: Ctx, x: number, y: number, r: number, color: string) {
+  if (r <= 0) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.beginPath();
+  ctx.moveTo(0, r * 0.9);
+  ctx.bezierCurveTo(-r * 1.4, -r * 0.1, -r * 0.7, -r * 1.25, 0, -r * 0.45);
+  ctx.bezierCurveTo(r * 0.7, -r * 1.25, r * 1.4, -r * 0.1, 0, r * 0.9);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.lineWidth = Math.max(3, r * 0.08);
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = C.ink;
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function createScene(options: SceneOptions) {
-  return designScene(options, 0, (ctx, abs) => {
+  return designScene(options, 0, (ctx, t) => {
+    const abs = songTime(t);
     hook(ctx, abs);
-    for (let i = 0; i < LINES.length; i++) drawLine(ctx, i, abs);
+    for (const i of t < SPLICE ? LINES_A : LINES_B) drawLine(ctx, i, abs);
+    endPrompts(ctx, abs);
   });
 }

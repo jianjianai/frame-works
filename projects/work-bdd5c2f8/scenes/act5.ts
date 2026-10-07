@@ -1,17 +1,17 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, backOut, beatAt, blob, camera, designScene, easeIn, easeOut, fillBg, flash, glow, paint, pulse, rbox, shake, text } from "./lib/draw";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blob, camera, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, handheld, inkLine, paint, poly, pulse, rbox, shaded, shake, text } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { CAST, Person, banner, drawPerson } from "./lib/people";
 import { Note, SH, SW, controlCenter, lockScreen, notification, notificationHeight, phone, wallpaper, statusBar } from "./lib/phone";
 import { FingerKey, fingerAt, heldHands } from "./lib/hand";
-import { confetti, cupcake, lampPost, lightPool } from "./lib/sets";
+import { bokeh, buildingEntrance, confetti, cupcake, lampPost, lightPool, streetBelow } from "./lib/sets";
 
-/** ACT 5 (67.05 – 83.74s): THE TWIST.
- *  In the dark he grabs the phone for the flashlight → the airplane toggle is orange.
- *  He switches it off → 99+ messages. Friends are downstairs; their X faces fall away. */
+/** ACT 5 (song 67.05 – 83.74 = work 33.66 – 50.35): THE TWIST.
+ *  In the dark he grabs the phone for the flashlight → the airplane toggle is orange (he switched it on himself at
+ *  12.00 and forgot). He switches it off → 99+ messages. Friends are downstairs; their X faces fall away. */
 const T0 = beatAt(128); // 67.05
-const TAP = 70.62;
+const TAP = beatAt(135); // 70.70 — the toggle goes off on the beat (click)
 const T2 = beatAt(136); // 71.22
 const T3 = beatAt(144); // 75.40
 const T4 = beatAt(152); // 79.57
@@ -32,12 +32,12 @@ const CC_FINGER: FingerKey[] = [
 ];
 // …and the left thumb is the one that switches the airplane toggle off.
 const LEFT_THUMB: FingerKey[] = [
-  [70.4, 150, 960, 0.25],
-  [70.54, 150, 262, 0],
+  [TAP - 0.3, 150, 960, 0.25],
+  [TAP - 0.16, 150, 262, 0],
   [TAP, 128, 228, 1],
-  [70.74, 128, 228, 1],
-  [70.92, 170, 400, 0],
-  [71.22, 150, 960, 0.25],
+  [TAP + 0.12, 128, 228, 1],
+  [TAP + 0.3, 170, 400, 0],
+  [T2, 150, 960, 0.25],
 ];
 
 function shotDiscover(ctx: Ctx, abs: number) {
@@ -46,7 +46,8 @@ function shotDiscover(ctx: Ctx, abs: number) {
   if (abs >= 69.62 && abs < 70.42) {
     const k = backOut(phase(abs, 69.62, 69.8));
     ctx.save();
-    camera(ctx, 540, 820, 1.08 + 0.05 * k);
+    const [hx, hy, hr] = handheld(abs, 8, 11);
+    camera(ctx, 540, 820, 1.08 + 0.05 * k, hr, hx, hy);
     drawKid(ctx, 540, 800, 1.2, { body: "bust", hat: true, eyes: "wide", mouth: "o", arms: "phone", look: [0, 0.6] });
     lightPool(ctx, 540, 1200, 900, 0.8, "rgba(140,170,255,0.25)");
     ctx.restore();
@@ -65,7 +66,8 @@ function shotDiscover(ctx: Ctx, abs: number) {
   ctx.save();
   // zoom into the airplane toggle (top-left of the control centre)
   const z = 1 + zoom * 0.75 - (tapped ? 0.75 * smooth(phase(abs, TAP + 0.1, TAP + 0.5)) : 0);
-  camera(ctx, 406, 579, z);
+  const [hx, hy, hr] = handheld(abs, 5, 12);
+  camera(ctx, 406, 579, z, hr, hx, hy);
   glow(ctx, 540, 900, 900, "rgba(120,150,255,0.25)", rise);
   const py = 900 + (1 - rise) * 900;
   phone(ctx, 540, py, 0.78, 0, (c) => {
@@ -105,7 +107,8 @@ const NOTES: Note[] = [
   { title: "高二(3)班", body: "阿杰：生日快乐！！！！！", count: "99+", kind: "group" },
   { title: "阿杰", body: "寿星？？？人呢？？？" },
   { title: "未接来电 (23)", body: "阿杰、班长、小雨、妈妈…", kind: "call" },
-  { title: "小雨", body: "我在秋千那边叫了你好几次…你戴着耳机，没听见" },
+  // (the swing scene is cut, so 小雨 now explains the laughing in the flashback; it gets the yellow highlight)
+  { title: "小雨", body: "上课大家是在笑阿杰差点说漏嘴…不是笑你啦" },
   { title: "班长", body: "横幅藏了一整天 差点被你看见哈哈" },
   { title: "妈妈", body: "同学们在楼下等你两个小时了" },
   { title: "阿杰", body: "快下楼！！！蛋糕要化了！！！" },
@@ -120,8 +123,10 @@ function shotFlood(ctx: Ctx, abs: number) {
   const settle = smooth(phase(abs, 72.7, 75.4));
   fillBg(ctx, "#0b0e22");
   glow(ctx, 540, 900, 1000, "rgba(255,220,140,0.25)", Math.min(1, shown / 4));
+  bokeh(ctx, abs, 14, 501, 0.4 + 0.6 * Math.min(1, shown / 4));
   ctx.save();
-  camera(ctx, 540, 880, 1 + 0.06 * settle, 0, sx, sy);
+  const [hx, hy, hr] = handheld(abs, 4, 13);
+  camera(ctx, 540, 880, 1 + 0.06 * settle, hr, sx + hx, sy + hy);
   phone(ctx, 540, 860, 0.8, 0, (c) => {
     wallpaper(c);
     statusBar(c, { time: "23:59", airplane: false, battery: 0.08 });
@@ -173,12 +178,13 @@ const CREW: { p: Person; x: number; y: number; s: number; arms: Person["arms"]; 
 function shotWindow(ctx: Ctx, abs: number) {
   const open = easeOut(phase(abs, T3, T3 + 0.5));
   // looking down at the street from his window
-  fillBg(ctx, "#1b1e33");
-  ctx.fillStyle = "#262a44";
-  ctx.fillRect(0, 600, W, H);
-  glow(ctx, 540, 1000, 620, "rgba(255,214,140,0.45)");
+  fillBg(ctx, "#0a0e2a");
   ctx.save();
-  camera(ctx, 540, 900, 1.12 - 0.08 * smooth(phase(abs, T3, T4)));
+  // tilt down from the night sky onto them (a crane move into the reveal), then hold — hand-held
+  const [hx, hy, hr] = handheld(abs, 5, 14);
+  const crane = 1 - easeOut(phase(abs, T3, T3 + 1.4));
+  camera(ctx, 540, 900, 1.12 - 0.08 * easeInOut(phase(abs, T3, T4)), hr, hx, hy + 260 * crane);
+  streetBelow(ctx, abs);
   lampPost(ctx, 140, 420, abs, 0);
   // banner overhead
   const bOpen = easeOut(phase(abs, T3 + 0.3, T3 + 1.0));
@@ -212,13 +218,34 @@ function shotWindow(ctx: Ctx, abs: number) {
   ctx.roundRect(110, 300, W - 220, 1040, 16);
   ctx.fill("evenodd");
   ctx.restore();
+  // the glass: two faint reflection streaks
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(110, 300, W - 220, 1040, 16);
+  ctx.clip();
+  ctx.globalCompositeOperation = "lighter";
+  poly(ctx, [[150, 300], [330, 300], [130, 900], [110, 900]], 738, 1);
+  ctx.fillStyle = "rgba(200,220,255,0.06)";
+  ctx.fill();
+  poly(ctx, [[430, 300], [480, 300], [260, 1340], [210, 1340]], 739, 1);
+  ctx.fillStyle = "rgba(200,220,255,0.05)";
+  ctx.fill();
+  ctx.restore();
   rbox(ctx, 110, 300, W - 220, 1040, 16, 730, 2);
   paint(ctx, null, "#3a3f5e", 16);
   paint(ctx, null, C.ink, 5);
+  // the sill, and the curtains he has pulled open (shaded, with folds that sway a little)
+  rbox(ctx, 70, 1326, W - 140, 44, 8, 737, 1);
+  paint(ctx, "#4a4f72", C.ink, 5);
   for (const side of [-1, 1]) {
     const cx = side < 0 ? 110 - open * 40 : W - 110 + open * 40;
-    blob(ctx, [[cx - 120 * side * -1, 260], [cx + side * 10, 260], [cx + side * 30, 800], [cx + side * 10, 1380], [cx - side * 140, 1380], [cx - side * (110 + Math.sin(abs * 2) * 10), 800]], 731 + side, 3);
-    paint(ctx, "#33508f", C.ink, 6);
+    const pts: Pt[] = [[cx - 120 * side * -1, 260], [cx + side * 10, 260], [cx + side * 30, 800], [cx + side * 10, 1380], [cx - side * 140, 1380], [cx - side * (110 + Math.sin(abs * 2) * 10), 800]];
+    shaded(ctx, () => blob(ctx, pts, 731 + side, 3), "#33508f", () => {
+      for (let k = 0; k < 4; k++) {
+        const fx = cx - side * (20 + k * 30);
+        inkLine(ctx, [[fx, 260], [fx + side * 8 + Math.sin(abs * 2 + k) * 4, 800], [fx - side * 6, 1380]], 742 + k + side * 10, 4, "#25407a");
+      }
+    }, C.ink, 6);
   }
   flash(ctx, 0.5 * (1 - phase(abs, T3, T3 + 0.2)));
 }
@@ -230,9 +257,11 @@ function shotParty(ctx: Ctx, abs: number) {
   const p = pulse(abs);
   const [sx, sy] = shake(abs, caked && abs < 80.4 ? 14 : 0);
   fillBg(ctx, "#1d2147");
-  glow(ctx, 540, 820, 900, "rgba(255,200,120,0.55)");
   ctx.save();
-  camera(ctx, 540, 820, 1 + 0.03 * p + 0.1 * smooth(phase(abs, 82.4, END)), 0, sx, sy);
+  const [hx, hy, hr] = handheld(abs, 6, 15);
+  camera(ctx, 540, 820, 1 + 0.03 * p + 0.1 * easeInOut(phase(abs, 82.4, END)), hr, sx + hx, sy + hy);
+  // downstairs at the door of his block: the lobby light behind him, fairy lights — a touch out of focus
+  filtered(ctx, "blur(2px)", (c) => buildingEntrance(c, abs), "bg");
   banner(ctx, 540, 360, 820, 1, "生日快乐", 740, F.cn);
   const ring: [Person, number, number, number][] = [
     [CAST.monitor, 290, 600, 0.6],

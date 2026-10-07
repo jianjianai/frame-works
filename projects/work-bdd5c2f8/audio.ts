@@ -142,6 +142,12 @@ const sounds: Record<string, () => StereoPcm> = {
     ding(pcm, 0, 0.3, 1.189);
     return pcm;
   },
+  // a light tap on the glass: the double tap of the like prompt at the end
+  tap: () => {
+    const pcm = buffer(0.2);
+    add(pcm, 0, 0.12, (t) => attack(t, 0.002) * Math.sin(TAU * (400 + 900 * t * 8) * t) * Math.exp(-t * 30), 0.25);
+    return pcm;
+  },
 };
 
 export const { generators, createAudio } = createAudioRack({ sfx: createPcmAudio(sounds, SR) });

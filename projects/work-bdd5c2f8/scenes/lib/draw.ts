@@ -188,6 +188,81 @@ export function inkLine(ctx: Ctx, pts: Pt[], seed: number, lw = 4, color = C.ink
   paint(ctx, null, color, lw);
 }
 
+// ---------------------------------------------------------------- construction helpers (精细版，和素材库 s0rrow 一致)
+export const lerp2 = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+export const rotPt = ([x, y]: Pt, a: number, o: Pt = [0, 0]): Pt => {
+  const dx = x - o[0],
+    dy = y - o[1];
+  return [o[0] + dx * Math.cos(a) - dy * Math.sin(a), o[1] + dx * Math.sin(a) + dy * Math.cos(a)];
+};
+/** Outline of a tapered tube along a polyline (widths per point) — limbs, tails, hair locks.
+ *  Returns points going down one side and back up the other, with rounded caps. */
+export function tubePts(spine: Pt[], widths: number[], capA = true, capB = true): Pt[] {
+  const n = spine.length;
+  const left: Pt[] = [],
+    right: Pt[] = [];
+  const dir = (i: number): Pt => {
+    const a = spine[Math.max(0, i - 1)],
+      b = spine[Math.min(n - 1, i + 1)];
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    return [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+  };
+  for (let i = 0; i < n; i++) {
+    const [dx, dy] = dir(i);
+    const w = widths[Math.min(i, widths.length - 1)] / 2;
+    left.push([spine[i][0] - dy * w, spine[i][1] + dx * w]);
+    right.push([spine[i][0] + dy * w, spine[i][1] - dx * w]);
+  }
+  const out: Pt[] = [];
+  if (capA) {
+    const [dx, dy] = dir(0);
+    const w = widths[0] / 2;
+    out.push([spine[0][0] - dx * w * 0.7 - dy * w * 0.7, spine[0][1] - dy * w * 0.7 + dx * w * 0.7]);
+  }
+  out.push(...left);
+  if (capB) {
+    const [dx, dy] = dir(n - 1);
+    const w = widths[Math.min(n - 1, widths.length - 1)] / 2;
+    out.push([spine[n - 1][0] + dx * w * 0.8, spine[n - 1][1] + dy * w * 0.8]);
+  }
+  out.push(...right.reverse());
+  if (capA) {
+    const [dx, dy] = dir(0);
+    const w = widths[0] / 2;
+    out.push([spine[0][0] - dx * w * 0.7 + dy * w * 0.7, spine[0][1] - dy * w * 0.7 - dx * w * 0.7]);
+  }
+  return out;
+}
+/** Two-joint chain (shoulder→elbow→wrist, hip→knee→ankle) that bends toward `bend` (+1/-1). */
+export function ik2(a: Pt, target: Pt, l1: number, l2: number, bend: number): [Pt, Pt] {
+  const dx = target[0] - a[0],
+    dy = target[1] - a[1];
+  const d = Math.min(l1 + l2 - 0.01, Math.max(Math.abs(l1 - l2) + 0.01, Math.hypot(dx, dy)));
+  const base = Math.atan2(dy, dx);
+  const cos = (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d);
+  const ang = base - bend * Math.acos(Math.max(-1, Math.min(1, cos)));
+  const elbow: Pt = [a[0] + Math.cos(ang) * l1, a[1] + Math.sin(ang) * l1];
+  const end: Pt = [a[0] + Math.cos(base) * d, a[1] + Math.sin(base) * d];
+  return [elbow, end];
+}
+/** Fill a shape and clip to it while `inside` draws shading/texture; then stroke the outline. */
+export function shaded(ctx: Ctx, path: () => void, fill: string, inside: (() => void) | null, stroke: string | null = C.ink, lw = 5) {
+  path();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (inside) {
+    ctx.save();
+    path();
+    ctx.clip();
+    inside();
+    ctx.restore();
+  }
+  if (stroke && lw > 0) {
+    path();
+    paint(ctx, null, stroke, lw);
+  }
+}
+
 /** Scribbly hatch fill inside the current clip — used for shading. */
 export function hatch(ctx: Ctx, x: number, y: number, w: number, h: number, gap: number, seed: number, color: string, lw = 2, angle = -0.6) {
   ctx.save();
@@ -268,35 +343,46 @@ export function writeOn(s: string, p: number) {
 
 // ---------------------------------------------------------------- fonts
 let fontsReady: Promise<void> | null = null;
-const FONT_FILES: [string, string, string][] = [
+/** [family, file, weight, unicode-range?]. The "-extra" files are small Google Fonts subsets with only the characters
+ *  the 重置版 added (fetched through asset_import from fonts.googleapis.com/css2?family=…&text=…, since fetch-fonts.mjs
+ *  can't run here). Their unicode-range makes the browser take just those characters from them, the rest from the
+ *  main subsets. To add more text: fetch another "-extra" subset the same way and list it here. */
+const FONT_FILES: [string, string, string, string?][] = [
   ["Gochi Hand", "gochi-hand.woff2", "400"],
   ["Permanent Marker", "permanent-marker.woff2", "400"],
   ["ZCOOL KuaiLe", "zcool-kuaile.woff2", "400"],
   ["Long Cang", "long-cang.woff2", "400"],
   ["Noto Sans SC", "noto-sans-sc-400.woff2", "400"],
   ["Noto Sans SC", "noto-sans-sc-700.woff2", "700"],
+  // 结尾引导：点赞的人，生日那天消息 99+ / 回看：他在第几秒开的飞行模式？/ 答案打在评论区
+  ["ZCOOL KuaiLe", "zcool-kuaile-extra.ttf", "400", "U+70B9,U+8D5E,U+7684,U+4EBA,U+FF0C,U+751F,U+65E5,U+90A3,U+5929,U+6D88,U+606F,U+56DE,U+770B,U+FF1A,U+4ED6,U+5728,U+7B2C,U+51E0,U+79D2,U+5F00,U+98DE,U+884C,U+6A21,U+5F0F,U+FF1F,U+7B54,U+6848,U+6253,U+8BC4,U+8BBA,U+533A"],
+  // 小雨的通知和回复：上课大家是在笑阿杰差点说漏嘴…不是笑你啦 / 横幅上的字是我写的！
+  ["Noto Sans SC", "noto-sans-sc-400-extra.ttf", "400", "U+4E0A,U+8BFE,U+5927,U+5BB6,U+662F,U+5728,U+7B11,U+963F,U+6770,U+5DEE,U+70B9,U+8BF4,U+6F0F,U+5634,U+2026,U+4E0D,U+4F60,U+5566,U+6A2A,U+5E45,U+7684,U+5B57,U+6211,U+5199,U+FF01"],
 ];
 export function loadFonts(): Promise<void> {
   fontsReady ??= Promise.all(
-    FONT_FILES.map(async ([family, file, weight]) => {
+    FONT_FILES.map(async ([family, file, weight, unicodeRange]): Promise<FontFace | null> => {
       const url = assetUrl(FONT_DIR + file);
+      const desc: FontFaceDescriptors = unicodeRange ? { weight, unicodeRange } : { weight };
       // Load the bytes ourselves first (works where CSS url() font loading is restricted),
       // then fall back to a quoted URL source.
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(String(res.status));
-        document.fonts.add(await new FontFace(family, await res.arrayBuffer(), { weight }).load());
-        return;
+        return await new FontFace(family, await res.arrayBuffer(), desc).load();
       } catch {
         // try the URL form below
       }
       try {
-        document.fonts.add(await new FontFace(family, `url("${new URL(url, location.href).href}")`, { weight }).load());
+        return await new FontFace(family, `url("${new URL(url, location.href).href}")`, desc).load();
       } catch {
-        // Fall back to system fonts if a file is missing.
+        return null; // fall back to system fonts if a file is missing
       }
     }),
-  ).then(() => undefined);
+  ).then((faces) => {
+    // added in list order, so the small "-extra" subsets (last) are tried first for their characters
+    for (const f of faces) if (f) document.fonts.add(f);
+  });
   return fontsReady;
 }
 
@@ -333,6 +419,21 @@ export async function designScene(options: SceneOptions, t0: number, draw: DrawF
   };
 }
 
+// ---------------------------------------------------------------- camera
+/** Ease in and out (cubic) — camera moves start and settle softly instead of the linear `phase`. */
+export const easeInOut = (t: number) => {
+  const v = clamp(t);
+  return v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2;
+};
+/** A hand-held camera: a slow, smooth drift (a few sines, no frame-to-frame jitter) → [dx, dy, rot].
+ *  `amp` ≈ pixels; 3–6 for a quiet shot, 8–12 when it should feel nervous. Different `seed` per shot. */
+export function handheld(abs: number, amp = 5, seed = 0): [number, number, number] {
+  const t = abs + seed * 13.7;
+  const dx = (Math.sin(t * 0.83) * 0.6 + Math.sin(t * 1.91 + 1.3) * 0.3 + Math.sin(t * 3.7 + 0.4) * 0.1) * amp;
+  const dy = (Math.sin(t * 0.67 + 2.1) * 0.6 + Math.sin(t * 1.53 + 0.7) * 0.3 + Math.sin(t * 3.1 + 1.9) * 0.1) * amp;
+  const rot = (Math.sin(t * 0.59 + 0.9) * 0.7 + Math.sin(t * 1.37) * 0.3) * amp * 0.0007;
+  return [dx, dy, rot];
+}
 /** Zoom/rotate the whole frame around (cx, cy). */
 export function camera(ctx: Ctx, cx: number, cy: number, zoom: number, rot = 0, dx = 0, dy = 0) {
   ctx.translate(cx + dx, cy + dy);
@@ -384,5 +485,34 @@ export function card(ctx: Ctx, s: string, x: number, y: number, a: number, size 
   rr(ctx, bx - 18, y - size * 0.75, w + 36, size * 1.5, 12);
   ctx.fill();
   text(ctx, s, bx + w / 2, y + 2, { size, font: F.cn, fill: "#fff" });
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- offscreen filter pass
+const offscreens = new Map<string, HTMLCanvasElement>();
+/** Draw `draw` into an offscreen copy of the canvas (same transform), then composite it back
+ *  through a CSS filter, e.g. "blur(2px)" (depth of field) or "sepia(0.8)". `key` lets several passes keep
+ *  their own buffer. */
+export function filtered(ctx: Ctx, filter: string, draw: (c: Ctx) => void, key = "a", alpha = 1) {
+  const cv = ctx.canvas;
+  let off = offscreens.get(key);
+  if (!off || off.width !== cv.width || off.height !== cv.height) {
+    off = document.createElement("canvas");
+    off.width = cv.width;
+    off.height = cv.height;
+    offscreens.set(key, off);
+  }
+  const oc = off.getContext("2d")!;
+  oc.setTransform(1, 0, 0, 1, 0, 0);
+  oc.clearRect(0, 0, off.width, off.height);
+  oc.setTransform(ctx.getTransform());
+  oc.save();
+  draw(oc);
+  oc.restore();
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.filter = filter;
+  ctx.globalAlpha *= alpha;
+  ctx.drawImage(off, 0, 0);
   ctx.restore();
 }

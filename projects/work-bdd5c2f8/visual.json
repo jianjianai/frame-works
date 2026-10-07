@@ -4,46 +4,10 @@
   "clips": [
     {
       "id": "act1",
-      "name": "第一幕 · 一个人的生日",
-      "source": {
-        "kind": "scene",
-        "module": "act1",
-        "engine": "canvas"
-      },
+      "name": "第一幕 · 一个人的生日（0–17.08，歌曲时间 = 作品时间）",
+      "source": { "kind": "scene", "module": "act1", "engine": "canvas" },
       "start": 0,
-      "duration": 16.961,
-      "offset": 0,
-      "phase": 0,
-      "rate": 1,
-      "fit": "contain",
-      "blend": "source-over"
-    },
-    {
-      "id": "act2",
-      "name": "第二幕 · 没有朋友的一天",
-      "source": {
-        "kind": "scene",
-        "module": "act2",
-        "engine": "canvas"
-      },
-      "start": 16.961,
-      "duration": 16.425,
-      "offset": 0,
-      "phase": 0,
-      "rate": 1,
-      "fit": "contain",
-      "blend": "source-over"
-    },
-    {
-      "id": "act3",
-      "name": "第三幕 · 秋千",
-      "source": {
-        "kind": "scene",
-        "module": "act3",
-        "engine": "canvas"
-      },
-      "start": 33.386,
-      "duration": 17.089,
+      "duration": 17.084,
       "offset": 0,
       "phase": 0,
       "rate": 1,
@@ -52,14 +16,10 @@
     },
     {
       "id": "act4",
-      "name": "第四幕 · 发送失败",
-      "source": {
-        "kind": "scene",
-        "module": "act4",
-        "engine": "canvas"
-      },
-      "start": 50.475,
-      "duration": 16.573,
+      "name": "第四幕 · 发送失败（歌曲 50.48 起）",
+      "source": { "kind": "scene", "module": "act4", "engine": "canvas" },
+      "start": 17.0837,
+      "duration": 16.5726,
       "offset": 0,
       "phase": 0,
       "rate": 1,
@@ -68,14 +28,10 @@
     },
     {
       "id": "act5",
-      "name": "第五幕 · 飞行模式",
-      "source": {
-        "kind": "scene",
-        "module": "act5",
-        "engine": "canvas"
-      },
-      "start": 67.048,
-      "duration": 16.696,
+      "name": "第五幕 · 飞行模式（反转，歌曲 67.05 起）",
+      "source": { "kind": "scene", "module": "act5", "engine": "canvas" },
+      "start": 33.6563,
+      "duration": 16.6957,
       "offset": 0,
       "phase": 0,
       "rate": 1,
@@ -84,14 +40,10 @@
     },
     {
       "id": "act6",
-      "name": "尾声 · 分你一只耳机",
-      "source": {
-        "kind": "scene",
-        "module": "act6",
-        "engine": "canvas"
-      },
-      "start": 83.744,
-      "duration": 15.356,
+      "name": "尾声 · 发送成功（歌曲 83.74 起）",
+      "source": { "kind": "scene", "module": "act6", "engine": "canvas" },
+      "start": 50.352,
+      "duration": 6.2608,
       "offset": 0,
       "phase": 0,
       "rate": 1,
@@ -100,14 +52,10 @@
     },
     {
       "id": "lyrics",
-      "name": "中英歌词",
-      "source": {
-        "kind": "scene",
-        "module": "lyrics",
-        "engine": "canvas"
-      },
+      "name": "中英歌词 + 钩子 + 结尾引导",
+      "source": { "kind": "scene", "module": "lyrics", "engine": "canvas" },
       "start": 0,
-      "duration": 99.1,
+      "duration": 56.6128,
       "offset": 0,
       "phase": 0,
       "rate": 1,
@@ -117,19 +65,13 @@
     {
       "id": "grain",
       "name": "胶片颗粒",
-      "source": {
-        "kind": "scene",
-        "module": "grain",
-        "engine": "canvas"
-      },
+      "source": { "kind": "scene", "module": "grain", "engine": "canvas" },
       "start": 0,
-      "duration": 99.1,
+      "duration": 56.6128,
       "offset": 0,
       "phase": 0,
       "rate": 1,
-      "transform": {
-        "opacity": 0.5
-      },
+      "transform": { "opacity": 0.5 },
       "fit": "contain",
       "blend": "overlay"
     }

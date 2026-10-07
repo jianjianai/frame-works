@@ -1,30 +1,40 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, backOut, beatAt, camera, card, designScene, easeIn, easeOut, fillBg, flash, glow, rr, shake, text, writeOn } from "./lib/draw";
+import { C, Ctx, F, backOut, beatAt, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, flash, glow, handheld, rr, shake, text, writeOn } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { CAST } from "./lib/people";
 import { Msg, chatScreen, phone } from "./lib/phone";
-import { street } from "./lib/sets";
+import { bokeh, street } from "./lib/sets";
 import { birthdayDesk } from "./lib/shared";
 
-/** ACT 4 (50.48 – 67.05s): walking home; "其实…今天是我生日" fails to send (red !);
- *  back at the desk he makes a wish and blows the candle out — the loop closes on the cold open. */
+/** ACT 4 (song 50.48 – 67.05 = work 17.08 – 33.66; this act still draws in song time, its layer sits 33.39 s earlier):
+ *  walking home, reading the class group; "其实…今天是我生日" fails to send (red !); back at the desk he makes a wish and
+ *  blows the candle out — the loop closes on the cold open. 重置版: send / fail / the match / the cut to the desk are on
+ *  the eighth-note grid. */
 const T0 = 50.475;
 const N2 = beatAt(104); // 54.53
 const N3 = beatAt(112); // 58.70
-const N3b = 60.35;
+const N3b = beatAt(115); // 60.27 the desk
 const N4 = beatAt(120); // 62.87
 const END = beatAt(128); // 67.05
 
 const MSG = "其实…今天是我生日";
-const SEND = 56.75;
-const FAIL = 57.55;
+const SEND = beatAt(108); // 56.61
+const FAIL = beatAt(109.5); // 57.40 the red !
+const MATCH = beatAt(117); // 61.31 he strikes the match
 
 function shotWalk(ctx: Ctx, abs: number) {
   const t = abs - T0;
-  street(ctx, abs, t * 260);
+  // tracking with him: the street's layers slide past at their own speeds (sets.street); the camera is hand-held and
+  // bobs a little with his steps
+  const [hx, hy, hr] = handheld(abs, 4, 7);
+  const step = Math.sin(abs * 14) * 3;
   ctx.save();
-  camera(ctx, 540, 900, 1.02);
+  camera(ctx, 540, 900, 1.0, hr, hx, hy + step);
+  street(ctx, abs, t * 260);
+  ctx.restore();
+  ctx.save();
+  camera(ctx, 540, 900, 1.02, hr, hx, hy + step);
   drawKid(ctx, 470, 760, 0.62, {
     body: "full",
     legs: "walk",
@@ -32,7 +42,20 @@ function shotWalk(ctx: Ctx, abs: number) {
     eyes: "sleepy",
     look: [0, 0.8],
     headY: -Math.abs(Math.sin(abs * 7)) * 6,
+    // head down over his phone (the class group he is about to write in), not just walking
+    arms: "phone",
+    holding: (c) => {
+      c.fillStyle = "#121214";
+      c.beginPath();
+      c.roundRect(-36, 236, 72, 128, 14);
+      c.fill();
+      c.fillStyle = "#cfe3ff";
+      c.beginPath();
+      c.roundRect(-29, 244, 58, 112, 9);
+      c.fill();
+    },
   });
+  glow(ctx, 470, 760 + 0.62 * 210, 220, "rgba(170,205,255,0.32)");
   ctx.restore();
   // his long shadow
   ctx.save();
@@ -92,9 +115,11 @@ function shotChat(ctx: Ctx, abs: number) {
   const [sx, sy] = shake(abs, zoom > 0.9 && abs < FAIL + 0.6 ? 8 : 0);
   fillBg(ctx, "#0f1124");
   glow(ctx, 540, 800, 900, "rgba(170,200,255,0.25)");
+  bokeh(ctx, abs, 14, 401, 0.7);
   ctx.save();
   // the red "!" — (rewatch: it failed because airplane mode is on)
-  camera(ctx, 432, 1010, 1 + zoom * 0.9, 0, sx, sy);
+  const [hx, hy, hr] = handheld(abs, 4, 8);
+  camera(ctx, 432, 1010, 1 + 0.05 * easeInOut(phase(abs, N2, FAIL)) + zoom * 0.9, hr, sx + hx, sy + hy);
   phone(ctx, 540, 800, 0.72, 0, chat(ctx, abs));
   ctx.restore();
   if (abs > FAIL + 0.3 && abs < 58.65) {
@@ -110,15 +135,18 @@ function shotChat(ctx: Ctx, abs: number) {
 
 function shotDelete(ctx: Ctx, abs: number) {
   if (abs < N3b) {
+    const [hx, hy, hr] = handheld(abs, 4, 8);
     fillBg(ctx, "#0f1124");
     glow(ctx, 540, 800, 900, "rgba(170,200,255,0.25)");
-    phone(ctx, 540, 800, 0.72, 0, chat(ctx, abs));
+    bokeh(ctx, abs, 14, 401, 0.7);
+    phone(ctx, 540 + hx, 800 + hy, 0.72, hr, chat(ctx, abs));
   } else {
     // he drops the phone on the desk and lights the candle himself
-    const lit = smooth(phase(abs, 61.35, 61.7));
+    const lit = smooth(phase(abs, MATCH + 0.15, MATCH + 0.5));
     const hatDrop = easeOut(phase(abs, 62.2, 62.5));
     ctx.save();
-    camera(ctx, 540, 900, 1.06 - 0.06 * smooth(phase(abs, N3b, N4)));
+    const [hx, hy, hr] = handheld(abs, 5, 9);
+    camera(ctx, 540, 900, 1.08 - 0.08 * easeInOut(phase(abs, N3b, N4)), hr, hx, hy);
     birthdayDesk(ctx, abs, {
       lit,
       kid: { hat: hatDrop > 0, headY: -(1 - hatDrop) * 0 + Math.sin(abs * 1.6) * 3, eyes: "sleepy" },
@@ -127,8 +155,8 @@ function shotDelete(ctx: Ctx, abs: number) {
     });
     ctx.restore();
     // match flare
-    if (abs > 61.2 && abs < 61.75) {
-      const f = phase(abs, 61.2, 61.75);
+    if (abs > MATCH && abs < MATCH + 0.55) {
+      const f = phase(abs, MATCH, MATCH + 0.55);
       glow(ctx, 390, 920, 300, "rgba(255,200,120,0.9)", 1 - f);
     }
     card(ctx, "23:58", 70, 330, smooth(phase(abs, N3b + 0.2, N3b + 0.5)));
@@ -140,8 +168,9 @@ function shotWish(ctx: Ctx, abs: number) {
   const blow = abs >= 65.25;
   const out = abs >= 65.6;
   const smoke = phase(abs, 65.6, 67.0);
+  const [hx, hy, hr] = handheld(abs, 4, 10);
   ctx.save();
-  camera(ctx, 520, 860, 1 + 0.12 * smooth(phase(abs, N4, 65.6)));
+  camera(ctx, 520, 860, 1 + 0.16 * easeInOut(phase(abs, N4, 65.6)), hr, hx, hy);
   birthdayDesk(ctx, abs, {
     lit: out ? 0 : 1,
     smoke: out ? smoke : 0,

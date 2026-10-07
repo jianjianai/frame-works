@@ -8,3 +8,8 @@
   - Long Cang 龙藏体（红笔批注、手写字）
   - Noto Sans SC（手机界面）
 - 画面全部为代码绘制；音效为代码合成（`audio.ts`）。
+- public/_tmp/probe.css: Google Fonts（OFL）子集测试
+- public/_tmp/zcool-extra.css: Google Fonts ZCOOL KuaiLe（SIL OFL 1.1），新增文字的子集
+- public/_tmp/noto-extra.css: Google Fonts Noto Sans SC（SIL OFL 1.1），新增文字的子集
+- public/fonts/zcool-kuaile-extra.ttf: Google Fonts · ZCOOL KuaiLe（SIL Open Font License 1.1），重置版新增文字的子集
+- public/fonts/noto-sans-sc-400-extra.ttf: Google Fonts · Noto Sans SC（SIL Open Font License 1.1），重置版新增文字的子集

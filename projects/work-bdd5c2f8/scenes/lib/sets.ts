@@ -1,43 +1,176 @@
 import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, H, Pt, W, blob, curve, fillBg, glow, hash, inkLine, jit, line, oval, paint, poly, rbox, vgrad } from "./draw";
+import { C, Ctx, F, H, Pt, W, blob, curve, fillBg, glow, hash, inkLine, jit, line, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
+
+/** Sets. 重置版: bedroom, desk, corridor, classroom and the night street were redrawn with more detail — props that
+ *  say something (the calendar with today circled), light that has a source (moon, window shafts, lamps, the candle),
+ *  texture (wood grain, floor tiles in perspective) and depth (far / mid / near layers that scroll at different
+ *  speeds). Signatures are the same as before; corridor/classroom take `abs` for dust in the light. */
 
 // ---------------------------------------------------------------- bedroom (night)
 export function bedroom(ctx: Ctx, abs: number, moon = 1) {
-  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#151a35"], [1, "#0b0e1f"]]));
-  // window with moon
+  // wall: deep blue, a faint striped wallpaper
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#171c3a"], [0.6, "#121731"], [1, "#0b0e1f"]]));
   ctx.save();
-  rbox(ctx, 640, 300, 330, 400, 10, 11, 2);
-  paint(ctx, vgrad(ctx, 300, 700, [[0, "#2c3a78"], [1, "#4b4f8e"]]), C.ink, 7);
-  ctx.save();
-  rbox(ctx, 640, 300, 330, 400, 10, 11, 2);
-  ctx.clip();
-  glow(ctx, 870, 390, 160, "rgba(255,244,200,0.35)", moon);
-  oval(ctx, 870, 390, 46, 46, 12, 1.2);
-  paint(ctx, "#fff4c8", null);
-  for (let i = 0; i < 9; i++) {
-    const x = 650 + hash(i * 3.1) * 310,
-      y = 310 + hash(i * 7.3) * 380;
-    ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(abs * 1.3 + i));
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(x, y, 4, 4);
+  ctx.globalAlpha = 0.07;
+  ctx.strokeStyle = "#9fb0ff";
+  ctx.lineWidth = 3;
+  for (let x = 30; x < W; x += 54) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + jit(x, 2), H);
+    ctx.stroke();
   }
   ctx.restore();
-  inkLine(ctx, [[805, 300], [805, 700]], 13, 8, "#1b1f3a");
-  inkLine(ctx, [[640, 500], [970, 500]], 14, 8, "#1b1f3a");
+  // window: night sky, a moon with craters, the town's rooftops and lit windows far below
+  const wx = 640,
+    wy = 300,
+    ww = 330,
+    wh = 400;
+  ctx.save();
+  rbox(ctx, wx, wy, ww, wh, 10, 11, 2);
+  ctx.clip();
+  ctx.fillStyle = vgrad(ctx, wy, wy + wh, [[0, "#1d2a63"], [0.7, "#3a3f80"], [1, "#5a4f86"]]);
+  ctx.fillRect(wx - 10, wy - 10, ww + 20, wh + 20);
+  for (let i = 0; i < 14; i++) {
+    const x = wx + 10 + hash(i * 3.1) * (ww - 20),
+      y = wy + 10 + hash(i * 7.3) * (wh * 0.6);
+    const big = i % 3 === 0 ? 2 : 0;
+    ctx.globalAlpha = 0.35 + 0.65 * Math.abs(Math.sin(abs * 1.3 + i * 1.7));
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(x, y, 3 + big, 3 + big);
+  }
+  ctx.globalAlpha = 1;
+  glow(ctx, 870, 390, 190, "rgba(255,244,200,0.38)", moon);
+  oval(ctx, 870, 390, 46, 46, 12, 1.2);
+  paint(ctx, "#fff4c8", null);
+  for (const [cx, cy, r] of [[856, 378, 9], [884, 402, 6], [872, 372, 4]] as [number, number, number][]) {
+    oval(ctx, cx, cy, r, r, 18 + r, 0.4);
+    paint(ctx, "rgba(220,200,140,0.55)", null);
+  }
+  const roofs: Pt[] = [
+    [wx - 10, wy + wh + 10], [wx - 10, wy + 300], [wx + 50, wy + 300], [wx + 50, wy + 270], [wx + 110, wy + 270], [wx + 110, wy + 318],
+    [wx + 170, wy + 318], [wx + 170, wy + 250], [wx + 230, wy + 250], [wx + 230, wy + 296], [wx + 290, wy + 296], [wx + 290, wy + 276],
+    [wx + ww + 10, wy + 276], [wx + ww + 10, wy + wh + 10],
+  ];
+  poly(ctx, roofs, 19, 1);
+  paint(ctx, "#121633", null);
+  for (let i = 0; i < 12; i++) {
+    const x = wx + 8 + hash(i * 5.7) * (ww - 30),
+      y = wy + 290 + hash(i * 2.3) * 90;
+    ctx.fillStyle = hash(i * 9.1) > 0.4 ? "rgba(255,214,140,0.9)" : "rgba(255,214,140,0.35)";
+    ctx.fillRect(x, y, 8, 10);
+  }
   ctx.restore();
-  // poster on the wall
-  rbox(ctx, 110, 330, 230, 300, 6, 15, 2);
-  paint(ctx, "#3a2f55", C.ink, 5);
-  line(ctx, 140, 380, 300, 380, 16);
+  rbox(ctx, wx, wy, ww, wh, 10, 11, 2);
+  paint(ctx, null, C.ink, 7);
+  inkLine(ctx, [[wx + ww / 2, wy], [wx + ww / 2, wy + wh]], 13, 10, "#1b1f3a");
+  inkLine(ctx, [[wx, wy + wh / 2], [wx + ww, wy + wh / 2]], 14, 10, "#1b1f3a");
+  rbox(ctx, wx - 26, wy + wh - 4, ww + 52, 30, 6, 20, 1.2);
+  paint(ctx, "#2a2f55", C.ink, 5);
+  // moonlight falling into the room
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  poly(ctx, [[wx, wy + wh], [wx + ww, wy + wh], [wx + ww - 120, H], [wx - 340, H]], 9, 1);
+  ctx.fillStyle = `rgba(150,170,255,${0.05 * moon})`;
+  ctx.fill();
+  ctx.restore();
+  // curtains gathered at both sides, with folds
+  for (const side of [-1, 1]) {
+    const x0 = side < 0 ? wx - 40 : wx + ww + 40;
+    const pts: Pt[] =
+      side < 0
+        ? [[x0 - 30, wy - 40], [x0 + 70, wy - 40], [x0 + 52, wy + 160], [x0 + 70, wy + wh + 60], [x0 - 40, wy + wh + 70]]
+        : [[x0 - 70, wy - 40], [x0 + 30, wy - 40], [x0 + 40, wy + wh + 70], [x0 - 70, wy + wh + 60], [x0 - 52, wy + 160]];
+    shaded(ctx, () => blob(ctx, pts, 21 + side, 2), "#34426e", () => {
+      for (let k = 0; k < 3; k++) {
+        const fx = x0 + (k - 1) * 22;
+        inkLine(ctx, [[fx, wy - 30], [fx + side * 6, wy + 200], [fx - side * 4, wy + wh + 50]], 23 + k + side * 5, 4, "#26315a");
+      }
+    }, C.ink, 5);
+  }
+  inkLine(ctx, [[wx - 110, wy - 44], [wx + ww + 110, wy - 44]], 24, 9, "#5b5f80");
+  // a shelf with books and a plant
+  rbox(ctx, 60, 250, 300, 22, 4, 25, 1);
+  paint(ctx, "#5a4632", C.ink, 5);
+  const spines: [number, number, string][] = [[76, 88, "#c0564f"], [102, 104, "#e8b04a"], [130, 92, "#4f8fbf"], [156, 110, "#7ea86b"], [184, 84, "#d9d2c3"]];
+  for (const [x, h, col] of spines) {
+    rbox(ctx, x, 250 - h, 24, h, 3, 26 + x, 0.8);
+    paint(ctx, col, C.ink, 4);
+  }
+  poly(ctx, [[262, 250], [322, 250], [314, 206], [270, 206]], 27, 0.8);
+  paint(ctx, "#c97a4a", C.ink, 4);
+  for (let k = 0; k < 4; k++) {
+    blob(ctx, [[292, 206], [292 + (k - 1.5) * 26, 150 - (k % 2) * 20], [292 + (k - 1.5) * 34, 176]], 28 + k, 1);
+    paint(ctx, "#5f9a58", C.ink, 3.5);
+  }
+  // poster, pinned and a little crooked
+  ctx.save();
+  ctx.translate(225, 480);
+  ctx.rotate(-0.03);
+  shaded(ctx, () => rbox(ctx, -115, -150, 230, 300, 6, 15, 2), "#3a2f55", () => {
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    ctx.fillRect(-115, -150, 230, 120);
+  }, C.ink, 5);
+  line(ctx, -85, -100, 75, -100, 16);
   paint(ctx, null, "#8d7bb8", 6);
-  oval(ctx, 225, 500, 60, 60, 17, 2);
+  oval(ctx, 0, 20, 60, 60, 17, 2);
   paint(ctx, null, "#8d7bb8", 6);
+  for (const tx of [-100, 100]) {
+    poly(ctx, [[tx - 14, -158], [tx + 14, -154], [tx + 12, -140], [tx - 12, -144]], 29 + tx, 0.6);
+    paint(ctx, "rgba(240,235,210,0.85)", null);
+  }
+  ctx.restore();
+  // the calendar: today (the 5th) circled in red
+  ctx.save();
+  ctx.translate(150, 775);
+  ctx.rotate(0.03);
+  shaded(ctx, () => rbox(ctx, -70, -85, 140, 170, 6, 30, 1), "#efe6d2", () => {
+    ctx.fillStyle = "#d9534f";
+    ctx.fillRect(-80, -95, 160, 46);
+  }, C.ink, 4);
+  text(ctx, "10", 0, -64, { size: 30, font: F.marker, fill: "#fff" });
+  ctx.fillStyle = "rgba(60,50,40,0.5)";
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) ctx.fillRect(-58 + c * 25, -28 + r * 28, 12, 10);
+  oval(ctx, -58 + 25 * 4 + 6, -28 + 5, 17, 15, 31, 0.8);
+  paint(ctx, null, C.red, 4);
+  ctx.restore();
 }
 
 export function desk(ctx: Ctx, y: number) {
-  poly(ctx, [[-40, y], [W + 40, y - 10], [W + 40, H + 40], [-40, H + 40]], 21, 2);
-  paint(ctx, "#4a3322", C.ink, 7);
-  for (let i = 0; i < 5; i++) inkLine(ctx, [[-20, y + 60 + i * 110], [W * 0.5, y + 70 + i * 110 + jit(i, 4)], [W + 20, y + 54 + i * 110]], 22 + i, 3, "#3a2618");
+  // the desk top: plank seams, grain, a warm highlight on the front edge
+  shaded(ctx, () => poly(ctx, [[-40, y], [W + 40, y - 10], [W + 40, H + 40], [-40, H + 40]], 21, 2), "#4a3322", () => {
+    for (let i = 0; i < 5; i++) inkLine(ctx, [[-20, y + 60 + i * 110], [W * 0.5, y + 70 + i * 110 + jit(i, 4)], [W + 20, y + 54 + i * 110]], 22 + i, 3, "#3a2618");
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    for (let i = 0; i < 16; i++) {
+      const gy = y + 30 + hash(i * 4.1) * 560,
+        gx = hash(i * 6.7) * W;
+      inkLine(ctx, [[gx - 120, gy], [gx, gy - 6], [gx + 140, gy + 2]], 40 + i, 2, "#5e4430");
+    }
+    ctx.restore();
+    inkLine(ctx, [[-40, y + 8], [W + 40, y - 2]], 27, 6, "rgba(255,210,150,0.22)");
+  }, C.ink, 7);
+  // textbooks stacked on the left
+  const books: [number, number, number, string][] = [
+    [40, y + 120, 220, "#3f6fa0"],
+    [52, y + 86, 196, "#c9a14a"],
+    [36, y + 52, 214, "#b8534d"],
+  ];
+  for (const [bx, by, bw, col] of books) {
+    shaded(ctx, () => rbox(ctx, bx, by - 34, bw, 34, 4, 50 + bx, 0.8), col, () => {
+      ctx.fillStyle = "rgba(250,246,232,0.9)";
+      ctx.fillRect(bx + bw - 22, by - 30, 18, 26);
+    }, C.ink, 4);
+  }
+  // a pencil cup on the right
+  shaded(ctx, () => poly(ctx, [[968, y + 12], [1040, y + 12], [1034, y + 104], [974, y + 104]], 60, 0.8), "#6d8fb3", () => {
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.fillRect(968, y + 12, 18, 92);
+  }, C.ink, 4);
+  for (const [px, ph, col] of [[984, 84, "#ffd84a"], [1004, 104, "#e46f78"], [1022, 76, "#7ee081"]] as [number, number, string][]) {
+    rbox(ctx, px - 5, y + 14 - ph, 10, ph, 2, 61 + px, 0.4);
+    paint(ctx, col, C.ink, 3);
+  }
 }
 
 /** Cupcake with one candle. lit: 0 = out, 1 = burning. smoke 0..1 after blowing out. */
@@ -75,6 +208,7 @@ export function cupcake(ctx: Ctx, x: number, y: number, s: number, abs: number, 
     inkLine(ctx, [[cx, -232], [cx + 2, -250]], 45 + c, 3);
     if (lit > 0.01) {
       const fl = 1 + Math.sin(abs * 23 + c) * 0.08 + Math.sin(abs * 37) * 0.05;
+      glow(ctx, cx, -290, 150, "rgba(255,190,90,0.35)", lit);
       ctx.save();
       ctx.translate(cx, -252);
       ctx.scale(lit * fl, lit * (fl + Math.sin(abs * 17) * 0.06));
@@ -112,43 +246,206 @@ export function lightPool(ctx: Ctx, x: number, y: number, r: number, dark: numbe
 }
 
 // ---------------------------------------------------------------- school
-export function corridor(ctx: Ctx) {
-  fillBg(ctx, "#e8dcc0");
-  // windows along the wall
-  for (let i = 0; i < 3; i++) {
-    const x = 60 + i * 360;
-    rbox(ctx, x, 330, 280, 360, 6, 60 + i, 2);
-    paint(ctx, vgrad(ctx, 330, 690, [[0, "#bfe3f2"], [1, "#e9f6ee"]]), C.ink, 6);
-    inkLine(ctx, [[x + 140, 330], [x + 140, 690]], 63 + i, 5);
-    inkLine(ctx, [[x, 510], [x + 280, 510]], 66 + i, 5);
+/** Sunlit dust drifting in a light shaft (x0..x1 at the top, sheared to the right as it falls). */
+function dust(ctx: Ctx, abs: number, x0: number, y0: number, w: number, h: number, seed: number, n = 12) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (let k = 0; k < n; k++) {
+    const u = hash(seed + k * 3.3),
+      v = (hash(seed + k * 7.1) + abs * (0.03 + hash(seed + k) * 0.03)) % 1;
+    const px = x0 + u * w + v * h * 0.15 + Math.sin(abs * 0.7 + k) * 6,
+      py = y0 + v * h;
+    ctx.globalAlpha = Math.sin(v * Math.PI) * 0.7;
+    ctx.fillStyle = "#fffbe8";
+    ctx.beginPath();
+    ctx.arc(px, py, 2 + hash(seed + k * 5) * 2, 0, Math.PI * 2);
+    ctx.fill();
   }
-  // skirting + floor
-  poly(ctx, [[-40, 1120], [W + 40, 1110], [W + 40, H + 40], [-40, H + 40]], 70, 2);
-  paint(ctx, "#c4a57a", C.ink, 6);
-  rbox(ctx, -40, 1060, W + 80, 60, 0, 71, 1.5);
-  paint(ctx, "#6e8f7a", C.ink, 5);
-  for (let i = 0; i < 6; i++) inkLine(ctx, [[-20 + i * 230, 1130], [-200 + i * 300, H]], 72 + i, 3, "#a8885e");
+  ctx.restore();
 }
 
-export function classroom(ctx: Ctx) {
-  fillBg(ctx, "#e3d7bb");
-  // blackboard
-  rbox(ctx, 90, 300, 900, 420, 8, 80, 2);
-  paint(ctx, "#2f4a3c", C.ink, 8);
+export function corridor(ctx: Ctx, abs = 0) {
+  // cream wall, ceiling strip with two lit tubes
+  fillBg(ctx, vgrad(ctx, 0, 1100, [[0, "#efe4c8"], [1, "#e2d3b0"]]));
+  ctx.fillStyle = "#f6efdc";
+  ctx.fillRect(-60, -60, W + 120, 250);
+  inkLine(ctx, [[-40, 188], [W + 40, 182]], 57, 5);
+  for (const lx of [200, 760]) {
+    glow(ctx, lx, 140, 260, "rgba(255,255,240,0.5)");
+    rr(ctx, lx - 120, 120, 240, 26, 12);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.strokeStyle = C.ink;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  }
+  // two windows onto the playground's trees, the classroom door between them
+  for (const x of [40, 700]) {
+    const y = 330,
+      w = 300,
+      h = 380;
+    ctx.save();
+    rbox(ctx, x, y, w, h, 6, 60 + x, 2);
+    ctx.clip();
+    ctx.fillStyle = vgrad(ctx, y, y + h, [[0, "#a9dcf2"], [1, "#e9f6ee"]]);
+    ctx.fillRect(x - 10, y - 10, w + 20, h + 20);
+    rbox(ctx, x + 30, y + 190, 150, 200, 4, 61 + x, 1);
+    paint(ctx, "#d9cdb4", null);
+    for (let r = 0; r < 3; r++) {
+      ctx.fillStyle = "rgba(120,140,160,0.45)";
+      ctx.fillRect(x + 48, y + 214 + r * 46, 30, 22);
+      ctx.fillRect(x + 110, y + 214 + r * 46, 30, 22);
+    }
+    for (let k = 0; k < 3; k++) {
+      oval(ctx, x + 60 + k * 90, y + h - 60 - (k % 2) * 40, 80, 70, 62 + x + k, 3);
+      paint(ctx, k % 2 ? "#7fb36a" : "#6aa05a", "#4f7d45", 4);
+    }
+    ctx.restore();
+    rbox(ctx, x, y, w, h, 6, 60 + x, 2);
+    paint(ctx, null, C.ink, 7);
+    inkLine(ctx, [[x + w / 2, y], [x + w / 2, y + h]], 63 + x, 6, "#8a7f6a");
+    inkLine(ctx, [[x, y + h / 2], [x + w, y + h / 2]], 66 + x, 6, "#8a7f6a");
+    rbox(ctx, x - 16, y + h - 4, w + 32, 24, 4, 67 + x, 1);
+    paint(ctx, "#d8c9a6", C.ink, 5);
+  }
+  shaded(ctx, () => rbox(ctx, 400, 360, 240, 720, 6, 68, 1.5), "#b9895a", () => {
+    rbox(ctx, 440, 420, 160, 180, 4, 69, 1);
+    paint(ctx, "rgba(190,225,240,0.9)", C.ink, 4);
+    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    ctx.fillRect(560, 360, 80, 720);
+    inkLine(ctx, [[430, 660], [610, 660]], 74, 2.4, "rgba(0,0,0,0.25)");
+  }, C.ink, 6);
+  oval(ctx, 610, 760, 12, 12, 70, 0.6);
+  paint(ctx, "#e8d39a", C.ink, 3);
+  rr(ctx, 440, 300, 160, 46, 8);
+  ctx.fillStyle = "#2f5b8a";
+  ctx.fill();
+  ctx.strokeStyle = C.ink;
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  text(ctx, "高二(3)班", 520, 324, { size: 28, font: F.ui, weight: 700, fill: "#fff" });
+  // green dado
+  shaded(ctx, () => poly(ctx, [[-40, 900], [W + 40, 896], [W + 40, 1120], [-40, 1124]], 71, 1.5), "#7e9f88", () => {
+    inkLine(ctx, [[-40, 910], [W + 40, 906]], 72, 4, "rgba(255,255,255,0.35)");
+  }, C.ink, 5);
+  // polished floor: tiles in perspective, window light lying on it
+  shaded(ctx, () => poly(ctx, [[-40, 1120], [W + 40, 1110], [W + 40, H + 40], [-40, H + 40]], 73, 2), "#c4a57a", () => {
+    for (let i = -6; i <= 6; i++) inkLine(ctx, [[540 + i * 60, 1120], [540 + i * 330, H + 40]], 75 + i, 2.6, "#a8885e");
+    for (let r = 1; r < 6; r++) {
+      const yy = 1120 + Math.pow(r / 5, 1.6) * 800;
+      inkLine(ctx, [[-40, yy], [W + 40, yy - 4]], 90 + r, 2.4, "#a8885e");
+    }
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (const x of [40, 700]) {
+      poly(ctx, [[x + 60, 1130], [x + 300, 1130], [x + 420, 1420], [x + 120, 1420]], 96 + x, 1);
+      ctx.fillStyle = "rgba(255,236,190,0.16)";
+      ctx.fill();
+    }
+    ctx.restore();
+  }, C.ink, 6);
+  // light shafts through the air, with dust
   ctx.save();
-  ctx.globalAlpha = 0.7;
+  ctx.globalCompositeOperation = "lighter";
+  for (const x of [40, 700]) {
+    poly(ctx, [[x, 330], [x + 300, 330], [x + 420, 1130], [x + 60, 1130]], 98 + x, 1);
+    ctx.fillStyle = "rgba(255,240,200,0.07)";
+    ctx.fill();
+  }
+  ctx.restore();
+  dust(ctx, abs, 60, 360, 300, 740, 300);
+  dust(ctx, abs, 720, 360, 300, 740, 700);
+}
+
+export function classroom(ctx: Ctx, abs = 0) {
+  fillBg(ctx, vgrad(ctx, 0, 1100, [[0, "#ece0c3"], [1, "#ddcfae"]]));
+  // a broad band of sunlight from the windows on the left
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  poly(ctx, [[-60, 120], [260, 120], [620, 1100], [-60, 1100]], 79, 1);
+  ctx.fillStyle = "rgba(255,236,190,0.10)";
+  ctx.fill();
+  ctx.restore();
+  // clock above the board
+  oval(ctx, 940, 222, 50, 50, 78, 1);
+  paint(ctx, "#fbf7ee", C.ink, 5);
+  inkLine(ctx, [[940, 222], [940, 190]], 77, 4);
+  inkLine(ctx, [[940, 222], [964, 232]], 76, 4);
+  // blackboard: wooden frame, smudged board, chalk notes and a diagram, a tray with chalk and the eraser
+  rbox(ctx, 74, 284, 932, 452, 10, 75, 1.5);
+  paint(ctx, "#8a6a44", C.ink, 7);
+  shaded(ctx, () => rbox(ctx, 90, 300, 900, 420, 8, 80, 2), "#2f4a3c", () => {
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    for (let i = 0; i < 6; i++) {
+      oval(ctx, 160 + hash(i * 2.2) * 760, 340 + hash(i * 3.3) * 330, 90, 30, 100 + i, 3, hash(i) * 0.6);
+      ctx.fill();
+    }
+  }, C.ink, 6);
+  ctx.save();
+  ctx.globalAlpha = 0.75;
   inkLine(ctx, [[150, 380], [420, 372]], 81, 5, "#e8efe8");
   inkLine(ctx, [[150, 450], [600, 446]], 82, 5, "#e8efe8");
   inkLine(ctx, [[150, 520], [330, 516]], 83, 5, "#e8efe8");
+  poly(ctx, [[660, 650], [940, 650], [940, 480]], 86, 1);
+  paint(ctx, null, "#e8efe8", 4);
+  poly(ctx, [[790, 562], [836, 534], [856, 570], [810, 598]], 87, 0.8);
+  paint(ctx, null, "#e8efe8", 4);
+  text(ctx, "F = ma", 790, 420, { size: 46, font: F.en, fill: "#e8efe8" });
   ctx.restore();
-  poly(ctx, [[-40, 1080], [W + 40, 1070], [W + 40, H + 40], [-40, H + 40]], 84, 2);
-  paint(ctx, "#b99a6c", C.ink, 6);
+  rbox(ctx, 120, 722, 840, 20, 4, 88, 1);
+  paint(ctx, "#8a6a44", C.ink, 4);
+  for (const [x, col] of [[300, "#ffffff"], [334, "#ffd84a"], [368, "#ff9cc3"]] as [number, string][]) {
+    rbox(ctx, x, 710, 24, 12, 3, 89 + x, 0.4);
+    paint(ctx, col, C.ink, 2);
+  }
+  rbox(ctx, 760, 702, 92, 24, 4, 92, 0.6);
+  paint(ctx, "#4b5b7a", C.ink, 3);
+  // a back row of empty desks between the standing classmates
+  for (let c = 0; c < 4; c++) {
+    const dx = 40 + c * 270;
+    shaded(ctx, () => rbox(ctx, dx, 930, 200, 34, 5, 120 + c, 1), "#d79a55", () => {
+      ctx.fillStyle = "rgba(255,255,255,0.18)";
+      ctx.fillRect(dx, 930, 200, 8);
+    }, C.ink, 4);
+    inkLine(ctx, [[dx + 20, 964], [dx + 20, 1076]], 124 + c, 6, "#6b6f7a");
+    inkLine(ctx, [[dx + 180, 964], [dx + 180, 1076]], 128 + c, 6, "#6b6f7a");
+  }
+  // floor
+  shaded(ctx, () => poly(ctx, [[-40, 1080], [W + 40, 1070], [W + 40, H + 40], [-40, H + 40]], 84, 2), "#b99a6c", () => {
+    for (let i = -6; i <= 6; i++) inkLine(ctx, [[540 + i * 70, 1080], [540 + i * 300, H + 40]], 93 + i, 2.4, "#a5865a");
+  }, C.ink, 6);
+  dust(ctx, abs, 0, 160, 420, 900, 400, 14);
 }
+
 export function schoolDesk(ctx: Ctx, x: number, y: number, w: number) {
-  rbox(ctx, x - w / 2, y, w, 70, 6, 85, 1.5);
-  paint(ctx, "#d79a55", C.ink, 6);
-  rbox(ctx, x - w / 2 + 20, y + 70, w - 40, 260, 4, 86, 1.5);
-  paint(ctx, "#9c6b3a", C.ink, 6);
+  shaded(ctx, () => rbox(ctx, x - w / 2, y, w, 70, 6, 85, 1.5), "#d79a55", () => {
+    ctx.fillStyle = "rgba(255,255,255,0.2)";
+    ctx.fillRect(x - w / 2, y, w, 12);
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    for (let i = 0; i < 5; i++) inkLine(ctx, [[x - w / 2 + 20, y + 22 + i * 9], [x, y + 20 + i * 9 + jit(i, 2)], [x + w / 2 - 20, y + 24 + i * 9]], 140 + i, 2, "#a8743c");
+    ctx.restore();
+  }, C.ink, 6);
+  shaded(ctx, () => rbox(ctx, x - w / 2 + 20, y + 70, w - 40, 260, 4, 86, 1.5), "#9c6b3a", () => {
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(x - w / 2 + 20, y + 70, w - 40, 30);
+  }, C.ink, 6);
+  // an open textbook and a pencil on the desk
+  ctx.save();
+  ctx.translate(x - w * 0.22, y + 18);
+  ctx.rotate(-0.04);
+  for (const side of [-1, 1]) {
+    poly(ctx, [[0, -14], [side * 92, -20], [side * 96, 26], [0, 30]], 145 + side, 0.6);
+    paint(ctx, "#fbf7ee", C.ink, 3.5);
+    for (let k = 0; k < 3; k++) inkLine(ctx, [[side * 14, -4 + k * 10], [side * 80, -8 + k * 10]], 147 + side * 3 + k, 1.6, "rgba(0,0,0,0.3)");
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.translate(x + w * 0.24, y + 34);
+  ctx.rotate(0.3);
+  rbox(ctx, -60, -6, 120, 12, 3, 150, 0.4);
+  paint(ctx, "#ffd84a", C.ink, 3);
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------- park + swing set (from the cover)
@@ -196,15 +493,12 @@ export function swingSet(ctx: Ctx, x: number, y: number, s: number, dusk: number
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(s, s);
-  // legs (back)
   for (const side of [-1, 1]) {
     poly(ctx, [[side * 380 - 18, 0], [side * 380 + 18, 0], [side * 470 + 22, 900], [side * 470 - 22, 900]], 100 + side, 1.5);
     paint(ctx, frame, C.ink, 6);
   }
-  // beam
   rbox(ctx, -440, -30, 880, 56, 6, 103, 1.5);
   paint(ctx, frame, C.ink, 6);
-  // trapeze bar
   inkLine(ctx, [[-30, 20], [-30, 330]], 104, 3, "#555");
   inkLine(ctx, [[60, 20], [60, 330]], 105, 3, "#555");
   rbox(ctx, -60, 320, 150, 30, 8, 106, 1.2);
@@ -218,7 +512,6 @@ export function swingSet(ctx: Ctx, x: number, y: number, s: number, dusk: number
     const seatX = sx + Math.sin(a) * L,
       seatY = Math.cos(a) * L;
     const fn = i === 0 ? draw.left : draw.right;
-    // chains
     for (const off of [-84, 84]) {
       const px = sx + off,
         ex = seatX + off * Math.cos(a),
@@ -233,7 +526,6 @@ export function swingSet(ctx: Ctx, x: number, y: number, s: number, dusk: number
     paint(ctx, "#2d6b56", C.ink, 5);
     fn?.(ctx, seatX, seatY, a);
   });
-  // front cross bars
   for (const side of [-1, 1]) {
     poly(ctx, [[side * 300, 640], [side * 560, 640], [side * 560, 670], [side * 300, 670]], 120 + side, 1.5);
     paint(ctx, frame, C.ink, 5);
@@ -242,25 +534,62 @@ export function swingSet(ctx: Ctx, x: number, y: number, s: number, dusk: number
 }
 
 // ---------------------------------------------------------------- street (night)
+/** The walk home. Four layers that slide at different speeds as he walks (`scroll` = distance walked):
+ *  sky and moon (almost still), a far skyline (0.25), the block of flats with lit windows (0.6), the lamps,
+ *  pavement and road (1.0) — plus wires between the lamp posts. */
 export function street(ctx: Ctx, abs: number, scroll: number) {
-  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#0d1230"], [0.55, "#1e2347"], [1, "#0b0d1c"]]));
-  // buildings with lit windows (some show celebrating silhouettes)
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#0b1030"], [0.5, "#1d2350"], [1, "#0b0d1c"]]));
+  for (let i = 0; i < 26; i++) {
+    const x = ((hash(i * 1.7) * 1400 - scroll * 0.05) % 1400 + 1400) % 1400 - 160,
+      y = 80 + hash(i * 2.9) * 520;
+    ctx.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(abs * 1.1 + i));
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(x, y, 3, 3);
+  }
+  ctx.globalAlpha = 1;
+  const mx = 820 - scroll * 0.03;
+  glow(ctx, mx, 300, 230, "rgba(255,244,200,0.3)");
+  oval(ctx, mx, 300, 52, 52, 129, 1.2);
+  paint(ctx, "#fff2c4", null);
+  // far skyline
+  const far = 1600;
+  for (let i = -1; i < 7; i++) {
+    const bx = ((i * 260 - scroll * 0.25) % far + far) % far - 260;
+    const bh = 420 + hash(i * 3 + 7) * 380;
+    poly(ctx, [[bx, 1150], [bx, 1150 - bh], [bx + 220, 1150 - bh], [bx + 220, 1150]], 118 + i, 1);
+    paint(ctx, "#151935", null);
+    for (let k = 0; k < 6; k++)
+      if (hash(i * 17 + k) > 0.55) {
+        ctx.fillStyle = "rgba(255,214,140,0.45)";
+        ctx.fillRect(bx + 20 + (k % 3) * 64, 1150 - bh + 40 + Math.floor(k / 3) * 90, 18, 22);
+      }
+  }
+  // the block of flats: lit windows with frames, some with people celebrating, AC units
   const span = 1400;
   for (let i = -1; i < 5; i++) {
     const bx = ((i * 380 - scroll * 0.6) % span + span) % span - 300;
     const bh = 700 + hash(i + 40) * 300;
-    rbox(ctx, bx, 1150 - bh, 330, bh + 20, 4, 130 + i, 2);
-    paint(ctx, "#1a1d3b", C.ink, 6);
+    shaded(ctx, () => rbox(ctx, bx, 1150 - bh, 330, bh + 20, 4, 130 + i, 2), "#1a1d3b", () => {
+      ctx.fillStyle = "rgba(255,255,255,0.04)";
+      ctx.fillRect(bx, 1150 - bh, 40, bh + 20);
+    }, C.ink, 6);
+    rbox(ctx, bx - 8, 1150 - bh - 14, 346, 22, 3, 135 + i, 1);
+    paint(ctx, "#232748", C.ink, 4);
     for (let r = 0; r < 5; r++)
       for (let c = 0; c < 3; c++) {
-        const on = hash(i * 31 + r * 7 + c) > 0.45;
-        if (!on) continue;
         const wx = bx + 30 + c * 100,
           wy = 1150 - bh + 60 + r * 130;
+        const on = hash(i * 31 + r * 7 + c) > 0.45;
+        if (!on) {
+          rbox(ctx, wx, wy, 70, 90, 3, 140 + r * 3 + c, 1);
+          paint(ctx, "#121430", C.ink, 3);
+          continue;
+        }
+        glow(ctx, wx + 35, wy + 45, 90, "rgba(255,200,120,0.18)");
         rbox(ctx, wx, wy, 70, 90, 3, 140 + r * 3 + c, 1);
         paint(ctx, "#ffd98a", C.ink, 4);
+        inkLine(ctx, [[wx + 35, wy + 4], [wx + 35, wy + 86]], 160 + r + c, 2.4, "rgba(120,80,30,0.6)");
         if (hash(i * 13 + r + c * 5) > 0.6) {
-          // little party silhouettes
           ctx.fillStyle = "#c48a3a";
           for (let k = 0; k < 2; k++) {
             ctx.beginPath();
@@ -268,16 +597,29 @@ export function street(ctx: Ctx, abs: number, scroll: number) {
             ctx.fill();
             ctx.fillRect(wx + 12 + k * 28, wy + 62, 20, 30);
           }
+        } else {
+          // a curtain half drawn
+          poly(ctx, [[wx + 4, wy + 4], [wx + 30, wy + 4], [wx + 22, wy + 86], [wx + 4, wy + 86]], 170 + r + c, 0.6);
+          paint(ctx, "rgba(220,130,90,0.55)", null);
+        }
+        if (hash(i * 7 + r * 3 + c) > 0.82) {
+          rbox(ctx, wx + 12, wy + 96, 46, 24, 3, 175 + r + c, 0.6);
+          paint(ctx, "#cfd3dc", C.ink, 3);
         }
       }
   }
-  // street lamps
-  for (let i = -1; i < 3; i++) {
-    const lx = ((i * 620 - scroll) % 1240 + 1240) % 1240 - 100;
-    inkLine(ctx, [[lx, 1460], [lx, 760], [lx + 60, 740]], 150 + i, 10, "#2a2d44");
-    glow(ctx, lx + 70, 760, 300, "rgba(255,210,130,0.35)");
-    oval(ctx, lx + 70, 754, 30, 16, 151 + i, 1);
-    paint(ctx, "#ffe6a8", C.ink, 4);
+  // lamp posts with wires sagging between them, cones of light and pools on the pavement
+  const lamps: number[] = [];
+  for (let i = -1; i < 3; i++) lamps.push(((i * 620 - scroll) % 1240 + 1240) % 1240 - 100);
+  lamps.sort((a, b) => a - b);
+  for (let k = 0; k < lamps.length - 1; k++) {
+    const a = lamps[k],
+      b = lamps[k + 1];
+    if (b - a > 700) continue;
+    inkLine(ctx, [[a, 790], [(a + b) / 2, 860], [b, 790]], 180 + k, 2.4, "#05060f");
+    inkLine(ctx, [[a, 815], [(a + b) / 2, 890], [b, 815]], 184 + k, 2, "#05060f");
+  }
+  for (const [i, lx] of lamps.entries()) {
     ctx.save();
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = "#ffd98a";
@@ -288,9 +630,30 @@ export function street(ctx: Ctx, abs: number, scroll: number) {
     ctx.lineTo(lx + 90, 760);
     ctx.fill();
     ctx.restore();
+    inkLine(ctx, [[lx, 1460], [lx, 760], [lx + 60, 740]], 150 + i, 10, "#2a2d44");
+    glow(ctx, lx + 70, 760, 300, "rgba(255,210,130,0.35)");
+    oval(ctx, lx + 70, 754, 30, 16, 151 + i, 1);
+    paint(ctx, "#ffe6a8", C.ink, 4);
   }
-  poly(ctx, [[-60, 1150], [W + 60, 1140], [W + 60, H + 60], [-60, H + 60]], 160, 2);
-  paint(ctx, "#23243a", C.ink, 6);
+  // pavement (with tile joints and kerb), road with lane dashes
+  shaded(ctx, () => poly(ctx, [[-60, 1150], [W + 60, 1140], [W + 60, 1330], [-60, 1336]], 160, 2), "#2b2c44", () => {
+    const off = ((-scroll % 120) + 120) % 120;
+    for (let x = -120 + off; x < W + 120; x += 120) inkLine(ctx, [[x, 1150], [x - 40, 1330]], 190 + Math.round(x), 2, "rgba(0,0,0,0.35)");
+    inkLine(ctx, [[-60, 1236], [W + 60, 1230]], 197, 2, "rgba(0,0,0,0.3)");
+  }, C.ink, 5);
+  for (const lx of lamps) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = "rgba(255,210,130,0.14)";
+    ctx.beginPath();
+    ctx.ellipse(lx + 70, 1250, 210, 46, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  poly(ctx, [[-60, 1330], [W + 60, 1326], [W + 60, 1356], [-60, 1360]], 198, 1.5);
+  paint(ctx, "#4a4b66", C.ink, 5);
+  poly(ctx, [[-60, 1356], [W + 60, 1352], [W + 60, H + 60], [-60, H + 60]], 199, 2);
+  paint(ctx, "#1c1d30", C.ink, 6);
   for (let i = -1; i < 6; i++) {
     const dx = ((i * 260 - scroll) % 1560 + 1560) % 1560 - 260;
     rbox(ctx, dx, 1560, 140, 18, 6, 161 + i, 1);
@@ -309,7 +672,7 @@ export function confetti(ctx: Ctx, abs: number, t0: number, count = 90, seed = 7
     const x = W / 2 + (sx - W / 2) * 0.3 + vx * t;
     const y = 1500 + vy * t + 900 * t * t;
     const fall = Math.max(0, t - 1.2);
-    const yy = Math.min(y, 1500 + vy * 1.2 + 900 * 1.44) + fall * fall * 0 + fall * (120 + hash(i) * 120);
+    const yy = Math.min(y, 1500 + vy * 1.2 + 900 * 1.44) + fall * (120 + hash(i) * 120);
     const yf = t < 1.2 ? y : yy;
     if (yf > H + 40) continue;
     ctx.save();
@@ -364,4 +727,163 @@ export function lampPost(ctx: Ctx, x: number, y: number, abs: number, on: number
   if (flick > 0) glow(ctx, x + 80, y, 420, "rgba(255,210,130,0.45)", flick);
   oval(ctx, x + 80, y - 6, 36, 18, 171, 1);
   paint(ctx, flick > 0.5 ? "#ffe6a8" : "#6b6b7a", C.ink, 4);
+}
+
+// ---------------------------------------------------------------- night lights out of focus
+/** Out-of-focus lights far behind a close-up (the room / the street at night behind the phone): soft discs with a
+ *  slightly brighter rim, drifting a little. `colors` are "r,g,b" strings. */
+export function bokeh(ctx: Ctx, abs: number, n: number, seed: number, alpha = 1, colors: string[] = ["255,200,120", "150,180,255", "255,150,170"]) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < n; i++) {
+    const r = 40 + hash(seed + i * 3.1) * 90;
+    const x = hash(seed + i * 1.3) * (W + 200) - 100 + Math.sin(abs * 0.3 + i) * 12,
+      y = hash(seed + i * 2.7) * (H + 200) - 100 + Math.cos(abs * 0.25 + i * 1.7) * 10;
+    const col = colors[i % colors.length];
+    const a = alpha * (0.1 + hash(seed + i * 5.9) * 0.14) * (0.85 + 0.15 * Math.sin(abs * 1.3 + i * 2.1));
+    const g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r);
+    g.addColorStop(0, `rgba(${col},${(a * 0.7).toFixed(3)})`);
+    g.addColorStop(0.85, `rgba(${col},${a.toFixed(3)})`);
+    g.addColorStop(1, `rgba(${col},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- the street below his window (act 5)
+/** Looking down from his window: the block across the road with its lit windows (neighbours watching), a shop with a
+ *  striped awning, the road, and the pavement outside his door where they wait in a warm pool of light. Drawn inside
+ *  the camera; it reaches far above the frame for the crane move down from the night sky. */
+export function streetBelow(ctx: Ctx, abs: number) {
+  ctx.fillStyle = vgrad(ctx, -520, 200, [[0, "#0a0e2a"], [1, "#1b2148"]]);
+  ctx.fillRect(-120, -560, W + 240, 820);
+  for (let i = 0; i < 22; i++) {
+    ctx.globalAlpha = 0.3 + 0.6 * Math.abs(Math.sin(abs * 1.2 + i));
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(hash(i * 1.9) * W, -500 + hash(i * 3.7) * 360, 3, 3);
+  }
+  ctx.globalAlpha = 1;
+  shaded(ctx, () => poly(ctx, [[-120, -150], [W + 120, -170], [W + 120, 660], [-120, 660]], 701, 1.5), "#1d2242", () => {
+    ctx.fillStyle = "rgba(255,255,255,0.03)";
+    ctx.fillRect(-120, -170, 160, 830);
+    for (let r = 0; r < 4; r++)
+      for (let c = 0; c < 6; c++) {
+        const wx = 10 + c * 178,
+          wy = -110 + r * 160;
+        const lit = hash(r * 7.3 + c * 3.1 + 2) > 0.42;
+        if (lit) glow(ctx, wx + 46, wy + 56, 110, "rgba(255,200,120,0.22)");
+        rbox(ctx, wx, wy, 92, 112, 3, 702 + r * 6 + c, 0.8);
+        paint(ctx, lit ? "#ffd98a" : "#141833", C.ink, 3.5);
+        if (!lit) continue;
+        inkLine(ctx, [[wx + 46, wy + 4], [wx + 46, wy + 108]], 730 + r * 6 + c, 2.4, "rgba(120,80,30,0.55)");
+        if (hash(r * 2.1 + c * 5.3) > 0.55) {
+          // a neighbour at the window, watching the crowd below
+          ctx.fillStyle = "rgba(90,60,30,0.8)";
+          ctx.beginPath();
+          ctx.arc(wx + 26, wy + 62, 12, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillRect(wx + 15, wy + 74, 22, 38);
+        }
+      }
+    rbox(ctx, 120, 520, 840, 140, 4, 760, 1);
+    paint(ctx, "#2a2f55", C.ink, 4);
+    glow(ctx, 540, 600, 420, "rgba(255,230,180,0.25)");
+    for (let k = 0; k < 8; k++) {
+      poly(ctx, [[120 + k * 105, 500], [225 + k * 105, 500], [215 + k * 105, 540], [130 + k * 105, 540]], 761 + k, 0.6);
+      paint(ctx, k % 2 ? "#e8ece6" : "#d9534f", C.ink, 3);
+    }
+  }, C.ink, 6);
+  poly(ctx, [[-120, 660], [W + 120, 660], [W + 120, 720], [-120, 720]], 770, 1);
+  paint(ctx, "#2b2e48", C.ink, 4);
+  shaded(ctx, () => poly(ctx, [[-120, 720], [W + 120, 720], [W + 120, 990], [-120, 990]], 771, 1), "#191b2d", () => {
+    for (let i = 0; i < 6; i++) {
+      rbox(ctx, 30 + i * 200, 846, 120, 14, 5, 772 + i, 0.6);
+      paint(ctx, "#4a4b66", null);
+    }
+  }, C.ink, 5);
+  poly(ctx, [[-120, 990], [W + 120, 986], [W + 120, 1016], [-120, 1020]], 780, 1);
+  paint(ctx, "#4a4b66", C.ink, 4);
+  shaded(ctx, () => poly(ctx, [[-120, 1020], [W + 120, 1016], [W + 120, H + 400], [-120, H + 400]], 781, 1.5), "#2f3352", () => {
+    for (let x = -120; x < W + 120; x += 120) inkLine(ctx, [[x, 1020], [x - 60, H + 200]], 782 + x, 2, "rgba(0,0,0,0.3)");
+    for (let y = 1110; y < H + 200; y += 110) inkLine(ctx, [[-120, y], [W + 120, y - 4]], 790 + y, 2, "rgba(0,0,0,0.3)");
+  }, C.ink, 5);
+  glow(ctx, 540, 1200, 680, "rgba(255,214,140,0.35)");
+  // a bush in a planter by the lamp
+  rbox(ctx, 200, 1300, 170, 70, 8, 795, 1);
+  paint(ctx, "#5a4a3a", C.ink, 4);
+  for (let k = 0; k < 5; k++) {
+    oval(ctx, 220 + k * 32, 1290 - (k % 2) * 14, 40, 34, 796 + k, 1.5);
+    paint(ctx, "#2f5a3a", C.ink, 3.5);
+  }
+}
+
+// ---------------------------------------------------------------- the door of his block (the party)
+/** Downstairs at night, where the party happens: tiled facade, the warm lobby door right behind him (a rim of light),
+ *  a wall lamp and doorbell panel, fairy lights sagging across the top, windows above, the pavement. Draw it through
+ *  filtered(..., "blur(2px)") so the people in front stay sharp. */
+export function buildingEntrance(ctx: Ctx, abs: number) {
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#171c3c"], [1, "#0d1024"]]));
+  shaded(ctx, () => poly(ctx, [[-120, -200], [W + 120, -200], [W + 120, 1300], [-120, 1300]], 801, 1), "#2a2f52", () => {
+    ctx.strokeStyle = "rgba(0,0,0,0.22)";
+    ctx.lineWidth = 2;
+    let row = 0;
+    for (let y = -180; y < 1300; y += 46, row++) {
+      ctx.beginPath();
+      ctx.moveTo(-120, y);
+      ctx.lineTo(W + 120, y);
+      ctx.stroke();
+      for (let x = (row % 2) * 60 - 120; x < W + 120; x += 120) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + 46);
+        ctx.stroke();
+      }
+    }
+    for (const [x, y, lit] of [[60, 60, 1], [860, 40, 0], [80, -180, 0], [880, -200, 1]] as [number, number, number][]) {
+      if (lit) glow(ctx, x + 70, y + 80, 160, "rgba(255,200,120,0.3)");
+      rbox(ctx, x, y, 140, 170, 4, 802 + x + y, 1);
+      paint(ctx, lit ? "#ffd98a" : "#151933", C.ink, 4);
+      inkLine(ctx, [[x + 70, y + 4], [x + 70, y + 166]], 806 + x, 3, "rgba(80,60,40,0.5)");
+    }
+  }, C.ink, 6);
+  glow(ctx, 540, 780, 700, "rgba(255,200,120,0.5)");
+  shaded(ctx, () => rbox(ctx, 350, 430, 380, 660, 14, 810, 1.5), "#ffe2a8", () => {
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fillRect(350, 430, 380, 120);
+    ctx.fillStyle = "rgba(200,140,60,0.25)";
+    ctx.fillRect(350, 900, 380, 200);
+    inkLine(ctx, [[540, 430], [540, 1090]], 811, 5, "rgba(120,80,30,0.7)");
+  }, C.ink, 8);
+  rbox(ctx, 300, 380, 480, 46, 8, 812, 1);
+  paint(ctx, "#3a3f62", C.ink, 5);
+  glow(ctx, 830, 560, 160, "rgba(255,220,150,0.6)");
+  rbox(ctx, 808, 530, 44, 60, 10, 813, 0.8);
+  paint(ctx, "#ffe6a8", C.ink, 4);
+  rbox(ctx, 270, 620, 50, 110, 6, 814, 0.6);
+  paint(ctx, "#8a8fa8", C.ink, 3.5);
+  for (let k = 0; k < 4; k++) {
+    oval(ctx, 295, 645 + k * 22, 6, 6, 815 + k, 0.3);
+    paint(ctx, "#d9dde8", null);
+  }
+  const wire: Pt[] = [];
+  for (let i = 0; i <= 14; i++) {
+    const u = i / 14;
+    wire.push([-60 + u * (W + 120), 250 + Math.sin(u * Math.PI) * 90]);
+  }
+  curve(ctx, wire, 820, 1);
+  paint(ctx, null, "#111", 2.5);
+  for (let i = 1; i < 14; i++) {
+    const [bx, by] = wire[i];
+    const col = ["#ffd84a", "#ff7fb0", "#7ee0ff", "#b6ff8a"][i % 4];
+    glow(ctx, bx, by + 12, 46, col, 0.5 + 0.5 * Math.sin(abs * 3 + i));
+    oval(ctx, bx, by + 12, 9, 12, 821 + i, 0.4);
+    paint(ctx, col, C.ink, 2.5);
+  }
+  shaded(ctx, () => poly(ctx, [[-120, 1300], [W + 120, 1290], [W + 120, H + 120], [-120, H + 120]], 840, 1.5), "#34385a", () => {
+    for (let x = -120; x < W + 120; x += 130) inkLine(ctx, [[x, 1300], [x - 50, H + 100]], 841 + x, 2, "rgba(0,0,0,0.3)");
+    inkLine(ctx, [[-120, 1460], [W + 120, 1452]], 850, 2, "rgba(0,0,0,0.3)");
+  }, C.ink, 5);
 }
