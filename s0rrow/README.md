@@ -66,3 +66,4 @@
 - `reference/unhappy-chat/act2.ts`：来源 《unhappy》聊天版第二幕参考（头像铺满、黑屏倒影、推近「对方正在输入」、关机滑块、被子、反转：她哭着删字），只看不拷
 - `reference/unhappy-chat/act3.ts`：来源 《unhappy》聊天版第三幕参考（倒带切视角、朋友消息横幅、书后脸红扑通、朋友合照定格成朋友圈照片、发出整段），只看不拷
 - `reference/unhappy-chat/act4.ts`：来源 《unhappy》聊天版第四幕参考（镜子、开机锁屏通知、高亮最后一句、清晨奔跑、便利店、桌上牛奶「我也是」、对视），只看不拷
+- `reference/unhappy-chat/act5.ts`：来源 《unhappy》聊天版尾奏参考（捂脸再笑、再问一次、「嗯！！」+贴纸、上下分屏两人都笑），只看不拷
