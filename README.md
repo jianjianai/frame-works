@@ -117,3 +117,4 @@
 - `code/chat.ts`：来源 work-d1187f37《unhappy》：「对方正在输入...」字号与名字一致（32px）
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：盯着嗯、错过对方正在输入的镜头语言
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：聚光逐渐加深到只剩「嗯」，删掉躺床镜头
+- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（去掉 lieDown）
