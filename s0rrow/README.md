@@ -97,3 +97,4 @@
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：开场镜头语言（屏息推近、急推震动、惊讶→失落、回忆暖/现在冷+内心独白）
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：聊天记录平稳下翻 → 点头像 → 朋友圈翻页滑入
 - `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：phoneCloseup 新增 steady 选项
+- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（scrollDown / tapAvatar / pagePush）

@@ -15,9 +15,9 @@ export const EV = {
   typing1: [0.25, 0.85] as const,
   typing2: [1.25, 1.65] as const,
   um1: 1.85, // her 37th 「嗯」 arrives
-  scrollUp: 4.25,
-  scrollDown: 5.6,
-  moments: BAR(3),
+  scrollDown: [4.75, 5.75] as const, // July → October, slow enough to read
+  tapAvatar: 6.2, // he taps her avatar…
+  pagePush: [6.3, 6.65] as const, // …and her 朋友圈 slides in
   turn1: 9.0, // she turns round in class…
   hide1: 9.35, // …and hides behind her book
   bell: BAR(5),
