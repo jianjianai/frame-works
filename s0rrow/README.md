@@ -63,3 +63,4 @@
 - `code/lyrics.ts`：来源 work-d1187f37 聊天版：钩子两行（关键字放大变色）→ 标题胶囊三段翻转；caption() 通用两行大字幕（暗底条）；回看彩蛋卡片
 - `code/sfx-audio.ts`：来源 三套合成音效合并：第一支、小狗版、聊天版（um/note/typing2/typingLong/del/send2/lamp/powerOff/rustle/rewind2/heartFast/bell/steps/shutter/birds/boot/run/store/pay/door/milk/sparkle/stickerPop）
 - `reference/unhappy-chat/act1.ts`：来源 《unhappy》聊天版第一幕参考（钩子手机近景、聊天记录滚动、朋友圈、教室对视躲书后、下课送牛奶、打字删除发送、关灯），只看不拷
+- `reference/unhappy-chat/act2.ts`：来源 《unhappy》聊天版第二幕参考（头像铺满、黑屏倒影、推近「对方正在输入」、关机滑块、被子、反转：她哭着删字），只看不拷
