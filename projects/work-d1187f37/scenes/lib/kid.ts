@@ -15,7 +15,13 @@ export interface KidPose {
   blush?: number;
   tears?: number; // 0..1 streams down the cheeks
   wet?: number; // 0..1 soaked by rain
-  outfit?: "hoodie" | "rider";
+  /** which character: the boy from the cover (default) or the girl */
+  who?: "boy" | "girl";
+  outfit?: "hoodie" | "rider" | "pajamas" | "cardigan";
+  /** girl: sunflower hair clip (default on) */
+  clip?: boolean;
+  /** girl: freckles (default on) */
+  freckles?: boolean;
   helmet?: boolean;
   bandaids?: boolean;
   /** party hat (birthday) */
@@ -34,6 +40,10 @@ export interface KidPose {
   handR?: Pt;
   shapeL?: HandShape;
   shapeR?: HandShape;
+  /** which way the elbow bends: by default the left elbow goes out to the left/up, the right to the right.
+   *  Flip it (e.g. bendL: 1) for an elbow that hangs down — a "V" arm holding something out. */
+  bendL?: number;
+  bendR?: number;
   legs?: "stand" | "walk" | "run" | "sit" | "sitFloor" | "kneel";
   walk?: number; // gait phase (rad)
   /** drawn after the torso, before the arms (things held against the body) */
@@ -146,7 +156,8 @@ function eye(ctx: Ctx, cx: number, cy: number, side: number, p: KidPose, seed: n
     inkLine(ctx, [[cx - 20, cy + 30], [cx, cy + 34], [cx + 18, cy + 29]], seed + 3, 2.2, "#b39a84");
     return;
   }
-  const [open, slant0] = EYE_OPEN[st] ?? EYE_OPEN.sleepy;
+  const girl = p.who === "girl";
+  const [open, slant0] = (girl ? EYE_OPEN_G : EYE_OPEN)[st] ?? EYE_OPEN.sleepy;
   const slant = slant0 * 7; // inner corner up
   const look = p.look ?? [0, 0];
   const w = 31;
@@ -163,7 +174,7 @@ function eye(ctx: Ctx, cx: number, cy: number, side: number, p: KidPose, seed: n
   ctx.fill();
   ctx.clip();
   // iris + pupil + catchlights
-  const ir = st === "wide" ? 15 : 16;
+  const ir = girl ? 17.5 : st === "wide" ? 15 : 16;
   const ix = cx + look[0] * 10,
     iy = cy + 4 + look[1] * 5 + (st === "wide" ? -3 : 0);
   ctx.fillStyle = K.iris;
@@ -204,6 +215,14 @@ function eye(ctx: Ctx, cx: number, cy: number, side: number, p: KidPose, seed: n
   inkLine(ctx, [lerp2(lower[0], lower[1], 0.1), lower[1], lower[2]], seed + 3, 2.4);
   // heavy lid fold above (his sleepy look) — always there, higher when the eye opens
   inkLine(ctx, [[cx - 22 * side, Math.min(cy - 10, upTop - 6) - slant * 0.9], [cx + 2 * side, Math.min(cy - 13, upTop - 9) - slant * 0.4], [cx + 26 * side, cy - 6]], seed + 5, 2.4, "#b08a5e");
+  if (girl) {
+    // lashes flicking out from the outer corner
+    for (let k = 0; k < 2; k++) {
+      const q = lerp2(upper[2], upper[3], 0.55 + k * 0.4);
+      inkLine(ctx, [q, [q[0] + (7 + k * 3) * side, q[1] - 8 + k * 3]], seed + 7 + k, 3.2);
+    }
+    return;
+  }
   // eye bags (his trademark)
   inkLine(ctx, [[cx - 20 * side, cy + 26], [cx - 2 * side, cy + 31], [cx + 18 * side, cy + 26]], seed + 6, 2.2, "#b39a84");
 }
@@ -217,8 +236,8 @@ function brow(ctx: Ctx, cx: number, cy: number, side: number, p: KidPose, seed: 
     outer: Pt = [cx + 22 * side, cy + yo];
   curve(ctx, [inner, [cx, (inner[1] + outer[1]) / 2 - 4], outer], seed, 0.8);
   ctx.lineCap = "round";
-  ctx.strokeStyle = K.hairDk;
-  ctx.lineWidth = 7;
+  ctx.strokeStyle = p.who === "girl" ? G.brow : K.hairDk;
+  ctx.lineWidth = p.who === "girl" ? 5 : 7;
   ctx.stroke();
 }
 
@@ -337,6 +356,14 @@ function wetMop(pts: Pt[], wet: number): Pt[] {
 }
 
 function headFront(ctx: Ctx, p: KidPose, seed: number) {
+  if (p.who === "girl") {
+    ctx.save();
+    ctx.translate(p.headX ?? 0, p.headY ?? 0);
+    ctx.rotate(p.tilt ?? 0);
+    girlHeadFront(ctx, p, seed);
+    ctx.restore();
+    return;
+  }
   const wet = p.wet ?? 0;
   const turn = p.turn ?? 0;
   const fx = turn * 20; // features shift
@@ -499,6 +526,14 @@ function cakeCream(ctx: Ctx, k: number, p: KidPose, seed: number) {
 }
 
 function headBack(ctx: Ctx, p: KidPose, seed: number) {
+  if (p.who === "girl") {
+    ctx.save();
+    ctx.translate(p.headX ?? 0, p.headY ?? 0);
+    ctx.rotate(p.tilt ?? 0);
+    girlBackHead(ctx, p, seed);
+    ctx.restore();
+    return;
+  }
   const wet = p.wet ?? 0;
   ctx.save();
   ctx.translate(p.headX ?? 0, p.headY ?? 0);
@@ -564,13 +599,13 @@ export function helmetProp(ctx: Ctx, x: number, y: number, s: number, rot: numbe
 
 // ---------------------------------------------------------------- hands
 /** A hand at the wrist `w`, pointing along `ang`. `mirror` flips the thumb side (left hand). */
-function hand(ctx: Ctx, w: Pt, ang: number, shape: HandShape, mirror: boolean, seed: number, bandaid = false) {
+function hand(ctx: Ctx, w: Pt, ang: number, shape: HandShape, mirror: boolean, seed: number, bandaid = false, skinCol: string = K.skin) {
   if (shape === "hidden") return;
   ctx.save();
   ctx.translate(w[0], w[1]);
   ctx.rotate(ang);
   if (mirror) ctx.scale(1, -1);
-  const skin = K.skin;
+  const skin = skinCol;
   const draw = (pts: Pt[], sd: number) => {
     blob(ctx, pts, sd, 0.8);
   };
@@ -683,18 +718,22 @@ function armSpecs(p: KidPose): [ArmSpec, ArmSpec] {
   if (p.handR) R = { ...R, wrist: p.handR };
   if (p.shapeL) L = { ...L, shape: p.shapeL };
   if (p.shapeR) R = { ...R, shape: p.shapeR };
+  if (p.bendL) L = { ...L, bend: p.bendL };
+  if (p.bendR) R = { ...R, bend: p.bendR };
   return [L, R];
 }
 
 function sleeveArm(ctx: Ctx, shoulder: Pt, spec: ArmSpec, side: number, p: KidPose, seed: number) {
   const rider = p.outfit === "rider";
-  const col = rider ? K.rider : K.hood,
-    dk = rider ? K.riderDk : K.hoodDk;
-  const [elbow, wrist] = ik2(shoulder, spec.wrist, 142, 134, spec.bend);
+  const girl = p.who === "girl";
+  const [gc, gd, gcuff] = girlSleeve(p);
+  const col = girl ? gc : rider ? K.rider : K.hood,
+    dk = girl ? gd : rider ? K.riderDk : K.hoodDk;
+  const [elbow, wrist] = ik2(shoulder, spec.wrist, girl ? 134 : 142, girl ? 128 : 134, spec.bend);
   // sleeve tube ends a little before the wrist, then the cuff
   const cuffStart = lerp2(elbow, wrist, 0.86);
   const spine = sub([shoulder, elbow, cuffStart]);
-  const widths = [60, 56, 52, 48, 45];
+  const widths = girl ? [54, 50, 46, 43, 40] : [60, 56, 52, 48, 45];
   shaded(ctx, () => blob(ctx, tubePts(spine, widths, true, false), seed, 1.1), col, () => {
     // shade along the outer edge
     const off = tubePts(spine.map(([x, y]) => [x + 16 * side, y + 4]) as Pt[], widths.map((w) => w * 0.7), true, false);
@@ -713,7 +752,7 @@ function sleeveArm(ctx: Ctx, shoulder: Pt, spec: ArmSpec, side: number, p: KidPo
   inkLine(ctx, [lerp2(elbow, shoulder, 0.12).map((v, i) => v + (i ? -6 : 4 * side)) as Pt, [elbow[0] - 4 * side, elbow[1]], lerp2(elbow, cuffStart, 0.14)], seed + 3, 2.6, dk);
   // ribbed cuff
   const cuff = tubePts([cuffStart, wrist], [48, 44], false, false);
-  shaded(ctx, () => poly(ctx, cuff, seed + 4, 0.8), rider ? K.riderCollar : dk, () => {
+  shaded(ctx, () => poly(ctx, cuff, seed + 4, 0.8), girl ? gcuff : rider ? K.riderCollar : dk, () => {
     for (let k = 1; k < 5; k++) {
       const q = lerp2(cuffStart, wrist, 0.5);
       const ang = Math.atan2(wrist[1] - cuffStart[1], wrist[0] - cuffStart[0]) + Math.PI / 2;
@@ -866,13 +905,315 @@ function torsoBack(ctx: Ctx, p: KidPose, seed: number) {
   }
 }
 
-// ---------------------------------------------------------------- public
-/** A single hand in design space (for close-ups): wrist at (x, y), pointing along ang. */
-export function drawHand(ctx: Ctx, x: number, y: number, s: number, ang: number, shape: HandShape, mirror = false, bandaid = false, seed = 1900) {
+// ---------------------------------------------------------------- the girl (who: "girl")
+const G = {
+  skin: "#f6e1c3",
+  skinSh: "#ecc9a0",
+  skinDeep: "#d6a87a",
+  hair: "#3e2a22",
+  hairDk: "#2a1b15",
+  hairHi: "#7a5646",
+  pj: "#f3b6c4",
+  pjDk: "#d98ca0",
+  pjTrim: "#fff4f6",
+  cardi: "#efdcb8",
+  cardiDk: "#d2b98c",
+  blouse: "#fbfaf6",
+  skirt: "#2f3d5c",
+  skirtDk: "#222c44",
+  sock: "#f4f2ec",
+  loafer: "#5a3a28",
+  brow: "#4a3226",
+};
+const FACE_G: Pt[] = FACE.map(([x, y]) => [x * 0.95, y < 60 ? y : y - (y - 60) * 0.06] as Pt);
+/** the bob from the crown to the jaw, ends flipping out a little */
+const BOB_BACK: Pt[] = [
+  [0, -152], [94, -134], [136, -80], [150, -12], [148, 56], [142, 100], [156, 128], [118, 128], [94, 112],
+  [56, 122], [0, 128], [-56, 122], [-94, 112], [-118, 128], [-156, 128], [-142, 100], [-148, 56], [-150, -12],
+  [-136, -80], [-94, -134],
+];
+/** fringe edge (right → left), gentle scallops just above the brows */
+const BANGS_EDGE: Pt[] = [
+  [130, -28], [112, -10], [92, -16], [70, -4], [48, -12], [24, -2], [0, -10], [-24, -2], [-48, -12], [-72, -4], [-96, -14], [-116, -12], [-132, -30],
+];
+const BANGS: Pt[] = [[-132, -30], [-140, -86], [-98, -136], [0, -156], [98, -136], [140, -86], [130, -28], ...BANGS_EDGE.slice(1, -1)];
+const LOCK_L: Pt[] = [[-128, -48], [-150, 20], [-146, 92], [-136, 124], [-112, 104], [-104, 40], [-108, -16]];
+const EYE_OPEN_G: Record<string, [number, number]> = {
+  sleepy: [0.5, 0],
+  open: [0.92, 0],
+  wide: [1.15, 0],
+  sad: [0.7, 1],
+  tired: [0.4, 0.4],
+  teary: [0.8, 1],
+  angry: [0.6, -0.7],
+};
+
+export function sunflowerClip(ctx: Ctx, x: number, y: number, s: number, seed: number) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(s, s);
-  hand(ctx, [0, 0], ang, shape, mirror, seed, bandaid);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    ctx.save();
+    ctx.rotate(a);
+    blob(ctx, [[0, -10], [9, -26], [0, -38], [-9, -26]], seed + i, 0.6);
+    paint(ctx, "#ffcf33", C.ink, 3);
+    ctx.restore();
+  }
+  oval(ctx, 0, 0, 13, 13, seed + 9, 0.6);
+  paint(ctx, "#7a4a24", C.ink, 3);
+  for (let i = 0; i < 4; i++) {
+    oval(ctx, -4 + (i % 2) * 8, -4 + Math.floor(i / 2) * 8, 1.8, 1.8, seed + 10 + i, 0.2);
+    paint(ctx, "#3a2414", null);
+  }
+  ctx.restore();
+}
+
+function girlHairBack(ctx: Ctx, seed: number) {
+  shaded(ctx, () => blob(ctx, BOB_BACK, seed, 1.3), G.hairDk, () => {
+    for (const side of [-1, 1]) inkLine(ctx, [[side * 120, 0], [side * 136, 70], [side * 140, 118]], seed + 2 + side, 2.4, "rgba(0,0,0,0.35)");
+  }, C.ink, 5.5);
+}
+
+function girlHairFront(ctx: Ctx, p: KidPose, seed: number) {
+  // side locks framing the cheeks
+  for (const side of [-1, 1]) {
+    const pts = LOCK_L.map(([x, y]) => [x * side, y] as Pt);
+    shaded(ctx, () => blob(ctx, pts, seed + 10 + side, 1), G.hair, () => {
+      inkLine(ctx, [[side * 124, -20], [side * 134, 50], [side * 128, 110]], seed + 12 + side, 2.2, G.hairDk);
+    }, C.ink, 5);
+  }
+  // crown + bangs
+  shaded(ctx, () => blob(ctx, BANGS, seed + 20, 1.0), G.hair, () => {
+    // a few strand separations from the crown into the bangs (soft, not to the edge)
+    for (let i = 0; i < 5; i++) {
+      const x = -84 + i * 42;
+      inkLine(ctx, [[x * 0.25, -148], [x * 0.75, -84], [x + 4, -22]], seed + 21 + i, 2, G.hairDk);
+    }
+    // glossy crescent on the crown with little notches
+    ctx.save();
+    ctx.globalAlpha *= 0.8;
+    const outer: Pt[] = [],
+      inner: Pt[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const a = Math.PI * (1.2 + i * 0.05);
+      outer.push([Math.cos(a) * 118, -46 + Math.sin(a) * 104]);
+      inner.push([Math.cos(a) * (i % 3 === 1 ? 94 : 104), -46 + Math.sin(a) * (i % 3 === 1 ? 84 : 92)]);
+    }
+    blob(ctx, [...outer, ...inner.reverse()], seed + 30, 0.6);
+    paint(ctx, G.hairHi, null);
+    ctx.restore();
+  }, C.ink, 5.5);
+  if (p.clip !== false) sunflowerClip(ctx, -98, -66, 0.92, seed + 40);
+}
+
+function girlBackHead(ctx: Ctx, p: KidPose, seed: number) {
+  blob(ctx, [[-50, 60], [50, 60], [46, 140], [-46, 140]], seed + 4, 1);
+  paint(ctx, G.skinSh, C.ink, 5);
+  const back: Pt[] = [...BOB_BACK.slice(0, 8), [100, 132], [60, 140], [20, 134], [-20, 140], [-60, 134], [-100, 140], ...BOB_BACK.slice(13)];
+  shaded(ctx, () => blob(ctx, back, seed + 5, 1.3), G.hair, () => {
+    for (let i = 0; i < 7; i++) {
+      const x = -120 + i * 40;
+      inkLine(ctx, [[x * 0.2, -150], [x * 0.8, -40], [x, 120]], seed + 6 + i, 2.2, G.hairDk);
+    }
+    ctx.save();
+    ctx.globalAlpha *= 0.8;
+    inkLine(ctx, [[-90, -100], [-40, -124], [10, -128], [60, -118]], seed + 20, 7, G.hairHi);
+    ctx.restore();
+  }, C.ink, 5.5);
+  if (p.clip !== false) sunflowerClip(ctx, 110, -60, 0.92, seed + 40);
+}
+
+function girlHeadFront(ctx: Ctx, p: KidPose, seed: number) {
+  const turn = p.turn ?? 0;
+  const fx = turn * 20;
+  girlHairBack(ctx, seed + 70);
+  shaded(ctx, () => blob(ctx, FACE_G, seed + 5, 1.1), G.skin, () => {
+    blob(ctx, [[56, 130], [100, 80], [118, 20], [134, 90], [76, 150]], seed + 6, 1);
+    paint(ctx, "rgba(214,160,110,0.28)", null);
+    poly(ctx, [...(BANGS_EDGE.map(([x, y]) => [x + 4, y + 13]) as Pt[]), [-200, -200], [200, -200]], seed + 7, 1);
+    ctx.fillStyle = "rgba(190,140,100,0.32)";
+    ctx.fill();
+  }, C.ink, 5.5);
+  const blush = Math.max(0.35, p.blush ?? 0);
+  ctx.save();
+  ctx.globalAlpha *= Math.min(1, blush);
+  for (const side of [-1, 1]) {
+    oval(ctx, side * 66 + fx, 80, 22, 12, seed + 8 + side, 0.8);
+    paint(ctx, "rgba(245,120,135,0.5)", null);
+    if (blush > 0.6) for (let k = 0; k < 3; k++) inkLine(ctx, [[side * 66 + fx - 12 + k * 9, 75], [side * 66 + fx - 16 + k * 9, 85]], seed + 9 + k, 2, "rgba(225,85,100,0.75)");
+  }
+  ctx.restore();
+  if (p.freckles !== false) {
+    for (const side of [-1, 1])
+      for (let k = 0; k < 3; k++) {
+        oval(ctx, side * (44 + k * 9) + fx, 64 + (k % 2) * 6, 2.2, 2.2, seed + 50 + k + side, 0.2);
+        paint(ctx, "rgba(160,100,60,0.55)", null);
+      }
+  }
+  brow(ctx, -48 + fx, 10, -1, p, seed + 12);
+  brow(ctx, 48 + fx, 10, 1, p, seed + 13);
+  eye(ctx, -48 + fx, 38, -1, p, seed + 10);
+  eye(ctx, 48 + fx, 38, 1, p, seed + 20);
+  inkLine(ctx, [[8 + fx * 1.2, 62], [13 + fx * 1.2, 70], [7 + fx * 1.2, 73]], seed + 30, 3);
+  mouth(ctx, p, seed + 31, 4 + fx * 1.1);
+  if (p.tears) {
+    ctx.save();
+    ctx.globalAlpha *= Math.min(1, p.tears * 1.6);
+    for (const side of [-1, 1]) {
+      const len = 24 + p.tears * 64;
+      const x0 = side * 44 + fx;
+      curve(ctx, [[x0, 54], [x0 + side * 4, 54 + len * 0.5], [x0 - side * 1, 54 + len]], seed + side * 5, 0.8);
+      paint(ctx, null, "#9fd8ff", 7);
+      oval(ctx, x0, 58 + len, 5, 7, seed + side * 6, 0.4);
+      paint(ctx, "#bfe6ff", null);
+    }
+    ctx.restore();
+  }
+  girlHairFront(ctx, p, seed + 80);
+  if ((p.blush ?? 0) > 0.85) {
+    // flustered steam puffs
+    ctx.save();
+    ctx.globalAlpha *= (p.blush ?? 0) - 0.85 > 0 ? Math.min(1, ((p.blush ?? 0) - 0.85) * 6) : 0;
+    for (const side of [-1, 1]) {
+      inkLine(ctx, [[side * 150, -110], [side * 168, -134], [side * 156, -156], [side * 174, -180]], seed + 60 + side, 4, "rgba(255,255,255,0.9)");
+    }
+    ctx.restore();
+  }
+}
+
+function girlTorsoFront(ctx: Ctx, p: KidPose, seed: number) {
+  const pj = p.outfit !== "cardigan";
+  const col = pj ? G.pj : G.cardi,
+    dk = pj ? G.pjDk : G.cardiDk;
+  const torso: Pt[] = TORSO.map(([x, y]) => [x * 0.9, y] as Pt);
+  if (!pj) {
+    // blouse under the cardigan
+    blob(ctx, [[-60, 150], [60, 150], [70, 300], [-70, 300]], seed, 1);
+    paint(ctx, G.blouse, C.ink, 4.5);
+  }
+  shaded(ctx, () => blob(ctx, torso, seed + 1, 1.3), col, () => {
+    blob(ctx, [[54, 150], [130, 170], [140, 460], [66, 460], [82, 330], [64, 220]], seed + 2, 1.5);
+    paint(ctx, dk, null);
+    if (pj) {
+      // tiny hearts all over the pajamas
+      for (let i = 0; i < 14; i++) {
+        const hx = -90 + (i % 5) * 45 + (Math.floor(i / 5) % 2) * 22,
+          hy = 220 + Math.floor(i / 5) * 70;
+        blob(ctx, [[hx, hy + 3], [hx - 6, hy - 3], [hx - 9, hy + 1], [hx, hy + 10], [hx + 9, hy + 1], [hx + 6, hy - 3]], seed + 10 + i, 0.3);
+        paint(ctx, "rgba(255,255,255,0.75)", null);
+      }
+      inkLine(ctx, [[0, 172], [2, 300], [0, 430]], seed + 30, 2.4, dk);
+    } else {
+      // open front, ribbed hem, buttons
+      poly(ctx, [[-28, 150], [28, 150], [10, 300], [-10, 300]], seed + 31, 0.8);
+      paint(ctx, G.blouse, null);
+      inkLine(ctx, [[-28, 150], [-8, 300], [-6, 430]], seed + 32, 3.5);
+      inkLine(ctx, [[28, 150], [8, 300], [6, 430]], seed + 33, 3.5);
+      poly(ctx, [[-150, 410], [150, 410], [150, 470], [-150, 470]], seed + 34, 1);
+      paint(ctx, dk, null);
+      inkLine(ctx, [[-124, 412], [0, 418], [124, 412]], seed + 35, 3.2);
+    }
+  }, C.ink, 6);
+  if (pj) {
+    // notched collar with piping
+    for (const side of [-1, 1]) {
+      poly(ctx, [[side * 8, 158], [side * 60, 146], [side * 78, 176], [side * 30, 212]], seed + 40 + side, 0.8);
+      paint(ctx, G.pjTrim, C.ink, 4);
+    }
+    for (let k = 0; k < 3; k++) {
+      oval(ctx, 6, 250 + k * 60, 6, 6, seed + 44 + k, 0.3);
+      paint(ctx, G.pjTrim, C.ink, 2.4);
+    }
+  } else {
+    // round blouse collar + cardigan buttons
+    for (const side of [-1, 1]) {
+      blob(ctx, [[side * 4, 150], [side * 50, 146], [side * 56, 176], [side * 20, 186]], seed + 40 + side, 0.8);
+      paint(ctx, G.blouse, C.ink, 4);
+    }
+    for (let k = 0; k < 3; k++) {
+      oval(ctx, -14, 330 + k * 34, 5, 5, seed + 44 + k, 0.3);
+      paint(ctx, "#8a6a44", C.ink, 2.2);
+    }
+  }
+}
+
+function girlTorsoBack(ctx: Ctx, p: KidPose, seed: number) {
+  const pj = p.outfit !== "cardigan";
+  const col = pj ? G.pj : G.cardi,
+    dk = pj ? G.pjDk : G.cardiDk;
+  const torso: Pt[] = TORSO.map(([x, y]) => [x * 0.9, y] as Pt);
+  shaded(ctx, () => blob(ctx, torso, seed + 1, 1.3), col, () => {
+    blob(ctx, [[54, 150], [130, 170], [140, 460], [70, 460], [86, 300]], seed + 2, 1.5);
+    paint(ctx, dk, null);
+    if (!pj) {
+      poly(ctx, [[-150, 410], [150, 410], [150, 470], [-150, 470]], seed + 3, 1);
+      paint(ctx, dk, null);
+    }
+  }, C.ink, 6);
+}
+
+function girlSleeve(p: KidPose): [string, string, string] {
+  return p.outfit === "cardigan" ? [G.cardi, G.cardiDk, G.cardiDk] : [G.pj, G.pjDk, G.pjTrim];
+}
+
+function girlLeg(ctx: Ctx, hip: Pt, ankle: Pt, side: number, p: KidPose, seed: number) {
+  const mode = p.legs ?? "stand";
+  const skirt = p.outfit === "cardigan";
+  let knee: Pt;
+  if (mode === "sit") knee = [hip[0] + side * 26, hip[1] + 120];
+  else if (mode === "sitFloor") knee = [hip[0] + side * 40, hip[1] - 70];
+  else if (mode === "kneel") knee = [hip[0] + side * 14, ankle[1] - 10];
+  else [knee] = ik2(hip, ankle, 172, 168, side);
+  const spine = sub([hip, knee, ankle]);
+  if (!skirt) {
+    const widths = [80, 72, 64, 58, 56];
+    shaded(ctx, () => blob(ctx, tubePts(spine, widths, true, true), seed, 1.2), G.pj, () => {
+      blob(ctx, tubePts(spine.map(([x, y]) => [x + 16 * side, y]) as Pt[], widths.map((w) => w * 0.55), true, true), seed + 1, 1);
+      paint(ctx, G.pjDk, null);
+    }, C.ink, 5.5);
+    // socks
+    oval(ctx, ankle[0] + side * 4, ankle[1] + 18, 34, 22, seed + 3, 0.8);
+    paint(ctx, "#f7e4ea", C.ink, 4.5);
+    return;
+  }
+  // skirt legs: bare shin, white knee socks, loafers
+  const widths = [64, 58, 52, 48, 44];
+  shaded(ctx, () => blob(ctx, tubePts(spine, widths, true, true), seed, 1.2), G.skin, () => {
+    blob(ctx, tubePts(spine.map(([x, y]) => [x + 12 * side, y]) as Pt[], widths.map((w) => w * 0.5), true, true), seed + 1, 1);
+    paint(ctx, "rgba(214,160,110,0.3)", null);
+  }, C.ink, 5);
+  const sockTop = lerp2(knee, ankle, 0.25);
+  blob(ctx, tubePts([sockTop, ankle], [50, 46], true, true), seed + 2, 1);
+  paint(ctx, G.sock, C.ink, 4.5);
+  if (mode === "kneel") return;
+  ctx.save();
+  ctx.translate(ankle[0] + side * 4, ankle[1] + 20);
+  blob(ctx, [[-34, -14], [0, -22], [34, -14], [42, 8], [26, 20], [-26, 20], [-42, 8]], seed + 4, 0.9);
+  paint(ctx, G.loafer, C.ink, 4.5);
+  ctx.restore();
+}
+
+function girlSkirt(ctx: Ctx, p: KidPose, seed: number) {
+  if (p.outfit !== "cardigan") return;
+  const sitting = p.legs === "sit" || p.legs === "sitFloor";
+  const hem = sitting ? 520 : 560;
+  const flare = sitting ? 150 : 140;
+  const pts: Pt[] = [[-112, 420], [112, 420], [flare, hem], [0, hem + 8], [-flare, hem]];
+  shaded(ctx, () => poly(ctx, pts, seed, 1.2), G.skirt, () => {
+    blob(ctx, [[40, 420], [130, 420], [160, hem + 20], [60, hem + 20]], seed + 1, 1);
+    paint(ctx, G.skirtDk, null);
+    for (let i = -3; i <= 3; i++) inkLine(ctx, [[i * 26, 432], [i * (flare / 3.4), hem]], seed + 2 + i, 2.2, "rgba(0,0,0,0.35)");
+  }, C.ink, 5.5);
+}
+
+// ---------------------------------------------------------------- public
+/** A single hand in design space (for close-ups): wrist at (x, y), pointing along ang. */
+export function drawHand(ctx: Ctx, x: number, y: number, s: number, ang: number, shape: HandShape, mirror = false, bandaid = false, seed = 1900, girl = false) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  hand(ctx, [0, 0], ang, shape, mirror, seed, bandaid, girl ? G.skin : K.skin);
   ctx.restore();
 }
 
@@ -886,19 +1227,30 @@ export function drawKid(ctx: Ctx, x: number, y: number, s: number, p: KidPose = 
   ctx.scale(s, s);
   if (body !== "head") {
     const legsInFront = p.legs === "sitFloor";
+    const girl = p.who === "girl";
     const drawLegs = () => {
       if (body !== "full") return;
       const [la, ra] = legSpecs(p);
-      pantsLeg(ctx, [-54, 430], la, -1, p, seed + 200);
-      pantsLeg(ctx, [54, 430], ra, 1, p, seed + 210);
+      if (girl) {
+        girlLeg(ctx, [-50, 430], la, -1, p, seed + 200);
+        girlLeg(ctx, [50, 430], ra, 1, p, seed + 210);
+      } else {
+        pantsLeg(ctx, [-54, 430], la, -1, p, seed + 200);
+        pantsLeg(ctx, [54, 430], ra, 1, p, seed + 210);
+      }
     };
     if (!legsInFront) drawLegs();
     // neck
-    blob(ctx, [[-36, 96], [36, 96], [40, 168], [-40, 168]], seed + 220, 1);
-    paint(ctx, back ? K.skinSh : K.skinSh, C.ink, 5);
-    if (back) torsoBack(ctx, p, seed + 230);
+    blob(ctx, girl ? [[-30, 96], [30, 96], [34, 168], [-34, 168]] : [[-36, 96], [36, 96], [40, 168], [-40, 168]], seed + 220, 1);
+    paint(ctx, girl ? G.skinSh : K.skinSh, C.ink, 5);
+    if (girl) {
+      if (body === "full" && !legsInFront) girlSkirt(ctx, p, seed + 225);
+      if (back) girlTorsoBack(ctx, p, seed + 230);
+      else girlTorsoFront(ctx, p, seed + 230);
+    } else if (back) torsoBack(ctx, p, seed + 230);
     else torsoFront(ctx, p, seed + 230);
     if (legsInFront) drawLegs();
+    if (girl && body === "full" && legsInFront) girlSkirt(ctx, p, seed + 225);
     if (p.earbuds && !back) {
       const hy = p.headY ?? 0;
       inkLine(ctx, [[-118, 56 + hy], [-104, 170], [-40, 300], [0, 336]], seed + 250, 2.4, "#111");
@@ -908,15 +1260,17 @@ export function drawKid(ctx: Ctx, x: number, y: number, s: number, p: KidPose = 
     }
     p.holding?.(ctx);
     const [L, R] = armSpecs(p);
-    const al = sleeveArm(ctx, [-100, 190], L, -1, p, seed + 260);
-    const ar = sleeveArm(ctx, [100, 190], R, 1, p, seed + 270);
+    const sx = girl ? 92 : 100;
+    const al = sleeveArm(ctx, [-sx, 192], L, -1, p, seed + 260);
+    const ar = sleeveArm(ctx, [sx, 192], R, 1, p, seed + 270);
     p.grip?.(ctx);
+    const sk = girl ? G.skin : K.skin;
     if (!back) {
-      hand(ctx, al.wrist, al.ang, L.shape, true, seed + 280, false);
-      hand(ctx, ar.wrist, ar.ang, R.shape, false, seed + 290, !!p.bandaids);
+      hand(ctx, al.wrist, al.ang, L.shape, true, seed + 280, false, sk);
+      hand(ctx, ar.wrist, ar.ang, R.shape, false, seed + 290, !!p.bandaids, sk);
     } else {
-      hand(ctx, al.wrist, al.ang, L.shape === "hidden" ? "hidden" : "relax", false, seed + 280);
-      hand(ctx, ar.wrist, ar.ang, R.shape === "hidden" ? "hidden" : "relax", true, seed + 290);
+      hand(ctx, al.wrist, al.ang, L.shape === "hidden" ? "hidden" : "relax", false, seed + 280, false, sk);
+      hand(ctx, ar.wrist, ar.ang, R.shape === "hidden" ? "hidden" : "relax", true, seed + 290, false, sk);
     }
   }
   if (back) headBack(ctx, p, seed);

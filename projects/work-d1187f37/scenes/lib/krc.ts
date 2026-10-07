@@ -1,5 +1,5 @@
-// Word timings from Kugou KRC (s0rrow - unhappy), shifted to work time (song time − 16.332).
-// Only verse 1, chorus 1 and verse 2 are used (the second chorus is cut). [start, duration, word]
+// Word timings from Kugou KRC (s0rrow - unhappy), shifted to work time (song time − 16.332). [start, duration, word]
+// Only the 17 lines sung in this cut (verse 1, chorus 1, verse 2); chorus 2 is skipped.
 export const LYRIC_WORDS: [number, number, string][][] = [
   [[0.329,0.752,"Every"],[1.081,0.544,"day"],[1.625,0.359,"we"],[1.984,0.528,"talk"],[2.512,0.249,"a"],[2.761,0.496,"little"],[3.257,0.401,"less"]],
   [[3.873,0.216,"It"],[4.089,0.439,"looks"],[4.528,0.514,"like"],[5.042,0.487,"you"],[5.529,0.182,"are"],[6.018,0.765,"losing"],[6.783,0.849,"interest"]],

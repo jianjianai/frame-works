@@ -4,48 +4,67 @@
   "clips": [
     {
       "id": "act1",
-      "name": "第一幕 · 小狗视角",
+      "name": "主歌1 · 他的视角",
       "source": {
         "kind": "scene",
         "module": "act1",
         "engine": "canvas"
       },
       "start": 0,
-      "duration": 16.43
+      "duration": 16.43,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     },
     {
       "id": "act2",
-      "name": "第二幕 · 雨夜与反转",
+      "name": "副歌1 · 以后不打扰你了 → 反转",
       "source": {
         "kind": "scene",
         "module": "act2",
         "engine": "canvas"
       },
       "start": 16.43,
-      "duration": 16.356
+      "duration": 16.356,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     },
     {
       "id": "act3",
-      "name": "第三幕 · 他的视角",
+      "name": "主歌2 · 她的视角 → 第二天他开机",
       "source": {
         "kind": "scene",
         "module": "act3",
         "engine": "canvas"
       },
       "start": 32.786,
-      "duration": 16.755
+      "duration": 16.355,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     },
     {
       "id": "act4",
-      "name": "尾声 · 树下",
+      "name": "尾奏 · 我也是 → 这一次的「嗯」",
       "source": {
         "kind": "scene",
         "module": "act4",
         "engine": "canvas"
       },
       "start": 49.141,
-      "duration": 6.159,
-      "fadeIn": 0.45
+      "duration": 7.859,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     },
     {
       "id": "lyrics",
@@ -56,7 +75,12 @@
         "engine": "canvas"
       },
       "start": 0,
-      "duration": 55.3
+      "duration": 57,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     },
     {
       "id": "grain",
@@ -67,10 +91,14 @@
         "engine": "canvas"
       },
       "start": 0,
-      "duration": 55.3,
+      "duration": 57,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
       "transform": {
         "opacity": 0.5
       },
+      "fit": "contain",
       "blend": "overlay"
     }
   ]

@@ -1,5 +1,5 @@
 import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, blob, curve, fillBg, glow, hash, inkLine, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
+import { C, Ctx, F, H, Pt, W, blob, curve, fillBg, glow, hash, inkLine, oval, paint, poly, rbox, rr, shaded, text, tubePts, vgrad } from "./draw";
 import { ballToy, fluffPuppy } from "./dog";
 import { helmetProp } from "./kid";
 
@@ -826,4 +826,528 @@ export function hallway(ctx: Ctx, abs: number, o: { shadow?: number; jacket?: bo
     inkLine(ctx, [[610, 440], [612, 758]], 936, 2.5, "#7a5a00");
   }
   glow(ctx, 260, 1200, 500, "rgba(255,190,110,0.18)");
+}
+
+// ================================================================ 《unhappy》second story: school + her room
+/** Pink strawberry-milk carton (their running joke). Optional sticky note on its front. */
+export function strawberryMilk(ctx: Ctx, x: number, y: number, s: number, rot = 0, seed = 3300, note?: string, noteK = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  // carton body + gable top
+  shaded(ctx, () => poly(ctx, [[-60, -60], [60, -60], [60, 120], [-60, 120]], seed, 1), "#ffd3dc", () => {
+    poly(ctx, [[20, -60], [60, -60], [60, 120], [20, 120]], seed + 1, 0.8);
+    paint(ctx, "#f4b6c4", null);
+  }, C.ink, 5);
+  poly(ctx, [[-60, -60], [-40, -110], [40, -110], [60, -60]], seed + 2, 0.8);
+  paint(ctx, "#fff0f3", C.ink, 5);
+  poly(ctx, [[-40, -110], [-36, -124], [36, -124], [40, -110]], seed + 3, 0.6);
+  paint(ctx, "#fff0f3", C.ink, 4);
+  // straw
+  inkLine(ctx, [[22, -118], [40, -190], [70, -200]], seed + 4, 9, C.ink);
+  inkLine(ctx, [[22, -118], [40, -190], [70, -200]], seed + 4, 5, "#ff6f8f");
+  // strawberry logo
+  blob(ctx, [[-22, 10], [0, 0], [22, 10], [16, 44], [0, 58], [-16, 44]], seed + 5, 0.8);
+  paint(ctx, "#ff4d6a", C.ink, 3.5);
+  for (const [dx, dy] of [[-8, 20], [8, 22], [0, 36], [-6, 46], [7, 44]] as Pt[]) {
+    oval(ctx, dx, dy, 2, 2.6, seed + 6 + dx + dy, 0.2);
+    paint(ctx, "#ffe08a", null);
+  }
+  poly(ctx, [[-16, 2], [0, -14], [16, 2], [0, 8]], seed + 9, 0.6);
+  paint(ctx, "#5bbf5a", C.ink, 3);
+  text(ctx, "草莓牛奶", 0, 92, { size: 22, font: F.cn, fill: "#d23a5a" });
+  if (note && noteK > 0) {
+    ctx.save();
+    ctx.globalAlpha *= clamp(noteK);
+    ctx.translate(-4, 40);
+    ctx.rotate(-0.08);
+    poly(ctx, [[-70, -50], [70, -54], [74, 50], [-66, 54]], seed + 10, 1.2);
+    paint(ctx, "#ffe680", C.ink, 4);
+    text(ctx, note, 2, 4, { size: 44, font: F.pen, fill: "#222" });
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/** Her room at night: the mirror image of his (bed on the left, window on the right), fairy lights, polaroids. */
+export function herRoom(ctx: Ctx, abs: number, o: { dawn?: number; lights?: number } = {}) {
+  const dawn = o.dawn ?? 0;
+  const lights = o.lights ?? 1;
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, mix("#2a2446", "#d9cdea", dawn)], [1, mix("#1b1730", "#b9a9d0", dawn)]]));
+  // window (right) with moon / sunrise
+  const wx = 650,
+    wy = 250,
+    ww = 360,
+    wh = 450;
+  ctx.save();
+  rbox(ctx, wx, wy, ww, wh, 8, 3400, 1.5);
+  paint(ctx, vgrad(ctx, wy, wy + wh, [[0, mix("#1b2350", "#ffb38a", dawn)], [1, mix("#38306a", "#ffe0a8", dawn)]]), C.ink, 7);
+  rbox(ctx, wx, wy, ww, wh, 8, 3400, 1.5);
+  ctx.clip();
+  if (dawn < 0.5) {
+    oval(ctx, wx + 250, wy + 110, 40, 40, 3401, 1);
+    paint(ctx, "#fff4c8", null);
+    oval(ctx, wx + 266, wy + 98, 34, 34, 3402, 1);
+    paint(ctx, mix("#1b2350", "#ffb38a", dawn), null);
+    for (let i = 0; i < 10; i++) {
+      ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(abs * 1.1 + i));
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(wx + hash(i * 2.1) * ww, wy + hash(i * 4.3) * wh * 0.7, 4, 4);
+    }
+    ctx.globalAlpha = 1;
+  } else {
+    glow(ctx, wx + 180, wy + wh, 320, "rgba(255,230,160,0.9)", 1);
+  }
+  ctx.restore();
+  inkLine(ctx, [[wx + ww / 2, wy], [wx + ww / 2, wy + wh]], 3403, 7, "#1d1838");
+  inkLine(ctx, [[wx, wy + wh * 0.45], [wx + ww, wy + wh * 0.45]], 3404, 7, "#1d1838");
+  // lace curtain (right)
+  blob(ctx, [[wx + ww - 50, wy - 40], [wx + ww + 40, wy - 40], [wx + ww + 50, wy + wh + 90], [wx + ww - 30, wy + wh + 80], [wx + ww - 70, wy + 200]], 3405, 2);
+  paint(ctx, mix("#e8d8f0", "#fff6fb", dawn), C.ink, 5);
+  // polaroid wall above the bed
+  const pols: [number, number, number, string][] = [
+    [150, 360, -0.12, "#ffb38a"],
+    [290, 330, 0.08, "#9fd4f5"],
+    [420, 370, -0.05, "#ffd3dc"],
+  ];
+  pols.forEach(([px, py, r, col], i) => {
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(r);
+    poly(ctx, [[-56, -66], [56, -66], [56, 70], [-56, 70]], 3410 + i, 1);
+    paint(ctx, "#fbf8f0", C.ink, 4);
+    poly(ctx, [[-44, -54], [44, -54], [44, 38], [-44, 38]], 3413 + i, 0.6);
+    paint(ctx, col, null);
+    if (i === 2) strawberryMilk(ctx, 0, 6, 0.28, 0.1, 3416);
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.fillRect(-16, -76, 32, 18);
+    ctx.restore();
+  });
+  // shelf with a plush bear (right of the bed)
+  inkLine(ctx, [[640, 800], [900, 796]], 3420, 8, "#8a6a8a");
+  oval(ctx, 720, 750, 40, 44, 3421, 1);
+  paint(ctx, "#d9a87a", C.ink, 4);
+  oval(ctx, 720, 700, 32, 30, 3422, 1);
+  paint(ctx, "#d9a87a", C.ink, 4);
+  for (const side of [-1, 1]) {
+    oval(ctx, 720 + side * 24, 676, 11, 11, 3423 + side, 0.6);
+    paint(ctx, "#d9a87a", C.ink, 3.5);
+  }
+  oval(ctx, 712, 700, 3, 3, 3426, 0.2);
+  paint(ctx, C.ink, null);
+  oval(ctx, 728, 700, 3, 3, 3427, 0.2);
+  paint(ctx, C.ink, null);
+  // fairy lights along the top
+  const bulbs = 15;
+  ctx.save();
+  ctx.strokeStyle = "#1a1530";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i = 0; i <= 40; i++) {
+    const u = i / 40;
+    const x = -20 + u * 1120,
+      y = 170 + Math.sin(u * Math.PI * 3) * 30 + u * 20;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+  for (let i = 0; i < bulbs; i++) {
+    const u = (i + 0.5) / bulbs;
+    const x = -20 + u * 1120,
+      y = 170 + Math.sin(u * Math.PI * 3) * 30 + u * 20 + 16;
+    const tw = 0.75 + 0.25 * Math.sin(abs * 2.3 + i * 1.7);
+    const col = i % 3 === 0 ? "rgba(255,170,200,0.55)" : "rgba(255,214,140,0.6)";
+    if (lights > 0) glow(ctx, x, y, 70, col, lights * tw);
+    oval(ctx, x, y, 9, 12, 3430 + i, 0.5);
+    paint(ctx, i % 3 === 0 ? "#ffc0d6" : "#ffe3a0", C.ink, 2.5);
+  }
+  // her bed (left): headboard, pillow, mattress, front
+  poly(ctx, [[-60, 690], [600, 700], [600, 1010], [-60, 1000]], 3440, 1.5);
+  paint(ctx, mix("#6a4a7a", "#c9a9d8", dawn), C.ink, 6);
+  blob(ctx, [[40, 750], [440, 764], [460, 870], [20, 860]], 3441, 2);
+  paint(ctx, "#fde9f0", C.ink, 5);
+  blob(ctx, [[-80, 940], [660, 960], [680, 1160], [-80, 1150]], 3442, 1.6);
+  paint(ctx, "#f7eef6", C.ink, 6);
+  poly(ctx, [[-80, 1140], [676, 1150], [672, 1270], [-80, 1260]], 3443, 1.2);
+  paint(ctx, "#d6bcd9", C.ink, 6);
+  // floor
+  poly(ctx, [[-60, 1250], [1140, 1240], [1140, 2000], [-60, 2000]], 3444, 1.5);
+  paint(ctx, mix("#2e2236", "#c9b39c", dawn), C.ink, 6);
+}
+/** the pink duvet over her legs (draw after she is placed in bed) */
+export function herBlanket(ctx: Ctx) {
+  blob(ctx, [[-80, 990], [520, 976], [600, 1080], [560, 1160], [-80, 1166]], 3450, 2);
+  paint(ctx, "#f2a7bd", C.ink, 6);
+  for (let i = 0; i < 6; i++) {
+    const x = 20 + i * 90,
+      y = 1060 + (i % 2) * 40;
+    blob(ctx, [[x, y + 4], [x - 9, y - 4], [x - 14, y + 2], [x, y + 16], [x + 14, y + 2], [x + 9, y - 4]], 3451 + i, 0.4);
+    paint(ctx, "rgba(255,255,255,0.7)", null);
+  }
+  inkLine(ctx, [[60, 1030], [220, 1070], [380, 1040]], 3460, 3, "#d97f9a");
+}
+
+/** Classroom seen from the blackboard: back wall with notice board and clock, windows on the right letting
+ *  in sunlight. Students and desks are drawn by the shot (back rows first). */
+export function classroomFront(ctx: Ctx, abs: number, o: { sun?: number } = {}) {
+  const sun = o.sun ?? 1;
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#e9e4cf"], [1, "#d9d0b4"]]));
+  // ceiling strip + back wall details
+  poly(ctx, [[-60, -60], [1140, -60], [1140, 120], [-60, 130]], 3500, 1.5);
+  paint(ctx, "#f4f0e2", C.ink, 5);
+  inkLine(ctx, [[140, 60], [440, 58]], 3501, 10, "#fffbe8");
+  inkLine(ctx, [[640, 58], [940, 60]], 3502, 10, "#fffbe8");
+  // notice board
+  rbox(ctx, 90, 250, 520, 290, 8, 3503, 1.2);
+  paint(ctx, "#c98e5a", C.ink, 6);
+  const notes: [number, number, string][] = [
+    [160, 310, "#fff6c9"],
+    [270, 330, "#cfe8ff"],
+    [390, 300, "#ffd3dc"],
+    [500, 340, "#d9f2c8"],
+    [200, 440, "#fff6c9"],
+    [440, 450, "#cfe8ff"],
+  ];
+  notes.forEach(([nx, ny, col], i) => {
+    poly(ctx, [[nx - 44, ny - 40], [nx + 44, ny - 42], [nx + 46, ny + 40], [nx - 42, ny + 42]], 3504 + i, 1);
+    paint(ctx, col, C.ink, 3);
+    for (let k = 0; k < 3; k++) inkLine(ctx, [[nx - 30, ny - 16 + k * 14], [nx + 26 - k * 10, ny - 16 + k * 14]], 3510 + i * 3 + k, 2, "#999");
+  });
+  text(ctx, "高二(3)班", 350, 222, { size: 40, font: F.cn, fill: "#7a5a3a" });
+  // clock
+  oval(ctx, 760, 260, 54, 54, 3520, 1);
+  paint(ctx, "#fbfaf4", C.ink, 5);
+  inkLine(ctx, [[760, 260], [760, 226]], 3521, 5);
+  inkLine(ctx, [[760, 260], [784, 270]], 3522, 4);
+  // windows on the right wall (in perspective)
+  for (let i = 0; i < 2; i++) {
+    const x0 = 840 + i * 120,
+      x1 = x0 + 100;
+    poly(ctx, [[x0, 230 - i * 40], [x1, 200 - i * 50], [x1, 880 + i * 60], [x0, 850 + i * 40]], 3530 + i, 1.2);
+    paint(ctx, "#cfeaf7", C.ink, 6);
+  }
+  // floor
+  poly(ctx, [[-60, 990], [1140, 980], [1140, 2000], [-60, 2000]], 3540, 1.5);
+  paint(ctx, "#b99a6c", C.ink, 6);
+  for (let i = 0; i < 7; i++) inkLine(ctx, [[-40, 1040 + i * i * 22 + i * 40], [1120, 1030 + i * i * 22 + i * 40]], 3541 + i, 2, "rgba(0,0,0,0.12)");
+  // sunbeams from the windows
+  if (sun > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.16 * sun;
+    ctx.fillStyle = "#fff2c4";
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(1080, 200 + i * 160);
+      ctx.lineTo(1080, 330 + i * 160);
+      ctx.lineTo(200 - i * 80, 1500 + i * 120);
+      ctx.lineTo(60 - i * 80, 1380 + i * 120);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+/** A school desk facing the camera (drawn in front of the seated student). (x, y) = centre of the desk top. */
+export function deskFront(ctx: Ctx, x: number, y: number, s: number, seed = 3560, items?: (c: Ctx) => void) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  // legs behind
+  inkLine(ctx, [[-230, 30], [-236, 420]], seed, 12, "#5a5a62");
+  inkLine(ctx, [[230, 30], [236, 420]], seed + 1, 12, "#5a5a62");
+  // front panel + top
+  shaded(ctx, () => poly(ctx, [[-250, 20], [250, 20], [244, 230], [-244, 230]], seed + 2, 1.2), "#c99a62", () => {
+    poly(ctx, [[-250, 20], [250, 20], [250, 60], [-250, 60]], seed + 3, 1);
+    paint(ctx, "rgba(0,0,0,0.15)", null);
+  }, C.ink, 5.5);
+  shaded(ctx, () => poly(ctx, [[-270, -40], [270, -40], [262, 24], [-262, 24]], seed + 4, 1.2), "#e2b679", () => {
+    inkLine(ctx, [[-240, -14], [240, -18]], seed + 5, 2.4, "rgba(120,80,40,0.35)");
+  }, C.ink, 5.5);
+  items?.(ctx);
+  ctx.restore();
+}
+
+/** a classmate seen from behind, sitting at a desk (simple shapes: the shot blurs the background) */
+function classmateBack(ctx: Ctx, x: number, y: number, s: number, hair: string, shirt: string, seed: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  // the desk in front of them shows at both sides of the body
+  poly(ctx, [[-250, 300], [250, 296], [262, 350], [-262, 354]], seed, 1);
+  paint(ctx, "#e2b679", C.ink, 5);
+  blob(ctx, [[-150, 150], [150, 150], [178, 300], [176, 420], [-176, 420], [-178, 300]], seed + 1, 1.5);
+  paint(ctx, shirt, C.ink, 5);
+  blob(ctx, [[-34, 80], [34, 80], [38, 160], [-38, 160]], seed + 2, 1);
+  paint(ctx, "#e6c79e", C.ink, 4);
+  oval(ctx, 0, 0, 116, 126, seed + 3, 2);
+  paint(ctx, hair, C.ink, 5);
+  ctx.restore();
+}
+
+/** Classroom seen from a back-row seat (over his shoulder): the blackboard with the physics problem he stays
+ *  up for, sunlit windows on the left, a few classmates' backs in the rows ahead. Her row is drawn by the shot. */
+export function classroomBoard(ctx: Ctx, abs: number, o: { sun?: number } = {}) {
+  const sun = o.sun ?? 1;
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#ece6d0"], [1, "#dcd0b2"]]));
+  // ceiling + tube lights
+  poly(ctx, [[-60, -60], [1140, -60], [1140, 170], [-60, 180]], 3600, 1.5);
+  paint(ctx, "#f5f1e3", C.ink, 5);
+  inkLine(ctx, [[230, 96], [480, 94]], 3601, 12, "#fffbe8");
+  inkLine(ctx, [[640, 94], [880, 96]], 3602, 12, "#fffbe8");
+  // windows on the left wall, in perspective
+  for (let i = 0; i < 2; i++) {
+    const x0 = -30 + i * 76,
+      x1 = x0 + 58;
+    poly(ctx, [[x0, 190 + i * 46], [x1, 226 + i * 42], [x1, 1010 - i * 40], [x0, 1060 - i * 42]], 3603 + i, 1.2);
+    paint(ctx, "#d4ecf7", C.ink, 5);
+  }
+  // blackboard in a wooden frame
+  rbox(ctx, 170, 300, 840, 480, 12, 3610, 1.2);
+  paint(ctx, "#8a6844", C.ink, 6);
+  rbox(ctx, 192, 322, 796, 436, 6, 3611, 1);
+  paint(ctx, "#2f4a3c", C.ink, 4);
+  // chalk: a block on a slope with its forces, F = ma
+  const chalk = "rgba(238,242,234,0.88)";
+  poly(ctx, [[260, 700], [600, 700], [260, 500]], 3612, 0.8);
+  paint(ctx, null, chalk, 4);
+  const ang = Math.atan2(200, 340);
+  ctx.save();
+  ctx.translate(430, 600);
+  ctx.rotate(ang);
+  poly(ctx, [[-44, -64], [44, -64], [44, 0], [-44, 0]], 3613, 0.8);
+  paint(ctx, null, chalk, 3.5);
+  ctx.restore();
+  const bc: Pt = [430 + 32 * Math.sin(ang), 600 - 32 * Math.cos(ang)];
+  const arrow = (to: Pt, seed: number) => {
+    inkLine(ctx, [bc, to], seed, 3.5, chalk);
+    const a = Math.atan2(to[1] - bc[1], to[0] - bc[0]);
+    poly(ctx, [[to[0] - 18 * Math.cos(a - 0.45), to[1] - 18 * Math.sin(a - 0.45)], to, [to[0] - 18 * Math.cos(a + 0.45), to[1] - 18 * Math.sin(a + 0.45)]], seed + 1, 0.4, false);
+    paint(ctx, null, chalk, 3.5);
+  };
+  arrow([bc[0], bc[1] + 120], 3614);
+  arrow([bc[0] + 110 * Math.sin(ang), bc[1] - 110 * Math.cos(ang)], 3616);
+  text(ctx, "mg", bc[0] + 34, bc[1] + 120, { size: 34, font: F.en, fill: chalk });
+  text(ctx, "N", bc[0] + 110 * Math.sin(ang) + 26, bc[1] - 110 * Math.cos(ang) - 10, { size: 34, font: F.en, fill: chalk });
+  text(ctx, "第3题", 330, 380, { size: 44, font: F.pen, fill: chalk });
+  text(ctx, "F = ma", 800, 450, { size: 64, font: F.marker, fill: chalk });
+  text(ctx, "a = ?", 790, 560, { size: 56, font: F.marker, fill: chalk });
+  inkLine(ctx, [[690, 620], [900, 616]], 3618, 3, chalk);
+  // chalk tray
+  rbox(ctx, 180, 770, 820, 20, 4, 3619, 1);
+  paint(ctx, "#7a5a3a", C.ink, 4);
+  // floor
+  poly(ctx, [[-60, 1160], [1140, 1150], [1140, 2000], [-60, 2000]], 3620, 1.5);
+  paint(ctx, "#b99a6c", C.ink, 6);
+  // classmates in the rows ahead
+  classmateBack(ctx, 700, 900, 0.3, "#2a2220", "#eef0ea", 3630);
+  classmateBack(ctx, 150, 960, 0.42, "#1f1a18", "#d9e3f0", 3640);
+  classmateBack(ctx, 935, 985, 0.44, "#3a2a20", "#eef0ea", 3650);
+  // sunlight from the windows
+  if (sun > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.11 * sun;
+    ctx.fillStyle = "#fff2c4";
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 240 + i * 230);
+      ctx.lineTo(0, 380 + i * 230);
+      ctx.lineTo(900 + i * 60, 1500 + i * 160);
+      ctx.lineTo(1040 + i * 60, 1380 + i * 160);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/** A school textbook held up with the cover facing the camera — 物理. (x, y) = centre of the cover. */
+export function textbook(ctx: Ctx, x: number, y: number, s: number, rot = 0, seed = 3660) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  // page block showing at the top and the right edge
+  poly(ctx, [[-148, -198], [162, -202], [166, 194], [-144, 198]], seed, 0.8);
+  paint(ctx, "#fbfaf2", C.ink, 4);
+  inkLine(ctx, [[150, -190], [154, 188]], seed + 1, 2, "#c9c2b0");
+  shaded(ctx, () => poly(ctx, [[-160, -190], [150, -194], [154, 190], [-156, 194]], seed + 2, 1), "#7fb2d9", () => {
+    // spine shading + colour band
+    poly(ctx, [[-160, -190], [-126, -191], [-122, 194], [-156, 194]], seed + 3, 0.6);
+    paint(ctx, "#5f93bd", null);
+    poly(ctx, [[-110, 30], [154, 28], [154, 84], [-110, 86]], seed + 4, 0.6);
+    paint(ctx, "#f2c14e", null);
+  }, C.ink, 5);
+  text(ctx, "物理", 22, -80, { size: 96, font: F.cn, fill: "#fff", stroke: "#2c4f6e", lw: 9 });
+  text(ctx, "高二 · 上册", 22, 57, { size: 28, font: F.cn, fill: "#2c4f6e" });
+  for (let k = 0; k < 3; k++) {
+    oval(ctx, 22, 140, 50, 16, seed + 5 + k, 0.5, (k * Math.PI) / 3);
+    paint(ctx, null, "rgba(255,255,255,0.85)", 2.5);
+  }
+  oval(ctx, 22, 140, 7, 7, seed + 9, 0.3);
+  paint(ctx, "#fff", null);
+  ctx.restore();
+}
+
+/** fingertips curled over both edges of a held-up textbook (same x, y, s, rot as textbook()) */
+export function bookFingers(ctx: Ctx, x: number, y: number, s: number, rot: number, skin = "#f6e1c3") {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  for (const side of [-1, 1])
+    for (let k = 0; k < 4; k++) {
+      rr(ctx, side < 0 ? -176 : 136, 18 + k * 31, 40, 27, 13);
+      paint(ctx, skin, C.ink, 3.5);
+    }
+  ctx.restore();
+}
+
+/** A pillow hugged to the chest: the upper arms go down the pillow's sides, the forearms cross over its front
+ *  and end in simple round hands. Kid-local units: (x, y, s) = the same as the drawKid call it belongs to;
+ *  draw it after drawKid (it covers her own arms) and before any blanket. */
+export function huggedPillow(ctx: Ctx, x: number, y: number, s: number, sleeve: string, cuff: string, skin: string, seed = 3800) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.save();
+  ctx.rotate(-0.05);
+  const pillow: Pt[] = [[-206, 196], [-70, 182], [70, 180], [206, 194], [222, 300], [204, 420], [66, 432], [-70, 434], [-212, 420], [-224, 300]];
+  shaded(ctx, () => blob(ctx, pillow, seed, 1.4), "#cfe2f5", () => {
+    blob(ctx, [[60, 300], [230, 250], [240, 450], [-80, 450], [20, 400]], seed + 1, 1.2);
+    paint(ctx, "rgba(110,140,185,0.3)", null);
+    // a few little stars printed on it
+    for (const [sx, sy] of [[-150, 260], [-40, 410], [150, 400], [120, 250]] as Pt[]) {
+      blob(ctx, [[sx, sy - 14], [sx + 4, sy - 4], [sx + 14, sy], [sx + 4, sy + 4], [sx, sy + 14], [sx - 4, sy + 4], [sx - 14, sy], [sx - 4, sy - 4]], seed + 20 + sx, 0.3);
+      paint(ctx, "#fff7d1", null);
+    }
+  }, C.ink, 6);
+  inkLine(ctx, [[-196, 236], [0, 226], [196, 234]], seed + 2, 2.4, "#9fbbdc");
+  ctx.restore();
+  const arm = (pts: Pt[], hand: Pt, sd: number) => {
+    blob(ctx, tubePts(pts, [58, 54, 50, 48], true, false), sd, 1);
+    paint(ctx, sleeve, C.ink, 5.5);
+    const a = pts[pts.length - 2],
+      b = pts[pts.length - 1];
+    blob(ctx, tubePts([[a[0] + (b[0] - a[0]) * 0.82, a[1] + (b[1] - a[1]) * 0.82], b], [52, 50], false, false), sd + 1, 0.8);
+    paint(ctx, cuff, C.ink, 4.5);
+    oval(ctx, hand[0], hand[1], 30, 28, sd + 2, 0.8);
+    paint(ctx, skin, C.ink, 5);
+  };
+  // her right arm (image left) underneath, left arm on top — crossed over the front of the pillow
+  arm([[-90, 200], [-182, 300], [-130, 372], [10, 386]], [34, 384], seed + 3);
+  arm([[90, 200], [186, 300], [126, 352], [-6, 352]], [-30, 352], seed + 7);
+  ctx.restore();
+}
+
+/** Bright school corridor (windows on the left, doors on the right). */
+export function schoolHall(ctx: Ctx, abs: number) {
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#eef1ea"], [1, "#dfe3d8"]]));
+  for (let i = 0; i < 3; i++) {
+    const y0 = 260 + i * 10,
+      x0 = 40 + i * 120;
+    poly(ctx, [[x0, y0], [x0 + 100, y0 + 30], [x0 + 100, 900 - i * 30], [x0, 940 - i * 20]], 3600 + i, 1.2);
+    paint(ctx, "#cdebf8", C.ink, 6);
+    glow(ctx, x0 + 50, 560, 260, "rgba(255,250,220,0.6)");
+  }
+  rbox(ctx, 700, 320, 260, 640, 6, 3610, 1.2);
+  paint(ctx, "#b98a5a", C.ink, 6);
+  rbox(ctx, 760, 400, 140, 160, 6, 3611, 1);
+  paint(ctx, "#cdebf8", C.ink, 4);
+  text(ctx, "高二(3)班", 830, 290, { size: 34, font: F.cn, fill: "#6a5a4a" });
+  poly(ctx, [[-60, 1000], [1140, 990], [1140, 2000], [-60, 2000]], 3612, 1.5);
+  paint(ctx, "#c9c3b0", C.ink, 6);
+  for (let i = 0; i < 5; i++) inkLine(ctx, [[540, 1000], [-200 + i * 420, 2000]], 3613 + i, 2, "rgba(0,0,0,0.12)");
+}
+
+/** Early-morning street with a 24h convenience store. pan scrolls the street sideways. */
+export function morningStreet(ctx: Ctx, abs: number, pan = 0) {
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#ffc3a0"], [0.45, "#ffe3b8"], [1, "#f6efe0"]]));
+  glow(ctx, 820, 640, 520, "rgba(255,220,160,0.8)");
+  ctx.save();
+  ctx.translate(-pan * 0.4, 0);
+  for (let i = -1; i < 7; i++) {
+    const bx = i * 220,
+      bh = 380 + hash(i + 70) * 300;
+    rbox(ctx, bx, 900 - bh, 200, bh + 20, 4, 3700 + i, 2);
+    paint(ctx, mix("#f2c9a8", "#d7b8c8", hash(i * 3)), C.ink, 5);
+    for (let r = 0; r < 4; r++)
+      for (let c = 0; c < 3; c++)
+        if (hash(i * 13 + r * 5 + c) > 0.5) {
+          rbox(ctx, bx + 22 + c * 58, 900 - bh + 40 + r * 80, 36, 50, 3, 3710 + r * 3 + c, 0.8);
+          paint(ctx, "#fff3d6", C.ink, 2.5);
+        }
+  }
+  ctx.restore();
+  ctx.save();
+  ctx.translate(-pan, 0);
+  // the convenience store
+  rbox(ctx, 520, 620, 520, 420, 6, 3720, 1.5);
+  paint(ctx, "#f4f6f6", C.ink, 6);
+  rbox(ctx, 520, 620, 520, 80, 6, 3721, 1.2);
+  paint(ctx, "#2fa36b", C.ink, 5);
+  text(ctx, "24H 便利店", 780, 662, { size: 44, font: F.cn, fill: "#fff" });
+  rbox(ctx, 560, 730, 440, 300, 4, 3722, 1);
+  paint(ctx, "#fff9e6", C.ink, 5);
+  for (let r = 0; r < 3; r++) {
+    inkLine(ctx, [[580, 800 + r * 80], [980, 798 + r * 80]], 3723 + r, 4, "#c9b48a");
+    for (let k = 0; k < 9; k++) {
+      rbox(ctx, 590 + k * 44, 760 + r * 80, 30, 38, 3, 3730 + r * 9 + k, 0.5);
+      paint(ctx, ["#ffd3dc", "#cfe8ff", "#fff0a8", "#d9f2c8"][(k + r) % 4], C.ink, 2);
+    }
+  }
+  // a tree and a bike
+  oval(ctx, 220, 700, 160, 150, 3760, 3);
+  paint(ctx, "#8fbf6a", C.ink, 6);
+  inkLine(ctx, [[220, 840], [224, 1040]], 3761, 16, "#7a5a3a");
+  ctx.restore();
+  // pavement + crossing
+  poly(ctx, [[-60, 1040], [1140, 1030], [1140, 2000], [-60, 2000]], 3770, 1.5);
+  paint(ctx, "#d8d2c4", C.ink, 6);
+  for (let i = -2; i < 8; i++) {
+    const x = ((i * 180 - pan * 1.2) % 1440 + 1440) % 1440 - 180;
+    poly(ctx, [[x, 1300], [x + 110, 1300], [x + 150, 1420], [x + 40, 1420]], 3771 + i, 0.8);
+    paint(ctx, "#f4f1ea", null);
+  }
+}
+
+/** Inside the store: a drinks fridge (strawberry milk on the middle shelf) and the counter with a QR stand. */
+export function storeInside(ctx: Ctx, abs: number) {
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#f6f8f6"], [1, "#e4ebe6"]]));
+  rbox(ctx, 60, 260, 560, 900, 10, 3800, 1.2);
+  paint(ctx, "#dfe9ee", C.ink, 7);
+  for (let r = 0; r < 4; r++) {
+    inkLine(ctx, [[80, 470 + r * 200], [600, 466 + r * 200]], 3801 + r, 6, "#b8c4ca");
+    for (let k = 0; k < 4; k++) {
+      if (r === 1) strawberryMilk(ctx, 140 + k * 125, 400 + r * 200, 0.62, 0, 3810 + k);
+      else {
+        rbox(ctx, 110 + k * 125, 330 + r * 200, 70, 120, 8, 3820 + r * 4 + k, 0.6);
+        paint(ctx, ["#cfe8ff", "#fff0a8", "#d9f2c8", "#ffe0c4"][(k + r) % 4], C.ink, 3);
+      }
+    }
+  }
+  ctx.fillStyle = "rgba(255,255,255,0.18)";
+  ctx.beginPath();
+  ctx.moveTo(140, 260);
+  ctx.lineTo(260, 260);
+  ctx.lineTo(120, 1160);
+  ctx.lineTo(60, 1160);
+  ctx.fill();
+  // counter + QR stand
+  poly(ctx, [[640, 900], [1140, 890], [1140, 1300], [640, 1310]], 3840, 1.2);
+  paint(ctx, "#f2f2ee", C.ink, 6);
+  rbox(ctx, 860, 740, 150, 170, 8, 3841, 1);
+  paint(ctx, "#2fa36b", C.ink, 5);
+  rbox(ctx, 880, 762, 110, 110, 4, 3842, 0.6);
+  paint(ctx, "#fff", null);
+  for (let i = 0; i < 25; i++)
+    if (hash(i * 3.7) > 0.45) {
+      ctx.fillStyle = C.ink;
+      ctx.fillRect(886 + (i % 5) * 20, 768 + Math.floor(i / 5) * 20, 16, 16);
+    }
+  poly(ctx, [[-60, 1300], [1140, 1290], [1140, 2000], [-60, 2000]], 3843, 1.5);
+  paint(ctx, "#d9dcd6", C.ink, 6);
 }
