@@ -34,8 +34,8 @@ export const EV = {
   // cuts sit on phrase ends that are also beats: the reflection holds through "ugly", then the chat — his eyes on
   // her 「嗯」 — runs on to the power-off at BAR(12)
   uglyEnd: 21.541,
-  typingA: [21.85, 22.45] as const,
-  typingB: [23.12, 23.55] as const, // in the second phone shot (23.07–23.59)
+  typingA: [21.8, 22.3] as const, // both in the one phone shot (21.54–23.07)
+  typingB: [22.5, 22.98] as const,
   powerOff: 25.06, // one quick swipe, the screen goes black
   blanket: 25.25, // the duvet goes up over his head
   muffle: [25.7, 26.45] as const, // under the duvet with him (the music is muffled only here)
