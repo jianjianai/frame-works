@@ -14,7 +14,8 @@ import { BAR, EV } from "./lib/timeline";
  *  2A her profile photo (so pretty) → the screen times out → his own face in the black glass (so ugly)
  *  2B 「对方正在输入...」 appears and disappears, twice (clue)
  *  2C he powers the phone off and pulls the duvet over his head (the music goes muffled)
- *  2D 29.82 "I should get a piercing through my heart" — her room: she is crying, deleting a whole paragraph */
+ *  2D 28.70 his light goes out → her room: she is crying; the paragraph is typed out, her thumb goes to 发送 three
+ *     times and pulls back — straight into her memory */
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const REST: FingerPos = REST_R;
@@ -211,15 +212,15 @@ function shotOff(ctx: Ctx, abs: number) {
   }
 }
 
-/** 27.67 → 29.82 "That makes me unhappy": two windows on the same night. */
+/** 27.67 → 28.70 "That makes me…": his window — the light goes out — and across the street hers is still lit. */
 function shotLitWindow(ctx: Ctx, abs: number) {
   // the same night from outside: his window dark (he has switched everything off), then across the street the
   // only window still lit is hers. Camera: hold on his → pull back to both → push into hers.
-  const a = smooth(phase(abs, 28.35, 28.9)),
-    b = phase(abs, 28.9, EV.twist);
-  const cx0 = 205 + (420 - 205) * a + (580 - 420) * smooth(b),
-    cy0 = 790 + (930 - 790) * a + (1025 - 930) * smooth(b);
-  const z = (1.9 + 0.1 * phase(abs, EV.curledUp, 28.35)) * (1 - a) + 1.0 * a + 1.9 * b * b;
+  // his window still lit → the light goes out (28.19) → a fast whip across to the only lit window: hers
+  const a = smooth(phase(abs, EV.hisLightOff + 0.12, EV.twist));
+  const cx0 = 205 + (580 - 205) * a,
+    cy0 = 790 + (1025 - 790) * a;
+  const z = 1.9 + 0.3 * Math.sin(Math.PI * a) * -1 + 0.2 * a;
   fillBg(ctx, vgrad(ctx, 0, H, [[0, "#0b1030"], [1, "#232b57"]]));
   ctx.save();
   camera(ctx, 540, 960, z);
@@ -254,8 +255,10 @@ function shotLitWindow(ctx: Ctx, abs: number) {
       ctx.fillStyle = "#10142a";
       ctx.fill();
     }
+  const lit = abs < EV.hisLightOff;
+  if (lit) glow(ctx, 215, 785, 150, "rgba(255,210,150,0.4)");
   rr(ctx, 160, 720, 110, 130, 6);
-  ctx.fillStyle = "#151c3a";
+  ctx.fillStyle = lit ? "#f5cf93" : "#151c3a";
   ctx.fill();
   ctx.lineWidth = 3;
   ctx.strokeStyle = C.ink;
@@ -347,11 +350,6 @@ function herNightView(abs: number, draft: string) {
 }
 
 function shotTwist(ctx: Ctx, abs: number) {
-  if (abs < EV.twist) {
-    shotLitWindow(ctx, abs);
-    card(ctx, "00:52", 70, 330, 1 - phase(abs, 29.6, 29.82));
-    return;
-  }
   if (abs < 30.4) {
     // her room — she is crying too
     ctx.save();
@@ -388,12 +386,13 @@ function shotTwist(ctx: Ctx, abs: number) {
     ctx.restore();
     return;
   }
-  if (abs < 31.84) {
-    // her phone: the whole paragraph is typed out; her thumb goes to 发送… almost… and pulls back, twice
+  {
+    // her phone: the whole paragraph is typed out; her thumb goes to 发送… almost… and pulls back, three times —
+    // then straight into her memory
     const view = herNightView(abs, HER_NIGHT_DRAFT);
     const sb = sendButtonAt(ctx, view);
     const near = (t: number) => Math.max(0, 1 - Math.abs(abs - t) / 0.16);
-    const press = Math.max(near(EV.del2[0] + 0.3), near(EV.del2[0] + 0.75));
+    const press = Math.max(near(30.95), near(31.6), near(32.3));
     const right: FingerPos = { x: sb[0] - 10 + Math.sin(abs * 4) * 8, y: sb[1] + 70 * (1 - press), touch: 0.15 + 0.6 * press };
     const [sx, sy] = shake(abs, 1.2, 9);
     phoneCloseup(
@@ -405,16 +404,7 @@ function shotTwist(ctx: Ctx, abs: number) {
       },
       { who: "girl", right, cx: 540 + sx, cy: PHONE_CY + sy, glowCol: "rgba(255,170,200,0.22)" },
     );
-    return;
   }
-  // her face
-  fillBg(ctx, "#140f22");
-  ctx.save();
-  camera(ctx, 540, 860, 1.02 + 0.05 * smooth(phase(abs, 31.84, BAR(16))));
-  for (let i = 0; i < 6; i++) glow(ctx, 120 + i * 170, 260 + (i % 2) * 60, 120, i % 3 === 0 ? "rgba(255,170,200,0.4)" : "rgba(255,214,140,0.4)");
-  drawKid(ctx, 540, 900, 1.3, { who: "girl", outfit: "pajamas", body: "bust", eyes: "teary", tears: 1, mouth: "open", brows: "sad", look: [0, 0.8], arms: "phone" });
-  lightPool(ctx, 540, 1200, 900, 0.5, "rgba(255,170,200,0.18)");
-  ctx.restore();
 }
 
 export function createScene(options: SceneOptions) {
