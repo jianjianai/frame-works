@@ -1,5 +1,5 @@
 import { clamp, smooth } from "../../../../src/engine/math";
-import { C, Ctx, Pt, blob, glow, hash, inkLine, paint, poly } from "./draw";
+import { C, Ctx, Pt, blob, glow, hash, inkLine, paint, poly, tubePts } from "./draw";
 import { SH, SW } from "./phone";
 
 /** His two hands holding the phone (POV). The right thumb taps/swipes; everything is in
@@ -31,10 +31,8 @@ export function fingerAt(abs: number, keys: FingerKey[]): FingerPos | null {
 export const onScreen = (cx: number, cy: number, s: number, sx: number, sy: number): [number, number] => [cx + (sx - 300) * s, cy + (sy - 640) * s];
 
 /** Where the right thumb rests when it isn't doing anything. */
-export const THUMB_REST: FingerPos = { x: 450, y: 960, touch: 0.25 };
-export const LEFT_REST: FingerPos = { x: 150, y: 960, touch: 0.25 };
-/** Distance from the thumb base (at the phone edge) to the thumb tip, in screen units. */
-const THUMB_LEN = 330;
+export const THUMB_REST: FingerPos = { x: 420, y: 1090, touch: 0.15 };
+export const LEFT_REST: FingerPos = { x: 180, y: 1090, touch: 0.15 };
 
 const SPECKS = Array.from({ length: 22 }, (_, i) => [hash(i * 4.1), hash(i * 6.7 + 2), hash(i * 3.3 + 7)]);
 /** sleeve / cuff / skin colours (set per call by heldHands’ look option) */
@@ -72,73 +70,108 @@ function sleeve(ctx: Ctx, pts: Pt[], seed: number) {
   ctx.restore();
 }
 
-/** Thumb outline from base (0,0) along +x to the tip at distance L (nail side up). */
-function thumbPts(L: number, w: number): Pt[] {
-  return [
-    [-80, -w * 0.78],
-    [L * 0.45, -w * 0.52],
-    [L - w * 0.5, -w * 0.48],
-    [L - w * 0.14, -w * 0.34],
-    [L + 2, 0],
-    [L - w * 0.14, w * 0.36],
-    [L - w * 0.5, w * 0.5],
-    [L * 0.45, w * 0.64],
-    [-80, w * 0.98],
-  ];
-}
+/** cartoon thumb length (base at the phone's edge → tip), screen units */
+const THUMB_LEN = 400;
 
-/** One (right) hand gripping the right edge; its thumb tip goes to `t` (screen coordinates).
- *  Palm and thumb are one silhouette: both outlines are stroked first, then both are filled,
- *  so the inner lines disappear and the thumb grows out of the palm. */
+/** One (right) hand holding the phone, posed like a cartoon "typing" illustration (drawn in our ink style):
+ *  the palm is behind the phone (clipped to outside it, so only the rim along the side and the part below
+ *  the phone show), and one thick, almost straight thumb with a round tip lies diagonally across the glass.
+ *  The base of the thumb slides along the edge so the thumb keeps its length; while typing the hand only
+ *  follows half way. Palm and thumb are stroked first and filled after, so they read as one shape. */
 function rightHand(ctx: Ctx, t: FingerPos, seed: number) {
   const lift = 1 - clamp(t.touch);
-  // the thumb never changes length: the whole hand slides along the edge to reach
-  const bx = Math.min(SW + 6, t.x + THUMB_LEN * 0.92);
-  const dx = bx - t.x;
-  const by = t.y + Math.sqrt(Math.max(0, THUMB_LEN * THUMB_LEN - dx * dx));
-  // a lifted thumb is a little closer to the camera, so its tip appears slightly further out
-  const tx = t.x,
-    ty = t.y;
-  const ox = bx - 10,
-    oy = by;
-  const L = Math.hypot(tx - ox, ty - oy);
-  const a = Math.atan2(ty - oy, tx - ox);
-  const w = 104 * (1 + 0.06 * lift);
-  const palm: Pt[] = [[bx - 40, by - 70], [bx + 40, by - 120], [bx + 130, by - 60], [bx + 160, by + 90], [bx + 140, by + 260], [bx + 40, by + 300], [bx - 50, by + 220], [bx - 70, by + 60]];
-  const inThumb = (draw: () => void) => {
+  const bx = SW + 34;
+  const ideal = (p: FingerPos) => {
+    const d = bx - p.x;
+    return p.y + (d < THUMB_LEN ? Math.sqrt(THUMB_LEN * THUMB_LEN - d * d) : 0);
+  };
+  const k = clamp((1000 - t.y) / 300, 0.5, 1);
+  const home = ideal({ x: 360, y: 1020, touch: 0 });
+  const by = clamp(home + (ideal(t) - home) * k, 520, 1330);
+  const B: Pt = [bx, by];
+  const T: Pt = [t.x, t.y];
+  // a gentle arc, convex towards the top of the phone
+  const len = Math.hypot(T[0] - B[0], T[1] - B[1]) || 1;
+  const nx = (T[1] - B[1]) / len,
+    ny = -(T[0] - B[0]) / len;
+  const bow = 0.06 * len;
+  const at = (u: number): Pt => [B[0] + (T[0] - B[0]) * u + nx * bow * 4 * u * (1 - u), B[1] + (T[1] - B[1]) * u + ny * bow * 4 * u * (1 - u)];
+  const w = 1 + 0.05 * lift;
+  const thumb = tubePts([at(0), at(0.25), at(0.5), at(0.75), at(0.94), T], [150, 132, 120, 112, 108, 104].map((v) => v * w), false, true);
+  // the hand behind the phone: its rim shows along the right side, its heel and wrist below the phone
+  const palm: Pt[] = [
+    [SW - 40, by - 600],
+    [SW + 56, by - 570],
+    [SW + 124, by - 450],
+    [SW + 156, by - 250],
+    [SW + 156, by - 20],
+    [SW + 128, by + 200],
+    [SW + 90, by + 370],
+    [SW - 100, by + 370],
+    [SW - 160, by + 190],
+    [SW - 110, by - 20],
+  ];
+  const outside = (draw: () => void) => {
     ctx.save();
-    ctx.translate(ox, oy);
-    ctx.rotate(a);
+    ctx.beginPath();
+    ctx.rect(-2000, -2000, SW + 4000, SH + 4000);
+    ctx.roundRect(-26, -26, SW + 52, SH + 52, 92);
+    ctx.clip("evenodd");
     draw();
     ctx.restore();
   };
-  // shadow of the thumb tip on the glass (offset while hovering)
-  glow(ctx, t.x + 30 * lift, t.y + 46 * lift, 60 + 50 * lift, "rgba(0,0,0,0.6)", 0.45 + 0.3 * (1 - lift));
+  glow(ctx, T[0] + 30 * lift, T[1] + 46 * lift, 70 + 46 * lift, "rgba(0,0,0,0.55)", 0.4 + 0.3 * (1 - lift));
   ctx.lineJoin = "round";
   ctx.strokeStyle = C.ink;
-  ctx.fillStyle = LOOK.skin;
-  ctx.lineWidth = 12;
-  blob(ctx, palm, seed + 1, 1.5);
-  ctx.stroke();
-  inThumb(() => {
-    blob(ctx, thumbPts(L, w), seed + 3, 1.4);
+  ctx.lineWidth = 11;
+  outside(() => {
+    blob(ctx, palm, seed + 1, 1);
     ctx.stroke();
   });
-  blob(ctx, palm, seed + 1, 1.5);
-  ctx.fill();
-  inThumb(() => {
-    blob(ctx, thumbPts(L, w), seed + 3, 1.4);
+  blob(ctx, thumb, seed + 3, 0.8);
+  ctx.stroke();
+  ctx.fillStyle = LOOK.skin;
+  outside(() => {
+    blob(ctx, palm, seed + 1, 1);
     ctx.fill();
-    // nail
-    blob(ctx, [[L - w * 0.66, -w * 0.26], [L - w * 0.2, -w * 0.24], [L - w * 0.1, 0], [L - w * 0.2, w * 0.22], [L - w * 0.66, w * 0.2]], seed + 4, 0.8);
-    paint(ctx, "#f9ead0", "#c9a77a", 3);
-    // knuckle crease
-    inkLine(ctx, [[L * 0.5, -w * 0.3], [L * 0.47, 0], [L * 0.5, w * 0.3]], seed + 5, 3, "#a8865c");
+    // one shadow block on the outer side of the hand (light from the upper left)
+    ctx.save();
+    blob(ctx, palm, seed + 1, 1);
+    ctx.clip();
+    blob(ctx, [[SW + 90, by - 560], [SW + 200, by - 260], [SW + 200, by + 420], [SW + 40, by + 420], [SW + 100, by + 120], [SW + 110, by - 280]], seed + 8, 1);
+    paint(ctx, "rgba(196,140,90,0.35)", null);
+    ctx.restore();
+    // where the fingers fold round the back of the phone
+    inkLine(ctx, [[SW + 40, by - 520], [SW + 92, by - 470]], seed + 13, 3, "#a8865c");
+    inkLine(ctx, [[SW + 70, by - 330], [SW + 128, by - 300]], seed + 14, 3, "#a8865c");
   });
-  inkLine(ctx, [[bx + 40, by + 90], [bx + 14, by + 150], [bx + 12, by + 190]], seed + 2, 3, "#a8865c");
-  // the hand comes out of the hoodie cuff
-  sleeve(ctx, [[bx + 10, by + 230], [bx + 250, by + 170], [bx + 520, 1700], [bx + 40, 1700]], seed);
-  poly(ctx, [[bx + 2, by + 222], [bx + 254, by + 158], [bx + 268, by + 218], [bx + 14, by + 284]], seed + 6, 1.2);
+  blob(ctx, thumb, seed + 3, 0.8);
+  ctx.fill();
+  // one shadow block along the underside of the thumb, a crease at the knuckle
+  ctx.save();
+  blob(ctx, thumb, seed + 3, 0.8);
+  ctx.clip();
+  const edge = (off: number, u0: number, u1: number) => [u0, (u0 + u1) / 2, u1].map((u) => {
+    const p = at(u);
+    return [p[0] - nx * off, p[1] - ny * off] as Pt;
+  });
+  blob(ctx, [...edge(30, 0, 0.92), ...edge(120, 0, 0.92).reverse()], seed + 9, 1);
+  paint(ctx, "rgba(196,140,90,0.35)", null);
+  ctx.restore();
+  const kq = at(0.62);
+  inkLine(ctx, [[kq[0] + nx * 40, kq[1] + ny * 40], [kq[0] + (T[0] - B[0]) / len * 8, kq[1] + (T[1] - B[1]) / len * 8], [kq[0] - nx * 40, kq[1] - ny * 40]], seed + 5, 3, "#a8865c");
+  // nail
+  const na = Math.atan2(T[1] - at(0.94)[1], T[0] - at(0.94)[0]);
+  ctx.save();
+  ctx.translate(T[0], T[1]);
+  ctx.rotate(na);
+  blob(ctx, [[-70, -28], [-16, -26], [-4, 0], [-16, 26], [-70, 24]], seed + 4, 0.7);
+  paint(ctx, "#f9ead0", "#c9a77a", 3);
+  ctx.restore();
+  // wrist into the sleeve at the bottom corner
+  const w0: Pt = [SW - 4, by + 340];
+  sleeve(ctx, tubePts([w0, [SW + 130, by + 900], [SW + 330, by + 1700]], [300, 330, 360], false, false), seed);
+  poly(ctx, tubePts([[w0[0] - 4, w0[1] - 20], [w0[0] + 26, w0[1] + 96]], [318, 324], false, false), seed + 10, 1.2);
   paint(ctx, LOOK.cuff, C.ink, 6);
 }
 
