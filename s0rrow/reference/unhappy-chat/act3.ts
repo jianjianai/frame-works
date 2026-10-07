@@ -7,7 +7,7 @@ import { heart } from "./lib/sets";
 import { BACKSPACE_AT, ChatItem, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW, lockScreen, notification } from "./lib/phone";
-import { FRIEND_ADVICE, GIVE_UP, HER, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
@@ -17,7 +17,7 @@ import { BAR, EV } from "./lib/timeline";
  *  3C back to 00:52: she wipes her tears, types everything and sends it — he never answers; she falls asleep
  *  3D 07:10 his room: the phone has been off all night; he turns it on and her message lands */
 
-const REST: FingerPos = { x: 480, y: 1180, touch: 0.2 };
+const REST: FingerPos = REST_R;
 
 /** her phone's conversation at a given moment of the replay / present */
 function herItems(abs: number, upto: "replay" | "present"): ChatItem[] {
@@ -76,7 +76,7 @@ function shotReplay(ctx: Ctx, abs: number) {
     else if (abs < EV.del3[1]) draft = deleted(HER_REPLY_DRAFT, abs, EV.del3[0], EV.del3[1]);
     else if (abs < EV.send2) draft = abs > 35.8 ? "嗯" : "";
     const view = { title: HIM, time: "23:13", me: "girl" as const, them: "boy" as const, items: herItems(abs, "replay"), dark: true, draft: abs < EV.send2 ? draft : "", caret: abs < EV.send2, keyboard: true, sendHot: abs > EV.send2 - 0.08 && abs < EV.send2 ? 1 : 0 };
-    let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: { x: 120, y: 1180, touch: 0.2 } };
+    let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
     if (inWin(abs, EV.type3)) hands = typingThumbs(abs, EV.type3[0], EV.type3[1], 31);
     else if (inWin(abs, EV.del3)) {
       const f = ((abs - EV.del3[0]) * 12) % 1;
@@ -102,7 +102,7 @@ function shotReplay(ctx: Ctx, abs: number) {
           c.restore();
         }
       },
-      { who: "girl", cy: 860, glowCol: "rgba(255,170,200,0.22)", ...hands },
+      { who: "girl", cy: PHONE_CY, glowCol: "rgba(255,170,200,0.22)", ...hands },
     );
     return;
   }
@@ -211,14 +211,14 @@ function shotSend(ctx: Ctx, abs: number) {
   if (abs < 43.6) {
     const draft = abs < EV.send3 ? typed(HER_CONFESSION, abs, EV.type4[0], EV.type4[1]) : "";
     const view = { title: HIM, time: "00:58", me: "girl" as const, them: "boy" as const, items: herItems(abs, "present"), dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
-    let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: { x: 120, y: 1180, touch: 0.2 } };
+    let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
     if (inWin(abs, EV.type4)) hands = typingThumbs(abs, EV.type4[0], EV.type4[1], 41);
     else if (abs >= EV.type4[1] && abs < EV.send3 + 0.2) {
       const sb = sendButtonAt(ctx, { ...view, draft: HER_CONFESSION });
       const shaky = Math.sin(abs * 23) * 6;
       hands = { right: { x: sb[0] + shaky, y: sb[1] + (abs < EV.send3 - 0.08 ? 50 : 0), touch: abs > EV.send3 - 0.08 && abs < EV.send3 + 0.12 ? 1 : 0 }, left: hands.left };
     }
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "girl", cy: 860, glowCol: "rgba(255,170,200,0.24)", ...hands });
+    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "girl", cy: PHONE_CY, glowCol: "rgba(255,170,200,0.24)", ...hands });
     return;
   }
   // waiting… no answer; she falls asleep holding the phone
@@ -280,7 +280,7 @@ function shotDawn(ctx: Ctx, abs: number) {
           }
         }
       },
-      { who: "boy", right: REST, cy: 880, glowCol: "rgba(255,230,190,0.28)", bg: "#2b2a3a" },
+      { who: "boy", right: REST, cy: PHONE_CY, glowCol: "rgba(255,230,190,0.28)", bg: "#2b2a3a" },
     );
     return;
   }

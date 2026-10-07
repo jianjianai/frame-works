@@ -81,3 +81,4 @@
 - `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：剧情文字和共用镜头（phoneCloseup 0.95 倍 + 手持晃动、typingThumbs 平滑打字、hisFaceReading、hisClassFace）
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（手机近景改用 PHONE_CY / REST_R）
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（手机近景改用 PHONE_CY / PHONE_S）
+- `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 act3
