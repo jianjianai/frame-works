@@ -40,6 +40,12 @@ export const CAST: Record<string, Person> = {
   d: { hair: "bun", hairColor: "#191515", top: "#e46f78", bottom: "#41506b", seed: 307 },
   e: { hair: "bob", hairColor: "#6b4a2a", top: "#4f8fbf", bottom: "#2e2e2e", seed: 308 },
   vet: { hair: "short", hairColor: "#2a2220", top: "#8fc1d0", bottom: "#4f5f6e", shoes: "#e9e9e9", glasses: true, coat: true, x: 0, seed: 309 },
+  mei: { hair: "pony", hairColor: "#2a1d18", top: "#9cc7e8", bottom: "#2f3d5c", skin: "#f6e0c4", x: 0, seed: 310 },
+  qi: { hair: "bun", hairColor: "#3a2a20", top: "#f4c9d4", bottom: "#2f3d5c", glasses: true, skin: "#f2d9b8", x: 0, seed: 311 },
+  stu1: { hair: "short", hairColor: "#1f1a17", top: "#e9e4dc", bottom: "#2f3d5c", x: 0, seed: 312 },
+  stu2: { hair: "long", hairColor: "#2a2220", top: "#e9e4dc", bottom: "#2f3d5c", x: 0, seed: 313 },
+  stu3: { hair: "buzz", hairColor: "#222", top: "#e9e4dc", bottom: "#2f3d5c", x: 0, seed: 314 },
+  stu4: { hair: "bob", hairColor: "#4a3020", top: "#e9e4dc", bottom: "#2f3d5c", x: 0, seed: 315 },
 };
 
 function darker(hex: string, k = 0.75) {
