@@ -1,19 +1,20 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, oval, paint, poly, rr } from "./lib/draw";
-import { drawKid } from "./lib/kid";
+import { C, Ctx, F, H, Pt, W, backOut, blob, camera, card, designScene, fillBg, filtered, glow, inkLine, oval, paint, poly, rr, shaded, text, tubePts } from "./lib/draw";
+import { drawHand, drawKid } from "./lib/kid";
 import { CAST, drawPerson } from "./lib/people";
-import { bedBlanket, bedroom, classroomFront, deskFront, strawberryMilk } from "./lib/places";
+import { bedBlanket, bedroom, classroomBoard, classroomFront, deskFront, strawberryMilk, textbook } from "./lib/places";
 import { lightPool } from "./lib/sets";
 import { BACKSPACE_AT, chatScreen2, momentsScreen, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
-import { GIVE_UP, HIS_DRAFT, deleted, hisNightChat, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { GIVE_UP, HIS_DRAFT, deleted, hisClassFace, hisNightChat, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 1 (0 – 16.43s) · 他的视角
  *  1A hook: he sent a long message; 「对方正在输入...」 flickers twice; she replies 「嗯」 (her 37th)
  *  1B three months of chat scroll by — long in July, 「嗯」「哦」 by October; her 朋友圈 「今天好开心～」 5 minutes later
- *  1C class: she turns round, their eyes meet, she hides behind her book; after class she runs off when he brings milk
+ *  1C class, from his seat: she turns round, their eyes meet, the 物理 textbook snaps up in front of her face; he looks
+ *     down at the milk he bought her. After class he holds it out — she grabs her friend and runs; the milk stays on her desk
  *  1D night: he types, deletes, sends 「以后不打扰你了」, turns off the lamp */
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -69,109 +70,156 @@ function shotHistory(ctx: Ctx, abs: number) {
   phoneCloseup(ctx, abs, (c) => momentsScreen(c, abs, { dark: true, mark }), { who: "boy", right: REST, cy: 900 });
 }
 
-// ---------------------------------------------------------------- 1C
-function book(c: Ctx) {
-  // a notebook held up in front of her face (girl local units)
-  c.save();
-  c.translate(0, 30);
-  c.rotate(-0.04);
-  blob(c, [[-170, -120], [170, -128], [176, 120], [-164, 126]], 3580, 1.2);
-  paint(c, "#7fb2d9", C.ink, 6);
-  inkLine(c, [[0, -126], [2, 122]], 3581, 4, "#4a7aa0");
-  poly(c, [[-130, -80], [-30, -82], [-30, -40], [-130, -38]], 3582, 0.8);
-  paint(c, "#fbfaf4", C.ink, 3);
-  c.restore();
-}
-function classmates(ctx: Ctx) {
-  drawPerson(ctx, 150, 560, 0.4, { ...CAST.stu1, face: "neutral", arms: "down", body: "bust" });
-  deskFront(ctx, 150, 712, 0.4, 3570);
-  drawPerson(ctx, 960, 590, 0.4, { ...CAST.stu4, face: "neutral", arms: "down", body: "bust" });
-  deskFront(ctx, 960, 742, 0.4, 3571);
-}
-function shotClass(ctx: Ctx, abs: number) {
-  if (abs < BAR(5)) {
-    const turned = abs >= EV.turn1 && abs < EV.hide1;
-    const hidden = abs >= EV.hide1;
-    ctx.save();
-    camera(ctx, 540, 900, 1.0 + 0.03 * smooth(phase(abs, BAR(4), BAR(5))));
-    classroomFront(ctx, abs, { sun: 1 });
-    classmates(ctx);
-    drawKid(ctx, 700, 640, 0.5, {
-      body: "bust",
-      eyes: hidden && abs > 9.6 ? "sad" : turned ? "open" : "sleepy",
-      look: [-0.7, 0.6],
-      mouth: turned ? "smile" : "flat",
-      arms: "table",
-    });
-    deskFront(ctx, 700, 855, 0.5, 3572);
-    if (turned) drawKid(ctx, 360, 900, 0.74, { who: "girl", outfit: "cardigan", body: "bust", view: "back", arms: "table" });
-    else
-      drawKid(ctx, 360, 900, 0.74, {
-        who: "girl",
-        outfit: "cardigan",
-        body: "bust",
-        eyes: "open",
-        look: [0, 1],
-        mouth: "flat",
-        arms: hidden ? "custom" : "table",
-        handL: [-150, 60],
-        handR: [150, 60],
-        shapeL: "hold",
-        shapeR: "hold",
-      });
-    if (hidden) {
-      // the notebook goes up in front of her face (drawn after the head)
-      ctx.save();
-      ctx.translate(360, 900);
-      ctx.scale(0.74, 0.74);
-      book(ctx);
-      ctx.restore();
-    }
-    deskFront(ctx, 360, 1210, 0.74, 3573, (c) => {
-      if (!hidden) {
-        poly(c, [[-120, -36], [60, -40], [70, -10], [-110, -6]], 3574, 0.8);
-        paint(c, "#fbfaf4", C.ink, 3);
-      }
-    });
-    ctx.restore();
-    return;
+// ---------------------------------------------------------------- 1C class: from his seat, then after class
+/** his desk in the foreground: open notebook with a little sunflower doodle (her hair clip), the strawberry
+ *  milk he bought for her, his hand holding a pen */
+function hisDesk(ctx: Ctx, abs: number) {
+  shaded(ctx, () => poly(ctx, [[-140, 1330], [1220, 1318], [1320, 2000], [-240, 2000]], 3700, 1.4), "#d9a96c", () => {
+    inkLine(ctx, [[-120, 1420], [1200, 1410]], 3701, 3, "rgba(120,80,40,0.28)");
+    inkLine(ctx, [[-160, 1640], [1260, 1628]], 3702, 3, "rgba(120,80,40,0.22)");
+  }, C.ink, 6);
+  poly(ctx, [[330, 1430], [800, 1420], [850, 1760], [290, 1776]], 3703, 1.2);
+  paint(ctx, "#fbfaf2", C.ink, 5);
+  inkLine(ctx, [[565, 1424], [570, 1768]], 3704, 3, "#c8c1ae");
+  for (let i = 0; i < 6; i++) {
+    inkLine(ctx, [[340 - i * 6, 1480 + i * 46], [550, 1476 + i * 46]], 3705 + i, 2, "rgba(90,120,170,0.35)");
+    inkLine(ctx, [[585, 1474 + i * 46], [795 + i * 8, 1470 + i * 46]], 3712 + i, 2, "rgba(90,120,170,0.35)");
   }
-  // after class: he brings strawberry milk; she grabs her friend and runs
-  const approach = smooth(phase(abs, 10.35, 10.95));
-  const flee = smooth(phase(abs, EV.flee, 11.85));
-  const placed = abs > 12.0;
   ctx.save();
-  camera(ctx, 540, 900, 1.02);
-  classroomFront(ctx, abs, { sun: 1 });
-  deskFront(ctx, 960, 742, 0.4, 3571);
-  // him walking up with the milk
-  const hx = lerp(1010, 760, approach);
-  drawKid(ctx, hx, 700, 0.64, {
+  ctx.globalAlpha = 0.8;
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    inkLine(ctx, [[450 + Math.cos(a) * 17, 1610 + Math.sin(a) * 13], [450 + Math.cos(a) * 33, 1610 + Math.sin(a) * 26]], 3730 + k, 3, "#d9a020");
+  }
+  oval(ctx, 450, 1610, 13, 10, 3740, 0.6);
+  paint(ctx, "#8a5a2a", null);
+  ctx.restore();
+  strawberryMilk(ctx, 150, 1530, 0.78, -0.06, 3720);
+  // his hand with the pen, coming in from the bottom right
+  const sway = Math.sin(abs * 3) * 4;
+  const wrist: Pt = [800 + sway, 1660];
+  blob(ctx, tubePts([[1200, 2080], [980, 1830], wrist], [124, 112, 100], false, true), 3721, 1.2);
+  paint(ctx, C.hoodie, C.ink, 6);
+  inkLine(ctx, [[688 + sway, 1556], [800 + sway, 1652]], 3722, 10, C.ink);
+  inkLine(ctx, [[688 + sway, 1556], [800 + sway, 1652]], 3722, 6, "#3d6fd1");
+  drawHand(ctx, wrist[0], wrist[1], 1.0, Math.atan2(1660 - 1830, 800 - 980), "hold", false, false, 3723);
+}
+
+/** her fingertips curled over both edges of the book (book-local units) */
+function bookFingers(ctx: Ctx, x: number, y: number, s: number, rot: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  for (const side of [-1, 1])
+    for (let k = 0; k < 4; k++) {
+      rr(ctx, side < 0 ? -176 : 136, 18 + k * 31, 40, 27, 13);
+      paint(ctx, "#f6e1c3", C.ink, 3.5);
+    }
+  ctx.restore();
+}
+
+/** 8.25 → 9.85: she sits in front of him; she turns round, their eyes meet, the textbook snaps up */
+function shotSeat(ctx: Ctx, abs: number) {
+  const turned = abs >= EV.turn1;
+  const hidden = abs >= EV.hide1;
+  const gx = 520,
+    gy = 930,
+    gs = 0.95;
+  ctx.save();
+  camera(ctx, gx, 1000, 1.0 + 0.03 * smooth(phase(abs, BAR(4), EV.turn1)) + 0.06 * smooth(phase(abs, EV.turn1, EV.turn1 + 0.3)));
+  filtered(ctx, "blur(2.5px)", (c) => classroomBoard(c, abs, { sun: 1 }), "board");
+  if (!turned) {
+    // back to him, writing
+    drawKid(ctx, gx, gy, gs, { who: "girl", outfit: "cardigan", body: "bust", view: "back", arms: "down", headY: 4 * Math.sin(abs * 1.6) });
+  } else if (!hidden) {
+    drawKid(ctx, gx, gy, gs, { who: "girl", outfit: "cardigan", body: "bust", eyes: "wide", mouth: "o", look: [0.05, 0.05], arms: "down", tilt: -0.04 });
+  } else {
+    drawKid(ctx, gx, gy, gs, { who: "girl", outfit: "cardigan", body: "bust", eyes: "shut", mouth: "bite", arms: "custom", handL: [-150, 170], handR: [150, 170], shapeL: "hidden", shapeR: "hidden" });
+    // the textbook goes up in front of her face (drawn after the head)
+    const up = backOut(phase(abs, EV.hide1, EV.hide1 + 0.16));
+    const bx = gx + 6,
+      by = gy + lerp(420, 110, up) * gs;
+    const rot = -0.05 + 0.03 * Math.sin((abs - EV.hide1) * 18) * (1 - phase(abs, EV.hide1, EV.hide1 + 0.5));
+    textbook(ctx, bx, by, gs, rot);
+    bookFingers(ctx, bx, by, gs, rot);
+  }
+  ctx.restore();
+  hisDesk(ctx, abs);
+}
+
+/** 11.95 → 12.34: the milk left on her empty desk */
+function shotMilkLeft(ctx: Ctx, abs: number) {
+  const down = smooth(phase(abs, 11.95, 12.1));
+  const away = smooth(phase(abs, 12.12, 12.3));
+  ctx.save();
+  camera(ctx, 380, 900, 1.6);
+  filtered(ctx, "blur(4px)", (c) => classroomFront(c, abs, { sun: 0.5 }), "classBack");
+  ctx.restore();
+  deskFront(ctx, 540, 1180, 2.0, 3913);
+  strawberryMilk(ctx, 500, lerp(820, 900, down), 2.0, 0.03, 3914);
+  // his hand lets go and pulls back out of frame
+  const wrist: Pt = [lerp(760, 960, away), lerp(lerp(640, 720, down), 260, away)];
+  blob(ctx, tubePts([[1240, -120], [1080, 260], wrist], [190, 176, 160], false, true), 3915, 1.2);
+  paint(ctx, C.hoodie, C.ink, 7);
+  drawHand(ctx, wrist[0], wrist[1], 2.1, Math.atan2(wrist[1] - 260, wrist[0] - 1080), away > 0 ? "relax" : "hold", false, false, 3916);
+}
+
+/** 10.30 → 12.34 after class: he brings the strawberry milk; she grabs her friend and runs */
+function shotMilk(ctx: Ctx, abs: number) {
+  if (abs >= 11.95) return shotMilkLeft(ctx, abs);
+  const approach = smooth(phase(abs, BAR(5), 10.75));
+  const offer = smooth(phase(abs, EV.milkOffer - 0.12, EV.milkOffer + 0.12));
+  const flee = smooth(phase(abs, EV.flee, 11.62));
+  ctx.save();
+  camera(ctx, 560, 700, 1.3);
+  filtered(ctx, "blur(2px)", (c) => classroomFront(c, abs, { sun: 0.6 }), "classBack");
+  ctx.restore();
+  // her friend, standing by the desk
+  drawPerson(ctx, lerp(190, -400, flee), 870, 0.92, { ...CAST.mei, face: flee > 0 ? "o" : "smile", arms: "down", body: "full", legs: flee > 0 && flee < 1 ? "walk" : "stand", walk: abs * 14 });
+  if (abs < EV.flee) {
+    const startled = abs > 10.95;
+    drawKid(ctx, 360, 1080, 1.08, { who: "girl", outfit: "cardigan", body: "bust", eyes: startled ? "wide" : "open", mouth: startled ? "o" : "flat", look: startled ? [0.9, -0.3] : [0.1, 0.9], arms: "down" });
+  } else {
+    // up and away, leaning into the run
+    const x = lerp(360, -340, flee);
+    ctx.save();
+    ctx.translate(x, 840);
+    ctx.rotate(-0.12);
+    drawKid(ctx, 0, 0, 1.02, { who: "girl", outfit: "cardigan", body: "full", legs: "run", walk: abs * 16, eyes: "shut", mouth: "bite", look: [-1, 0], arms: "custom", handL: [-230, 240], handR: [70, 360], shapeL: "open", shapeR: "fist", headY: -Math.abs(Math.sin(abs * 16)) * 8 });
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 1 - phase(abs, 11.45, 11.62);
+    for (let k = 0; k < 4; k++) inkLine(ctx, [[x + 250 + k * 18, 720 + k * 130], [x + 390 + k * 30, 730 + k * 130]], 3760 + k, 5);
+    ctx.restore();
+  }
+  deskFront(ctx, 360, 1540, 1.08, 3573);
+  // him: walks up, holds out the milk, is left holding it
+  const sad = abs > 11.5;
+  const hand: Pt = [lerp(-70, -270, offer), lerp(300, 236, offer)];
+  drawKid(ctx, lerp(1260, 830, approach), 800, 1.04, {
     body: "full",
     legs: approach > 0 && approach < 1 ? "walk" : "stand",
-    walk: abs * 9,
-    eyes: flee > 0.3 ? "sad" : "open",
-    mouth: flee > 0.3 ? "frown" : "smile",
-    look: [-0.8, 0.5],
+    walk: abs * 10,
+    eyes: sad ? "sad" : "open",
+    mouth: sad ? "frown" : "smile",
+    brows: sad ? "sad" : undefined,
+    look: [-0.85, 0.35],
     arms: "custom",
-    handR: placed ? [120, 432] : [60, 300],
-    handL: [-120, 432],
-    shapeR: placed ? "relax" : "hold",
-    grip: placed ? undefined : (c) => strawberryMilk(c, 74, 250, 0.7, -0.1, 3590),
+    handL: hand,
+    handR: [120, 432],
+    shapeL: "hold",
+    grip: (c) => strawberryMilk(c, hand[0] - 6, hand[1] - 70, 0.72, -0.08, 3590),
   });
-  // her friend, standing by the desk
-  const fx = lerp(170, -260, flee);
-  drawPerson(ctx, fx, 720, 0.62, { ...CAST.mei, face: flee > 0 ? "o" : "smile", arms: "down", body: "full", legs: flee > 0 && flee < 1 ? "walk" : "stand", walk: abs * 10 });
-  // her: startled, then up and away with the friend
-  if (abs < EV.flee) {
-    drawKid(ctx, 380, 920, 0.72, { who: "girl", outfit: "cardigan", body: "bust", eyes: abs > 10.95 ? "wide" : "open", mouth: abs > 10.95 ? "o" : "flat", look: [0.8, -0.2], arms: "table" });
-  } else {
-    drawKid(ctx, lerp(380, -120, flee), 760, 0.64, { who: "girl", outfit: "cardigan", body: "full", legs: "walk", walk: abs * 10, eyes: "shut", mouth: "bite", look: [-1, 0], arms: "custom", handL: [-150, 330], handR: [100, 420] });
-  }
-  deskFront(ctx, 380, 1222, 0.72, 3573, (c) => {
-    if (placed) strawberryMilk(c, 120, -90, 0.6, 0.05, 3591);
-  });
-  ctx.restore();
+  // the bell
+  const bell = 1 - phase(abs, 10.75, 10.95);
+  if (bell > 0) text(ctx, "叮铃铃～", 230, 330, { size: 56, font: F.cn, fill: "#fff", stroke: C.ink, lw: 10, alpha: bell });
+}
+
+function shotClass(ctx: Ctx, abs: number) {
+  if (abs < 9.85) shotSeat(ctx, abs);
+  else if (abs < BAR(5)) hisClassFace(ctx, abs, 9.85, "sad");
+  else shotMilk(ctx, abs);
 }
 
 // ---------------------------------------------------------------- 1D
