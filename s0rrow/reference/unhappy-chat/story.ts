@@ -4,8 +4,8 @@ import { drawKid } from "./kid";
 import { classroomFront, deskFront, strawberryMilk } from "./places";
 import { heart } from "./sets";
 import { ChatItem, ChatView, chatScreen2 } from "./chat";
-import { FingerPos, HandsLook, heldHands } from "./hand";
-import { phone } from "./phone";
+import { FingerPos, HandsLook } from "./hand";
+import { SH, SW, phone } from "./phone";
 import { EV } from "./timeline";
 
 /** 《unhappy》· 同一段聊天两个视角 — the words on both phones, and helpers shared by the acts. */
@@ -64,8 +64,8 @@ export const inWin = (abs: number, w: readonly [number, number]) => abs >= w[0] 
 export const pop = (abs: number, t: number, d = 0.18) => clamp((abs - t) / d);
 
 /** Phone close-ups: size and centre. At 0.95 the chat text (37 screen px ≈ 35px) stays readable on a phone. */
-export const PHONE_S = 0.95;
-export const PHONE_CY = 890;
+export const PHONE_S = 1.0;
+export const PHONE_CY = 910;
 /** where the thumbs rest when they aren't doing anything (screen coordinates) */
 export const REST_R: FingerPos = { x: 395, y: 1000, touch: 0.15 };
 export const REST_L: FingerPos = { x: 205, y: 1060, touch: 0.15 };
@@ -99,7 +99,7 @@ export function typingThumbs(abs: number, t0: number, t1: number, seed = 1): { r
 export const HER_HANDS: HandsLook = { sleeve: "#f3b6c4", cuff: "#fff4f6", skin: "#f6e1c3", specks: 0.15 };
 export const HIS_HANDS: HandsLook = {};
 
-/** A phone held up close with both thumbs, over a dim room glow. */
+/** A phone up close over a dim room glow; thumb presses show as touch dots (no hands are drawn). */
 export function phoneCloseup(
   ctx: Ctx,
   abs: number,
@@ -118,7 +118,24 @@ export function phoneCloseup(
   fillBg(ctx, o.bg ?? "#0b0d1c");
   glow(ctx, cx, cy - 60, 900, o.glowCol ?? "rgba(120,150,255,0.26)");
   phone(ctx, cx, cy, s, rot, screen);
-  heldHands(ctx, cx, cy, s, rot, drift(o.right ?? REST_R, 0), drift(o.left ?? REST_L, 2), 1300, o.who === "girl" ? HER_HANDS : HIS_HANDS);
+  // no hands (the user preferred the phone alone): where a thumb presses, a soft touch dot shows instead
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  ctx.translate(-SW / 2, -SH / 2);
+  for (const p of [drift(o.right ?? REST_R, 0), drift(o.left ?? REST_L, 2)]) {
+    const k = clamp((p.touch - 0.6) / 0.4);
+    if (k <= 0) continue;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 30 + 6 * k, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${0.32 * k})`;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = `rgba(255,255,255,${0.7 * k})`;
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 /** Rain-like drops on the phone glass (her tears) in screen coordinates. */
