@@ -98,11 +98,14 @@ function shotHook(ctx: Ctx, abs: number) {
 // ---------------------------------------------------------------- 1B
 /** her avatar beside the latest 「嗯」 (screen coordinates, chat scrolled to now, no keyboard) */
 const AVATAR_AT: Pt = [56, 1042];
-/** One steady phone shot (4.16 → 8.25): July first — long, lively — then a slow, readable scroll down to October's
- *  「嗯」「哦」; he taps her avatar, her 朋友圈 slides in like a page push, and the camera moves in on 「5分钟前」. */
+/** One steady phone shot (4.16 → 8.25): from October's 「嗯」「哦」 he scrolls back up to July — long, lively — and
+ *  stays there; then one quick flick down to now, a tap on her avatar, her 朋友圈 slides in like a page push, and the
+ *  camera moves in on 「5分钟前」. */
 function shotHistory(ctx: Ctx, abs: number) {
-  const sd = smooth(phase(abs, EV.scrollDown[0], EV.scrollDown[1]));
-  const scroll = 2150 * (1 - sd);
+  const su = smooth(phase(abs, EV.scrollUp[0], EV.scrollUp[1]));
+  const fd = phase(abs, EV.scrollDown[0], EV.scrollDown[1]);
+  const sd = 1 - (1 - fd) * (1 - fd) * (1 - fd); // a flick: fast, then settling
+  const scroll = 2150 * (su - sd);
   const push = smooth(phase(abs, EV.pagePush[0], EV.pagePush[1]));
   const mark = smooth(phase(abs, 7.15, 7.6));
   // camera: still while reading; after the page change it moves up and in on 「5分钟前」 (screen 160, 1040)
@@ -112,9 +115,14 @@ function shotHistory(ctx: Ctx, abs: number) {
     py = 1168 + (1060 - 1168) * pk;
   // thumb: slow swipes up while scrolling down, then one tap on her avatar
   let right: FingerPos = REST;
-  if (inWin(abs, EV.scrollDown)) {
-    const f = ((abs - EV.scrollDown[0]) * 2.2) % 1;
-    right = { x: 420, y: 960 - f * 380, touch: f < 0.75 ? 1 : 0 };
+  if (inWin(abs, EV.scrollUp)) {
+    // dragging the conversation down to read older messages
+    const f = ((abs - EV.scrollUp[0]) * 3.4) % 1;
+    right = { x: 420, y: 520 + f * 420, touch: f < 0.8 ? 1 : 0 };
+  } else if (abs > EV.scrollDown[0] - 0.05 && abs < EV.scrollDown[0] + 0.14) {
+    // one quick flick up
+    const f = phase(abs, EV.scrollDown[0] - 0.05, EV.scrollDown[0] + 0.12);
+    right = { x: 420, y: 1000 - f * 460, touch: f < 0.85 ? 1 : 0 };
   } else if (abs > EV.tapAvatar - 0.25 && abs < EV.tapAvatar + 0.12) {
     right = { x: AVATAR_AT[0], y: AVATAR_AT[1], touch: abs > EV.tapAvatar - 0.05 ? 1 : 0.2 };
   }
