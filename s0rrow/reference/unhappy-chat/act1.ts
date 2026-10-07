@@ -1,12 +1,13 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, blob, camera, card, designScene, fillBg, filtered, glow, inkLine, oval, paint, poly, rr, shaded, text, tubePts } from "./lib/draw";
+import { C, Ctx, F, H, Pt, W, backOut, blob, camera, card, designScene, fillBg, filtered, glow, inkLine, oval, paint, poly, rr, shaded, text, tubePts, writeOn } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { CAST, drawPerson } from "./lib/people";
 import { bedBlanket, bedroom, bookFingers, classroomBoard, classroomFront, deskFront, strawberryMilk, textbook } from "./lib/places";
 import { lightPool } from "./lib/sets";
 import { BACKSPACE_AT, chatScreen2, momentsScreen, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
+import { SH, SW } from "./lib/phone";
 import { GIVE_UP, HIS_DRAFT, PHONE_CY, REST_L, REST_R, deleted, hisClassFace, hisNightChat, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
@@ -23,36 +24,79 @@ const HOOK_CY = 1100;
 const REST: FingerPos = REST_R;
 
 // ---------------------------------------------------------------- 1A
+/** the hook phone: the camera holds its breath while 「对方正在输入...」 shows (a small push each time, released
+ *  when it stops), then crash-zooms onto her 「嗯」 with a jolt. Anchored on the reply bubble (screen 155, 632). */
+function hookCamera(abs: number) {
+  const breath = (w: readonly [number, number]) => smooth(phase(abs, w[0], w[0] + 0.22)) * (1 - smooth(phase(abs, w[1], w[1] + 0.3)));
+  const lean = breath(EV.typing1) + breath(EV.typing2);
+  let s = 1 + 0.015 * smooth(phase(abs, 0, EV.um1)) + 0.03 * lean;
+  let dx = 395 + 30 * lean,
+    dy = 1092 - 26 * lean;
+  let rot = -0.02;
+  if (abs >= EV.um1) {
+    const k = backOut(phase(abs, EV.um1, EV.um1 + 0.16));
+    // stop lower and a little less close so his long message stays under the hook text
+    s = s + (1.4 - s) * k + 0.05 * phase(abs, EV.um1 + 0.16, 2.95);
+    dx = dx + (480 - dx) * k;
+    dy = dy + (1095 - dy) * k;
+    rot = -0.02 - 0.025 * k;
+    const j = 1 - phase(abs, EV.um1, EV.um1 + 0.35);
+    dx += Math.sin(abs * 90) * 16 * j;
+    dy += Math.cos(abs * 77) * 12 * j;
+  }
+  return { s, dx, dy, rot, cx: dx - (155 - 300) * s, cy: dy - (632 - 640) * s };
+}
+
 function shotHook(ctx: Ctx, abs: number) {
   if (abs < 2.95) {
     const typing = inWin(abs, EV.typing1) || inWin(abs, EV.typing2);
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing, keyboard: true })), { who: "boy", cy: HOOK_CY, s: 1 });
-    // a soft pulse around the new 「嗯」
-    const k = pop(abs, EV.um1, 0.35);
-    if (k > 0 && k < 1) {
+    const cam = hookCamera(abs);
+    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing, keyboard: true })), { who: "boy", cx: cam.cx, cy: cam.cy, s: cam.s, rot: cam.rot });
+    // yellow pulses around the new 「嗯」
+    for (const t0 of [EV.um1 + 0.05, EV.um1 + 0.45]) {
+      const k = phase(abs, t0, t0 + 0.45);
+      if (k <= 0 || k >= 1) continue;
       ctx.save();
       ctx.globalAlpha = 1 - k;
       ctx.strokeStyle = "#ffd166";
-      ctx.lineWidth = 6;
+      ctx.lineWidth = 7;
       ctx.beginPath();
-      // around the 「嗯」 bubble (screen 155, 632)
-      ctx.ellipse(540 + (155 - 300), HOOK_CY + (632 - 640), 80 + k * 75, 55 + k * 38, 0, 0, Math.PI * 2);
+      ctx.ellipse(cam.dx, cam.dy, (64 + k * 70) * cam.s, (44 + k * 40) * cam.s, cam.rot, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
     return;
   }
-  // his face in the phone light
+  // his face: surprise (snap zoom, a jolt, wide eyes) → it sinks in (eyes drop to the phone) → sadness (a slow
+  // push into his face, the frame tilting, the phone light going cold)
+  const t = abs;
+  const snap = backOut(phase(t, 2.95, 3.08));
+  const jolt = 1 - phase(t, 2.95, 3.25);
+  const zoom = 1.0 + 0.12 * snap + 0.2 * smooth(phase(t, 3.2, BAR(2)));
+  const dutch = -0.04 * smooth(phase(t, 3.6, BAR(2)));
+  const surprised = t < 3.32,
+    sinking = t >= 3.32 && t < 3.72;
   fillBg(ctx, "#0b0d1c");
   ctx.save();
-  camera(ctx, 540, 860, 1.0 + 0.04 * smooth(phase(abs, 2.95, BAR(2))));
-  glow(ctx, 540, 1250, 900, "rgba(120,150,255,0.3)");
-  drawKid(ctx, 540, 860, 1.32, { body: "bust", eyes: abs > 3.45 ? "sad" : "tired", look: [0, 0.9], mouth: "flat", arms: "phone", tilt: -0.06 * smooth(phase(abs, 3.4, 3.9)) });
-  lightPool(ctx, 540, 1180, 900, 0.55, "rgba(120,150,255,0.22)");
+  camera(ctx, 540 + Math.sin(t * 80) * 10 * jolt, 900 + Math.cos(t * 70) * 8 * jolt, zoom, dutch);
+  const light = 0.34 - 0.18 * smooth(phase(t, 3.5, BAR(2)));
+  glow(ctx, 540, 1250, 900, `rgba(120,150,255,${light})`);
+  drawKid(ctx, 540, 860, 1.32, {
+    body: "bust",
+    eyes: surprised ? "wide" : sinking ? "open" : "sad",
+    brows: surprised ? "up" : sinking ? "worried" : "sad",
+    mouth: surprised ? "o" : sinking ? "flat" : "frown",
+    look: surprised ? [0, 0.55] : [0, 1],
+    arms: "phone",
+    tilt: -0.07 * smooth(phase(t, 3.7, 4.1)),
+    headY: 10 * smooth(phase(t, 3.7, 4.1)),
+  });
+  lightPool(ctx, 540, 1180, 900, 0.5 + 0.2 * smooth(phase(t, 3.5, BAR(2))), "rgba(120,150,255,0.2)");
   ctx.restore();
 }
 
 // ---------------------------------------------------------------- 1B
+/** scrolling back to July (warm, the camera leaning in) and down to now (cold, pulling back, tilting): self-doubt */
 function shotHistory(ctx: Ctx, abs: number) {
   if (abs < BAR(3)) {
     const up = smooth(phase(abs, EV.scrollUp, 5.0));
@@ -65,7 +109,32 @@ function shotHistory(ctx: Ctx, abs: number) {
       const f = ((abs - (swipingUp ? EV.scrollUp : EV.scrollDown)) * 3.4) % 1;
       right = swipingUp ? { x: 420, y: 520 + f * 420, touch: f < 0.8 ? 1 : 0 } : { x: 420, y: 940 - f * 420, touch: f < 0.8 ? 1 : 0 };
     }
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { scroll })), { who: "boy", right, cy: PHONE_CY });
+    const warm = up - down;
+    const back = smooth(phase(abs, EV.scrollDown, BAR(3)));
+    const s = 1 + 0.06 * up - 0.16 * back;
+    phoneCloseup(
+      ctx,
+      abs,
+      (c) => {
+        chatScreen2(c, abs, hisNightChat(abs, { scroll }));
+        // July glows warm in memory; now is cold
+        c.fillStyle = `rgba(255,170,90,${0.13 * warm})`;
+        c.fillRect(0, 0, SW, SH);
+        c.fillStyle = `rgba(20,30,70,${0.25 * back})`;
+        c.fillRect(0, 0, SW, SH);
+      },
+      { who: "boy", right, cy: PHONE_CY - 60 * back, s, rot: -0.02 - 0.06 * back },
+    );
+    // darkness closing in, and the doubt in his head
+    if (back > 0) {
+      const g = ctx.createRadialGradient(540, 900, 300, 540, 900, 1100);
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(1, `rgba(0,0,0,${0.55 * back})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+    const q = phase(abs, 5.7, 6.05);
+    if (q > 0) text(ctx, writeOn("是我话太多了吗……", q), 540, 1690, { size: 58, font: F.pen, fill: "#c9d3ff", stroke: "#0b0d1c", lw: 8, alpha: 0.9 });
     return;
   }
   const mark = smooth(phase(abs, 7.15, 7.6));

@@ -94,3 +94,4 @@
 - `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑的事件表（她发「嗯」提前到 35.55，停到 36.45）
 - `code/chat.ts`：来源 work-d1187f37《unhappy》：朋友圈时间戳放大到 28px、夜间模式提亮
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：朋友圈镜头上移并推近「5分钟前」
+- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：开场镜头语言（屏息推近、急推震动、惊讶→失落、回忆暖/现在冷+内心独白）
