@@ -85,3 +85,4 @@
 - `reference/unhappy-chat/act4.ts`：来源 work-d1187f37《unhappy》聊天版 act4
 - `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：phoneCloseup 改为只画手机 + 触点（用户决定不画手）
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1：教室里主角的手改成简单的圆（roundHand）
+- `code/kid.ts`：来源 work-d1187f37《unhappy》：新增 bendL/bendR（肘部弯向，递东西的 V 字臂）

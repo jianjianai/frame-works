@@ -40,6 +40,10 @@ export interface KidPose {
   handR?: Pt;
   shapeL?: HandShape;
   shapeR?: HandShape;
+  /** which way the elbow bends: by default the left elbow goes out to the left/up, the right to the right.
+   *  Flip it (e.g. bendL: 1) for an elbow that hangs down — a "V" arm holding something out. */
+  bendL?: number;
+  bendR?: number;
   legs?: "stand" | "walk" | "run" | "sit" | "sitFloor" | "kneel";
   walk?: number; // gait phase (rad)
   /** drawn after the torso, before the arms (things held against the body) */
@@ -714,6 +718,8 @@ function armSpecs(p: KidPose): [ArmSpec, ArmSpec] {
   if (p.handR) R = { ...R, wrist: p.handR };
   if (p.shapeL) L = { ...L, shape: p.shapeL };
   if (p.shapeR) R = { ...R, shape: p.shapeR };
+  if (p.bendL) L = { ...L, bend: p.bendL };
+  if (p.bendR) R = { ...R, bend: p.bendR };
   return [L, R];
 }
 
