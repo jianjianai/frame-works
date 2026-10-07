@@ -4,7 +4,7 @@ import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine
 import { drawKid } from "./lib/kid";
 import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook, classroomFront, strawberryMilk } from "./lib/places";
 import { heart } from "./lib/sets";
-import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
+import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, markAt, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW, lockScreen, notification } from "./lib/phone";
 import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT, herHome, oldFilm, afterNight, LATE1, LATE2, hisRoomMorning, herRoomAt } from "./lib/story";
@@ -324,8 +324,8 @@ function shotNight(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 3D the next morning, his side
-/** where her paragraph's last line ("其实，我喜欢你，很久很久了。") sits on his phone once the chat is open */
-const LOVE_LINE: [number, number, number] = [116, 600, 330]; // x, y (screen), width
+/** the end of her paragraph, picked out with a highlighter on his phone once the chat is open */
+const LOVE_LINE = "其实，我喜欢你，很久很久了。";
 const NOTE_Y = 360;
 
 function shotDawn(ctx: Ctx, abs: number) {
@@ -339,9 +339,13 @@ function shotDawn(ctx: Ctx, abs: number) {
   const appK = smooth(phase(abs, EV.tapNote + 0.03, EV.tapNote + 0.3));
   const read = smooth(phase(abs, EV.tapNote + 0.32, EV.read - 0.2));
   const s = 1.0 + 0.5 * read;
-  const [lx, ly, lw] = LOVE_LINE;
-  const ax = lx + lw / 2,
-    ay = ly;
+  // the highlighter is drawn by the chat itself, under exactly those characters, and the camera aims at the same box
+  const hk = smooth(phase(abs, EV.tapNote + 0.45, EV.tapNote + 0.8));
+  const items = [...HISTORY.slice(-3), ...afterNight("his")].map((it) => (it.t === "msg" && it.text === HER_CONFESSION ? ({ ...it, mark: LOVE_LINE, markK: hk } as ChatItem) : it));
+  const view = { title: HER, time: "07:10", me: "boy" as const, them: "girl" as const, items, dark: false };
+  const mk = markAt(ctx, view) ?? { x: 116, y: 580, w: 330, h: 90 };
+  const ax = mk.x + mk.w / 2,
+    ay = mk.y + mk.h / 2;
   const px = 540 + (ax - 300) + (540 - (540 + (ax - 300))) * read,
     py = PHONE_CY + (ay - 640) + (820 - (PHONE_CY + (ay - 640))) * read;
   const cx = px - (ax - 300) * s,
@@ -380,19 +384,7 @@ function shotDawn(ctx: Ctx, abs: number) {
           y += h + 14;
         });
       }
-      appWindow(c, appK, [300, NOTE_Y + firstH / 2], (a) => {
-        chatScreen2(a, abs, { title: HER, time: "07:10", me: "boy", them: "girl", items: [...HISTORY.slice(-3), ...afterNight("his")], dark: false });
-        // her last line, picked out with a highlighter stroke
-        const hk = smooth(phase(abs, EV.tapNote + 0.45, EV.tapNote + 0.75));
-        if (hk > 0) {
-          a.save();
-          a.globalCompositeOperation = "multiply";
-          a.fillStyle = "rgba(255,214,90,0.75)";
-          rr(a, lx - 6, ly - 22, (lw + 12) * hk, 44, 8);
-          a.fill();
-          a.restore();
-        }
-      });
+      appWindow(c, appK, [300, NOTE_Y + firstH / 2], (a) => chatScreen2(a, abs, view));
     },
     { who: "boy", right, cx, cy, s, steady: read > 0, glowCol: "rgba(255,230,190,0.28)", bg: "#2b2a3a" },
   );
