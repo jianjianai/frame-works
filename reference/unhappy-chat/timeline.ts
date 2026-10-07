@@ -74,16 +74,15 @@ export const EV = {
   read: 48.6, // his face
   // act 4 — the outro (one loop, then the song fades out)
   joy: BAR(24),
-  // the messages get room to be read (the split screen that followed was cut — the street is the last shot)
+  // one continuous shot on his phone, sending and receiving — no cutaways (the split screen that followed was cut too;
+  // the street is the last shot)
   reply: 50.0,
   type6: [50.15, 50.55] as const, // 「我也是」
   send5: beatAt(99), // 50.67
   type7: [50.95, 51.95] as const, // 「那周末一起去图书馆？」
   send6: beatAt(102), // 52.21
-  typingC: [52.3, 53.74] as const, // on his phone the title says 「对方正在输入...」…
-  herTypes: [52.4, 53.55] as const, // …and this time we see her: she types 「嗯！！」 and sends it straight away
-  herSend: beatAt(104), // 53.23 her 「嗯！！」, then a heart
-  um3: beatAt(105), // 53.74 「嗯！！」 lands on his phone
-  heart: 53.99,
+  typingC: [52.35, beatAt(104)] as const, // 「对方正在输入...」 — this time it ends in an answer…
+  um3: beatAt(104), // 53.23 …「嗯！！」
+  heart: 53.48,
   outside: beatAt(107), // 54.76 the street again, in the morning sun — to the end
 };
