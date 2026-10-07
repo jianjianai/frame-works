@@ -145,8 +145,8 @@ function shotPretty(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 2B
-/** "Will you even love me anymore / Love me": first his tears — the camera moving in from his face to his eyes, the
- *  screen in them — then what he is looking at: her 「嗯」. 「对方正在输入...」 comes and goes twice at the top (the
+/** "Will you even love me anymore / Love me", one camera move: his tears — in to his eye and through it (the screen
+ *  in his pupil grows until it is his phone) — her 「嗯」; 「对方正在输入...」 comes and goes twice at the top (the
  *  video's yellow "look here" pulse, for us), then the camera sinks into the 「嗯」 until it fills the frame. */
 const T2 = [beatAt(42), beatAt(44), BAR(12)];
 const DIVE = [23.45, 24.5];
@@ -211,7 +211,10 @@ function typingPhone(ctx: Ctx, abs: number, dk: number, zs: number, rot: number,
 }
 
 /** his face in the dark, lit from below by the screen: a band of cold light across the eyes */
-function screenLit(ctx: Ctx, cy: number, band: number) {
+function screenLit(ctx: Ctx, cy: number, band: number, alpha = 1) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   glow(ctx, 540, cy + 260, 620, "rgba(70,95,150,0.35)");
@@ -228,21 +231,38 @@ function screenLit(ctx: Ctx, cy: number, band: number) {
   v.addColorStop(1, "rgba(3,4,12,0.9)");
   ctx.fillStyle = v;
   ctx.fillRect(0, 0, W, H);
+  ctx.restore();
 }
 
-/** 21.54 → 22.56 "Will you even": his face, crying, lit by the screen; the camera moves in to his eyes — fixed on
- *  the screen, which shows in them as two small bright squares (cut on the eyeline to what he is looking at) */
+/** when the camera starts going into his eye */
+const EYE_DIVE = 22.1;
+
+/** 21.54 → 22.56 "Will you even": his face, crying, lit by the screen; the camera moves in to his eyes — and on through
+ *  one of them. The screen reflected in his pupils is the real picture of his phone (drawn small, framed like the
+ *  frame, 9:16), so it grows until it IS the picture: we come out on his phone and her 「嗯」 with no cut. */
 function hisTears(ctx: Ctx, abs: number) {
   const S = 1.25; // his head
   const eyeY = 860 + EYE_DY * S;
-  const into = smooth(phase(abs, T2[0] + 0.2, T2[1] - 0.05));
-  const z = Math.exp(Math.log(1.3) + (Math.log(3.3) - Math.log(1.3)) * into);
-  const fy = 860 + (eyeY - 860) * into; // the point held at screen (540, 900)
+  // the reflection in each pupil (local units): 9:16 like the frame, centred in the iris
+  const rh = 11 * S,
+    rw = (rh * 9) / 16,
+    ry = eyeY + 3 * S;
+  const rx = (side: number) => 540 + (side * EYE_DX + 3) * S;
+  // 1) in to his eyes; 2) through his right eye (as we see it) until its reflection fills the frame exactly
+  const into = smooth(phase(abs, T2[0] + 0.15, EYE_DIVE));
+  const u = phase(abs, EYE_DIVE, T2[1]);
+  const zEnd = 1920 / rh;
+  const z = u > 0 ? Math.exp(Math.log(3.3) + (Math.log(zEnd) - Math.log(3.3)) * smooth(u)) : Math.exp(Math.log(1.3) + (Math.log(3.3) - Math.log(1.3)) * into);
+  // the local point held still and where on screen it sits: between his eyes → the centre of that reflection
+  const k = smooth(clamp(u / 0.6));
+  const fx = 540 + (rx(1) - 540) * k,
+    fy = (860 + (eyeY - 860) * into) * (1 - k) + ry * k;
+  const ay = 900 + 60 * smooth(u);
   fillBg(ctx, "#06070f");
   ctx.save();
-  ctx.translate(540, 900);
+  ctx.translate(540, ay);
   ctx.scale(z, z);
-  ctx.translate(-540, -fy);
+  ctx.translate(-fx, -fy);
   drawKid(ctx, 540, 860, S, {
     body: "bust",
     eyes: "teary",
@@ -253,18 +273,23 @@ function hisTears(ctx: Ctx, abs: number) {
     tears: 0.45 + 0.55 * smooth(phase(abs, T2[0], T2[0] + 0.6)),
   });
   for (const side of [-1, 1]) {
-    // the screen reflected in each eye
-    const x = 540 + (side * EYE_DX + 3) * S,
-      y = eyeY + 3 * S;
-    ctx.fillStyle = "rgba(225,235,255,0.85)";
-    rr(ctx, x - 3.2 * S, y - 5.5 * S, 6.4 * S, 11 * S, 1.6 * S);
-    ctx.fill();
-    ctx.fillStyle = "rgba(90,110,140,0.9)";
-    rr(ctx, x - 2.2 * S, y + 0.5 * S, 3.4 * S, 2.2 * S, 0.8 * S);
-    ctx.fill();
+    // what he is looking at, mirrored small in each pupil: the phone shot itself (as it is at this moment)
+    const x0 = rx(side) - rw / 2,
+      y0 = ry - rh / 2;
+    ctx.save();
+    rr(ctx, x0, y0, rw, rh, 1.6 * S * (1 - smooth(u)));
+    ctx.clip();
+    ctx.translate(x0, y0);
+    ctx.scale(rw / W, rh / H);
+    umDive(ctx, abs);
+    // a cool glassy tint, gone by the time we are through
+    ctx.fillStyle = `rgba(150,180,255,${0.35 * (1 - smooth(u))})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
   }
   ctx.restore();
-  screenLit(ctx, 900 + (eyeY - fy) * z, 230 - 70 * into); // the cold light stays on his eyes
+  // the cold light on his face, fading as we go through
+  screenLit(ctx, ay + (eyeY - fy) * z, 230 - 70 * into, 1 - smooth(u));
 }
 
 /** 22.56 → 24.61 "love me anymore / Love me": her 「嗯」 under the spotlight, the clue flickering at the top twice;
