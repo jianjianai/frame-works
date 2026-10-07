@@ -424,9 +424,9 @@ export function herRoomAt(ctx: Ctx, abs: number, day: number, state: "awake" | "
   }
 }
 
-/** one of them hugging a pillow, rocking with joy (the split screen at the end) */
-export function hugJoy(ctx: Ctx, abs: number, who: "boy" | "girl", x: number, y: number, s: number) {
-  const rock = Math.sin((abs - EV.split) * 7) * 0.12;
+/** one of them hugging a pillow, rocking with joy (from time t0) */
+export function hugJoy(ctx: Ctx, abs: number, who: "boy" | "girl", x: number, y: number, s: number, t0 = 0) {
+  const rock = Math.sin((abs - t0) * 7) * 0.12;
   ctx.save();
   ctx.translate(x, y + 30 * s);
   ctx.rotate(rock);
@@ -438,7 +438,7 @@ export function hugJoy(ctx: Ctx, abs: number, who: "boy" | "girl", x: number, y:
     eyes: "happy",
     mouth: "grin",
     blush: 1,
-    tilt: 0.12 * Math.sin((abs - EV.split) * 7 + 0.5),
+    tilt: 0.12 * Math.sin((abs - t0) * 7 + 0.5),
     headY: 14,
     arms: "custom",
     handL: [-60, 300],
