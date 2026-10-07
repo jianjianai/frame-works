@@ -7,7 +7,7 @@ import { lightPool } from "./lib/sets";
 import { BACKSPACE_AT, chatScreen2, powerOffScreen, profileScreen } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW } from "./lib/phone";
-import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops } from "./lib/story";
+import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops, phoneBody } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 2 (16.43 – 32.79s) · chorus 1
@@ -40,8 +40,12 @@ function shotPretty(ctx: Ctx, abs: number) {
   const out = smooth(phase(abs, 18.2, 18.75)); // her photo fading to black glass
   const refl = abs < 18.3 ? 0 : 0.28 * smooth(phase(abs, 18.3, 18.9)) + 0.32 * smooth(phase(abs, 19.4, 20.0));
   const push = smooth(phase(abs, 19.45, BAR(10)));
-  const s = 1.5 + 0.45 * push;
-  const ay = 805 + 55 * push; // where both faces sit on screen (face at screen 300, 470)
+  // framed so the phone's sides stay in the picture — it has to read as a phone when the screen goes black
+  const s = 1.22 + 0.25 * push;
+  const ay = 805 + 45 * push; // where both faces sit on screen (face at screen 300, 470)
+  // her profile sits low enough that her name clears the lyrics; as the screen dims the camera rises to put
+  // her face where his reflection will appear
+  const cyNow = abs < 18.5 ? 1161 - 149 * smooth(phase(abs, 18.12, 18.5)) : ay + 170 * s;
   const avert = smooth(phase(abs, 19.9, 20.25));
   phoneCloseup(
     ctx,
@@ -74,10 +78,45 @@ function shotPretty(ctx: Ctx, abs: number) {
         c.lineTo(gx - 100, SH);
         c.fill();
       }
+      if (out > 0) {
+        // glass: a soft sheen over the top and the desk lamp mirrored in the corner
+        const sheen = c.createLinearGradient(0, 0, SW * 0.7, SH * 0.45);
+        sheen.addColorStop(0, `rgba(255,255,255,${0.1 * out})`);
+        sheen.addColorStop(1, "rgba(255,255,255,0)");
+        c.fillStyle = sheen;
+        c.fillRect(0, 0, SW, SH);
+        const lamp = c.createRadialGradient(470, 210, 10, 470, 210, 150);
+        lamp.addColorStop(0, `rgba(255,226,180,${0.22 * out})`);
+        lamp.addColorStop(1, "rgba(255,226,180,0)");
+        c.fillStyle = lamp;
+        c.fillRect(300, 40, 300, 340);
+      }
     },
     // the same framing for both faces, then a slow push into his
-    { who: "boy", right: REST, cx: 540, cy: abs < 18.5 ? 1180 - 120 * smooth(phase(abs, BAR(8), 18.5)) : ay + 170 * s, s, glowCol: `rgba(${Math.round(255 - 195 * out)},${Math.round(200 - 130 * out)},${Math.round(150 - 30 * out)},0.22)` },
+    {
+      who: "boy",
+      right: REST,
+      cx: 540,
+      cy: cyNow,
+      s,
+      rot: -0.02,
+      steady: true,
+      bg: "#1a1424",
+      glowCol: "rgba(255,200,150,0.16)",
+      // his bed, out of focus: a dim plum blanket with lamp bokeh, so the black phone stands out
+      backdrop: (c) => {
+        for (let i = 0; i < 9; i++) {
+          const bx = 80 + ((i * 263) % 960),
+            by = 220 + ((i * 397) % 1500);
+          c.fillStyle = i % 3 === 0 ? "rgba(255,210,150,0.10)" : "rgba(170,150,220,0.08)";
+          c.beginPath();
+          c.arc(bx, by, 60 + (i % 4) * 30, 0, Math.PI * 2);
+          c.fill();
+        }
+      },
+    },
   );
+  phoneBody(ctx, 540, cyNow, s, -0.02);
   // the room closes in around him
   const v = smooth(phase(abs, 19.5, BAR(10)));
   if (v > 0) {

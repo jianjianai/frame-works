@@ -102,3 +102,4 @@
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：pretty/ugly 的自卑镜头语言
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：倒影低头向下看
 - `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：phoneCloseup 新增 backdrop、新增 phoneBody（边框高光+侧键）
+- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：黑屏倒影加机身、玻璃反光和虚化背景
