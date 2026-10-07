@@ -62,11 +62,16 @@ export const EV = {
   openApp: 40.08, // …she taps 微信 and it opens on the paragraph she left
   type4: [40.45, 42.35] as const,
   send3: 43.008, // the whole paragraph, finally (on "misery")
-  asleep: 44.6,
+  late1: 43.85, // 01:30 「你睡了吗？」
+  late2: 44.25, // 03:00 「晚安。」 — then the screen goes to sleep
+  nightFalls: 44.75, // outside: the two windows across the street…
+  herLightOff: 44.95, // …her light goes out too; the night turns into morning
+  intoHis: [45.7, 46.3] as const, // in through his window: 07:10
   dawn: BAR(22), // 07:10, his room
   boot: 46.585,
-  um2: BAR(23), // her message lands on his lock screen
-  read: 48.2,
+  um2: BAR(23), // her three messages land on his lock screen
+  tapNote: 47.55, // he taps the first one: the chat opens on her paragraph
+  read: 48.6, // his face
   // act 4 — the outro (one loop, then the song fades out)
   joy: BAR(24),
   reply: 50.0,
@@ -74,8 +79,10 @@ export const EV = {
   send5: 50.674,
   type7: [50.85, 51.5] as const, // 「那周末一起去图书馆？」
   send6: 51.696,
-  typingC: [51.85, 52.6] as const,
+  typingC: [51.75, 52.62] as const, // on his phone the title says 「对方正在输入...」…
+  herTypes: [51.85, 52.62] as const, // …and this time we see her: she types 「嗯！！」 and sends it straight away
   um3: 52.719, // 「嗯！！」
   heart: 52.97,
   split: BAR(26),
+  outside: BAR(27), // the street again, in the morning sun
 };
