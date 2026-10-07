@@ -7,7 +7,7 @@ import { lightPool } from "./lib/sets";
 import { BACKSPACE_AT, chatScreen2, powerOffScreen, profileScreen } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW } from "./lib/phone";
-import { GIVE_UP, HER_NIGHT_DRAFT, HIM, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops } from "./lib/story";
+import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 2 (16.43 – 32.79s) · chorus 1
@@ -17,7 +17,7 @@ import { BAR, EV } from "./lib/timeline";
  *  2D 29.82 "I should get a piercing through my heart" — her room: she is crying, deleting a whole paragraph */
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const REST: FingerPos = { x: 480, y: 1180, touch: 0.2 };
+const REST: FingerPos = REST_R;
 
 /** his blue duvet, top edge at y */
 function duvet(ctx: Ctx, top: number) {
@@ -71,7 +71,7 @@ function shotPretty(ctx: Ctx, abs: number) {
       c.lineTo(-120, SH);
       c.fill();
     },
-    { who: "boy", right: REST, cy: 900, glowCol: "rgba(60,70,120,0.2)" },
+    { who: "boy", right: REST, cy: PHONE_CY, glowCol: "rgba(60,70,120,0.2)" },
   );
 }
 
@@ -81,8 +81,7 @@ function shotTyping(ctx: Ctx, abs: number) {
     const typing = inWin(abs, EV.typingA) || inWin(abs, EV.typingB);
     // push in on the title bar: 「对方正在输入...」 big
     const push = smooth(phase(abs, BAR(10), 21.1));
-    const s2 = 0.72 + 0.9 * push;
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing })), { who: "boy", right: REST, cx: 540, cy: 900 + (640 - 260) * (s2 - 0.72) * 0.95, s: s2 });
+    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing })), { who: "boy", right: REST, cx: 540, cy: lerp(PHONE_CY, 1225, push), s: lerp(PHONE_S, 1.62, push) });
     return;
   }
   // lying in bed, phone held above his face
@@ -114,7 +113,7 @@ function shotOff(ctx: Ctx, abs: number) {
           c.fillRect(0, 0, SW, SH);
         }
       },
-      { who: "boy", right, cy: 900 },
+      { who: "boy", right, cy: PHONE_CY },
     );
     return;
   }
@@ -216,7 +215,7 @@ function shotTwist(ctx: Ctx, abs: number) {
         chatScreen2(c, abs, herNightView(abs, draft));
         tearDrops(c, abs, 30.6, 3);
       },
-      { who: "girl", right, cx: 540 + sx, cy: 860 + sy, glowCol: "rgba(255,170,200,0.22)" },
+      { who: "girl", right, cx: 540 + sx, cy: PHONE_CY + sy, glowCol: "rgba(255,170,200,0.22)" },
     );
     return;
   }
