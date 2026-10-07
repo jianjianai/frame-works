@@ -240,7 +240,7 @@ export function chatScreen2(ctx: Ctx, abs: number, v: ChatView) {
       ctx.fillRect(fx + 16 + cw + 3, inputTop + 30 + (show.length - 1) * LH, 3, 40);
     }
     const hot = v.sendHot ?? 0;
-    ctx.fillStyle = hot > 0.5 ? "#06a050" : "#07c160";
+    ctx.fillStyle = hot > 0.5 ? "#04803d" : "#07c160"; // pressed
     rr(ctx, SW - 104, inputTop + inputH - 88, 88, 60, 10);
     ctx.fill();
     text(ctx, "发送", SW - 60, inputTop + inputH - 57, { size: 28, font: F.ui, weight: 700, fill: "#fff" });
@@ -466,5 +466,252 @@ export function bootScreen(ctx: Ctx, k: number) {
   ctx.beginPath();
   ctx.arc(SW / 2, SH / 2 - 40, 60, 0, Math.PI * 2);
   ctx.stroke();
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- home screen
+/** where 微信 sits on the home screen (screen coordinates): the app opens out of it and closes back into it */
+export const WECHAT_AT: Pt = [230, 560];
+const ICON = 104;
+type AppKind = "wechat" | "camera" | "photos" | "music" | "settings" | "calendar" | "notes" | "clock" | "weather" | "phone" | "sms" | "browser" | "mail";
+const APP_BG: Record<AppKind, string> = {
+  wechat: "#07c160",
+  camera: "#8e8e93",
+  photos: "#ffffff",
+  music: "#fa2d55",
+  settings: "#8e8e93",
+  calendar: "#ffffff",
+  notes: "#fffbe6",
+  clock: "#111111",
+  weather: "#3a8ee6",
+  phone: "#34c759",
+  sms: "#34c759",
+  browser: "#ffffff",
+  mail: "#2f7cf6",
+};
+
+/** an app icon centred at (0, 0) */
+function appIcon(ctx: Ctx, kind: AppKind) {
+  const h = ICON / 2;
+  rr(ctx, -h, -h, ICON, ICON, 26);
+  ctx.fillStyle = APP_BG[kind];
+  ctx.fill();
+  const dot = (x: number, y: number, r: number, col: string) => {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  ctx.save();
+  if (kind === "wechat") {
+    // two speech bubbles with little eyes
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(-9, -8, 30, 25, 0, 0, Math.PI * 2);
+    ctx.moveTo(-28, 8);
+    ctx.lineTo(-32, 24);
+    ctx.lineTo(-14, 15);
+    ctx.fill();
+    dot(-19, -12, 3.6, "#07c160");
+    dot(1, -12, 3.6, "#07c160");
+    ctx.strokeStyle = "#07c160";
+    ctx.lineWidth = 4;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(16, 13, 23, 19, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(28, 26);
+    ctx.lineTo(34, 37);
+    ctx.lineTo(20, 31);
+    ctx.fill();
+    dot(9, 9, 3, "#07c160");
+    dot(24, 9, 3, "#07c160");
+  } else if (kind === "camera") {
+    rr(ctx, -34, -20, 68, 46, 10);
+    ctx.fillStyle = "#2b2b2e";
+    ctx.fill();
+    dot(0, 3, 15, "#d9d9de");
+    dot(0, 3, 9, "#2b2b2e");
+  } else if (kind === "photos") {
+    const cols = ["#ff9f0a", "#ffd60a", "#34c759", "#32ade6", "#5e5ce6", "#ff375f"];
+    cols.forEach((col, i) => {
+      const a = (i / 6) * Math.PI * 2;
+      ctx.globalAlpha = 0.85;
+      dot(Math.cos(a) * 16, Math.sin(a) * 16, 15, col);
+    });
+  } else if (kind === "music" || kind === "clock" || kind === "weather") {
+    if (kind === "music") text(ctx, "♪", 0, 2, { size: 60, font: F.ui, weight: 700, fill: "#fff" });
+    else if (kind === "clock") {
+      dot(0, 0, 38, "#fff");
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -26);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(18, 8);
+      ctx.stroke();
+    } else {
+      dot(-12, -10, 16, "#ffd60a");
+      dot(4, 12, 16, "#fff");
+      dot(20, 8, 13, "#fff");
+      dot(-10, 14, 12, "#fff");
+    }
+  } else if (kind === "settings") {
+    ctx.strokeStyle = "#e5e5ea";
+    ctx.lineWidth = 9;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * 22, Math.sin(a) * 22);
+      ctx.lineTo(Math.cos(a) * 34, Math.sin(a) * 34);
+      ctx.stroke();
+    }
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (kind === "calendar") {
+    text(ctx, "周二", 0, -26, { size: 20, font: F.ui, weight: 700, fill: "#ff3b30" });
+    text(ctx, "7", 0, 12, { size: 54, font: F.ui, fill: "#111" });
+  } else if (kind === "notes") {
+    ctx.fillStyle = "#ffd60a";
+    ctx.fillRect(-h, -h, ICON, 26);
+    ctx.strokeStyle = "#ddd2a8";
+    ctx.lineWidth = 3;
+    for (const y of [0, 16, 32]) {
+      ctx.beginPath();
+      ctx.moveTo(-34, y);
+      ctx.lineTo(34, y);
+      ctx.stroke();
+    }
+  } else if (kind === "phone") {
+    text(ctx, "✆", 0, 2, { size: 58, font: F.ui, fill: "#fff" });
+  } else if (kind === "sms") {
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(0, -2, 32, 25, 0, 0, Math.PI * 2);
+    ctx.moveTo(-20, 14);
+    ctx.lineTo(-26, 30);
+    ctx.lineTo(-6, 20);
+    ctx.fill();
+  } else if (kind === "browser") {
+    dot(0, 0, 38, "#2f7cf6");
+    dot(0, 0, 34, "#fff");
+    ctx.fillStyle = "#ff3b30";
+    ctx.beginPath();
+    ctx.moveTo(-6, -6);
+    ctx.lineTo(24, -24);
+    ctx.lineTo(6, 6);
+    ctx.fill();
+    ctx.fillStyle = "#c7c7cc";
+    ctx.beginPath();
+    ctx.moveTo(-6, -6);
+    ctx.lineTo(-24, 24);
+    ctx.lineTo(6, 6);
+    ctx.fill();
+  } else if (kind === "mail") {
+    rr(ctx, -32, -22, 64, 44, 6);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+    ctx.strokeStyle = "#2f7cf6";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-30, -18);
+    ctx.lineTo(0, 6);
+    ctx.lineTo(30, -18);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+const HOME_GRID: [AppKind, string][] = [
+  ["calendar", "日历"],
+  ["photos", "照片"],
+  ["camera", "相机"],
+  ["weather", "天气"],
+  ["clock", "时钟"],
+  ["notes", "备忘录"],
+  ["music", "音乐"],
+  ["mail", "邮件"],
+  ["settings", "设置"],
+  ["wechat", "微信"],
+  ["browser", "浏览器"],
+  ["sms", "信息"],
+];
+
+/** the phone's home screen. `press` darkens 微信 under a thumb; `zoom` > 1 while an app is closing back into it;
+ *  `art` draws on the wallpaper (screen coordinates), under the icons */
+export function homeScreen(ctx: Ctx, abs: number, o: { time: string; press?: number; zoom?: number; art?: (c: Ctx) => void }) {
+  const g = ctx.createLinearGradient(0, 0, 0, SH);
+  g.addColorStop(0, "#2a2350");
+  g.addColorStop(0.55, "#6a4a86");
+  g.addColorStop(1, "#d98fb0");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, SW, SH);
+  for (let i = 0; i < 14; i++) {
+    ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.4 * Math.abs(Math.sin(abs * 1.3 + i))})`;
+    ctx.fillRect(((i * 97) % 560) + 20, ((i * 173) % 520) + 90, 3, 3);
+  }
+  ctx.save();
+  const z = o.zoom ?? 1;
+  ctx.translate(SW / 2, SH / 2);
+  ctx.scale(z, z);
+  ctx.translate(-SW / 2, -SH / 2);
+  o.art?.(ctx);
+  HOME_GRID.forEach(([kind, label], i) => {
+    const x = 90 + (i % 4) * 140,
+      y = WECHAT_AT[1] - 320 + Math.floor(i / 4) * 160;
+    ctx.save();
+    ctx.translate(x, y);
+    const pr = kind === "wechat" ? clamp(o.press ?? 0) : 0;
+    ctx.scale(1 - 0.06 * pr, 1 - 0.06 * pr);
+    appIcon(ctx, kind);
+    if (pr > 0) {
+      rr(ctx, -ICON / 2, -ICON / 2, ICON, ICON, 26);
+      ctx.fillStyle = `rgba(0,0,0,${0.3 * pr})`;
+      ctx.fill();
+    }
+    ctx.restore();
+    text(ctx, label, x, y + ICON / 2 + 26, { size: 22, font: F.ui, fill: "#fff" });
+  });
+  // dock
+  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  rr(ctx, 24, SH - 176, SW - 48, 136, 44);
+  ctx.fill();
+  (["phone", "sms", "browser", "music"] as AppKind[]).forEach((kind, i) => {
+    ctx.save();
+    ctx.translate(90 + i * 140, SH - 108);
+    appIcon(ctx, kind);
+    ctx.restore();
+  });
+  ctx.restore();
+  statusBar(ctx, { time: o.time, airplane: false, battery: 0.38 });
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  rr(ctx, SW / 2 - 90, SH - 22, 180, 8, 4);
+  ctx.fill();
+}
+
+/** an app's window flying out of (k 0 → 1) or back into (1 → 0) its home-screen icon at `at` */
+export function appWindow(ctx: Ctx, k: number, at: Pt, drawApp: (c: Ctx) => void) {
+  if (k <= 0) return;
+  if (k >= 1) {
+    drawApp(ctx);
+    return;
+  }
+  const s = 0.17 + 0.83 * k;
+  ctx.save();
+  ctx.globalAlpha *= clamp(k * 4);
+  ctx.translate(at[0] + (SW / 2 - at[0]) * k, at[1] + (SH / 2 - at[1]) * k);
+  ctx.scale(s, s * (0.47 + 0.53 * k)); // squarer as it shrinks towards the icon
+  ctx.translate(-SW / 2, -SH / 2);
+  rr(ctx, 0, 0, SW, SH, 60 + 160 * (1 - k));
+  ctx.clip();
+  drawApp(ctx);
+  // it turns into the green icon on the way in
+  ctx.fillStyle = `rgba(7,193,96,${0.9 * (1 - k) * (1 - k)})`;
+  ctx.fillRect(0, 0, SW, SH);
   ctx.restore();
 }
