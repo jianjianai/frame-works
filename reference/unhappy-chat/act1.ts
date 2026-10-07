@@ -210,10 +210,12 @@ function shotMilk(ctx: Ctx, abs: number) {
   deskFront(ctx, 360, 1540, 1.08, 3573);
   // him: walks up, holds out the milk, is left holding it
   const sad = abs > 11.5;
-  const hand: Pt = [lerp(-70, -270, offer), lerp(300, 236, offer)];
+  // holding the milk out like handing someone a card: the upper arm goes down and out to the elbow,
+  // the forearm comes back up to the hand at shoulder height — a "V", elbow below (bendL: 1)
+  const hand: Pt = [lerp(-70, -285, offer), lerp(320, 190, offer)];
   drawKid(ctx, lerp(1260, 830, approach), 800, 1.04, {
     body: "full",
-    legs: approach > 0 && approach < 1 ? "walk" : "stand",
+    legs: approach > 0 && approach < 0.92 ? "walk" : "stand",
     walk: abs * 10,
     eyes: sad ? "sad" : "open",
     mouth: sad ? "frown" : "smile",
@@ -221,9 +223,10 @@ function shotMilk(ctx: Ctx, abs: number) {
     look: [-0.85, 0.35],
     arms: "custom",
     handL: hand,
-    handR: [120, 432],
+    bendL: 1,
+    handR: [130, 456],
     shapeL: "hold",
-    grip: (c) => strawberryMilk(c, hand[0] - 6, hand[1] - 70, 0.72, -0.08, 3590),
+    grip: (c) => strawberryMilk(c, hand[0] - 4, hand[1] - 72, 0.72, -0.04, 3590),
   });
   // the bell
   const bell = 1 - phase(abs, 10.75, 10.95);
