@@ -3,24 +3,19 @@ import { phase, smooth } from "../../../src/engine/math";
 import { Ctx, designScene, flash, glow, pulse } from "./lib/draw";
 import { heart } from "./lib/sets";
 import { ChatItem, bubbleAt, chatScreen2, sendButtonAt } from "./lib/chat";
-import { FingerPos } from "./lib/hand";
-import { ASK_AGAIN, HER, HIM, PHONE_CY, PHONE_S, REST_L, REST_R, HISTORY, afterNight, fromHer, herRoomAt, hisFaceReading, hisRoomMorning, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { ASK_AGAIN, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HISTORY, afterNight, herRoomAt, hisFaceReading, hisRoomMorning, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { HER_WIN, HIS_WIN, street, winC } from "./lib/street";
 import { BAR, END, EV } from "./lib/timeline";
 
 /** ACT 4 (49.14 – 57.0s) · the last loop of the outro
  *  4A his face: it sinks in — then on the downbeat he beams (story.hisFaceReading, from act 3)
- *  4B he answers 「我也是」 and asks 「那周末一起去图书馆？」, the camera nudging in with each one
- *  4C her phone: this time we see who is typing — she types 「嗯！！」 and sends it straight away, nothing deleted,
- *     and a heart
- *  4D his phone: 「嗯！！」 lands (the hook's yellow pulses again) and the heart
+ *  4B his phone, one shot with no cutaways: he answers 「我也是」, asks 「那周末一起去图书馆？」, 「对方正在输入...」 comes
+ *     up and this time an answer lands — 「嗯！！」 (the hook's yellow pulses again) and a heart
  *  4E the street in the morning sun, to the end: the camera pulls back from the two windows, hearts drifting between
  *     them, under 「这一次的「嗯」/ 后面什么都没删」 (the split screen that used to come first was cut) */
 
 const ME_TOO = "我也是";
 const UM = "嗯！！";
-/** her heart sticker, right after her 「嗯！！」 */
-const HER_HEART = EV.herSend + 0.19;
 
 function hisItems(abs: number): ChatItem[] {
   const items: ChatItem[] = [...HISTORY.slice(-3), ...afterNight("his")];
@@ -32,13 +27,15 @@ function hisItems(abs: number): ChatItem[] {
   return items;
 }
 
-// ---------------------------------------------------------------- 4B his answer
-function shotReply(ctx: Ctx, abs: number) {
+// ---------------------------------------------------------------- 4B his phone, one continuous shot
+/** 50.0 → 54.76: no cutaways — he sends 「我也是」 and 「那周末一起去图书馆？」, 「对方正在输入...」 comes up (this time it
+ *  ends in an answer), 「嗯！！」 lands with the hook's yellow pulses, then a heart. The keyboard stays up throughout so
+ *  the conversation never jumps; the camera creeps in, nudges with every message, and settles on the newest ones. */
+function shotChat(ctx: Ctx, abs: number) {
   let draft = "";
   if (abs >= EV.type6[0] && abs < EV.send5) draft = typed(ME_TOO, abs, EV.type6[0], EV.type6[1]);
   else if (abs >= EV.type7[0] && abs < EV.send6) draft = typed(ASK_AGAIN, abs, EV.type7[0], EV.type7[1]);
-  const kb = abs < EV.send6 + 0.15;
-  const view = { title: HER, time: "07:11", me: "boy" as const, them: "girl" as const, items: hisItems(abs), typing: inWin(abs, EV.typingC), draft, caret: kb, keyboard: kb };
+  const view = { title: HER, time: "07:11", me: "boy" as const, them: "girl" as const, items: hisItems(abs), typing: inWin(abs, EV.typingC), draft, caret: true, keyboard: true };
   let hands = { right: REST_R, left: REST_L };
   if (inWin(abs, EV.type6)) hands = typingThumbs(abs, EV.type6[0], EV.type6[1], 61);
   else if (inWin(abs, EV.type7)) hands = typingThumbs(abs, EV.type7[0], EV.type7[1], 71);
@@ -50,60 +47,48 @@ function shotReply(ctx: Ctx, abs: number) {
         hands = { right: { x: sb[0], y: sb[1] + (abs < send - 0.06 ? 30 : 0), touch: abs > send - 0.06 ? 1 : 0.1 }, left: REST_L };
       }
   }
-  // each message he sends gives the camera a little push, and it creeps closer all the while
-  const bump = Math.max(...[EV.send5, EV.send6].map((t) => (abs >= t ? Math.exp(-(abs - t) * 7) : 0)));
-  const s = PHONE_S * (1 + 0.05 * smooth(phase(abs, EV.reply, EV.herTypes[0])) + 0.035 * bump);
-  phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "boy", cy: PHONE_CY + 40 * (s - PHONE_S), s, glowCol: "rgba(255,230,190,0.3)", bg: "#2b2a3a", ...hands });
-}
-
-// ---------------------------------------------------------------- 4C her phone
-function shotHerTypes(ctx: Ctx, abs: number) {
-  const [t0] = EV.herTypes;
-  const items: ChatItem[] = [...fromHer(HISTORY.slice(-3)), ...afterNight("hers")];
-  items.push({ t: "time", text: "07:11" });
-  items.push({ t: "msg", text: ME_TOO });
-  items.push({ t: "msg", text: ASK_AGAIN });
-  if (abs >= EV.herSend) items.push({ t: "msg", me: true, text: UM, pop: pop(abs, EV.herSend) });
-  if (abs >= HER_HEART) items.push({ t: "sticker", me: true, kind: "heart", pop: pop(abs, HER_HEART, 0.25) });
-  // a moment to read his question, then 「嗯！！」 typed in one go and sent
-  const draft = abs < EV.herSend ? typed(UM, abs, t0 + 0.15, t0 + 0.45) : "";
-  const view = { title: HIM, time: "07:11", me: "girl" as const, them: "boy" as const, items, draft, caret: abs < EV.herSend, keyboard: true, sendHot: abs > EV.herSend - 0.08 && abs < EV.herSend ? 1 : 0 };
-  let hands: { right: FingerPos; left: FingerPos } = { right: REST_R, left: REST_L };
-  if (abs > t0 + 0.13 && abs < t0 + 0.47) hands = typingThumbs(abs, t0 + 0.15, t0 + 0.45, 81);
-  else if (abs >= t0 + 0.47 && abs < EV.herSend + 0.1) {
-    const sb = sendButtonAt(ctx, { ...view, draft: UM });
-    hands = { right: { x: sb[0], y: sb[1] + (abs < EV.herSend - 0.06 ? 24 : 0), touch: abs > EV.herSend - 0.06 ? 1 : 0.2 }, left: REST_L };
+  // camera: creeps in; a nudge with every message sent or received; once her answer is in, it settles lower on the
+  // newest messages (screen y ≈ 560, just above the input bar) — there are no lyrics in the outro to keep clear of
+  const bump = Math.max(...[EV.send5, EV.send6, EV.um3, EV.heart].map((t) => (abs >= t ? Math.exp(-(abs - t) * 7) : 0)));
+  const settle = smooth(phase(abs, EV.um3, EV.um3 + 0.6));
+  const s = PHONE_S * (1 + 0.05 * smooth(phase(abs, EV.reply, EV.um3)) + 0.12 * settle + 0.035 * bump);
+  const ay = 640 - 80 * settle,
+    py = PHONE_CY + 40 * (s - PHONE_S) * (1 - settle) + (900 - PHONE_CY) * settle;
+  const cx = 540,
+    cy = py - (ay - 640) * s;
+  phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "boy", cx, cy, s, steady: true, glowCol: "rgba(255,230,190,0.32)", bg: "#2b2a3a", ...hands });
+  const at = (x: number, y: number): [number, number] => [cx + (x - 300) * s, cy + (y - 640) * s];
+  // 「对方正在输入...」 in the title: a soft yellow glow and one ring, like the clue he missed that night
+  if (inWin(abs, EV.typingC)) {
+    const [tx, ty] = at(293, 95);
+    const on = smooth(phase(abs, EV.typingC[0], EV.typingC[0] + 0.12));
+    glow(ctx, tx, ty, 190 * s, `rgba(255,209,102,${0.3 * on})`);
+    const k = phase(abs, EV.typingC[0] + 0.02, EV.typingC[0] + 0.47);
+    if (k > 0 && k < 1) ring(ctx, tx, ty, (150 + 90 * k) * s, (40 + 34 * k) * s, 1 - k);
   }
-  const s = PHONE_S * (1.03 + 0.03 * smooth(phase(abs, t0, EV.herTypes[1])));
-  phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "girl", cy: PHONE_CY, s, glowCol: "rgba(255,170,200,0.32)", bg: "#3a2a3e", ...hands });
-}
-
-// ---------------------------------------------------------------- 4D his phone: 「嗯！！」
-function shotGotIt(ctx: Ctx, abs: number) {
-  const view = { title: HER, time: "07:11", me: "boy" as const, them: "girl" as const, items: hisItems(abs), typing: inWin(abs, EV.typingC), dark: false };
-  const z = smooth(phase(abs, EV.um3, EV.outside));
-  const s = PHONE_S * (1.05 + 0.12 * z);
-  const cy = PHONE_CY + 40 * (s - PHONE_S) - 120 * z;
-  phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "boy", cy, s, steady: true, glowCol: "rgba(255,230,190,0.34)", bg: "#2b2a3a" });
   if (abs < EV.um3) return;
-  // the same yellow pulses as when he got her 37th 「嗯」 in the hook, round the new one — measured, so they sit on it
+  // 「嗯！！」: the same yellow pulses as when he got her 37th 「嗯」 in the hook — measured, so they sit on it (and
+  // follow it up when the heart arrives)
   const b = bubbleAt(ctx, view, view.items.findIndex((it) => it.t === "msg" && it.text === UM));
   if (!b) return;
-  const bx = 540 + (b.x + b.w / 2 - 300) * s,
-    by = cy + (b.y + b.h / 2 - 640) * s;
+  const [bx, by] = at(b.x + b.w / 2, b.y + b.h / 2);
   for (const t of [EV.um3 + 0.02, EV.um3 + 0.22]) {
     const k = phase(abs, t, t + 0.42);
-    if (k <= 0 || k >= 1) continue;
-    ctx.save();
-    ctx.globalAlpha = 1 - k;
-    ctx.strokeStyle = "#ffd166";
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.ellipse(bx, by, (b.w / 2 + 30 + 70 * k) * s, (b.h / 2 + 18 + 40 * k) * s, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+    if (k > 0 && k < 1) ring(ctx, bx, by, (b.w / 2 + 30 + 70 * k) * s, (b.h / 2 + 18 + 40 * k) * s, 1 - k);
   }
   glow(ctx, bx, by, 220 * s, `rgba(255,209,102,${0.25 * pulse(abs, 5)})`);
+}
+
+/** the video's yellow "look here" ring */
+function ring(ctx: Ctx, x: number, y: number, rx: number, ry: number, alpha: number) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = "#ffd166";
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------- 4E the street in the morning
@@ -142,9 +127,7 @@ function shotOutside(ctx: Ctx, abs: number) {
 export function createScene(options: SceneOptions) {
   return designScene(options, BAR(24), (ctx, abs) => {
     if (abs < EV.reply) hisFaceReading(ctx, abs);
-    else if (abs < EV.herTypes[0]) shotReply(ctx, abs);
-    else if (abs < EV.herTypes[1]) shotHerTypes(ctx, abs);
-    else if (abs < EV.outside) shotGotIt(ctx, abs);
+    else if (abs < EV.outside) shotChat(ctx, abs);
     else shotOutside(ctx, abs);
   });
 }
