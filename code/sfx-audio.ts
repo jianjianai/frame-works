@@ -7,7 +7,7 @@ import { seeded } from "../../src/engine/math";
  *  第一支《i have no friends》：typing/send/fail/match/blow/flood/splat/pop/reply
  *  第二支《unhappy》：keys/doorOpen/doorClose/roomDoor/ball/slam/cough/squeak/rain/heartbeat/click/splash/
  *  whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps（小狗版）
- *  《unhappy》聊天版：um/note/typing2/typingLong/del/send2/lamp/powerOff/rustle/rewind2/heartFast/bell/steps/shutter/
+ *  《unhappy》聊天版：um/note/typing2/typingLong/del/send2/lamp/powerOff/rustle/whoosh2/rewind2/heartFast/bell/steps/shutter/
  *  birds/boot/run/store/pay/door/milk/sparkle/stickerPop */
 const SR = 48000;
 const TAU = Math.PI * 2;
@@ -407,6 +407,21 @@ const sounds: Record<string, () => StereoPcm> = {
     const pcm = buffer(0.8);
     const nz = lowpass(41, 0.35);
     add(pcm, 0, 0.7, (t) => nz() * Math.sin((Math.PI * t) / 0.7) * (1.6 + Math.sin(t * 40) * 0.4), 0.3);
+    return pcm;
+  },
+  // the camera swinging across the street and in through her window: noise that brightens, swells and dies
+  whoosh2: () => {
+    const pcm = buffer(0.8);
+    const r = seeded(140);
+    let a = 0,
+      b = 0;
+    add(pcm, 0, 0.7, (t) => {
+      const u = t / 0.7;
+      const k = 0.015 + 0.22 * u * u;
+      a += k * (r() * 2 - 1 - a);
+      b += k * (a - b);
+      return b * 3.4 * Math.sin(Math.PI * Math.min(1, u * 1.12)) ** 1.5;
+    }, 0.3);
     return pcm;
   },
   rewind2: () => {
