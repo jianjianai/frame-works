@@ -39,14 +39,14 @@ function pillow(ctx: Ctx, x: number, y: number, s: number) {
 function shotPretty(ctx: Ctx, abs: number) {
   const out = smooth(phase(abs, 18.2, 18.75)); // her photo fading to black glass
   const refl = abs < 18.3 ? 0 : 0.28 * smooth(phase(abs, 18.3, 18.9)) + 0.32 * smooth(phase(abs, 19.4, 20.0));
-  const push = smooth(phase(abs, 19.45, BAR(10)));
+  const push = smooth(phase(abs, 19.45, EV.uglyEnd));
   // framed so the phone's sides stay in the picture — it has to read as a phone when the screen goes black
   const s = 1.22 + 0.25 * push;
   const ay = 805 + 45 * push; // where both faces sit on screen (face at screen 300, 470)
   // her profile sits low enough that her name clears the lyrics; as the screen dims the camera rises to put
   // her face where his reflection will appear
   const cyNow = abs < 18.5 ? 1161 - 149 * smooth(phase(abs, 18.12, 18.5)) : ay + 170 * s;
-  const avert = smooth(phase(abs, 19.9, 20.25));
+  const avert = smooth(phase(abs, 20.55, 20.9)); // on the word "ugly"
   phoneCloseup(
     ctx,
     abs,
@@ -69,7 +69,7 @@ function shotPretty(ctx: Ctx, abs: number) {
           });
         }, "refl", refl);
         // a glare sliding across the glass, over his face on "ugly"
-        const gx = -320 + 760 * phase(abs, 18.6, BAR(10));
+        const gx = -320 + 760 * phase(abs, 18.6, EV.uglyEnd);
         c.fillStyle = "rgba(255,255,255,0.07)";
         c.beginPath();
         c.moveTo(gx + 160, 0);
@@ -118,7 +118,7 @@ function shotPretty(ctx: Ctx, abs: number) {
   );
   phoneBody(ctx, 540, cyNow, s, -0.02);
   // the room closes in around him
-  const v = smooth(phase(abs, 19.5, BAR(10)));
+  const v = smooth(phase(abs, 19.5, EV.uglyEnd));
   if (v > 0) {
     const g = ctx.createRadialGradient(540, 860, 260, 540, 860, 1000);
     g.addColorStop(0, "rgba(0,0,0,0)");
@@ -130,24 +130,24 @@ function shotPretty(ctx: Ctx, abs: number) {
 
 // ---------------------------------------------------------------- 2B
 function shotTyping(ctx: Ctx, abs: number) {
-  if (abs < 23.4) {
+  if (abs < EV.lieDown) {
     const typing = inWin(abs, EV.typingA) || inWin(abs, EV.typingB);
     // push in on the title bar: 「对方正在输入...」 big
-    const push = smooth(phase(abs, BAR(10), 21.1));
+    const push = smooth(phase(abs, EV.uglyEnd, EV.uglyEnd + 0.55));
     phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing })), { who: "boy", right: REST, cx: 540, cy: lerp(PHONE_CY, 1225, push), s: lerp(PHONE_S, 1.62, push) });
     return;
   }
   // lying in bed, phone held above his face
   fillBg(ctx, "#0a0c1a");
   ctx.save();
-  camera(ctx, 540, 820, 1.0 + 0.04 * smooth(phase(abs, 23.4, BAR(12))));
+  camera(ctx, 540, 820, 1.0 + 0.04 * smooth(phase(abs, EV.lieDown, BAR(12))));
   pillow(ctx, 540, 880, 1.2);
   drawKid(ctx, 540, 820, 1.25, { body: "head", eyes: "sad", look: [0, -0.9], mouth: "flat", tilt: 0.04 });
   duvet(ctx, 975);
   glow(ctx, 540, 380, 700, "rgba(120,150,255,0.35)");
   lightPool(ctx, 540, 520, 1000, 0.55, "rgba(120,150,255,0.18)");
   ctx.restore();
-  card(ctx, "00:47", 70, 330, smooth(phase(abs, 23.5, 23.8)));
+  card(ctx, "00:47", 70, 330, smooth(phase(abs, EV.lieDown + 0.05, EV.lieDown + 0.25)));
 }
 
 // ---------------------------------------------------------------- 2C
@@ -284,7 +284,7 @@ function shotTwist(ctx: Ctx, abs: number) {
 
 export function createScene(options: SceneOptions) {
   return designScene(options, BAR(8), (ctx, abs) => {
-    if (abs < BAR(10)) shotPretty(ctx, abs);
+    if (abs < EV.uglyEnd) shotPretty(ctx, abs);
     else if (abs < BAR(12)) shotTyping(ctx, abs);
     else if (abs < BAR(14)) shotOff(ctx, abs);
     else shotTwist(ctx, abs);
