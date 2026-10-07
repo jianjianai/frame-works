@@ -1,25 +1,22 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, backOut, blob, camera, card, designScene, fillBg, flash, glow, inkLine, paint, poly, rr, text } from "./lib/draw";
+import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text } from "./lib/draw";
 import { drawKid } from "./lib/kid";
-import { CAST, drawPerson } from "./lib/people";
-import { classroomFront, deskFront, herBlanket, herRoom, schoolHall } from "./lib/places";
-import { heart, lightPool } from "./lib/sets";
-import { BACKSPACE_AT, ChatItem, chatScreen2, selfiePhoto, sendButtonAt } from "./lib/chat";
+import { bedBlanket, bedroom, classroomFront, deskFront, herBlanket, herRoom } from "./lib/places";
+import { heart } from "./lib/sets";
+import { BACKSPACE_AT, ChatItem, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
-import { notification } from "./lib/phone";
-import { FRIEND_ADVICE, GIVE_UP, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { SH, SW, lockScreen, notification } from "./lib/phone";
+import { FRIEND_ADVICE, GIVE_UP, HER, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
-/** ACT 3 (32.79 – 49.14s) · 她的视角
+/** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
  *  3A rewind to 23:12: his long message lands; she squeals, types a long happy reply… her friend's advice
  *     pops up — she deletes it all and sends 「嗯」 (that's why 「对方正在输入...」 flickered)
- *  3B class, her side: when their eyes met she went bright red behind the book; her friends coach her
- *     「回个嗯就行」 and take a selfie — the very photo he saw in her 朋友圈
- *  3C back to 00:52: she wipes her tears and types everything, this time to the end
- *  3D she sends it — but his phone is off; she waits, and falls asleep holding it */
+ *  3B class, her side: when their eyes met she went bright red behind the book ("You never ever pay attention to me")
+ *  3C back to 00:52: she wipes her tears, types everything and sends it — he never answers; she falls asleep
+ *  3D 07:10 his room: the phone has been off all night; he turns it on and her message lands */
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const REST: FingerPos = { x: 480, y: 1180, touch: 0.2 };
 
 /** her phone's conversation at a given moment of the replay / present */
@@ -136,7 +133,7 @@ function shotReplay(ctx: Ctx, abs: number) {
   ctx.restore();
 }
 
-// ---------------------------------------------------------------- 3B class + friends, her side
+// ---------------------------------------------------------------- 3B class, her side
 function shotSchool(ctx: Ctx, abs: number) {
   if (abs < EV.hide2) {
     ctx.save();
@@ -150,92 +147,52 @@ function shotSchool(ctx: Ctx, abs: number) {
     card(ctx, "那天上课", 70, 330, smooth(phase(abs, BAR(18) + 0.05, BAR(18) + 0.3)));
     return;
   }
-  if (abs < BAR(19)) {
-    // behind the book: bright red, heart going crazy
-    const beat = Math.max(0, Math.sin((abs - EV.hide2) * Math.PI * 4.2));
-    fillBg(ctx, "#efe6cf");
-    ctx.save();
-    camera(ctx, 540, 900, 1.0 + 0.04 * beat);
-    glow(ctx, 540, 860, 800, "rgba(255,170,190,0.4)");
-    drawKid(ctx, 540, 860, 1.3, {
-      who: "girl",
-      outfit: "cardigan",
-      body: "bust",
-      eyes: "wide",
-      mouth: "bite",
-      blush: 1,
-      look: [0, 0.3],
-      arms: "custom",
-      handL: [-150, 200],
-      handR: [150, 200],
-      shapeL: "hold",
-      shapeR: "hold",
-      grip: (c) => {
-        c.save();
-        c.translate(0, 260);
-        blob(c, [[-180, -90], [180, -96], [186, 110], [-174, 116]], 3820, 1.2);
-        paint(c, "#7fb2d9", C.ink, 6);
-        inkLine(c, [[0, -94], [2, 112]], 3821, 4, "#4a7aa0");
-        c.restore();
-      },
-    });
-    ctx.restore();
-    // pounding heart doodle + 扑通
-    ctx.save();
-    ctx.translate(840, 640);
-    const k = 1 + 0.25 * beat;
-    ctx.scale(k, k);
-    heart(ctx, 0, 0, 46, "#ff4d6d", 3822);
-    ctx.restore();
-    text(ctx, "扑通 扑通", 820, 520, { size: 52, font: F.cn, fill: "#ff4d6d", stroke: C.ink, lw: 8, alpha: 0.6 + 0.4 * beat });
-    return;
-  }
-  // friends coaching her, then the selfie
-  const flash0 = EV.shutter;
-  if (abs < flash0 + 0.05) {
-    ctx.save();
-    camera(ctx, 540, 900, 1.02);
-    schoolHall(ctx, abs);
-    drawPerson(ctx, 230, 700, 0.66, { ...CAST.mei, face: "laugh", arms: abs > 39.6 ? "phone" : "point", body: "full" });
-    drawPerson(ctx, 850, 710, 0.66, { ...CAST.qi, face: "smile", arms: abs > 39.6 ? "up" : "laugh", body: "full" });
-    drawKid(ctx, 540, 720, 0.64, { who: "girl", outfit: "cardigan", body: "full", eyes: abs > 39.6 ? "happy" : "wide", mouth: abs > 39.6 ? "grin" : "o", blush: 0.9, arms: abs > 39.6 ? "custom" : "face", handR: [150, 120], shapeR: "open" });
-    ctx.restore();
-    const b = smooth(phase(abs, 39.0, 39.18)) * (1 - smooth(phase(abs, 39.7, 39.85)));
-    if (b > 0) {
-      ctx.save();
-      ctx.globalAlpha = b;
-      ctx.translate(330, 420);
-      blob(ctx, [[-250, -80], [250, -90], [262, 70], [-60, 80], [-110, 140], [-110, 80], [-240, 76]], 3830, 1.4);
-      paint(ctx, "#fff", C.ink, 6);
-      text(ctx, "回个「嗯」就行！", 0, -24, { size: 46, font: F.cn, fill: "#222" });
-      text(ctx, "别太主动！", 0, 32, { size: 46, font: F.cn, fill: "#e8343c" });
-      ctx.restore();
-    }
-    return;
-  }
-  // freeze into the photo from his feed
-  fillBg(ctx, "#1c1a22");
-  const k = backOut(phase(abs, flash0 + 0.05, flash0 + 0.35));
+  // behind the book: bright red, heart going crazy
+  const beat = Math.max(0, Math.sin((abs - EV.hide2) * Math.PI * 4.2));
+  fillBg(ctx, "#efe6cf");
   ctx.save();
-  ctx.translate(540, 820);
-  ctx.rotate(-0.04);
-  ctx.scale(0.85 + 0.15 * k, 0.85 + 0.15 * k);
-  rr(ctx, -330, -360, 660, 780, 12);
-  ctx.fillStyle = "#fbfaf4";
-  ctx.fill();
-  selfiePhoto(ctx, -300, -330, 600, 600, abs, "happy");
-  text(ctx, "今天好开心～", 0, 340, { size: 52, font: F.cn, fill: "#333" });
+  camera(ctx, 540, 900, 1.0 + 0.04 * beat + 0.05 * smooth(phase(abs, EV.hide2, EV.now)));
+  glow(ctx, 540, 860, 800, "rgba(255,170,190,0.4)");
+  drawKid(ctx, 540, 860, 1.3, {
+    who: "girl",
+    outfit: "cardigan",
+    body: "bust",
+    eyes: "wide",
+    mouth: "bite",
+    blush: 1,
+    look: [0, 0.3],
+    arms: "custom",
+    handL: [-150, 200],
+    handR: [150, 200],
+    shapeL: "hold",
+    shapeR: "hold",
+    grip: (c) => {
+      c.save();
+      c.translate(0, 260);
+      blob(c, [[-180, -90], [180, -96], [186, 110], [-174, 116]], 3820, 1.2);
+      paint(c, "#7fb2d9", C.ink, 6);
+      inkLine(c, [[0, -94], [2, 112]], 3821, 4, "#4a7aa0");
+      c.restore();
+    },
+  });
   ctx.restore();
-  flash(ctx, 1 - phase(abs, flash0 + 0.05, flash0 + 0.4), "#fff");
+  // pounding heart doodle + 扑通
+  ctx.save();
+  ctx.translate(840, 640);
+  const k = 1 + 0.25 * beat;
+  ctx.scale(k, k);
+  heart(ctx, 0, 0, 46, "#ff4d6d", 3822);
+  ctx.restore();
+  text(ctx, "扑通 扑通", 820, 520, { size: 52, font: F.cn, fill: "#ff4d6d", stroke: C.ink, lw: 8, alpha: 0.6 + 0.4 * beat });
 }
 
-// ---------------------------------------------------------------- 3C / 3D present: she sends everything
+// ---------------------------------------------------------------- 3C present: she sends everything
 function shotSend(ctx: Ctx, abs: number) {
   if (abs < EV.type4[0]) {
     ctx.save();
     camera(ctx, 420, 900, 1.1);
     herRoom(ctx, abs, { lights: 1 });
-    const wipe = abs < 41.35;
+    const wipe = abs < 39.95;
     drawKid(ctx, 330, 700, 0.66, {
       who: "girl",
       outfit: "pajamas",
@@ -254,10 +211,10 @@ function shotSend(ctx: Ctx, abs: number) {
     });
     herBlanket(ctx);
     ctx.restore();
-    card(ctx, "00:52", 70, 330, smooth(phase(abs, BAR(20) + 0.05, BAR(20) + 0.3)));
+    card(ctx, "00:52", 70, 330, smooth(phase(abs, EV.now + 0.05, EV.now + 0.3)));
     return;
   }
-  if (abs < 46.2) {
+  if (abs < 43.6) {
     const draft = abs < EV.send3 ? typed(HER_CONFESSION, abs, EV.type4[0], EV.type4[1]) : "";
     const view = { title: HIM, time: "00:58", me: "girl" as const, them: "boy" as const, items: herItems(abs, "present"), dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
     let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: { x: 120, y: 1180, touch: 0.2 } };
@@ -270,12 +227,11 @@ function shotSend(ctx: Ctx, abs: number) {
     phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "girl", cy: 860, glowCol: "rgba(255,170,200,0.24)", ...hands });
     return;
   }
-  // waiting… falling asleep with the phone
-  const asleep = abs > 48.0;
-  const dawn = smooth(phase(abs, 48.3, BAR(24)));
+  // waiting… no answer; she falls asleep holding the phone
+  const asleep = abs > EV.asleep;
   ctx.save();
-  camera(ctx, 420, 900, 1.1);
-  herRoom(ctx, abs, { lights: 1 - dawn * 0.5, dawn: dawn * 0.6 });
+  camera(ctx, 420, 900, 1.1 + 0.04 * smooth(phase(abs, 43.6, EV.dawn)));
+  herRoom(ctx, abs, { lights: 1 - 0.45 * smooth(phase(abs, EV.asleep, EV.dawn)) });
   drawKid(ctx, 320, 720, 0.64, {
     who: "girl",
     outfit: "pajamas",
@@ -290,17 +246,59 @@ function shotSend(ctx: Ctx, abs: number) {
   herBlanket(ctx);
   ctx.restore();
   const cards: [string, number, number][] = [
-    ["01:30", 46.3, 47.3],
-    ["03:00", 47.35, 48.4],
+    ["01:30", 43.65, 44.35],
+    ["03:00", 44.4, EV.dawn],
   ];
   for (const [s, a, b] of cards) card(ctx, s, 70, 330, smooth(phase(abs, a, a + 0.12)) * (1 - phase(abs, b - 0.1, b)));
+}
+
+// ---------------------------------------------------------------- 3D the next morning, his side
+function shotDawn(ctx: Ctx, abs: number) {
+  if (abs < 46.3) {
+    // the phone has been off all night
+    ctx.save();
+    camera(ctx, 700, 900, 1.06);
+    bedroom(ctx, abs, { dawn: 1 });
+    drawKid(ctx, 840, 620, 0.78, { body: "bust", eyes: abs < 45.55 ? "shut" : "tired", mouth: "flat", look: [0, 0.9], arms: "phone" });
+    bedBlanket(ctx);
+    ctx.restore();
+    card(ctx, "07:10", 70, 330, smooth(phase(abs, EV.dawn + 0.05, EV.dawn + 0.3)));
+    return;
+  }
+  if (abs < EV.read) {
+    const booted = abs > 46.95;
+    const n = pop(abs, EV.um2, 0.22);
+    phoneCloseup(
+      ctx,
+      abs,
+      (c) => {
+        if (abs < EV.boot - 0.03) {
+          c.fillStyle = "#050507";
+          c.fillRect(0, 0, SW, SH);
+        } else if (!booted) bootScreen(c, smooth(phase(abs, EV.boot - 0.03, EV.boot + 0.2)));
+        else {
+          lockScreen(c, { time: "07:10", airplane: false, battery: 0.21 }, { date: "10月7日 星期二" });
+          if (n > 0) {
+            c.save();
+            c.translate(0, -120 * (1 - n));
+            notification(c, 24, 360, 552, { title: HER, body: HER_CONFESSION, time: "00:58" }, n);
+            c.restore();
+          }
+        }
+      },
+      { who: "boy", right: REST, cy: 880, glowCol: "rgba(255,230,190,0.28)", bg: "#2b2a3a" },
+    );
+    return;
+  }
+  hisFaceReading(ctx, abs);
 }
 
 export function createScene(options: SceneOptions) {
   return designScene(options, BAR(16), (ctx, abs) => {
     if (abs < BAR(18)) shotReplay(ctx, abs);
-    else if (abs < BAR(20)) shotSchool(ctx, abs);
-    else shotSend(ctx, abs);
+    else if (abs < EV.now) shotSchool(ctx, abs);
+    else if (abs < EV.dawn) shotSend(ctx, abs);
+    else shotDawn(ctx, abs);
     // rewind flicker into her point of view
     const rw = 1 - phase(abs, BAR(16), BAR(16) + 0.7);
     if (rw > 0) {
@@ -318,7 +316,3 @@ export function createScene(options: SceneOptions) {
     }
   });
 }
-
-void glow;
-void lightPool;
-void poly;
