@@ -206,54 +206,24 @@ function shotOff(ctx: Ctx, abs: number) {
   }
   if (abs < EV.curledUp) underBlanket(ctx, abs);
   else {
-    shotCurledUp(ctx, abs);
+    shotLitWindow(ctx, abs);
     card(ctx, "00:52", 70, 330, smooth(phase(abs, EV.curledUp + 0.05, EV.curledUp + 0.3)));
   }
 }
 
-/** 27.67 → 28.70 "That makes me…": the dark room from above the bed — he is a lump under the duvet, the phone off
- *  beside the pillow — and the camera drifts towards the window */
-function shotCurledUp(ctx: Ctx, abs: number) {
-  const k = smooth(phase(abs, EV.curledUp, BAR(14)));
-  ctx.save();
-  camera(ctx, 640 - 300 * k, 860 - 300 * k, 1.0 + 0.3 * k);
-  bedroom(ctx, abs, {});
-  // hair peeking out at the pillow, then the duvet over him, curled up
-  for (let i = 0; i < 5; i++) {
-    const hx = 600 + i * 22;
-    poly(ctx, [[hx - 16, 838], [hx, 790 - (i % 2) * 14], [hx + 16, 838]], 3740 + i, 0.8);
-    paint(ctx, C.hair, C.ink, 4);
-  }
-  blob(ctx, [[560, 880], [660, 812], [800, 786], [940, 806], [1060, 862], [1160, 920], [1160, 1150], [420, 1162], [440, 990]], 3745, 1.6);
-  paint(ctx, "#33456e", C.ink, 6);
-  inkLine(ctx, [[640, 900], [780, 860], [920, 880]], 3746, 4, "#26375a");
-  inkLine(ctx, [[560, 1040], [820, 1000], [1100, 1050]], 3747, 4, "#26375a");
-  // his phone, switched off, on the mattress
-  ctx.save();
-  ctx.translate(500, 1010);
-  ctx.rotate(-0.25);
-  rr(ctx, -34, -60, 68, 120, 14);
-  ctx.fillStyle = "#0b0b0e";
-  ctx.fill();
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = C.ink;
-  ctx.stroke();
-  ctx.restore();
-  ctx.restore();
-  // lamp off: only the window light
-  ctx.fillStyle = "rgba(4,6,20,0.5)";
-  ctx.fillRect(0, 0, W, H);
-  glow(ctx, 250 + 300 * k, 470 + 300 * k, 520, "rgba(120,140,220,0.18)");
-}
-
-/** 28.70 → 29.82 "…unhappy": out of his window, across the dark blocks — one window is still lit, with fairy
- *  lights and someone holding a glowing phone. The camera pushes into it; the twist cuts inside. */
+/** 27.67 → 29.82 "That makes me unhappy": two windows on the same night. */
 function shotLitWindow(ctx: Ctx, abs: number) {
-  const k = phase(abs, BAR(14), EV.twist);
-  const z = 1 + 1.9 * k * k;
+  // the same night from outside: his window dark (he has switched everything off), then across the street the
+  // only window still lit is hers. Camera: hold on his → pull back to both → push into hers.
+  const a = smooth(phase(abs, 28.35, 28.9)),
+    b = phase(abs, 28.9, EV.twist);
+  const cx0 = 205 + (420 - 205) * a + (580 - 420) * smooth(b),
+    cy0 = 790 + (930 - 790) * a + (1025 - 930) * smooth(b);
+  const z = (1.9 + 0.1 * phase(abs, EV.curledUp, 28.35)) * (1 - a) + 1.0 * a + 1.9 * b * b;
   fillBg(ctx, vgrad(ctx, 0, H, [[0, "#0b1030"], [1, "#232b57"]]));
   ctx.save();
-  camera(ctx, 580, 1025, z);
+  camera(ctx, 540, 960, z);
+  ctx.translate(540 - cx0, 960 - cy0); // world point (cx0, cy0) at the centre of the frame
   // moon and a few stars
   oval(ctx, 860, 300, 46, 46, 3760, 0.8);
   paint(ctx, "#f3eccf", null);
@@ -274,6 +244,43 @@ function shotLitWindow(ctx: Ctx, abs: number) {
           ctx.fillRect(bx + 18 + c * 40, H - bh + 30 + r * 70, 22, 30);
         }
   }
+  // his block on the left: his window dark — the poster and the curtain just visible in the moonlight
+  poly(ctx, [[-60, 600], [330, 590], [336, 2000], [-60, 2000]], 3770, 1.2);
+  paint(ctx, "#1a1f3b", C.ink, 6);
+  for (let r = 0; r < 10; r++)
+    for (let c = 0; c < 2; c++) {
+      if (r === 1 && c === 1) continue;
+      rr(ctx, 30 + c * 150, 660 + r * 140, 90, 100, 6);
+      ctx.fillStyle = "#10142a";
+      ctx.fill();
+    }
+  rr(ctx, 160, 720, 110, 130, 6);
+  ctx.fillStyle = "#151c3a";
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = C.ink;
+  ctx.stroke();
+  rr(ctx, 200, 740, 46, 58, 3);
+  ctx.fillStyle = "#2c2442";
+  ctx.fill();
+  ctx.strokeStyle = "#5d4f86";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(223, 762, 11, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = "#262a4c";
+  ctx.beginPath();
+  ctx.moveTo(160, 720);
+  ctx.lineTo(186, 720);
+  ctx.quadraticCurveTo(176, 790, 192, 850);
+  ctx.lineTo(160, 850);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(200,210,255,0.12)";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(170, 840);
+  ctx.lineTo(250, 730);
+  ctx.stroke();
   // her block, every window dark but one
   poly(ctx, [[380, 640], [760, 630], [770, 2000], [372, 2000]], 3761, 1.2);
   paint(ctx, "#1d2342", C.ink, 6);
@@ -309,22 +316,6 @@ function shotLitWindow(ctx: Ctx, abs: number) {
   ctx.fill();
   ctx.fillStyle = "#bfe0ff";
   ctx.fillRect(582, 1046, 9, 6);
-  ctx.restore();
-  // his window frame, left behind as the camera goes out through it
-  const f = 1 + 3.5 * k;
-  ctx.save();
-  ctx.translate(560, 990);
-  ctx.scale(f, f);
-  ctx.globalAlpha = 1 - smooth(phase(abs, BAR(14), BAR(14) + 0.6));
-  ctx.strokeStyle = "#141830";
-  ctx.lineWidth = 26;
-  ctx.strokeRect(-470, -820, 940, 1640);
-  ctx.beginPath();
-  ctx.moveTo(0, -820);
-  ctx.lineTo(0, 820);
-  ctx.moveTo(-470, -80);
-  ctx.lineTo(470, -80);
-  ctx.stroke();
   ctx.restore();
 }
 
