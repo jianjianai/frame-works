@@ -7,7 +7,7 @@ import { heart } from "./lib/sets";
 import { BACKSPACE_AT, ChatItem, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW, lockScreen, notification } from "./lib/phone";
-import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
@@ -250,7 +250,8 @@ function shotSend(ctx: Ctx, abs: number) {
     return;
   }
   if (abs < 43.6) {
-    const draft = abs < EV.send3 ? typed(HER_CONFESSION, abs, EV.type4[0], EV.type4[1]) : "";
+    // she picks up the paragraph she couldn't send, rewrites it, adds to it, and sends it
+    const draft = abs < EV.send3 ? editing(abs, EV.type4[0], EV.type4[1], HER_NIGHT_DRAFT, CONFESSION_EDITS) : "";
     const view = { title: HIM, time: "00:58", me: "girl" as const, them: "boy" as const, items: herItems(abs, "present"), dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
     let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
     if (inWin(abs, EV.type4)) hands = typingThumbs(abs, EV.type4[0], EV.type4[1], 41);
