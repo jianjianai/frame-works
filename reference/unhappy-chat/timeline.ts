@@ -35,7 +35,7 @@ export const EV = {
   // her 「嗯」 — runs on to the power-off at BAR(12)
   uglyEnd: 21.541,
   typingA: [21.85, 22.45] as const,
-  typingB: [22.95, 23.6] as const,
+  typingB: [23.12, 23.55] as const, // in the second phone shot (23.07–23.59)
   powerOff: 25.06, // one quick swipe, the screen goes black
   blanket: 25.25, // the duvet goes up over his head
   muffle: [25.7, 26.45] as const, // under the duvet with him (the music is muffled only here)
