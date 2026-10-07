@@ -28,7 +28,7 @@ function hisItems(abs: number): ChatItem[] {
 }
 
 // ---------------------------------------------------------------- 4B his phone, one continuous shot
-/** 50.0 → 54.76: no cutaways — he sends 「我也是」 and 「那周末一起去图书馆？」, 「对方正在输入...」 comes up (this time it
+/** 49.91 → 54.76: no cutaways — he sends 「我也是」 and 「那周末一起去图书馆？」, 「对方正在输入...」 comes up (this time it
  *  ends in an answer), 「嗯！！」 lands with the hook's yellow pulses, then a heart. The keyboard stays up throughout so
  *  the conversation never jumps; the camera creeps in, nudges with every message, and settles on the newest ones. */
 function shotChat(ctx: Ctx, abs: number) {

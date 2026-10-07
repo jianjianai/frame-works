@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text, writeOn, pulse, filtered, rr } from "./lib/draw";
+import { BEAT, C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text, writeOn, pulse, filtered, rr } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook, classroomFront, strawberryMilk } from "./lib/places";
 import { heart } from "./lib/sets";
@@ -52,7 +52,7 @@ function littleHearts(ctx: Ctx, abs: number, t0: number, x: number, y: number, n
 
 // ---------------------------------------------------------------- 3A the 「嗯」, from her side
 function shotReplay(ctx: Ctx, abs: number) {
-  if (abs < 33.6) {
+  if (abs < EV.type3[0]) {
     const happy = abs > EV.ding2 + 0.08;
     ctx.save();
     camera(ctx, 420, 900, 1.08);
@@ -74,7 +74,7 @@ function shotReplay(ctx: Ctx, abs: number) {
     return;
   }
   // types a long happy reply → 小美's message drops in → she opens it and reads 「回个嗯就行」 → back to his chat →
-  // deletes all of it → types just 「嗯」 → sends; the chat holds on that 「嗯」 (the same one he got at 0:01.85)
+  // deletes all of it → types just 「嗯」 → sends; the chat holds on that 「嗯」 (the same one he got at 0:01.86)
   const umTyped = EV.del3[1] + 0.04;
   let draft = "";
   if (abs < EV.del3[0]) draft = typed(HER_REPLY_DRAFT, abs, EV.type3[0], EV.type3[1]);
@@ -184,7 +184,7 @@ function shotSchool(ctx: Ctx, abs: number) {
       brows: "worried",
       mouth: "bite",
       blush: 1,
-      look: (abs < 37.85 ? [0.3, 0.1] : [-0.45, 0.3]) as [number, number],
+      look: (abs < EV.peek ? [0.3, 0.1] : [-0.45, 0.3]) as [number, number],
       arms: "custom",
       // arms straight down behind the book (bent elbows would stick out at the sides)
       handL: [-128, 440],
@@ -252,7 +252,7 @@ function shotSend(ctx: Ctx, abs: number) {
     ctx.save();
     camera(ctx, 420, 900, 1.1);
     herRoom(ctx, abs, { lights: 1 });
-    const wipe = abs < 39.72;
+    const wipe = abs < EV.wiped;
     drawKid(ctx, 330, 700, 0.66, {
       who: "girl",
       outfit: "pajamas",
@@ -316,11 +316,11 @@ function shotSend(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 3C+ the night passes
-/** 44.75 → 46.30 "…for a couple of weeks": the street again, both windows. Hers goes dark (she has fallen asleep);
+/** 44.80 → 46.33 "…for a couple of weeks": the street again, both windows. Hers goes dark (she has fallen asleep);
  *  the night runs on into morning — the moon sets, the sun comes up between the blocks — and the camera goes in
  *  through his window: 07:10, he is sitting up with the phone that has been off all night */
 function shotNight(ctx: Ctx, abs: number) {
-  const day = smooth(phase(abs, 45.0, 45.7));
+  const day = smooth(phase(abs, EV.herLightOff + 0.05, 45.75));
   const both: [number, number] = [470, 1040];
   const his = winC(HIS_WIN);
   const w = phase(abs, EV.intoHis[0], EV.intoHis[1]);
@@ -389,7 +389,7 @@ function shotDawn(ctx: Ctx, abs: number) {
         lockScreen(c, { time: "07:10", airplane: false, battery: 0.21 }, { date: "10月7日 星期二" });
         let y = NOTE_Y;
         notes.forEach((n, i) => {
-          const k = pop(abs, EV.um2 + i * 0.12, 0.2);
+          const k = pop(abs, EV.um2 + (i * BEAT) / 4, 0.2); // a sixteenth apart
           if (k <= 0) return;
           c.save();
           c.translate(0, -60 * (1 - k));
@@ -415,7 +415,7 @@ function umSpot(abs: number) {
 /** over her memory, outside the film: the time cards, and round the sent 「嗯」 two yellow pulses (like the hook) and
  *  a red-pen note — everything else was deleted */
 function memoryNotes(ctx: Ctx, abs: number) {
-  card(ctx, "10月6日 23:12", 70, 330, smooth(phase(abs, BAR(16) + 0.15, BAR(16) + 0.4)) * (1 - phase(abs, 33.5, 33.6)));
+  card(ctx, "10月6日 23:12", 70, 330, smooth(phase(abs, BAR(16) + 0.15, BAR(16) + 0.4)) * (1 - phase(abs, EV.type3[0] - 0.1, EV.type3[0])));
   card(ctx, "那天上课", 70, 330, smooth(phase(abs, EV.hide2 + 0.05, EV.hide2 + 0.3)) * (1 - phase(abs, EV.afterClass - 0.1, EV.afterClass)));
   card(ctx, "放学后", 70, 330, smooth(phase(abs, EV.afterClass + 0.05, EV.afterClass + 0.25)) * (1 - phase(abs, EV.now - 0.1, EV.now)));
   if (abs <= EV.send2 || abs >= EV.umHold) return;

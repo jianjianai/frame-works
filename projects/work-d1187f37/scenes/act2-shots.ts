@@ -149,7 +149,8 @@ function shotPretty(ctx: Ctx, abs: number) {
  *  in his pupil grows until it is his phone) — her 「嗯」; 「对方正在输入...」 comes and goes twice at the top (the
  *  video's yellow "look here" pulse, for us), then the camera sinks into the 「嗯」 until it fills the frame. */
 const T2 = [beatAt(42), beatAt(44), BAR(12)];
-const DIVE = [23.45, 24.5];
+/** the camera sinks into her 「嗯」 from the beat the second 「对方正在输入...」 ends on */
+const DIVE = [beatAt(46), 24.5];
 
 /** her 「嗯」 (screen 145, 948) held at (ux, uy) under a spotlight that closes to darkness `dk`, glowing a little on
  *  every beat; the clue he misses — 「对方正在输入...」 in the title bar (screen 293, 95) — gets the yellow pulse */
@@ -234,8 +235,8 @@ function screenLit(ctx: Ctx, cy: number, band: number, alpha = 1) {
   ctx.restore();
 }
 
-/** when the camera starts going into his eye */
-const EYE_DIVE = 22.1;
+/** when the camera starts going into his eye (on the beat) */
+const EYE_DIVE = beatAt(43);
 
 /** 21.54 → 22.56 "Will you even": his face, crying, lit by the screen; the camera moves in to his eyes — and on through
  *  one of them. The screen reflected in his pupils is the real picture of his phone (drawn small, framed like the
@@ -293,7 +294,7 @@ function hisTears(ctx: Ctx, abs: number) {
 }
 
 /** 22.56 → 24.61 "love me anymore / Love me": her 「嗯」 under the spotlight, the clue flickering at the top twice;
- *  then (23.45) the camera sinks into the 「嗯」 — brought to the middle and swelling until it fills the frame */
+ *  then (23.59) the camera sinks into the 「嗯」 — brought to the middle and swelling until it fills the frame */
 function umDive(ctx: Ctx, abs: number) {
   const d = smooth(phase(abs, DIVE[0], DIVE[1]));
   const zs = Math.exp(Math.log(1.02) + (Math.log(6) - Math.log(1.02)) * d);
@@ -309,10 +310,10 @@ function shotTyping(ctx: Ctx, abs: number) {
 // ---------------------------------------------------------------- 2C
 function shotOff(ctx: Ctx, abs: number) {
   if (abs < EV.blanket) {
-    // one quick swipe across 滑动来关机 and the screen goes black
-    const slide = smooth(phase(abs, 24.7, 25.0));
-    const right: FingerPos = abs < 24.66 ? REST : { x: lerp(115, 485, slide), y: 255, touch: abs < 25.02 ? 1 : 0.2 };
-    const black = smooth(phase(abs, 25.0, EV.powerOff + 0.1));
+    // one quick swipe across 滑动来关机, landing on the "and" (EV.powerOff), and the screen goes black
+    const slide = smooth(phase(abs, EV.powerOff - 0.2, EV.powerOff));
+    const right: FingerPos = abs < EV.powerOff - 0.23 ? REST : { x: lerp(115, 485, slide), y: 255, touch: abs < EV.powerOff + 0.02 ? 1 : 0.2 };
+    const black = smooth(phase(abs, EV.powerOff, EV.powerOff + 0.12));
     phoneCloseup(
       ctx,
       abs,

@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, W, backOut, curve, designScene, easeOut, font, jit, measure, paint, rr, sinceBeat, text, writeOn } from "./lib/draw";
+import { BEAT, C, Ctx, F, W, backOut, curve, designScene, easeOut, font, jit, measure, paint, rr, sinceBeat, text, writeOn } from "./lib/draw";
 import { heart } from "./lib/sets";
 import { LINES, Line } from "./lib/lyrics-data";
 import { END, EV } from "./lib/timeline";
@@ -268,7 +268,7 @@ function hook(ctx: Ctx, abs: number) {
     ctx.translate(W / 2, 300);
     ctx.scale(k, k);
     text(ctx, "我发了一大段", 0, -50, { size: 88, font: F.cn, fill: "#fff", stroke: C.ink, lw: 14 });
-    const bump = abs > 1.85 && abs < 2.2 ? Math.sin(phase(abs, 1.85, 2.2) * Math.PI) * 0.18 : 0;
+    const bump = abs > EV.um1 && abs < EV.um1 + 0.35 ? Math.sin(phase(abs, EV.um1, EV.um1 + 0.35) * Math.PI) * 0.18 : 0;
     ctx.save();
     ctx.translate(0, 74);
     ctx.scale(1 + bump * 0.3, 1 + bump * 0.3);
@@ -326,7 +326,9 @@ function caption(ctx: Ctx, abs: number, a0: number, a1: number, l1: [string, num
  *  「点赞的人，喜欢的人都会秒回你」, tied to the story: a quick reply instead of a slow 「嗯」) and a comment prompt (the
  *  rewatch question with something to type: 「答案打在评论区」). Both stay to the last frame. */
 function captions(ctx: Ctx, abs: number) {
-  const t0 = EV.outside + 0.15;
+  // the double tap lands on the two sixteenths after the downbeat (54.89, 55.02); the second one pops the heart
+  const t0 = EV.outside + BEAT / 4,
+    t1 = t0 + BEAT / 4;
   if (abs < t0 || abs > END) return;
   const out = 1 - phase(abs, END - 0.12, END);
   const hx = W / 2,
@@ -334,7 +336,7 @@ function captions(ctx: Ctx, abs: number) {
   ctx.save();
   ctx.globalAlpha = out;
   // 1) like: double tap — ripples, then the heart pops and throws off little ones, beating with the music
-  for (const t of [t0, t0 + 0.14]) {
+  for (const t of [t0, t1]) {
     const k = phase(abs, t, t + 0.35);
     if (k <= 0 || k >= 1) continue;
     ctx.save();
@@ -346,9 +348,9 @@ function captions(ctx: Ctx, abs: number) {
     ctx.stroke();
     ctx.restore();
   }
-  const pop = backOut(phase(abs, t0 + 0.14, t0 + 0.45));
+  const pop = backOut(phase(abs, t1, t0 + 0.45));
   if (pop > 0) {
-    const burst = phase(abs, t0 + 0.14, t0 + 0.75);
+    const burst = phase(abs, t1, t0 + 0.75);
     if (burst < 1)
       for (let i = 0; i < 7; i++) {
         const ang = -Math.PI / 2 + (i - 3) * 0.42;

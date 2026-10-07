@@ -126,11 +126,13 @@ const sounds: Record<string, () => StereoPcm> = {
     }, 0.3);
     return pcm;
   },
-  // her heart pounding behind the book
+  // her heart pounding behind the book: one lub-dub on every beat of the song (60 / 117.39 s), in step with the
+  // heart doodle that pulses on the beat
   heartbeat: () => {
-    const pcm = buffer(1.8);
+    const beat = 60 / 117.39;
+    const pcm = buffer(2.2);
     for (let k = 0; k < 4; k++) {
-      const at = k * 0.4;
+      const at = k * beat;
       add(pcm, at, 0.16, (t) => attack(t, 0.01) * Math.sin(TAU * 58 * t) * Math.exp(-t * 18), 0.7);
       add(pcm, at + 0.14, 0.18, (t) => attack(t, 0.01) * Math.sin(TAU * 50 * t) * Math.exp(-t * 16), 0.5);
     }

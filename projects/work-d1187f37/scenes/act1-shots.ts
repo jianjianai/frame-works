@@ -36,7 +36,7 @@ function hookCamera(abs: number) {
   if (abs >= EV.um1) {
     const k = backOut(phase(abs, EV.um1, EV.um1 + 0.16));
     // stop lower and a little less close so his long message stays under the hook text
-    s = s + (1.4 - s) * k + 0.05 * phase(abs, EV.um1 + 0.16, 2.95);
+    s = s + (1.4 - s) * k + 0.05 * phase(abs, EV.um1 + 0.16, EV.hisFace);
     dx = dx + (480 - dx) * k;
     dy = dy + (1095 - dy) * k;
     rot = -0.02 - 0.025 * k;
@@ -48,7 +48,7 @@ function hookCamera(abs: number) {
 }
 
 function shotHook(ctx: Ctx, abs: number) {
-  if (abs < 2.95) {
+  if (abs < EV.hisFace) {
     const typing = inWin(abs, EV.typing1) || inWin(abs, EV.typing2);
     const cam = hookCamera(abs);
     phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing, keyboard: true })), { who: "boy", cx: cam.cx, cy: cam.cy, s: cam.s, rot: cam.rot });
@@ -67,19 +67,20 @@ function shotHook(ctx: Ctx, abs: number) {
     }
     return;
   }
-  // his face: surprise (snap zoom, a jolt, wide eyes) → it sinks in (eyes drop to the phone) → sadness (a slow
-  // push into his face, the frame tilting, the phone light going cold)
-  const t = abs;
-  const snap = backOut(phase(t, 2.95, 3.08));
-  const jolt = 1 - phase(t, 2.95, 3.25);
-  const zoom = 1.0 + 0.12 * snap + 0.2 * smooth(phase(t, 3.2, BAR(2)));
-  const dutch = -0.04 * smooth(phase(t, 3.6, BAR(2)));
-  const surprised = t < 3.32,
-    sinking = t >= 3.32 && t < 3.72;
+  // his face (cut on the "and", EV.hisFace): surprise (snap zoom, a jolt, wide eyes) → it sinks in (eyes drop to the
+  // phone) → sadness (a slow push into his face, the frame tilting, the phone light going cold)
+  const t = abs,
+    f0 = EV.hisFace;
+  const snap = backOut(phase(t, f0, f0 + 0.13));
+  const jolt = 1 - phase(t, f0, f0 + 0.3);
+  const zoom = 1.0 + 0.12 * snap + 0.2 * smooth(phase(t, f0 + 0.25, BAR(2)));
+  const dutch = -0.04 * smooth(phase(t, f0 + 0.65, BAR(2)));
+  const surprised = t < f0 + 0.37,
+    sinking = t >= f0 + 0.37 && t < f0 + 0.77;
   fillBg(ctx, "#0b0d1c");
   ctx.save();
   camera(ctx, 540 + Math.sin(t * 80) * 10 * jolt, 900 + Math.cos(t * 70) * 8 * jolt, zoom, dutch);
-  const light = 0.34 - 0.18 * smooth(phase(t, 3.5, BAR(2)));
+  const light = 0.34 - 0.18 * smooth(phase(t, f0 + 0.55, BAR(2)));
   glow(ctx, 540, 1250, 900, `rgba(120,150,255,${light})`);
   drawKid(ctx, 540, 860, 1.32, {
     body: "bust",
@@ -88,10 +89,10 @@ function shotHook(ctx: Ctx, abs: number) {
     mouth: surprised ? "o" : sinking ? "flat" : "frown",
     look: surprised ? [0, 0.55] : [0, 1],
     arms: "phone",
-    tilt: -0.07 * smooth(phase(t, 3.7, 4.1)),
-    headY: 10 * smooth(phase(t, 3.7, 4.1)),
+    tilt: -0.07 * smooth(phase(t, f0 + 0.75, f0 + 1.15)),
+    headY: 10 * smooth(phase(t, f0 + 0.75, f0 + 1.15)),
   });
-  lightPool(ctx, 540, 1180, 900, 0.5 + 0.2 * smooth(phase(t, 3.5, BAR(2))), "rgba(120,150,255,0.2)");
+  lightPool(ctx, 540, 1180, 900, 0.5 + 0.2 * smooth(phase(t, f0 + 0.55, BAR(2))), "rgba(120,150,255,0.2)");
   ctx.restore();
 }
 
@@ -207,7 +208,8 @@ function roundHand(ctx: Ctx, x: number, y: number, r: number, seed: number) {
   ctx.restore();
 }
 
-/** 8.25 → 9.85: she sits in front of him; she turns round, their eyes meet, the textbook snaps up */
+/** 8.25 → 9.79: she sits in front of him; on consecutive beats she turns round (their eyes meet), the textbook
+ *  snaps up, and we cut to him */
 function shotSeat(ctx: Ctx, abs: number) {
   const turned = abs >= EV.turn1;
   const hidden = abs >= EV.hide1;
@@ -236,10 +238,10 @@ function shotSeat(ctx: Ctx, abs: number) {
   hisDesk(ctx, abs);
 }
 
-/** 11.95 → 12.34: the milk left on her empty desk */
+/** 11.83 → 12.34: the milk left on her empty desk */
 function shotMilkLeft(ctx: Ctx, abs: number) {
-  const down = smooth(phase(abs, 11.95, 12.1));
-  const away = smooth(phase(abs, 12.12, 12.3));
+  const down = smooth(phase(abs, EV.milkLeft, EV.milkLeft + 0.15));
+  const away = smooth(phase(abs, EV.milkLeft + 0.17, EV.milkLeft + 0.35));
   ctx.save();
   camera(ctx, 380, 900, 1.6);
   filtered(ctx, "blur(4px)", (c) => classroomFront(c, abs, { sun: 0.5 }), "classBack");
@@ -255,10 +257,10 @@ function shotMilkLeft(ctx: Ctx, abs: number) {
 
 /** 10.30 → 12.34 after class: he brings the strawberry milk; she grabs her friend and runs */
 function shotMilk(ctx: Ctx, abs: number) {
-  if (abs >= 11.95) return shotMilkLeft(ctx, abs);
-  const approach = smooth(phase(abs, BAR(5), 10.75));
+  if (abs >= EV.milkLeft) return shotMilkLeft(ctx, abs);
+  const approach = smooth(phase(abs, BAR(5), EV.milkOffer + 0.15));
   const offer = smooth(phase(abs, EV.milkOffer - 0.12, EV.milkOffer + 0.12));
-  const flee = smooth(phase(abs, EV.flee, 11.62));
+  const flee = smooth(phase(abs, EV.flee, EV.flee + 0.42));
   ctx.save();
   camera(ctx, 560, 700, 1.3);
   filtered(ctx, "blur(2px)", (c) => classroomFront(c, abs, { sun: 0.6 }), "classBack");
@@ -266,7 +268,7 @@ function shotMilk(ctx: Ctx, abs: number) {
   // her friend, standing by the desk
   drawPerson(ctx, lerp(190, -400, flee), 870, 0.92, { ...CAST.mei, face: flee > 0 ? "o" : "smile", arms: "down", body: "full", legs: flee > 0 && flee < 1 ? "walk" : "stand", walk: abs * 14 });
   if (abs < EV.flee) {
-    const startled = abs > 10.95;
+    const startled = abs > EV.flee - 0.25;
     drawKid(ctx, 360, 1080, 1.08, { who: "girl", outfit: "cardigan", body: "bust", eyes: startled ? "wide" : "open", mouth: startled ? "o" : "flat", look: startled ? [0.9, -0.3] : [0.1, 0.9], arms: "down" });
   } else {
     // up and away, leaning into the run
@@ -277,13 +279,13 @@ function shotMilk(ctx: Ctx, abs: number) {
     drawKid(ctx, 0, 0, 1.02, { who: "girl", outfit: "cardigan", body: "full", legs: "run", walk: abs * 16, eyes: "shut", mouth: "bite", look: [-1, 0], arms: "custom", handL: [-230, 240], handR: [70, 360], shapeL: "open", shapeR: "fist", headY: -Math.abs(Math.sin(abs * 16)) * 8 });
     ctx.restore();
     ctx.save();
-    ctx.globalAlpha = 1 - phase(abs, 11.45, 11.62);
+    ctx.globalAlpha = 1 - phase(abs, EV.flee + 0.25, EV.flee + 0.42);
     for (let k = 0; k < 4; k++) inkLine(ctx, [[x + 250 + k * 18, 720 + k * 130], [x + 390 + k * 30, 730 + k * 130]], 3760 + k, 5);
     ctx.restore();
   }
   deskFront(ctx, 360, 1540, 1.08, 3573);
   // him: walks up, holds out the milk, is left holding it
-  const sad = abs > 11.5;
+  const sad = abs > EV.flee + 0.3;
   // holding the milk out like handing someone a card: the upper arm goes down and out to the elbow,
   // the forearm comes back up to the hand at shoulder height — a "V", elbow below (bendL: 1)
   const hand: Pt = [lerp(-70, -285, offer), lerp(320, 190, offer)];
@@ -308,8 +310,8 @@ function shotMilk(ctx: Ctx, abs: number) {
 }
 
 function shotClass(ctx: Ctx, abs: number) {
-  if (abs < 9.85) shotSeat(ctx, abs);
-  else if (abs < BAR(5)) hisClassFace(ctx, abs, 9.85, "sad");
+  if (abs < EV.classFace) shotSeat(ctx, abs);
+  else if (abs < BAR(5)) hisClassFace(ctx, abs, EV.classFace, "sad");
   else shotMilk(ctx, abs);
 }
 
@@ -339,7 +341,7 @@ function lamp(ctx: Ctx, on: number) {
 }
 
 function shotGiveUp(ctx: Ctx, abs: number) {
-  if (abs < 15.45) {
+  if (abs < EV.room) {
     let draft = "";
     if (abs < EV.del1[0]) draft = typed(HIS_DRAFT, abs, EV.type1[0], EV.type1[1]);
     else if (abs < EV.type2[0]) draft = deleted(HIS_DRAFT, abs, EV.del1[0], EV.del1[1]);
@@ -351,8 +353,8 @@ function shotGiveUp(ctx: Ctx, abs: number) {
   }
   // his room: phone face down, lamp off
   const on = abs < EV.lampOff ? 1 : 0;
-  const down = smooth(phase(abs, 15.5, 15.85));
-  const reach = smooth(phase(abs, 15.85, 16.12));
+  const down = smooth(phase(abs, EV.room + 0.05, EV.room + 0.4));
+  const reach = smooth(phase(abs, EV.lampOff - 0.3, EV.lampOff - 0.03));
   ctx.save();
   camera(ctx, 700, 900, 1.06);
   bedroom(ctx, abs, {});
@@ -393,7 +395,7 @@ function shotGiveUp(ctx: Ctx, abs: number) {
 /** today's class, remembered that night: on old film (the same as her memory in act 3), with a time card */
 function memory(ctx: Ctx, abs: number) {
   oldFilm(ctx, abs, (c) => shotClass(c, abs), "memory");
-  card(ctx, "今天 · 物理课", 70, 330, smooth(phase(abs, BAR(4) + 0.2, BAR(4) + 0.45)) * (1 - phase(abs, 9.7, 9.95)));
+  card(ctx, "今天 · 物理课", 70, 330, smooth(phase(abs, BAR(4) + 0.2, BAR(4) + 0.45)) * (1 - phase(abs, EV.classFace - 0.15, EV.classFace + 0.1)));
 }
 
 export function createScene(options: SceneOptions) {
