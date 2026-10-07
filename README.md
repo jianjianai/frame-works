@@ -106,3 +106,4 @@
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：往上翻→停住→快速划到底→点头像
 - `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（scrollUp / scrollDown / tapAvatar / pagePush）
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：切点对齐乐句结尾的拍点
+- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（uglyEnd / typingA / typingB / lieDown 按乐句对齐）
