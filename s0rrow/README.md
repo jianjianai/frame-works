@@ -92,3 +92,4 @@
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）
 - `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 act3：发出的「嗯」停留 + 推近 + 脉冲 + 红笔「删掉了 37 个字」
 - `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑的事件表（她发「嗯」提前到 35.55，停到 36.45）
+- `code/chat.ts`：来源 work-d1187f37《unhappy》：朋友圈时间戳放大到 28px、夜间模式提亮
