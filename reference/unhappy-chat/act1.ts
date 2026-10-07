@@ -69,7 +69,13 @@ function shotHistory(ctx: Ctx, abs: number) {
     return;
   }
   const mark = smooth(phase(abs, 7.15, 7.6));
-  phoneCloseup(ctx, abs, (c) => momentsScreen(c, abs, { dark: true, mark }), { who: "boy", right: REST, cy: PHONE_CY });
+  // the clue is 「5分钟前」 (screen 160, 1040): keep it above the lyrics from the start, then push in on it
+  // while the red circle is drawn
+  const pk = smooth(phase(abs, 6.95, 7.4));
+  const ps = 1 + 0.35 * pk;
+  const tx = 375 + (440 - 375) * pk,
+    ty = 1170 + (1060 - 1170) * pk;
+  phoneCloseup(ctx, abs, (c) => momentsScreen(c, abs, { dark: true, mark }), { who: "boy", right: REST, cx: tx - (160 - 300) * ps, cy: ty - (1040 - 640) * ps, s: ps });
 }
 
 // ---------------------------------------------------------------- 1C class: from his seat, then after class
