@@ -1,5 +1,7 @@
-import { clamp, phase } from "../../../../src/engine/math";
-import { C, Ctx, Pt, fillBg, glow, hash } from "./draw";
+import { clamp, phase, smooth } from "../../../../src/engine/math";
+import { C, Ctx, Pt, camera, fillBg, glow, hash } from "./draw";
+import { drawKid } from "./kid";
+import { heart } from "./sets";
 import { ChatItem, ChatView, chatScreen2 } from "./chat";
 import { FingerPos, HandsLook, heldHands } from "./hand";
 import { phone } from "./phone";
@@ -123,6 +125,25 @@ export function hisNightChat(abs: number, extra: Partial<ChatView> = {}): ChatVi
   if (abs >= EV.um1) items.push({ t: "msg", text: "嗯", pop: pop(abs, EV.um1) });
   if (abs >= EV.send1) items.push({ t: "msg", me: true, text: GIVE_UP, pop: pop(abs, EV.send1) });
   return { title: HER, time: abs < 20 ? "23:12" : "00:47", me: "boy", them: "girl", items, dark: true, ...extra };
+}
+/** his face as her message sinks in: shock (from EV.read), then joy on the outro downbeat (EV.joy).
+ *  Drawn by act 3 and act 4 so the shot runs across the layer boundary. */
+export function hisFaceReading(ctx: Ctx, abs: number) {
+  const k = phase(abs, EV.joy - 0.05, EV.joy + 0.3);
+  fillBg(ctx, "#f1e4d2");
+  ctx.save();
+  camera(ctx, 540, 860, 1.0 + 0.07 * smooth(phase(abs, EV.read, EV.reply)));
+  glow(ctx, 540, 1100, 800, `rgba(255,240,200,${0.45 + 0.25 * k})`);
+  drawKid(ctx, 540, 880, 1.3, { body: "bust", eyes: k < 0.3 ? "wide" : "happy", mouth: k < 0.3 ? "o" : "grin", blush: k, look: [0, 0.6], arms: "phone", tears: k > 0.5 ? 0.25 : 0 });
+  ctx.restore();
+  if (k <= 0) return;
+  for (let i = 0; i < 6; i++) {
+    const t = ((abs - EV.joy) * 0.8 + i * 0.17) % 1;
+    ctx.save();
+    ctx.globalAlpha = (1 - t) * clamp((abs - EV.joy) * 5);
+    heart(ctx, 540 + Math.sin(i * 2.1) * 330, 700 - t * 320, 20 + (i % 3) * 8, "#ff7fa8", 3930 + i);
+    ctx.restore();
+  }
 }
 export const phase01 = phase;
 export { C };

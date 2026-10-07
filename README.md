@@ -71,3 +71,4 @@
 - `reference/unhappy-chat/timeline.ts`：来源 《unhappy》聊天版的小节与事件时间表（整首歌、尾奏缩成一遍后 73.3 秒）
 - `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：主歌2 她的视角 → 第二天他开机
 - `reference/unhappy-chat/act4.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：尾奏 我也是 → 嗯！！ → 上下分屏
+- `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：剧情文字和共用镜头（phoneCloseup、typingThumbs、hisFaceReading）
