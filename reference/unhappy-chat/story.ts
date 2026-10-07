@@ -63,19 +63,37 @@ export const inWin = (abs: number, w: readonly [number, number]) => abs >= w[0] 
 /** pop-in progress for something that appears at t */
 export const pop = (abs: number, t: number, d = 0.18) => clamp((abs - t) / d);
 
-/** Thumbs tapping keys during [t0, t1] (alternating), resting otherwise. Screen coordinates. */
+/** Phone close-ups: size and centre. At 0.95 the chat text (37 screen px ≈ 35px) stays readable on a phone. */
+export const PHONE_S = 0.95;
+export const PHONE_CY = 890;
+/** where the thumbs rest when they aren't doing anything (screen coordinates) */
+export const REST_R: FingerPos = { x: 395, y: 1000, touch: 0.15 };
+export const REST_L: FingerPos = { x: 205, y: 1060, touch: 0.15 };
+
+/** Both thumbs typing during [t0, t1]: each thumb taps every 0.24 s, half a period apart (~8 taps/s), and
+ *  glides lifted from one key to the next on its own half of the keyboard. Screen coordinates. */
 export function typingThumbs(abs: number, t0: number, t1: number, seed = 1): { right: FingerPos; left: FingerPos } {
-  const restR: FingerPos = { x: 480, y: 1180, touch: 0.2 },
-    restL: FingerPos = { x: 120, y: 1180, touch: 0.2 };
-  if (abs < t0 || abs > t1) return { right: restR, left: restL };
-  const rate = 9; // taps per second
-  const k = Math.floor((abs - t0) * rate);
-  const f = (abs - t0) * rate - k;
-  const key = (n: number): Pt => [70 + hash(seed + n * 3.1) * 460, 900 + hash(seed + n * 5.7) * 260];
-  const [kx, ky] = key(k);
-  const tap: FingerPos = { x: kx, y: ky, touch: f < 0.45 ? 1 : 0.35 };
-  const rightTurn = k % 2 === 0 ? kx > 260 : kx > 340;
-  return rightTurn ? { right: tap, left: restL } : { right: restR, left: tap };
+  if (abs < t0 || abs > t1) return { right: REST_R, left: REST_L };
+  const period = 0.24;
+  const keyR = (n: number): Pt => [305 + hash(seed + n * 3.1) * 185, 940 + hash(seed + n * 5.7) * 200];
+  const keyL = (n: number): Pt => [110 + hash(seed + 40 + n * 2.3) * 185, 940 + hash(seed + 40 + n * 4.9) * 200];
+  const thumb = (key: (n: number) => Pt, rest: FingerPos, offset: number): FingerPos => {
+    const u = (abs - t0) / period - offset;
+    if (u < 0) {
+      // on its way from rest to the first key
+      const k = smooth(clamp(1 + u / offset));
+      const p = key(0);
+      return { x: rest.x + (p[0] - rest.x) * k, y: rest.y + (p[1] - rest.y) * k, touch: 0.15 + 0.5 * k };
+    }
+    const n = Math.floor(u),
+      g = u - n;
+    const a = key(n);
+    if (g < 0.28) return { x: a[0], y: a[1], touch: 1 };
+    const b = key(n + 1);
+    const m = smooth((g - 0.28) / 0.6);
+    return { x: a[0] + (b[0] - a[0]) * m, y: a[1] + (b[1] - a[1]) * m, touch: 0.1 + 0.9 * clamp((g - 0.86) / 0.14) };
+  };
+  return { right: thumb(keyR, REST_R, 0.35), left: thumb(keyL, REST_L, 0.85) };
 }
 
 export const HER_HANDS: HandsLook = { sleeve: "#f3b6c4", cuff: "#fff4f6", skin: "#f6e1c3", specks: 0.15 };
@@ -88,14 +106,19 @@ export function phoneCloseup(
   screen: (c: Ctx) => void,
   o: { who?: "boy" | "girl"; right?: FingerPos; left?: FingerPos; cx?: number; cy?: number; s?: number; rot?: number; bg?: string; glowCol?: string } = {},
 ) {
-  const cx = o.cx ?? 540,
-    cy = o.cy ?? 900,
-    s = o.s ?? 0.68,
-    rot = o.rot ?? -0.02;
+  // hand-held: the phone floats a little; resting thumbs drift, pressing thumbs stay exactly on target
+  const cx = (o.cx ?? 540) + Math.sin(abs * 0.9) * 3,
+    cy = (o.cy ?? PHONE_CY) + Math.sin(abs * 1.1 + 1) * 4,
+    s = o.s ?? PHONE_S,
+    rot = (o.rot ?? -0.02) + Math.sin(abs * 0.7) * 0.006;
+  const drift = (p: FingerPos, ph: number): FingerPos => {
+    const k = 1 - clamp(p.touch * 2);
+    return { x: p.x + Math.sin(abs * 1.7 + ph) * 7 * k, y: p.y + Math.cos(abs * 1.3 + ph) * 9 * k, touch: p.touch };
+  };
   fillBg(ctx, o.bg ?? "#0b0d1c");
   glow(ctx, cx, cy - 60, 900, o.glowCol ?? "rgba(120,150,255,0.26)");
   phone(ctx, cx, cy, s, rot, screen);
-  heldHands(ctx, cx, cy, s, rot, o.right ?? { x: 480, y: 1180, touch: 0.2 }, o.left ?? { x: 120, y: 1180, touch: 0.2 }, 1300, o.who === "girl" ? HER_HANDS : HIS_HANDS);
+  heldHands(ctx, cx, cy, s, rot, drift(o.right ?? REST_R, 0), drift(o.left ?? REST_L, 2), 1300, o.who === "girl" ? HER_HANDS : HIS_HANDS);
 }
 
 /** Rain-like drops on the phone glass (her tears) in screen coordinates. */
