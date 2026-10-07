@@ -96,55 +96,56 @@ function shotHook(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 1B
-/** scrolling back to July (warm, the camera leaning in) and down to now (cold, pulling back, tilting): self-doubt */
+/** her avatar beside the latest 「嗯」 (screen coordinates, chat scrolled to now, no keyboard) */
+const AVATAR_AT: Pt = [56, 1042];
+/** One steady phone shot (4.16 → 8.25): July first — long, lively — then a slow, readable scroll down to October's
+ *  「嗯」「哦」; he taps her avatar, her 朋友圈 slides in like a page push, and the camera moves in on 「5分钟前」. */
 function shotHistory(ctx: Ctx, abs: number) {
-  if (abs < BAR(3)) {
-    const up = smooth(phase(abs, EV.scrollUp, 5.0));
-    const down = smooth(phase(abs, EV.scrollDown, 6.1));
-    const scroll = 2150 * (up - down);
-    const swipingUp = abs > EV.scrollUp && abs < 5.0;
-    const swipingDown = abs > EV.scrollDown && abs < 6.1;
-    let right: FingerPos = REST;
-    if (swipingUp || swipingDown) {
-      const f = ((abs - (swipingUp ? EV.scrollUp : EV.scrollDown)) * 3.4) % 1;
-      right = swipingUp ? { x: 420, y: 520 + f * 420, touch: f < 0.8 ? 1 : 0 } : { x: 420, y: 940 - f * 420, touch: f < 0.8 ? 1 : 0 };
-    }
-    const warm = up - down;
-    const back = smooth(phase(abs, EV.scrollDown, BAR(3)));
-    const s = 1 + 0.06 * up - 0.16 * back;
-    phoneCloseup(
-      ctx,
-      abs,
-      (c) => {
-        chatScreen2(c, abs, hisNightChat(abs, { scroll }));
-        // July glows warm in memory; now is cold
-        c.fillStyle = `rgba(255,170,90,${0.13 * warm})`;
-        c.fillRect(0, 0, SW, SH);
-        c.fillStyle = `rgba(20,30,70,${0.25 * back})`;
-        c.fillRect(0, 0, SW, SH);
-      },
-      { who: "boy", right, cy: PHONE_CY - 60 * back, s, rot: -0.02 - 0.06 * back },
-    );
-    // darkness closing in, and the doubt in his head
-    if (back > 0) {
-      const g = ctx.createRadialGradient(540, 900, 300, 540, 900, 1100);
-      g.addColorStop(0, "rgba(0,0,0,0)");
-      g.addColorStop(1, `rgba(0,0,0,${0.55 * back})`);
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-    }
-    const q = phase(abs, 5.7, 6.05);
-    if (q > 0) text(ctx, writeOn("是我话太多了吗……", q), 540, 1690, { size: 58, font: F.pen, fill: "#c9d3ff", stroke: "#0b0d1c", lw: 8, alpha: 0.9 });
-    return;
-  }
+  const sd = smooth(phase(abs, EV.scrollDown[0], EV.scrollDown[1]));
+  const scroll = 2150 * (1 - sd);
+  const push = smooth(phase(abs, EV.pagePush[0], EV.pagePush[1]));
   const mark = smooth(phase(abs, 7.15, 7.6));
-  // the clue is 「5分钟前」 (screen 160, 1040): keep it above the lyrics from the start, then push in on it
-  // while the red circle is drawn
+  // camera: still while reading; after the page change it moves up and in on 「5分钟前」 (screen 160, 1040)
   const pk = smooth(phase(abs, 6.95, 7.4));
-  const ps = 1 + 0.35 * pk;
-  const tx = 375 + (440 - 375) * pk,
-    ty = 1170 + (1060 - 1170) * pk;
-  phoneCloseup(ctx, abs, (c) => momentsScreen(c, abs, { dark: true, mark }), { who: "boy", right: REST, cx: tx - (160 - 300) * ps, cy: ty - (1040 - 640) * ps, s: ps });
+  const s = 0.92 + (1.3 - 0.92) * pk;
+  const px = 411 + (440 - 411) * pk,
+    py = 1168 + (1060 - 1168) * pk;
+  // thumb: slow swipes up while scrolling down, then one tap on her avatar
+  let right: FingerPos = REST;
+  if (inWin(abs, EV.scrollDown)) {
+    const f = ((abs - EV.scrollDown[0]) * 2.2) % 1;
+    right = { x: 420, y: 960 - f * 380, touch: f < 0.75 ? 1 : 0 };
+  } else if (abs > EV.tapAvatar - 0.25 && abs < EV.tapAvatar + 0.12) {
+    right = { x: AVATAR_AT[0], y: AVATAR_AT[1], touch: abs > EV.tapAvatar - 0.05 ? 1 : 0.2 };
+  }
+  phoneCloseup(
+    ctx,
+    abs,
+    (c) => {
+      if (push < 1) {
+        c.save();
+        c.translate(-SW * 0.3 * push, 0);
+        chatScreen2(c, abs, hisNightChat(abs, { scroll }));
+        // July is remembered warm
+        c.fillStyle = `rgba(255,170,90,${0.1 * (1 - sd)})`;
+        c.fillRect(0, 0, SW, SH);
+        if (push > 0) {
+          c.fillStyle = `rgba(0,0,0,${0.35 * push})`;
+          c.fillRect(0, 0, SW, SH);
+        }
+        c.restore();
+      }
+      if (push > 0) {
+        c.save();
+        c.translate(SW * (1 - push), 0);
+        momentsScreen(c, abs, { dark: true, mark });
+        c.fillStyle = "rgba(0,0,0,0.35)";
+        c.fillRect(-14, 0, 14, SH);
+        c.restore();
+      }
+    },
+    { who: "boy", right, cx: px - (160 - 300) * s, cy: py - (1040 - 640) * s, s, steady: true },
+  );
 }
 
 // ---------------------------------------------------------------- 1C class: from his seat, then after class
