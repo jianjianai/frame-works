@@ -217,7 +217,7 @@ export function chatScreen2(ctx: Ctx, abs: number, v: ChatView) {
   ctx.fillRect(0, 0, SW, 160);
   statusBar(ctx, { time: v.time, airplane: false, battery: 0.4, dark: !v.dark });
   text(ctx, "‹", 40, 120, { size: 60, font: F.ui, fill: P.title });
-  text(ctx, v.typing ? "对方正在输入..." : v.title, SW / 2, 120, { size: v.typing ? 28 : 32, font: F.ui, weight: 700, fill: P.title });
+  text(ctx, v.typing ? "对方正在输入..." : v.title, SW / 2, 120, { size: 32, font: F.ui, weight: 700, fill: P.title });
   text(ctx, "···", SW - 50, 116, { size: 40, font: F.ui, weight: 700, fill: P.title });
   ctx.fillStyle = v.dark ? "#262626" : "#d6d6d6";
   ctx.fillRect(0, 158, SW, 2);
