@@ -49,12 +49,13 @@ export const EV = {
   // act 3 — her side
   rewind: 32.55,
   ding2: 33.05,
-  type3: [33.6, 34.3] as const,
-  friendNote: 34.4,
-  del3: [34.85, 35.3] as const,
-  send2: 35.55, // the 「嗯」 she sends — the chat holds on it until umHold
-  umHold: 36.45,
-  turn2: 36.9,
+  type3: [33.6, 34.2] as const, // her long, happy reply
+  friendNote: 34.25, // 小美’s message drops in…
+  openNote: 34.55, // …she taps it and reads 小美’s chat: 「回个嗯就行」
+  backToHim: 35.6, // back to his chat, her reply still in the box…
+  del3: [35.9, 36.22] as const, // …all of it deleted
+  send2: beatAt(71), // 36.36 the 「嗯」 she sends — the chat holds on it until umHold
+  umHold: beatAt(73), // 37.39 that class (his smile and her pillow were cut to make room for 小美)
   hide2: beatAt(73), // 37.39 up goes the book
   afterClass: beatAt(75), // 38.41 she comes back for the strawberry milk
   now: 39.43, // back to 00:52
