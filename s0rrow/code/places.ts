@@ -1070,6 +1070,128 @@ export function deskFront(ctx: Ctx, x: number, y: number, s: number, seed = 3560
   ctx.restore();
 }
 
+/** a classmate seen from behind, sitting at a desk (simple shapes: the shot blurs the background) */
+function classmateBack(ctx: Ctx, x: number, y: number, s: number, hair: string, shirt: string, seed: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  // the desk in front of them shows at both sides of the body
+  poly(ctx, [[-250, 300], [250, 296], [262, 350], [-262, 354]], seed, 1);
+  paint(ctx, "#e2b679", C.ink, 5);
+  blob(ctx, [[-150, 150], [150, 150], [178, 300], [176, 420], [-176, 420], [-178, 300]], seed + 1, 1.5);
+  paint(ctx, shirt, C.ink, 5);
+  blob(ctx, [[-34, 80], [34, 80], [38, 160], [-38, 160]], seed + 2, 1);
+  paint(ctx, "#e6c79e", C.ink, 4);
+  oval(ctx, 0, 0, 116, 126, seed + 3, 2);
+  paint(ctx, hair, C.ink, 5);
+  ctx.restore();
+}
+
+/** Classroom seen from a back-row seat (over his shoulder): the blackboard with the physics problem he stays
+ *  up for, sunlit windows on the left, a few classmates' backs in the rows ahead. Her row is drawn by the shot. */
+export function classroomBoard(ctx: Ctx, abs: number, o: { sun?: number } = {}) {
+  const sun = o.sun ?? 1;
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#ece6d0"], [1, "#dcd0b2"]]));
+  // ceiling + tube lights
+  poly(ctx, [[-60, -60], [1140, -60], [1140, 170], [-60, 180]], 3600, 1.5);
+  paint(ctx, "#f5f1e3", C.ink, 5);
+  inkLine(ctx, [[230, 96], [480, 94]], 3601, 12, "#fffbe8");
+  inkLine(ctx, [[640, 94], [880, 96]], 3602, 12, "#fffbe8");
+  // windows on the left wall, in perspective
+  for (let i = 0; i < 2; i++) {
+    const x0 = -30 + i * 76,
+      x1 = x0 + 58;
+    poly(ctx, [[x0, 190 + i * 46], [x1, 226 + i * 42], [x1, 1010 - i * 40], [x0, 1060 - i * 42]], 3603 + i, 1.2);
+    paint(ctx, "#d4ecf7", C.ink, 5);
+  }
+  // blackboard in a wooden frame
+  rbox(ctx, 170, 300, 840, 480, 12, 3610, 1.2);
+  paint(ctx, "#8a6844", C.ink, 6);
+  rbox(ctx, 192, 322, 796, 436, 6, 3611, 1);
+  paint(ctx, "#2f4a3c", C.ink, 4);
+  // chalk: a block on a slope with its forces, F = ma
+  const chalk = "rgba(238,242,234,0.88)";
+  poly(ctx, [[260, 700], [600, 700], [260, 500]], 3612, 0.8);
+  paint(ctx, null, chalk, 4);
+  const ang = Math.atan2(200, 340);
+  ctx.save();
+  ctx.translate(430, 600);
+  ctx.rotate(ang);
+  poly(ctx, [[-44, -64], [44, -64], [44, 0], [-44, 0]], 3613, 0.8);
+  paint(ctx, null, chalk, 3.5);
+  ctx.restore();
+  const bc: Pt = [430 + 32 * Math.sin(ang), 600 - 32 * Math.cos(ang)];
+  const arrow = (to: Pt, seed: number) => {
+    inkLine(ctx, [bc, to], seed, 3.5, chalk);
+    const a = Math.atan2(to[1] - bc[1], to[0] - bc[0]);
+    poly(ctx, [[to[0] - 18 * Math.cos(a - 0.45), to[1] - 18 * Math.sin(a - 0.45)], to, [to[0] - 18 * Math.cos(a + 0.45), to[1] - 18 * Math.sin(a + 0.45)]], seed + 1, 0.4, false);
+    paint(ctx, null, chalk, 3.5);
+  };
+  arrow([bc[0], bc[1] + 120], 3614);
+  arrow([bc[0] + 110 * Math.sin(ang), bc[1] - 110 * Math.cos(ang)], 3616);
+  text(ctx, "mg", bc[0] + 34, bc[1] + 120, { size: 34, font: F.en, fill: chalk });
+  text(ctx, "N", bc[0] + 110 * Math.sin(ang) + 26, bc[1] - 110 * Math.cos(ang) - 10, { size: 34, font: F.en, fill: chalk });
+  text(ctx, "第3题", 330, 380, { size: 44, font: F.pen, fill: chalk });
+  text(ctx, "F = ma", 800, 450, { size: 64, font: F.marker, fill: chalk });
+  text(ctx, "a = ?", 790, 560, { size: 56, font: F.marker, fill: chalk });
+  inkLine(ctx, [[690, 620], [900, 616]], 3618, 3, chalk);
+  // chalk tray
+  rbox(ctx, 180, 770, 820, 20, 4, 3619, 1);
+  paint(ctx, "#7a5a3a", C.ink, 4);
+  // floor
+  poly(ctx, [[-60, 1160], [1140, 1150], [1140, 2000], [-60, 2000]], 3620, 1.5);
+  paint(ctx, "#b99a6c", C.ink, 6);
+  // classmates in the rows ahead
+  classmateBack(ctx, 700, 900, 0.3, "#2a2220", "#eef0ea", 3630);
+  classmateBack(ctx, 150, 960, 0.42, "#1f1a18", "#d9e3f0", 3640);
+  classmateBack(ctx, 935, 985, 0.44, "#3a2a20", "#eef0ea", 3650);
+  // sunlight from the windows
+  if (sun > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.11 * sun;
+    ctx.fillStyle = "#fff2c4";
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 240 + i * 230);
+      ctx.lineTo(0, 380 + i * 230);
+      ctx.lineTo(900 + i * 60, 1500 + i * 160);
+      ctx.lineTo(1040 + i * 60, 1380 + i * 160);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/** A school textbook held up with the cover facing the camera — 物理. (x, y) = centre of the cover. */
+export function textbook(ctx: Ctx, x: number, y: number, s: number, rot = 0, seed = 3660) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  // page block showing at the top and the right edge
+  poly(ctx, [[-148, -198], [162, -202], [166, 194], [-144, 198]], seed, 0.8);
+  paint(ctx, "#fbfaf2", C.ink, 4);
+  inkLine(ctx, [[150, -190], [154, 188]], seed + 1, 2, "#c9c2b0");
+  shaded(ctx, () => poly(ctx, [[-160, -190], [150, -194], [154, 190], [-156, 194]], seed + 2, 1), "#7fb2d9", () => {
+    // spine shading + colour band
+    poly(ctx, [[-160, -190], [-126, -191], [-122, 194], [-156, 194]], seed + 3, 0.6);
+    paint(ctx, "#5f93bd", null);
+    poly(ctx, [[-110, 30], [154, 28], [154, 84], [-110, 86]], seed + 4, 0.6);
+    paint(ctx, "#f2c14e", null);
+  }, C.ink, 5);
+  text(ctx, "物理", 22, -80, { size: 96, font: F.cn, fill: "#fff", stroke: "#2c4f6e", lw: 9 });
+  text(ctx, "高二 · 上册", 22, 57, { size: 28, font: F.cn, fill: "#2c4f6e" });
+  for (let k = 0; k < 3; k++) {
+    oval(ctx, 22, 140, 50, 16, seed + 5 + k, 0.5, (k * Math.PI) / 3);
+    paint(ctx, null, "rgba(255,255,255,0.85)", 2.5);
+  }
+  oval(ctx, 22, 140, 7, 7, seed + 9, 0.3);
+  paint(ctx, "#fff", null);
+  ctx.restore();
+}
+
 /** Bright school corridor (windows on the left, doors on the right). */
 export function schoolHall(ctx: Ctx, abs: number) {
   fillBg(ctx, vgrad(ctx, 0, H, [[0, "#eef1ea"], [1, "#dfe3d8"]]));
