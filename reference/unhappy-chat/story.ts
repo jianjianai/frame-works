@@ -79,6 +79,9 @@ export function afterNight(side: "his" | "hers", abs = 99, popAt: { conf?: numbe
   return items;
 }
 export const FRIEND_ADVICE = "别回太快！回个嗯就行，显得你没那么在意";
+export const MEI = "小美";
+/** what she had told 小美 the moment his message came in (above 小美’s advice in their chat) */
+export const MEI_FIRST = "他给我发了好长一段！！";
 
 /** three months of chatting: long and lively in July, short by October */
 export const HISTORY: ChatItem[] = [
