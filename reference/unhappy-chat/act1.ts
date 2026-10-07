@@ -126,9 +126,6 @@ function shotHistory(ctx: Ctx, abs: number) {
         c.save();
         c.translate(-SW * 0.3 * push, 0);
         chatScreen2(c, abs, hisNightChat(abs, { scroll }));
-        // July is remembered warm
-        c.fillStyle = `rgba(255,170,90,${0.1 * (1 - sd)})`;
-        c.fillRect(0, 0, SW, SH);
         if (push > 0) {
           c.fillStyle = `rgba(0,0,0,${0.35 * push})`;
           c.fillRect(0, 0, SW, SH);
