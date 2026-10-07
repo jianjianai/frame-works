@@ -104,13 +104,14 @@ export function phoneCloseup(
   ctx: Ctx,
   abs: number,
   screen: (c: Ctx) => void,
-  o: { who?: "boy" | "girl"; right?: FingerPos; left?: FingerPos; cx?: number; cy?: number; s?: number; rot?: number; bg?: string; glowCol?: string } = {},
+  o: { who?: "boy" | "girl"; right?: FingerPos; left?: FingerPos; cx?: number; cy?: number; s?: number; rot?: number; bg?: string; glowCol?: string; steady?: boolean } = {},
 ) {
   // hand-held: the phone floats a little; resting thumbs drift, pressing thumbs stay exactly on target
-  const cx = (o.cx ?? 540) + Math.sin(abs * 0.9) * 3,
-    cy = (o.cy ?? PHONE_CY) + Math.sin(abs * 1.1 + 1) * 4,
+  const sway = o.steady ? 0 : 1;
+  const cx = (o.cx ?? 540) + Math.sin(abs * 0.9) * 3 * sway,
+    cy = (o.cy ?? PHONE_CY) + Math.sin(abs * 1.1 + 1) * 4 * sway,
     s = o.s ?? PHONE_S,
-    rot = (o.rot ?? -0.02) + Math.sin(abs * 0.7) * 0.006;
+    rot = (o.rot ?? (o.steady ? 0 : -0.02)) + Math.sin(abs * 0.7) * 0.006 * sway;
   const drift = (p: FingerPos, ph: number): FingerPos => {
     const k = 1 - clamp(p.touch * 2);
     return { x: p.x + Math.sin(abs * 1.7 + ph) * 7 * k, y: p.y + Math.cos(abs * 1.3 + ph) * 9 * k, touch: p.touch };
