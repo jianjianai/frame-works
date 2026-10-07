@@ -11,7 +11,7 @@ import { SH, SW, statusBar } from "./phone";
 export type Who = "boy" | "girl";
 export type ChatItem =
   | { t: "time"; text: string }
-  | { t: "msg"; me?: boolean; text: string; pop?: number }
+  | { t: "msg"; me?: boolean; text: string; pop?: number; /** a phrase picked out with a highlighter… */ mark?: string; /** …drawn left to right, 0..1 */ markK?: number }
   | { t: "voice"; me?: boolean; secs: number }
   | { t: "sticker"; me?: boolean; kind: "heart" | "bunny" | "cat"; pop?: number };
 export interface ChatView {
@@ -137,6 +137,58 @@ function bubble(ctx: Ctx, x: number, y: number, w: number, h: number, me: boolea
   ctx.fill();
 }
 
+/** the pieces of `mark` within the wrapped `lines` of `s`: line index, x from the line's start, width (current FS) */
+function markSpans(ctx: Ctx, s: string, lines: string[], mark: string): { j: number; x: number; w: number }[] {
+  const at = s.replace(/\n/g, "").indexOf(mark);
+  if (at < 0) return [];
+  const m0 = Array.from(s.replace(/\n/g, "").slice(0, at)).length,
+    m1 = m0 + Array.from(mark).length;
+  ctx.save();
+  ctx.font = `400 ${FS}px ${F.ui}`;
+  const out: { j: number; x: number; w: number }[] = [];
+  let p = 0;
+  lines.forEach((line, j) => {
+    const chars = Array.from(line);
+    const a = Math.max(p, m0),
+      b = Math.min(p + chars.length, m1);
+    if (a < b) {
+      const x = ctx.measureText(chars.slice(0, a - p).join("")).width;
+      out.push({ j, x, w: ctx.measureText(chars.slice(a - p, b - p).join("")).width });
+    }
+    p += chars.length;
+  });
+  ctx.restore();
+  return out;
+}
+
+/** the screen box (600×1280 units) of the first marked phrase in a chat view — to aim the camera at it */
+export function markAt(ctx: Ctx, v: ChatView): { x: number; y: number; w: number; h: number } | null {
+  setMetrics(v.big !== false);
+  const kb = v.keyboard ? 420 : 0;
+  const dl = v.draft ? Math.min(7, draftLines(ctx, v.draft).length) : 1;
+  const inputTop = SH - kb - (48 + dl * LH + 30);
+  let y = inputTop - 24 + (v.scroll ?? 0);
+  for (let i = v.items.length - 1; i >= 0; i--) {
+    const it = v.items[i];
+    y -= itemHeight(ctx, it);
+    if (it.t !== "msg" || !it.mark) continue;
+    const lines = wrapText(ctx, it.text, MAXW, FS);
+    ctx.save();
+    ctx.font = `400 ${FS}px ${F.ui}`;
+    const bw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 44;
+    ctx.restore();
+    const bx = it.me ? SW - 106 - bw : 106;
+    const sp = markSpans(ctx, it.text, lines, it.mark);
+    if (!sp.length) return null;
+    const x0 = Math.min(...sp.map((q) => q.x)),
+      x1 = Math.max(...sp.map((q) => q.x + q.w));
+    const y0 = y + 38 + sp[0].j * LH - FS * 0.62,
+      y1 = y + 38 + sp[sp.length - 1].j * LH + FS * 0.62;
+    return { x: bx + 22 + x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+  return null;
+}
+
 /** height an item takes in the list */
 function itemHeight(ctx: Ctx, it: ChatItem) {
   if (it.t === "time") return 70;
@@ -192,6 +244,19 @@ export function chatScreen2(ctx: Ctx, abs: number, v: ChatView) {
       const bh = lines.length * LH + 36;
       const bx = me ? SW - 106 - bw : 106;
       bubble(ctx, bx, y, bw, bh, me, me ? P.mine : P.theirs);
+      if (it.mark && (it.markK ?? 1) > 0) {
+        // a highlighter stroke under exactly those characters, swept left to right across the lines
+        const sp = markSpans(ctx, it.text, lines, it.mark);
+        let left = (it.markK ?? 1) * sp.reduce((n, q) => n + q.w, 0);
+        ctx.fillStyle = "rgba(255,210,80,0.78)";
+        for (const q of sp) {
+          const w = Math.min(q.w, left);
+          left -= q.w;
+          if (w <= 0) break;
+          rr(ctx, bx + 22 + q.x - 3, y + 38 + q.j * LH - FS * 0.55, w + 6, FS * 1.1, 6);
+          ctx.fill();
+        }
+      }
       lines.forEach((l, j) => text(ctx, l, bx + 22, y + 38 + j * LH, { size: FS, font: F.ui, fill: me ? P.mineText : P.theirsText, align: "left" }));
     } else if (it.t === "voice") {
       const bw = 120 + it.secs * 3;
