@@ -37,14 +37,23 @@ export const LEFT_REST: FingerPos = { x: 150, y: 960, touch: 0.25 };
 const THUMB_LEN = 330;
 
 const SPECKS = Array.from({ length: 22 }, (_, i) => [hash(i * 4.1), hash(i * 6.7 + 2), hash(i * 3.3 + 7)]);
+/** sleeve / cuff / skin colours (set per call by heldHands’ look option) */
+let LOOK = { sleeve: C.hoodie, cuff: C.hoodieDark, skin: C.skin, specks: 0.5 };
+export interface HandsLook {
+  sleeve?: string;
+  cuff?: string;
+  skin?: string;
+  /** white scratch texture on the sleeve, 0..1 */
+  specks?: number;
+}
 function sleeve(ctx: Ctx, pts: Pt[], seed: number) {
   poly(ctx, pts, seed, 1.6);
-  paint(ctx, C.hoodie, C.ink, 7);
+  paint(ctx, LOOK.sleeve, C.ink, 7);
   ctx.save();
   poly(ctx, pts, seed, 1.6);
   ctx.clip();
   ctx.strokeStyle = "#f2efe6";
-  ctx.globalAlpha = 0.5;
+  ctx.globalAlpha = LOOK.specks;
   ctx.lineWidth = 3;
   const xs = pts.map((p) => p[0]),
     ys = pts.map((p) => p[1]);
@@ -107,7 +116,7 @@ function rightHand(ctx: Ctx, t: FingerPos, seed: number) {
   glow(ctx, t.x + 30 * lift, t.y + 46 * lift, 60 + 50 * lift, "rgba(0,0,0,0.6)", 0.45 + 0.3 * (1 - lift));
   ctx.lineJoin = "round";
   ctx.strokeStyle = C.ink;
-  ctx.fillStyle = C.skin;
+  ctx.fillStyle = LOOK.skin;
   ctx.lineWidth = 12;
   blob(ctx, palm, seed + 1, 1.5);
   ctx.stroke();
@@ -130,12 +139,13 @@ function rightHand(ctx: Ctx, t: FingerPos, seed: number) {
   // the hand comes out of the hoodie cuff
   sleeve(ctx, [[bx + 10, by + 230], [bx + 250, by + 170], [bx + 520, 1700], [bx + 40, 1700]], seed);
   poly(ctx, [[bx + 2, by + 222], [bx + 254, by + 158], [bx + 268, by + 218], [bx + 14, by + 284]], seed + 6, 1.2);
-  paint(ctx, C.hoodieDark, C.ink, 6);
+  paint(ctx, LOOK.cuff, C.ink, 6);
 }
 
 /** Both hands holding the phone. `cx, cy, s, rot` must match the phone() call.
  *  `right` / `left` are the thumb tips in screen coordinates (left defaults to resting). */
-export function heldHands(ctx: Ctx, cx: number, cy: number, s: number, rot: number, right: FingerPos, left: FingerPos = LEFT_REST, seed = 1300) {
+export function heldHands(ctx: Ctx, cx: number, cy: number, s: number, rot: number, right: FingerPos, left: FingerPos = LEFT_REST, seed = 1300, look: HandsLook = {}) {
+  LOOK = { sleeve: look.sleeve ?? C.hoodie, cuff: look.cuff ?? C.hoodieDark, skin: look.skin ?? C.skin, specks: look.specks ?? 0.5 };
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(rot);
