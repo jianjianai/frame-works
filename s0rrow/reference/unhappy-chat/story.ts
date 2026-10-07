@@ -104,7 +104,7 @@ export function phoneCloseup(
   ctx: Ctx,
   abs: number,
   screen: (c: Ctx) => void,
-  o: { who?: "boy" | "girl"; right?: FingerPos; left?: FingerPos; cx?: number; cy?: number; s?: number; rot?: number; bg?: string; glowCol?: string; steady?: boolean } = {},
+  o: { who?: "boy" | "girl"; right?: FingerPos; left?: FingerPos; cx?: number; cy?: number; s?: number; rot?: number; bg?: string; glowCol?: string; steady?: boolean; backdrop?: (c: Ctx) => void } = {},
 ) {
   // hand-held: the phone floats a little; resting thumbs drift, pressing thumbs stay exactly on target
   const sway = o.steady ? 0 : 1;
@@ -117,6 +117,7 @@ export function phoneCloseup(
     return { x: p.x + Math.sin(abs * 1.7 + ph) * 7 * k, y: p.y + Math.cos(abs * 1.3 + ph) * 9 * k, touch: p.touch };
   };
   fillBg(ctx, o.bg ?? "#0b0d1c");
+  o.backdrop?.(ctx);
   glow(ctx, cx, cy - 60, 900, o.glowCol ?? "rgba(120,150,255,0.26)");
   phone(ctx, cx, cy, s, rot, screen);
   // no hands (the user preferred the phone alone): where a thumb presses, a soft touch dot shows instead
@@ -136,6 +137,38 @@ export function phoneCloseup(
     ctx.strokeStyle = `rgba(255,255,255,${0.7 * k})`;
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+/** Make a phone read as a phone when its screen is dark: a rim light round the frame and the side buttons.
+ *  Same cx, cy, s, rot as the phone() / phoneCloseup call (use steady: true so they match). */
+export function phoneBody(ctx: Ctx, cx: number, cy: number, s: number, rot: number) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  ctx.translate(-SW / 2, -SH / 2);
+  // side buttons
+  ctx.fillStyle = "#2c2c33";
+  ctx.strokeStyle = C.ink;
+  ctx.lineWidth = 5;
+  for (const [x, y, h] of [[-40, 250, 60], [-40, 350, 110], [-40, 480, 110], [SW + 26, 380, 170]] as [number, number, number][]) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, 14, h, 6);
+    ctx.fill();
+    ctx.stroke();
+  }
+  // rim light on the metal frame, brightest on the upper left
+  const g = ctx.createLinearGradient(-26, -26, SW + 26, SH + 26);
+  g.addColorStop(0, "rgba(235,240,255,0.75)");
+  g.addColorStop(0.35, "rgba(200,210,235,0.25)");
+  g.addColorStop(0.7, "rgba(200,210,235,0.08)");
+  g.addColorStop(1, "rgba(255,220,180,0.35)");
+  ctx.strokeStyle = g;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.roundRect(-16, -16, SW + 32, SH + 32, 84);
+  ctx.stroke();
   ctx.restore();
 }
 
