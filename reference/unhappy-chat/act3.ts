@@ -4,17 +4,18 @@ import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine
 import { drawKid } from "./lib/kid";
 import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook } from "./lib/places";
 import { heart } from "./lib/sets";
-import { BACKSPACE_AT, ChatItem, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
+import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW, lockScreen, notification } from "./lib/phone";
-import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT } from "./lib/story";
+import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT, herHome } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
  *  3A rewind to 23:12: his long message lands; she squeals, types a long happy reply… her friend's advice
  *     pops up — she deletes it all and sends 「嗯」 (that's why 「对方正在输入...」 flickered)
  *  3B class, her side: he smiled at her when their eyes met — she went bright red behind the book ("You never ever pay attention to me")
- *  3C back to 00:52: she wipes her tears, types everything and sends it — he never answers; she falls asleep
+ *  3C back to 00:52: she wipes her tears, opens 微信 again from her home screen, rewrites the paragraph and sends it —
+ *     he never answers; she falls asleep
  *  3D 07:10 his room: the phone has been off all night; he turns it on and her message lands */
 
 const REST: FingerPos = REST_R;
@@ -223,11 +224,11 @@ function shotSchool(ctx: Ctx, abs: number) {
 
 // ---------------------------------------------------------------- 3C present: she sends everything
 function shotSend(ctx: Ctx, abs: number) {
-  if (abs < EV.type4[0]) {
+  if (abs < EV.phoneAgain) {
     ctx.save();
     camera(ctx, 420, 900, 1.1);
     herRoom(ctx, abs, { lights: 1 });
-    const wipe = abs < 39.95;
+    const wipe = abs < 39.72;
     drawKid(ctx, 330, 700, 0.66, {
       who: "girl",
       outfit: "pajamas",
@@ -250,7 +251,8 @@ function shotSend(ctx: Ctx, abs: number) {
     return;
   }
   if (abs < 43.6) {
-    // she picks up the paragraph she couldn't send, rewrites it, adds to it, and sends it
+    // from her home screen she opens 微信 again — the paragraph she couldn't send is still there; she rewrites it,
+    // adds to it, and sends it
     const draft = abs < EV.send3 ? editing(abs, EV.type4[0], EV.type4[1], HER_NIGHT_DRAFT, CONFESSION_EDITS) : "";
     const view = { title: HIM, time: "00:58", me: "girl" as const, them: "boy" as const, items: herItems(abs, "present"), dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
     let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
@@ -259,8 +261,22 @@ function shotSend(ctx: Ctx, abs: number) {
       const sb = sendButtonAt(ctx, { ...view, draft: HER_CONFESSION });
       const shaky = Math.sin(abs * 23) * 6;
       hands = { right: { x: sb[0] + shaky, y: sb[1] + (abs < EV.send3 - 0.08 ? 50 : 0), touch: abs > EV.send3 - 0.08 && abs < EV.send3 + 0.12 ? 1 : 0 }, left: hands.left };
+    } else if (abs < EV.openApp + 0.06) {
+      // one tap on 微信
+      const land = smooth(phase(abs, EV.phoneAgain + 0.02, EV.openApp - 0.06));
+      hands = { right: { x: WECHAT_AT[0], y: WECHAT_AT[1] + 40 * (1 - land), touch: abs > EV.openApp - 0.08 ? 1 : 0.6 + 0.25 * land }, left: hands.left };
     }
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "girl", cy: PHONE_CY, glowCol: "rgba(255,170,200,0.24)", ...hands });
+    const tap = abs > EV.openApp - 0.08 && abs < EV.openApp + 0.06 ? 1 : 0;
+    const appK = smooth(phase(abs, EV.openApp, EV.openApp + 0.3)); // the app opening out of its icon
+    phoneCloseup(
+      ctx,
+      abs,
+      (c) => {
+        if (appK < 1) herHome(c, abs, "00:58", { press: tap, zoom: 1 + 0.08 * appK });
+        appWindow(c, appK, WECHAT_AT, (a) => chatScreen2(a, abs, view));
+      },
+      { who: "girl", cy: PHONE_CY, glowCol: "rgba(255,170,200,0.24)", ...hands },
+    );
     return;
   }
   // waiting… no answer; she falls asleep holding the phone
