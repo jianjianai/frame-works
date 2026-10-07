@@ -2,7 +2,7 @@ import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
 import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text } from "./lib/draw";
 import { drawKid } from "./lib/kid";
-import { bedBlanket, bedroom, herBlanket, herRoom } from "./lib/places";
+import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook } from "./lib/places";
 import { heart } from "./lib/sets";
 import { BACKSPACE_AT, ChatItem, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
@@ -106,10 +106,11 @@ function shotReplay(ctx: Ctx, abs: number) {
     );
     return;
   }
-  // regret, face in the pillow
+  // regret: she hugs her pillow tight, chin on top of it
   ctx.save();
-  camera(ctx, 420, 900, 1.12);
+  camera(ctx, 400, 860, 1.25);
   herRoom(ctx, abs, { lights: 1 });
+  const squeeze = 1 + 0.02 * Math.sin((abs - 35.95) * 9);
   drawKid(ctx, 340, 700, 0.66, {
     who: "girl",
     outfit: "pajamas",
@@ -117,18 +118,17 @@ function shotReplay(ctx: Ctx, abs: number) {
     legs: "sitFloor",
     eyes: "shut",
     mouth: "wobble",
+    brows: "sad",
     blush: 0.7,
-    tilt: 0.12,
+    tilt: 0.1,
+    headY: 14,
     arms: "custom",
-    handL: [-90, 300],
-    handR: [90, 300],
-    shapeL: "flat",
-    shapeR: "flat",
-    grip: (c) => {
-      blob(c, [[-170, 200], [170, 190], [190, 420], [-180, 430]], 3810, 2);
-      paint(c, "#fde9f0", C.ink, 5);
-    },
+    handL: [-60, 300],
+    handR: [60, 300],
+    shapeL: "hidden",
+    shapeR: "hidden",
   });
+  huggedPillow(ctx, 340, 700, 0.66 * squeeze, "#f3b6c4", "#fff4f6", "#f6e1c3", 3810);
   herBlanket(ctx);
   ctx.restore();
 }
@@ -147,28 +147,29 @@ function shotSchool(ctx: Ctx, abs: number) {
   ctx.save();
   camera(ctx, 540, 900, 1.0 + 0.04 * beat + 0.05 * smooth(phase(abs, EV.hide2, EV.now)));
   glow(ctx, 540, 860, 800, "rgba(255,170,190,0.4)");
+  // the same 物理 textbook as in his memory, but now we see what was behind it: wide eyes peeking over
+  // the top, bright red, steaming
+  const peek = abs < 38.35 ? [0.25, 0.1] : [-0.55, 0.35];
   drawKid(ctx, 540, 860, 1.3, {
     who: "girl",
     outfit: "cardigan",
     body: "bust",
     eyes: "wide",
+    brows: "worried",
     mouth: "bite",
     blush: 1,
-    look: [0, 0.3],
+    look: peek as [number, number],
     arms: "custom",
-    handL: [-150, 200],
-    handR: [150, 200],
-    shapeL: "hold",
-    shapeR: "hold",
-    grip: (c) => {
-      c.save();
-      c.translate(0, 260);
-      blob(c, [[-180, -90], [180, -96], [186, 110], [-174, 116]], 3820, 1.2);
-      paint(c, "#7fb2d9", C.ink, 6);
-      inkLine(c, [[0, -94], [2, 112]], 3821, 4, "#4a7aa0");
-      c.restore();
-    },
+    // arms straight down behind the book (bent elbows would stick out at the sides)
+    handL: [-128, 440],
+    handR: [128, 440],
+    shapeL: "hidden",
+    shapeR: "hidden",
   });
+  const bob = 4 * beat;
+  const bookY = 860 + (66 + 196) * 1.3 + bob;
+  textbook(ctx, 546, bookY, 1.3, -0.03);
+  bookFingers(ctx, 546, bookY, 1.3, -0.03);
   ctx.restore();
   // pounding heart doodle + 扑通
   ctx.save();
