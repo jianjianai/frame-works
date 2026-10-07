@@ -7,11 +7,11 @@ import { lightPool } from "./lib/sets";
 import { BACKSPACE_AT, WECHAT_AT, appWindow, chatScreen2, powerOffScreen, profileScreen, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW } from "./lib/phone";
-import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops, phoneBody, herHome } from "./lib/story";
+import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops, phoneBody, herHome, HER_PHOTOS } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 2 (16.43 – 32.79s) · chorus 1
- *  2A her profile photo (so pretty) → the screen times out → his own face in the black glass (so ugly)
+ *  2A he flicks through her photos and stops on her sunflower portrait (so pretty) → the screen times out → his own face in the black glass (so ugly)
  *  2B 「对方正在输入...」 appears and disappears, twice (clue)
  *  2C he powers the phone off and pulls the duvet over his head (the music goes muffled)
  *  2D one camera move: out of his room through his window — his light goes out — across the street and in through
@@ -36,16 +36,24 @@ function pillow(ctx: Ctx, x: number, y: number, s: number) {
 }
 
 // ---------------------------------------------------------------- 2A
-/** "You are very pretty / I'm so very ugly": her sunny profile photo; the screen times out and his own face
- *  surfaces in the black glass exactly where hers was (match dissolve). He looks at himself; on "ugly" the camera
- *  pushes in slowly and the edges close in; then he can't hold his own gaze — eyes and head go down. */
+/** he flicks through her album on the beat (16.94 / 17.45 / 17.96) and stops on her sunflower portrait for "pretty" */
+const FLICKS = [beatAt(33), beatAt(34), beatAt(35)];
+const FLICK = 0.22;
+
+/** "You are very pretty / I'm so very ugly": her photos, one after another, then her sunny portrait; the screen times
+ *  out and his own face surfaces in the black glass exactly where hers was (match dissolve). He looks at himself; on
+ *  "ugly" the camera pushes in slowly and the edges close in; then he can't hold his own gaze — eyes and head go down. */
 function shotPretty(ctx: Ctx, abs: number) {
+  const album = FLICKS.reduce((n, t) => n + smooth(phase(abs, t, t + FLICK)), 0);
+  const flick = FLICKS.find((t) => abs > t - 0.05 && abs < t + FLICK + 0.02);
+  const thumb: FingerPos = flick === undefined ? REST : { x: lerp(470, 130, smooth(phase(abs, flick, flick + FLICK))), y: 560, touch: 1 };
   // her photo stays until "pretty" has been sung (ends 19.33); the screen times out round the next beat (19.50)
   const out = smooth(phase(abs, 19.33, 19.75)); // her photo fading to black glass
   const refl = abs < 19.4 ? 0 : 0.3 * smooth(phase(abs, 19.4, 19.9)) + 0.3 * smooth(phase(abs, 20.15, 20.6));
   const push = smooth(phase(abs, 19.8, EV.uglyEnd));
   // framed so the phone's sides stay in the picture — it has to read as a phone when the screen goes black
-  const s = 1.22 + 0.25 * push;
+  const gaze = smooth(phase(abs, FLICKS[2] + FLICK, 19.33)); // stopped on her portrait, the camera creeps closer
+  const s = 1.22 + 0.06 * gaze + 0.19 * push;
   const ay = 805 + 45 * push; // where both faces sit on screen (face at screen 300, 470)
   // her profile sits low enough that her name clears the lyrics; as the screen dims the camera rises to put
   // her face where his reflection will appear
@@ -55,7 +63,7 @@ function shotPretty(ctx: Ctx, abs: number) {
     ctx,
     abs,
     (c) => {
-      if (out < 1) profileScreen(c, abs);
+      if (out < 1) profileScreen(c, abs, { photos: HER_PHOTOS, at: album });
       if (out > 0) {
         c.fillStyle = `rgba(5,5,7,${out})`;
         c.fillRect(0, 0, SW, SH);
@@ -99,7 +107,7 @@ function shotPretty(ctx: Ctx, abs: number) {
     // the same framing for both faces, then a slow push into his
     {
       who: "boy",
-      right: REST,
+      right: thumb,
       cx: 540,
       cy: cyNow,
       s,
