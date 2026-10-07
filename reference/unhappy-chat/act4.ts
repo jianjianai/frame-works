@@ -6,7 +6,7 @@ import { bedBlanket, bedroom, herBlanket, herRoom } from "./lib/places";
 import { heart } from "./lib/sets";
 import { ChatItem, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
-import { ASK_AGAIN, GIVE_UP, HER, HER_CONFESSION, HISTORY, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { ASK_AGAIN, GIVE_UP, HER, PHONE_CY, REST_L, REST_R, HER_CONFESSION, HISTORY, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { BAR, END, EV } from "./lib/timeline";
 
 /** ACT 4 (49.14 – 57.0s) · the last loop of the outro
@@ -15,8 +15,6 @@ import { BAR, END, EV } from "./lib/timeline";
  *  4C both of them grinning at their phones (split screen) under the last line 「这一次的「嗯」/ 后面什么都没删」 */
 
 const ME_TOO = "我也是";
-const REST_L: FingerPos = { x: 120, y: 1180, touch: 0.2 };
-const REST_R: FingerPos = { x: 480, y: 1180, touch: 0.2 };
 
 function replyItems(abs: number): ChatItem[] {
   const items: ChatItem[] = [...HISTORY.slice(-3)];
@@ -49,7 +47,7 @@ function shotReply(ctx: Ctx, abs: number) {
         hands = { right: { x: sb[0], y: sb[1] + (abs < send - 0.06 ? 30 : 0), touch: abs > send - 0.06 ? 1 : 0.1 }, left: REST_L };
       }
   }
-  phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "boy", cy: 880, glowCol: "rgba(255,230,190,0.3)", bg: "#2b2a3a", ...hands });
+  phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "boy", cy: PHONE_CY, glowCol: "rgba(255,230,190,0.3)", bg: "#2b2a3a", ...hands });
 }
 
 // ---------------------------------------------------------------- 4C both of them
