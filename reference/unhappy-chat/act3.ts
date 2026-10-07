@@ -2,18 +2,18 @@ import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
 import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text } from "./lib/draw";
 import { drawKid } from "./lib/kid";
-import { bedBlanket, bedroom, classroomFront, deskFront, herBlanket, herRoom } from "./lib/places";
+import { bedBlanket, bedroom, herBlanket, herRoom } from "./lib/places";
 import { heart } from "./lib/sets";
 import { BACKSPACE_AT, ChatItem, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW, lockScreen, notification } from "./lib/phone";
-import { FRIEND_ADVICE, GIVE_UP, HER, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { FRIEND_ADVICE, GIVE_UP, HER, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
  *  3A rewind to 23:12: his long message lands; she squeals, types a long happy reply… her friend's advice
  *     pops up — she deletes it all and sends 「嗯」 (that's why 「对方正在输入...」 flickered)
- *  3B class, her side: when their eyes met she went bright red behind the book ("You never ever pay attention to me")
+ *  3B class, her side: he smiled at her when their eyes met — she went bright red behind the book ("You never ever pay attention to me")
  *  3C back to 00:52: she wipes her tears, types everything and sends it — he never answers; she falls asleep
  *  3D 07:10 his room: the phone has been off all night; he turns it on and her message lands */
 
@@ -136,14 +136,8 @@ function shotReplay(ctx: Ctx, abs: number) {
 // ---------------------------------------------------------------- 3B class, her side
 function shotSchool(ctx: Ctx, abs: number) {
   if (abs < EV.hide2) {
-    ctx.save();
-    camera(ctx, 540, 900, 1.03);
-    classroomFront(ctx, abs, { sun: 1 });
-    drawKid(ctx, 700, 640, 0.5, { body: "bust", eyes: "open", look: [-0.7, 0.6], mouth: "smile", arms: "table" });
-    deskFront(ctx, 700, 855, 0.5, 3572);
-    drawKid(ctx, 360, 900, 0.74, { who: "girl", outfit: "cardigan", body: "bust", view: abs >= EV.turn2 ? "back" : "front", eyes: "open", look: [0.5, -0.4], arms: "table" });
-    deskFront(ctx, 360, 1210, 0.74, 3573);
-    ctx.restore();
+    // what she saw when she turned round: him, smiling at her
+    hisClassFace(ctx, abs, BAR(18), "smile");
     card(ctx, "那天上课", 70, 330, smooth(phase(abs, BAR(18) + 0.05, BAR(18) + 0.3)));
     return;
   }
