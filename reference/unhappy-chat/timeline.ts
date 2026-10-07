@@ -36,13 +36,14 @@ export const EV = {
   uglyEnd: 21.541,
   typingA: [21.85, 22.45] as const,
   typingB: [22.95, 23.6] as const,
-  powerOff: 25.85,
-  blanket: 26.2,
-  muffle: [26.65, 27.674] as const, // only while he is under the duvet
-  curledUp: 27.674, // "That makes me unhappy": the dark room, then out of the window to her lit one
-  twist: BAR(14), // 28.70: his light goes out, cut into her room (was 29.82)
-  hisLightOff: 28.185,
-  del2: [30.8, 31.8] as const,
+  powerOff: 25.06, // one quick swipe, the screen goes black
+  blanket: 25.25, // the duvet goes up over his head
+  muffle: [25.7, 26.45] as const, // under the duvet with him (the music is muffled only here)
+  leaveRoom: 26.45, // his room — the camera backs out through his window
+  hisLightOff: beatAt(53), // 27.16 "…without me": his light goes out
+  herWindow: [27.42, 28.1] as const, // across the street and in through the only window still lit
+  twist: 28.1, // her room: she is crying too ("unhappy")
+  hesitate: beatAt(58), // 29.72 her phone: the paragraph is typed; three times to 发送 and back
   // act 3 — her side
   rewind: 32.55,
   ding2: 33.05,
