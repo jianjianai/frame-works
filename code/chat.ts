@@ -364,7 +364,7 @@ export function momentsScreen(ctx: Ctx, abs: number, o: { dark?: boolean; mark?:
   text(ctx, "林夏", 112, py + 16, { size: 30, font: F.ui, weight: 700, fill: "#576b95", align: "left" });
   text(ctx, "今天好开心～", 112, py + 64, { size: 30, font: F.ui, fill: dark ? "#ddd" : "#111", align: "left" });
   selfiePhoto(ctx, 112, py + 96, 400, 400, abs, "happy");
-  text(ctx, "5分钟前", 112, py + 540, { size: 24, font: F.ui, fill: "#999", align: "left" });
+  text(ctx, "5分钟前", 112, py + 540, { size: 28, font: F.ui, fill: dark ? "#b4b4b4" : "#888", align: "left" });
   const mk = clamp(o.mark ?? 0);
   if (mk > 0) {
     ctx.save();
