@@ -77,3 +77,4 @@
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版：重拍的教室（越肩→对视→课本→他的脸→放学递牛奶→空桌牛奶）
 - `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：主歌2 她的视角（教室回忆用他的笑脸）
 - `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：剧情文字和共用镜头（phoneCloseup、typingThumbs、hisFaceReading、hisClassFace）
+- `code/hand.ts`：来源 work-d1187f37《unhappy》：双手握手机重画（手掌在机身后、粗直拇指斜搭键盘、袖子出画），按用户给的卡通参考图定动作
