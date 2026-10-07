@@ -6,7 +6,9 @@ import { seeded } from "../../src/engine/math";
  *  （module "sfx", trackId = 下面的名字），clip 的 start 对齐画面事件时间。不用的音效可以删掉。
  *  第一支《i have no friends》：typing/send/fail/match/blow/flood/splat/pop/reply
  *  第二支《unhappy》：keys/doorOpen/doorClose/roomDoor/ball/slam/cough/squeak/rain/heartbeat/click/splash/
- *  whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps */
+ *  whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps（小狗版）
+ *  《unhappy》聊天版：um/note/typing2/typingLong/del/send2/lamp/powerOff/rustle/rewind2/heartFast/bell/steps/shutter/
+ *  birds/boot/run/store/pay/door/milk/sparkle/stickerPop */
 const SR = 48000;
 const TAU = Math.PI * 2;
 
@@ -66,6 +68,21 @@ function noiseVoice(seed: number) {
   let lp = 0,
     lp2 = 0;
   return { r, filt: (x: number, k: number) => ((lp += k * (x - lp)), (lp2 += k * (lp - lp2)), lp2) };
+}
+
+function tone(pcm: StereoPcm, at: number, f: number, dur: number, gain: number, pan = 0, decay = 6) {
+  add(pcm, at, dur, (t) => attack(t, 0.003) * (Math.sin(TAU * f * t) * 0.7 + Math.sin(TAU * f * 2 * t) * 0.2) * Math.exp(-t * decay), gain, pan);
+}
+/** keyboard taps: n per second for `dur` seconds */
+function taps(dur: number, rate: number, seed: number, pitch = 1, gain = 0.16) {
+  const pcm = buffer(dur + 0.1);
+  const r = seeded(seed);
+  for (let t = 0; t < dur; t += 1 / rate) {
+    const at = t + r() * 0.02;
+    const nz = seeded(seed + Math.floor(t * 100));
+    add(pcm, at, 0.04, (u) => (nz() * 2 - 1) * Math.exp(-u * 280) + Math.sin(TAU * 1700 * pitch * u) * 0.35 * Math.exp(-u * 320), gain * (0.8 + r() * 0.4));
+  }
+  return pcm;
 }
 
 const sounds: Record<string, () => StereoPcm> = {
@@ -343,6 +360,150 @@ const sounds: Record<string, () => StereoPcm> = {
   thumps: () => {
     const pcm = buffer(1.2);
     for (let k = 0; k < 4; k++) thud(pcm, k * 0.22, 110, 0.22 - k * 0.02, 0.18, 100 + k);
+    return pcm;
+  },
+  // ---------------- 《unhappy》second story (同一段聊天两个视角)
+  // the message-received chime (two soft notes)
+  um: () => {
+    const pcm = buffer(0.9);
+    tone(pcm, 0, 1318, 0.6, 0.32, 0, 9);
+    tone(pcm, 0.09, 1760, 0.7, 0.28, 0, 8);
+    return pcm;
+  },
+  // her friend's notification on her phone: lighter, higher
+  note: () => {
+    const pcm = buffer(0.6);
+    tone(pcm, 0, 2093, 0.5, 0.22, 0.2, 12);
+    return pcm;
+  },
+  typing2: () => taps(1.0, 9, 3),
+  typingLong: () => taps(2.6, 9, 4),
+  // backspace held: faster, lower clicks
+  del: () => taps(1.0, 12, 5, 0.7, 0.14),
+  send2: () => {
+    const pcm = buffer(0.4);
+    const r = seeded(21);
+    let a = 0;
+    add(pcm, 0, 0.35, (t) => {
+      const k = 0.04 + 0.4 * (t / 0.35);
+      a += k * (r() * 2 - 1 - a);
+      return a * Math.sin((Math.PI * t) / 0.35) * 2.2;
+    }, 0.32);
+    return pcm;
+  },
+  lamp: () => {
+    const pcm = buffer(0.15);
+    const r = seeded(31);
+    add(pcm, 0, 0.06, (t) => (r() * 2 - 1) * Math.exp(-t * 400) + Math.sin(TAU * 2300 * t) * 0.4 * Math.exp(-t * 220), 0.35);
+    return pcm;
+  },
+  // powering off: a falling blip
+  powerOff: () => {
+    const pcm = buffer(0.6);
+    add(pcm, 0, 0.5, (t) => attack(t) * Math.sin(TAU * (900 - 700 * Math.min(1, t / 0.4)) * t) * Math.exp(-t * 7), 0.25);
+    return pcm;
+  },
+  rustle: () => {
+    const pcm = buffer(0.8);
+    const nz = lowpass(41, 0.35);
+    add(pcm, 0, 0.7, (t) => nz() * Math.sin((Math.PI * t) / 0.7) * (1.6 + Math.sin(t * 40) * 0.4), 0.3);
+    return pcm;
+  },
+  rewind2: () => {
+    const pcm = buffer(0.7);
+    const r = seeded(55);
+    let a = 0;
+    add(pcm, 0, 0.65, (t) => {
+      const k = 0.02 + 0.5 * (t / 0.65) ** 2;
+      a += k * (r() * 2 - 1 - a);
+      return a * 2.4 * Math.min(1, t / 0.1) * Math.min(1, (0.65 - t) / 0.05) + Math.sin(TAU * (300 + 2000 * t * t) * t) * 0.08;
+    }, 0.3);
+    return pcm;
+  },
+  // her heart pounding behind the book
+  heartFast: () => {
+    const pcm = buffer(1.8);
+    for (let k = 0; k < 4; k++) {
+      const at = k * 0.4;
+      add(pcm, at, 0.16, (t) => attack(t, 0.01) * Math.sin(TAU * 58 * t) * Math.exp(-t * 18), 0.7);
+      add(pcm, at + 0.14, 0.18, (t) => attack(t, 0.01) * Math.sin(TAU * 50 * t) * Math.exp(-t * 16), 0.5);
+    }
+    return pcm;
+  },
+  // school bell: 叮——叮——
+  bell: () => {
+    const pcm = buffer(1.6);
+    tone(pcm, 0, 988, 1.0, 0.22, -0.2, 2.5);
+    tone(pcm, 0.45, 784, 1.1, 0.22, 0.2, 2.5);
+    return pcm;
+  },
+  steps: () => {
+    const pcm = buffer(0.8);
+    for (let k = 0; k < 5; k++) thud(pcm, k * 0.13, 180, 0.12, 0.08, 60 + k);
+    return pcm;
+  },
+  shutter: () => {
+    const pcm = buffer(0.3);
+    const r = seeded(70);
+    add(pcm, 0, 0.05, (t) => (r() * 2 - 1) * Math.exp(-t * 200), 0.4);
+    add(pcm, 0.07, 0.06, (t) => (r() * 2 - 1) * Math.exp(-t * 160), 0.32);
+    return pcm;
+  },
+  birds: () => {
+    const pcm = buffer(1.6);
+    const r = seeded(80);
+    for (let k = 0; k < 7; k++) {
+      const at = r() * 1.3,
+        f0 = 3200 + r() * 1400;
+      add(pcm, at, 0.12, (t) => attack(t, 0.005) * Math.sin(TAU * (f0 + 900 * Math.sin(t * 60)) * t) * Math.exp(-t * 18), 0.08, r() * 1.4 - 0.7);
+    }
+    return pcm;
+  },
+  boot: () => {
+    const pcm = buffer(0.9);
+    tone(pcm, 0, 523, 0.8, 0.18, 0, 3);
+    tone(pcm, 0, 784, 0.8, 0.14, 0, 3);
+    return pcm;
+  },
+  run: () => {
+    const pcm = buffer(2.1);
+    for (let k = 0; k < 12; k++) thud(pcm, k * 0.17, 120, 0.22, 0.1, 90 + k);
+    return pcm;
+  },
+  // convenience-store door chime + the payment beep
+  store: () => {
+    const pcm = buffer(1.2);
+    tone(pcm, 0, 1175, 0.6, 0.18, 0, 4);
+    tone(pcm, 0.22, 880, 0.7, 0.18, 0, 4);
+    return pcm;
+  },
+  pay: () => {
+    const pcm = buffer(0.3);
+    tone(pcm, 0, 2637, 0.12, 0.2, 0, 20);
+    return pcm;
+  },
+  door: () => {
+    const pcm = buffer(0.5);
+    thud(pcm, 0, 90, 0.4, 0.35, 101);
+    return pcm;
+  },
+  // the milk set down on the desk + a little sparkle
+  milk: () => {
+    const pcm = buffer(1.0);
+    thud(pcm, 0, 140, 0.3, 0.2, 111);
+    const r = seeded(112);
+    for (let k = 0; k < 8; k++) tone(pcm, 0.05 + k * 0.05, 2600 + r() * 2000, 0.25, 0.05, r() * 1.4 - 0.7, 18);
+    return pcm;
+  },
+  sparkle: () => {
+    const pcm = buffer(1.0);
+    const r = seeded(120);
+    for (let k = 0; k < 10; k++) tone(pcm, k * 0.06, 2000 + r() * 2600, 0.3, 0.05, r() * 1.4 - 0.7, 14);
+    return pcm;
+  },
+  stickerPop: () => {
+    const pcm = buffer(0.3);
+    add(pcm, 0, 0.12, (t) => Math.sin(TAU * (400 + 900 * t * 8) * t) * Math.exp(-t * 30), 0.25);
     return pcm;
   },
 };

@@ -61,3 +61,4 @@
 - `code/people.ts`：来源 work-d1187f37：CAST 加女主的两个朋友 mei（马尾）、qi（丸子头眼镜）和同学 stu1–4
 - `code/hand.ts`：来源 work-d1187f37：heldHands 加 look 参数（袖子/袖口/肤色/划痕），女生睡衣袖子可用
 - `code/lyrics.ts`：来源 work-d1187f37 聊天版：钩子两行（关键字放大变色）→ 标题胶囊三段翻转；caption() 通用两行大字幕（暗底条）；回看彩蛋卡片
+- `code/sfx-audio.ts`：来源 三套合成音效合并：第一支、小狗版、聊天版（um/note/typing2/typingLong/del/send2/lamp/powerOff/rustle/rewind2/heartFast/bell/steps/shutter/birds/boot/run/store/pay/door/milk/sparkle/stickerPop）
