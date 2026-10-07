@@ -184,6 +184,8 @@ export interface Msg {
   failed?: number; // 0..1 red mark appear
   sending?: number; // spinner
   avatar?: Person;
+  /** a grey time label above this message, e.g. "10:12" */
+  time?: string;
 }
 function avatar(ctx: Ctx, x: number, y: number, p: Person | undefined, me: boolean) {
   ctx.save();
@@ -221,13 +223,14 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
   text(ctx, "···", SW - 50, 116, { size: 40, font: F.ui, weight: 700, fill: "#111" });
   ctx.fillStyle = "#d6d6d6";
   ctx.fillRect(0, 160, SW, 2);
+  const top = 162;
   const kb = opts.keyboard ? 420 : 0;
   const inputY = SH - 120 - kb;
   // messages from the bottom up
   let y = inputY - 40 + (opts.scroll ?? 0);
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0, 162, SW, inputY - 162);
+  ctx.rect(0, top, SW, inputY - top);
   ctx.clip();
   for (let i = msgs.length - 1; i >= 0; i--) {
     const m = msgs[i];
@@ -271,6 +274,10 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
       ctx.restore();
     }
     y -= m.from && !m.me ? 70 : 40;
+    if (m.time) {
+      text(ctx, m.time, SW / 2, y + 10, { size: 22, font: F.ui, fill: "#9a9a9a" });
+      y -= 48;
+    }
   }
   ctx.restore();
   // input bar

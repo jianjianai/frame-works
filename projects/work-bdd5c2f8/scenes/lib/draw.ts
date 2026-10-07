@@ -358,6 +358,10 @@ const FONT_FILES: [string, string, string, string?][] = [
   ["ZCOOL KuaiLe", "zcool-kuaile-extra.ttf", "400", "U+70B9,U+8D5E,U+7684,U+4EBA,U+FF0C,U+751F,U+65E5,U+90A3,U+5929,U+6D88,U+606F,U+56DE,U+770B,U+FF1A,U+4ED6,U+5728,U+7B2C,U+51E0,U+79D2,U+5F00,U+98DE,U+884C,U+6A21,U+5F0F,U+FF1F,U+7B54,U+6848,U+6253,U+8BC4,U+8BBA,U+533A"],
   // 小雨的通知和回复：上课大家是在笑阿杰差点说漏嘴…不是笑你啦 / 横幅上的字是我写的！
   ["Noto Sans SC", "noto-sans-sc-400-extra.ttf", "400", "U+4E0A,U+8BFE,U+5927,U+5BB6,U+662F,U+5728,U+7B11,U+963F,U+6770,U+5DEE,U+70B9,U+8BF4,U+6F0F,U+5634,U+2026,U+4E0D,U+4F60,U+5566,U+6A2A,U+5E45,U+7684,U+5B57,U+6211,U+5199,U+FF01"],
+  // 班群：昨天 22:30 / 明天都早点来！！ / 收到收到（文件里还有「当前网络不可用」，已不用）
+  ["Noto Sans SC", "noto-sans-sc-400-extra2.ttf", "400", "U+5F53,U+524D,U+7F51,U+7EDC,U+4E0D,U+53EF,U+7528,U+6628,U+5929,U+660E,U+90FD,U+65E9,U+70B9,U+6765,U+FF01,U+6536,U+5230"],
+  // 评论引导：回看：第几秒就能看出他开着飞行模式？
+  ["ZCOOL KuaiLe", "zcool-kuaile-extra2.ttf", "400", "U+5C31,U+80FD,U+51FA,U+7740"],
 ];
 export function loadFonts(): Promise<void> {
   fontsReady ??= Promise.all(
@@ -515,4 +519,138 @@ export function filtered(ctx: Ctx, filter: string, draw: (c: Ctx) => void, key =
   ctx.globalAlpha *= alpha;
   ctx.drawImage(off, 0, 0);
   ctx.restore();
+}
+
+// ---------------------------------------------------------------- the look (重新设计版)
+/** His world before the twist is grey: draw `draw` desaturated (sat 0..1). Things that stay warm (the candle, the
+ *  airplane toggle, the red "!") are drawn after this, outside it. */
+export function grade(ctx: Ctx, sat: number, draw: (c: Ctx) => void, key = "grade") {
+  if (sat >= 0.999) {
+    draw(ctx);
+    return;
+  }
+  filtered(ctx, `saturate(${sat.toFixed(3)}) brightness(0.97)`, draw, key);
+}
+
+// film grain tiles (built once): mid-grey noise, so laid over the picture in "overlay" it adds grain, not colour
+let filmTiles: HTMLCanvasElement[] | null = null;
+function grainTiles(): HTMLCanvasElement[] {
+  if (filmTiles) return filmTiles;
+  let s = 20261005;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  filmTiles = [0, 1, 2, 3].map(() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 256;
+    const g = c.getContext("2d")!;
+    const img = g.createImageData(256, 256);
+    for (let i = 0; i < 256 * 256; i++) {
+      const v = 128 + (rnd() + rnd() + rnd() - 1.5) * 100;
+      img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v;
+      img.data[i * 4 + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  });
+  return filmTiles;
+}
+
+/** Memories, through a film camera. The picture keeps its colours (用户要求：回忆不改变画面颜色); only the camera is laid
+ *  over it: a gate weave at 18 fps, coarse grain, dust, a hair and the odd scratch (dark grey, never white — white
+ *  specks read as dandruff on a phone), a slight exposure flicker and a neutral vignette. */
+export function oldFilm(ctx: Ctx, abs: number, draw: (c: Ctx) => void, _key = "film", amount = 1) {
+  const f = Math.floor(abs * 18);
+  ctx.save();
+  ctx.translate((hash(f * 1.3) - 0.5) * 2.5 * amount, (hash(f * 2.1) - 0.5) * 2.5 * amount);
+  draw(ctx);
+  ctx.restore();
+  // grain
+  ctx.save();
+  ctx.globalCompositeOperation = "overlay";
+  ctx.globalAlpha = 0.34 * amount;
+  ctx.translate(-((f * 97) % 256), -((f * 61) % 256));
+  ctx.scale(1.5, 1.5);
+  ctx.fillStyle = ctx.createPattern(grainTiles()[f % 4], "repeat")!;
+  ctx.fillRect(0, 0, W + 400, H + 400);
+  ctx.restore();
+  ctx.save();
+  // exposure flicker (neutral)
+  const fl = (hash(f * 3.7) - 0.5) * 0.06 * amount;
+  ctx.globalAlpha = Math.abs(fl);
+  ctx.fillStyle = fl > 0 ? "#fff" : "#000";
+  ctx.fillRect(-60, -60, W + 120, H + 120);
+  // dust, a hair, the odd scratch
+  ctx.globalAlpha = 0.55 * amount;
+  ctx.fillStyle = "#1c1c1c";
+  for (let i = 0; i < 8; i++) {
+    if (hash(f + i * 9.7) < 0.55) continue;
+    ctx.beginPath();
+    ctx.arc(hash(f * 7.1 + i) * W, hash(f * 3.3 + i * 2) * H, 1.5 + hash(f + i) * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (hash(f * 0.61) > 0.8) {
+    const hx = hash(f * 2.9) * W,
+      hy = hash(f * 4.3) * H;
+    ctx.strokeStyle = "rgba(20,20,20,0.6)";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.bezierCurveTo(hx + 30, hy - 20, hx + 50, hy + 30, hx + 80, hy + 10);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // old-screen vertical lines at random (用户要求：回忆播放时也随机出现竖线): two that wander and come and go, one to
+  // three that jump every frame, and now and then a short burst — the same lines as the cut into the memory. Masked by
+  // linesOutsideCentre: faint inside a circle in the middle of the screen, stronger the further out they run.
+  const burst = hash(Math.floor(abs * 3) * 1.37) > 0.72 && (abs * 3) % 1 < 0.35;
+  const lines = (hash(f * 0.37) > 0.45 ? 1 + Math.floor(hash(f * 0.91) * 3) : 0) + (burst ? 10 : 0);
+  linesOutsideCentre(ctx, (c) => {
+    for (let k = 0; k < 2; k++) {
+      if (Math.sin(abs * (0.9 + k * 0.7) + k * 2.1) < 0.1) continue;
+      c.globalAlpha = (0.3 + 0.25 * hash(f + k * 3.3)) * amount;
+      c.fillStyle = k ? "#f3efe6" : "#0c0c0c";
+      c.fillRect(W * (0.25 + 0.5 * hash(k * 5.3)) + Math.sin(abs * (1.3 + k)) * 160 + (hash(f * 1.1 + k) - 0.5) * 6, -60, 1.5 + k, H + 120);
+    }
+    for (let k = 0; k < lines; k++) {
+      c.globalAlpha = (0.25 + 0.5 * hash(f * 2.3 + k)) * amount;
+      c.fillStyle = hash(k * 9.1 + f) > 0.45 ? "#0c0c0c" : "#f3efe6";
+      c.fillRect(hash(f * 3.1 + k * 7.3) * W, -60, 1 + hash(f + k * 1.7) * (k % 6 === 0 ? 5 : 2), H + 120);
+    }
+  });
+  // a mild neutral vignette (a strong one hurt the look — the old-screen cut into the memory carries the cue instead)
+  const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, `rgba(0,0,0,${(0.38 * amount).toFixed(2)})`);
+  ctx.save();
+  ctx.fillStyle = g;
+  ctx.fillRect(-60, -60, W + 120, H + 120);
+  ctx.restore();
+}
+
+/** Blink every 2.6–4 s for ~0.12 s: returns "shut" during a blink, else `base`. `seed` desyncs characters. */
+export function blinkEyes<T extends string>(abs: number, seed: number, base: T): T | "shut" {
+  const period = 2.6 + hash(seed) * 1.4;
+  const t = (abs + hash(seed * 3.1) * period) % period;
+  return t < 0.12 ? "shut" : base;
+}
+
+/** Old-screen vertical lines, faint inside a circle in the middle of the screen and stronger the further out they
+ *  run (用户：中心区域圆圈里不明显，越到边缘越明显 — a radial mask, not a per-line fade). `draw` paints the lines. */
+export function linesOutsideCentre(ctx: Ctx, draw: (c: Ctx) => void, key = "lines") {
+  filtered(
+    ctx,
+    "none",
+    (c) => {
+      draw(c);
+      c.save();
+      c.globalAlpha = 1;
+      c.globalCompositeOperation = "destination-in";
+      const g = c.createRadialGradient(W / 2, H / 2, W * 0.3, W / 2, H / 2, W * 0.78);
+      g.addColorStop(0, "rgba(0,0,0,0.08)");
+      g.addColorStop(1, "rgba(0,0,0,1)");
+      c.fillStyle = g;
+      c.fillRect(-100, -100, W + 200, H + 200);
+      c.restore();
+    },
+    key,
+  );
 }

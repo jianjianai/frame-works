@@ -312,7 +312,8 @@ const LINES_B = [13, 14, 15, 16, 17, 18, 19];
 
 /** The end card, over the epilogue to the last frame. Like: a double tap in the middle of the screen (two ripples,
  *  a big heart thrown up, beating with the music) and a line tied to the story; comment: a question answered with one
- *  number, which also sends people back to 0:12 (「回看：他在第几秒开的飞行模式？」). Song time. */
+ *  number, which also sends people back to the opening (「回看：第几秒就能看出他开着飞行模式？」— the ✈ in the
+ *  status bar from 0:02). Song time. */
 const PROMPTS = beatAt(166); // song 86.87 = work 53.48
 const SONG_END = beatAt(172); // song 90.00 = work 56.61
 function endPrompts(ctx: Ctx, abs: number) {
@@ -358,7 +359,7 @@ function endPrompts(ctx: Ctx, abs: number) {
   }
   const ck = smooth(phase(abs, t0 + 0.5, t0 + 0.8));
   if (ck > 0) {
-    const l1 = "回看：他在第几秒开的飞行模式？",
+    const l1 = "回看：第几秒就能看出他开着飞行模式？",
       l2 = "答案打在评论区";
     const w = Math.max(measure(ctx, l1, 40, F.cn), measure(ctx, l2, 46, F.cn) + 60) + 64;
     ctx.save();

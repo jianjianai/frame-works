@@ -13,3 +13,7 @@
 - public/_tmp/noto-extra.css: Google Fonts Noto Sans SC（SIL OFL 1.1），新增文字的子集
 - public/fonts/zcool-kuaile-extra.ttf: Google Fonts · ZCOOL KuaiLe（SIL Open Font License 1.1），重置版新增文字的子集
 - public/fonts/noto-sans-sc-400-extra.ttf: Google Fonts · Noto Sans SC（SIL Open Font License 1.1），重置版新增文字的子集
+- public/_tmp/noto-extra2.css: Google Fonts Noto Sans SC（SIL OFL 1.1）子集
+- public/fonts/noto-sans-sc-400-extra2.ttf: Google Fonts · Noto Sans SC（SIL Open Font License 1.1），重新设计版新增聊天文字的子集
+- public/_tmp/zcool-extra2.css: Google Fonts ZCOOL KuaiLe（SIL OFL 1.1）子集
+- public/fonts/zcool-kuaile-extra2.ttf: Google Fonts · ZCOOL KuaiLe（SIL Open Font License 1.1），新评论引导文字的子集

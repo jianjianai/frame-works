@@ -7,7 +7,7 @@ import { C, Ctx, F, H, Pt, W, blob, curve, fillBg, glow, hash, inkLine, jit, lin
  *  speeds). Signatures are the same as before; corridor/classroom take `abs` for dust in the light. */
 
 // ---------------------------------------------------------------- bedroom (night)
-export function bedroom(ctx: Ctx, abs: number, moon = 1) {
+export function bedroom(ctx: Ctx, abs: number, moon = 1, clue = 0) {
   // wall: deep blue, a faint striped wallpaper
   fillBg(ctx, vgrad(ctx, 0, H, [[0, "#171c3a"], [0.6, "#121731"], [1, "#0b0e1f"]]));
   ctx.save();
@@ -59,6 +59,22 @@ export function bedroom(ctx: Ctx, abs: number, moon = 1) {
       y = wy + 290 + hash(i * 2.3) * 90;
     ctx.fillStyle = hash(i * 9.1) > 0.4 ? "rgba(255,214,140,0.9)" : "rgba(255,214,140,0.35)";
     ctx.fillRect(x, y, 8, 10);
+  }
+  if (clue > 0) {
+    // 彩蛋: far below, at the foot of the window, a few phone lights and a scrap of pink banner — they are already
+    // down there waiting (the twist shows the same street at 0:42)
+    ctx.save();
+    ctx.globalAlpha *= clue;
+    for (let i = 0; i < 6; i++) {
+      const lx = wx + 118 + i * 15 + Math.sin(abs * 2 + i) * 2,
+        ly = wy + wh - 13 - (i % 2) * 5;
+      glow(ctx, lx, ly, 13, "rgba(255,255,230,0.9)", 0.6 + 0.4 * Math.sin(abs * 5 + i));
+      ctx.fillStyle = "#fffbe6";
+      ctx.fillRect(lx - 1.5, ly - 1.5, 3, 3);
+    }
+    ctx.fillStyle = "#ff7fb0";
+    ctx.fillRect(wx + 146, wy + wh - 27, 36, 8);
+    ctx.restore();
   }
   ctx.restore();
   rbox(ctx, wx, wy, ww, wh, 10, 11, 2);
@@ -173,11 +189,15 @@ export function desk(ctx: Ctx, y: number) {
   }
 }
 
-/** Cupcake with one candle. lit: 0 = out, 1 = burning. smoke 0..1 after blowing out. */
-export function cupcake(ctx: Ctx, x: number, y: number, s: number, abs: number, lit: number, smoke = 0, candles = 1) {
+/** Cupcake with one candle. lit: 0 = out, 1 = burning. smoke 0..1 after blowing out. `part`: "body" = everything but
+ *  the flame and its glow, "flame" = only those (so the flame can stay warm over a graded, grey scene). */
+export function cupcake(ctx: Ctx, x: number, y: number, s: number, abs: number, lit: number, smoke = 0, candles = 1, part: "all" | "body" | "flame" = "all") {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(s, s);
+  const body = part !== "flame",
+    flame = part !== "body";
+  if (body) {
   // wrapper
   poly(ctx, [[-110, -10], [110, -10], [84, 130], [-84, 130]], 31, 1.5);
   paint(ctx, "#ff8fb8", C.ink, 6);
@@ -189,8 +209,10 @@ export function cupcake(ctx: Ctx, x: number, y: number, s: number, abs: number, 
     oval(ctx, -80 + hash(i) * 160, -70 + hash(i * 3) * 50, 7, 4, 34 + i, 0.4, hash(i * 5) * 3);
     paint(ctx, ["#ff5a7a", "#ffd84a", "#59c3ff", "#7ee081"][i % 4], null);
   }
+  }
   for (let c = 0; c < candles; c++) {
     const cx = candles === 1 ? 0 : (c - (candles - 1) / 2) * 50;
+    if (body) {
     rbox(ctx, cx - 11, -230, 22, 130, 4, 40 + c, 1);
     paint(ctx, "#cfe8ff", C.ink, 4);
     ctx.save();
@@ -206,7 +228,8 @@ export function cupcake(ctx: Ctx, x: number, y: number, s: number, abs: number, 
     }
     ctx.restore();
     inkLine(ctx, [[cx, -232], [cx + 2, -250]], 45 + c, 3);
-    if (lit > 0.01) {
+    }
+    if (flame && lit > 0.01) {
       const fl = 1 + Math.sin(abs * 23 + c) * 0.08 + Math.sin(abs * 37) * 0.05;
       glow(ctx, cx, -290, 150, "rgba(255,190,90,0.35)", lit);
       ctx.save();
@@ -219,7 +242,7 @@ export function cupcake(ctx: Ctx, x: number, y: number, s: number, abs: number, 
       paint(ctx, "#fff6c2", null);
       ctx.restore();
     }
-    if (smoke > 0) {
+    if (body && smoke > 0) {
       ctx.save();
       ctx.globalAlpha = (1 - smoke) * 0.8;
       const pts: Pt[] = [];
@@ -886,4 +909,83 @@ export function buildingEntrance(ctx: Ctx, abs: number) {
     for (let x = -120; x < W + 120; x += 130) inkLine(ctx, [[x, 1300], [x - 50, H + 100]], 841 + x, 2, "rgba(0,0,0,0.3)");
     inkLine(ctx, [[-120, 1460], [W + 120, 1452]], 850, 2, "rgba(0,0,0,0.3)");
   }, C.ink, 5);
+}
+
+// ---------------------------------------------------------------- the big cake (bakery window → the party)
+/** The two-tier birthday cake in the bakery window — the one he looks at and can't buy, and the one the friends bring
+ *  downstairs (with a gold "17" candle). (x, y) = the foot of the cake stand; s = 1 → about 420 wide, 480 tall. */
+export function bigCake(ctx: Ctx, x: number, y: number, s: number, abs: number, opts: { candle17?: boolean; lit?: number } = {}) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  // the stand
+  shaded(ctx, () => blob(ctx, [[-64, 0], [64, 0], [36, -34], [18, -52], [-18, -52], [-36, -34]], 2001, 1), "#f2f2f5", () => {
+    ctx.fillStyle = "rgba(0,0,0,0.1)";
+    ctx.fillRect(10, -60, 60, 60);
+  }, C.ink, 5);
+  oval(ctx, 0, -58, 250, 24, 2002, 1.4);
+  paint(ctx, "#fbfbfd", C.ink, 5);
+  const tier = (w: number, h: number, by: number, seed: number) => {
+    shaded(ctx, () => rbox(ctx, -w / 2, by - h, w, h, 26, seed, 1.2), "#fff6f0", () => {
+      ctx.fillStyle = "rgba(200,165,150,0.25)";
+      ctx.fillRect(w / 2 - 64, by - h, 64, h);
+      // pink drip running down from the top edge
+      const pts: Pt[] = [[-w / 2 - 12, by - h - 24]];
+      for (let i = 0; i <= 12; i++) pts.push([-w / 2 + (i / 12) * w, by - h + (i % 2 ? 28 + hash(seed + i) * 44 : 14)]);
+      pts.push([w / 2 + 12, by - h - 24]);
+      blob(ctx, pts, seed + 1, 1.2);
+      paint(ctx, "#ff9cc3", null);
+      ctx.fillStyle = "rgba(255,255,255,0.35)";
+      ctx.fillRect(-w / 2 + 18, by - h + 50, 14, h - 70);
+    }, C.ink, 5);
+  };
+  tier(400, 200, -60, 2003);
+  tier(270, 150, -260, 2005);
+  // piped cream along both top edges
+  for (let i = 0; i < 9; i++) {
+    oval(ctx, -180 + i * 45, -262, 18, 12, 2010 + i, 0.6);
+    paint(ctx, "#fffaf6", C.ink, 3);
+  }
+  for (let i = 0; i < 6; i++) {
+    oval(ctx, -112 + i * 45, -412, 16, 11, 2020 + i, 0.6);
+    paint(ctx, "#fffaf6", C.ink, 3);
+  }
+  text(ctx, "Happy Birthday", 0, -150, { size: 42, font: F.en, fill: "#e8508a" });
+  // strawberries on top
+  for (let i = 0; i < 5; i++) {
+    const sx = -90 + i * 45,
+      sy = -432 - (i % 2) * 10;
+    blob(ctx, [[sx - 16, sy - 6], [sx + 16, sy - 6], [sx + 10, sy + 16], [sx, sy + 24], [sx - 10, sy + 16]], 2030 + i, 0.8);
+    paint(ctx, "#e8343c", C.ink, 3);
+    poly(ctx, [[sx - 12, sy - 8], [sx, sy - 18], [sx + 12, sy - 8], [sx, sy - 4]], 2040 + i, 0.5);
+    paint(ctx, "#5aa36b", C.ink, 2);
+  }
+  if (opts.candle17) {
+    // a gold "17" number candle in the middle, lit
+    ctx.save();
+    ctx.translate(0, -500);
+    ctx.font = `400 120px ${F.marker}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 14;
+    ctx.strokeStyle = C.ink;
+    ctx.strokeText("17", 0, 0);
+    ctx.fillStyle = "#f2c14e";
+    ctx.fillText("17", 0, 0);
+    const lit = opts.lit ?? 1;
+    if (lit > 0.01)
+      for (const fx of [-26, 24]) {
+        const fl = 1 + Math.sin(abs * 23 + fx) * 0.08;
+        glow(ctx, fx, -96, 70, "rgba(255,190,90,0.5)", lit);
+        ctx.save();
+        ctx.translate(fx, -76);
+        ctx.scale(lit * fl * 0.55, lit * fl * 0.55);
+        blob(ctx, [[0, -78], [22, -30], [20, 0], [0, 12], [-20, 0], [-22, -30]], 2050 + fx, 1.2);
+        paint(ctx, "#ffb43a", "#e0701a", 3);
+        ctx.restore();
+      }
+    ctx.restore();
+  }
+  ctx.restore();
 }
