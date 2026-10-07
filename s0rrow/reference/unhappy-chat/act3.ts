@@ -7,7 +7,8 @@ import { heart } from "./lib/sets";
 import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW, lockScreen, notification } from "./lib/phone";
-import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT, herHome, oldFilm } from "./lib/story";
+import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT, herHome, oldFilm, afterNight, LATE1, LATE2, hisRoomMorning, herRoomAt } from "./lib/story";
+import { HIS_WIN, Z_IN, street, winC } from "./lib/street";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
@@ -258,11 +259,16 @@ function shotSend(ctx: Ctx, abs: number) {
     card(ctx, "00:52", 70, 330, smooth(phase(abs, EV.now + 0.05, EV.now + 0.3)));
     return;
   }
-  if (abs < 43.6) {
+  {
     // from her home screen she opens 微信 again — the paragraph she couldn't send is still there; she rewrites it,
     // adds to it, and sends it
     const draft = abs < EV.send3 ? editing(abs, EV.type4[0], EV.type4[1], HER_NIGHT_DRAFT, CONFESSION_EDITS) : "";
-    const view = { title: HIM, time: "00:58", me: "girl" as const, them: "boy" as const, items: herItems(abs, "present"), dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
+    // after sending: the clock jumps (01:30, 03:00), no answer; she sends two more, then the screen goes to sleep
+    const items = abs < EV.send3 ? herItems(abs, "present") : [...fromHer(HISTORY), ...afterNight("hers", abs, { conf: EV.send3, late1: EV.late1, late2: EV.late2 })];
+    const time = abs < EV.late1 ? "00:58" : abs < EV.late2 ? "01:30" : "03:00";
+    const view = { title: HIM, time, me: "girl" as const, them: "boy" as const, items, dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
+    const sleep = smooth(phase(abs, EV.late2 + 0.2, EV.nightFalls));
+    const lapse = smooth(phase(abs, EV.send3 + 0.4, EV.late1));
     let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
     if (inWin(abs, EV.type4)) hands = typingThumbs(abs, EV.type4[0], EV.type4[1], 41);
     else if (abs >= EV.type4[1] && abs < EV.send3 + 0.2) {
@@ -282,75 +288,114 @@ function shotSend(ctx: Ctx, abs: number) {
       (c) => {
         if (appK < 1) herHome(c, abs, "00:58", { press: tap, zoom: 1 + 0.08 * appK });
         appWindow(c, appK, WECHAT_AT, (a) => chatScreen2(a, abs, view));
+        if (sleep > 0) {
+          c.fillStyle = `rgba(0,0,0,${0.88 * sleep})`;
+          c.fillRect(0, 0, SW, SH);
+        }
       },
-      { who: "girl", cy: PHONE_CY, glowCol: "rgba(255,170,200,0.24)", ...hands },
+      { who: "girl", cy: PHONE_CY - 30 * lapse, s: PHONE_S - 0.06 * lapse, glowCol: "rgba(255,170,200,0.24)", ...hands },
     );
-    return;
+    for (const [label, t0, t1] of [["01:30", EV.late1, EV.late2], ["03:00", EV.late2, EV.nightFalls]] as [string, number, number][])
+      card(ctx, label, 70, 330, smooth(phase(abs, t0 - 0.05, t0 + 0.1)) * (1 - phase(abs, t1 - 0.08, t1)));
   }
-  // waiting… no answer; she falls asleep holding the phone
-  const asleep = abs > EV.asleep;
-  ctx.save();
-  camera(ctx, 420, 900, 1.1 + 0.04 * smooth(phase(abs, 43.6, EV.dawn)));
-  herRoom(ctx, abs, { lights: 1 - 0.45 * smooth(phase(abs, EV.asleep, EV.dawn)) });
-  drawKid(ctx, 320, 720, 0.64, {
-    who: "girl",
-    outfit: "pajamas",
-    body: "full",
-    legs: "sitFloor",
-    eyes: asleep ? "shut" : "sad",
-    mouth: "flat",
-    tilt: asleep ? 0.25 : 0.05,
-    look: [0, 0.8],
-    arms: "phone",
+}
+
+// ---------------------------------------------------------------- 3C+ the night passes
+/** 44.75 → 46.30 "…for a couple of weeks": the street again, both windows. Hers goes dark (she has fallen asleep);
+ *  the night runs on into morning — the moon sets, the sun comes up between the blocks — and the camera goes in
+ *  through his window: 07:10, he is sitting up with the phone that has been off all night */
+function shotNight(ctx: Ctx, abs: number) {
+  const day = smooth(phase(abs, 45.0, 45.7));
+  const both: [number, number] = [470, 1040];
+  const his = winC(HIS_WIN);
+  const w = phase(abs, EV.intoHis[0], EV.intoHis[1]);
+  const c = smooth(clamp(w / 0.6));
+  const z0 = 1.3 + 0.08 * phase(abs, EV.nightFalls, EV.intoHis[0]);
+  const Z = Math.exp(Math.log(z0) + (Math.log(Z_IN) - Math.log(z0)) * smooth(w));
+  const cam: [number, number] = [both[0] + (his[0] - both[0]) * c, both[1] + (his[1] - both[1]) * c];
+  street(ctx, abs, cam, Z, {
+    day,
+    hisLit: false,
+    herLit: abs < EV.herLightOff,
+    hisRoom: (k) => hisRoomMorning(k, abs, day, abs < 45.9 ? "sleep" : "tired"),
+    herRoom: (k) => herRoomAt(k, abs, day, abs < EV.herLightOff ? "awake" : "asleep"),
   });
-  herBlanket(ctx);
-  ctx.restore();
-  const cards: [string, number, number][] = [
-    ["01:30", 43.65, 44.35],
-    ["03:00", 44.4, EV.dawn],
-  ];
-  for (const [s, a, b] of cards) card(ctx, s, 70, 330, smooth(phase(abs, a, a + 0.12)) * (1 - phase(abs, b - 0.1, b)));
+  card(ctx, "07:10", 70, 330, smooth(phase(abs, EV.intoHis[0] + 0.15, EV.intoHis[0] + 0.35)));
 }
 
 // ---------------------------------------------------------------- 3D the next morning, his side
+/** where her paragraph's last line ("其实，我喜欢你，很久很久了。") sits on his phone once the chat is open */
+const LOVE_LINE: [number, number, number] = [116, 600, 330]; // x, y (screen), width
+const NOTE_Y = 360;
+
 function shotDawn(ctx: Ctx, abs: number) {
-  if (abs < 46.3) {
-    // the phone has been off all night
-    ctx.save();
-    camera(ctx, 700, 900, 1.06);
-    bedroom(ctx, abs, { dawn: 1 });
-    drawKid(ctx, 840, 620, 0.78, { body: "bust", eyes: abs < 45.55 ? "shut" : "tired", mouth: "flat", look: [0, 0.9], arms: "phone" });
-    bedBlanket(ctx);
-    ctx.restore();
-    card(ctx, "07:10", 70, 330, smooth(phase(abs, EV.dawn + 0.05, EV.dawn + 0.3)));
+  if (abs >= EV.read) {
+    hisFaceReading(ctx, abs);
     return;
   }
-  if (abs < EV.read) {
-    const booted = abs > 46.95;
-    const n = pop(abs, EV.um2, 0.22);
-    phoneCloseup(
-      ctx,
-      abs,
-      (c) => {
-        if (abs < EV.boot - 0.03) {
-          c.fillStyle = "#050507";
-          c.fillRect(0, 0, SW, SH);
-        } else if (!booted) bootScreen(c, smooth(phase(abs, EV.boot - 0.03, EV.boot + 0.2)));
-        else {
-          lockScreen(c, { time: "07:10", airplane: false, battery: 0.21 }, { date: "10月7日 星期二" });
-          if (n > 0) {
-            c.save();
-            c.translate(0, -120 * (1 - n));
-            notification(c, 24, 360, 552, { title: HER, body: HER_CONFESSION, time: "00:58" }, n);
-            c.restore();
-          }
+  // his phone: on — her three messages drop onto the lock screen — he taps the first — the chat opens and the camera
+  // goes to the last line of her paragraph
+  const booted = abs > 46.95;
+  const appK = smooth(phase(abs, EV.tapNote + 0.03, EV.tapNote + 0.3));
+  const read = smooth(phase(abs, EV.tapNote + 0.32, EV.read - 0.2));
+  const s = 1.0 + 0.5 * read;
+  const [lx, ly, lw] = LOVE_LINE;
+  const ax = lx + lw / 2,
+    ay = ly;
+  const px = 540 + (ax - 300) + (540 - (540 + (ax - 300))) * read,
+    py = PHONE_CY + (ay - 640) + (820 - (PHONE_CY + (ay - 640))) * read;
+  const cx = px - (ax - 300) * s,
+    cy = py - (ay - 640) * s;
+  const notes = [
+    { title: HER, body: HER_CONFESSION, time: "00:58" },
+    { title: HER, body: LATE1, time: "01:30" },
+    { title: HER, body: LATE2, time: "03:00" },
+  ];
+  let firstH = 166;
+  const right: FingerPos = abs > EV.tapNote - 0.2 && abs < EV.tapNote + 0.08 ? { x: 300, y: NOTE_Y + 80 + 30 * (1 - smooth(phase(abs, EV.tapNote - 0.2, EV.tapNote - 0.04))), touch: abs > EV.tapNote - 0.05 ? 1 : 0.75 } : REST;
+  phoneCloseup(
+    ctx,
+    abs,
+    (c) => {
+      if (abs < EV.boot - 0.03) {
+        c.fillStyle = "#050507";
+        c.fillRect(0, 0, SW, SH);
+        return;
+      }
+      if (!booted) {
+        bootScreen(c, smooth(phase(abs, EV.boot - 0.03, EV.boot + 0.2)));
+        return;
+      }
+      if (appK < 1) {
+        lockScreen(c, { time: "07:10", airplane: false, battery: 0.21 }, { date: "10月7日 星期二" });
+        let y = NOTE_Y;
+        notes.forEach((n, i) => {
+          const k = pop(abs, EV.um2 + i * 0.12, 0.2);
+          if (k <= 0) return;
+          c.save();
+          c.translate(0, -60 * (1 - k));
+          const h = notification(c, 24, y, 552, n, k);
+          c.restore();
+          if (i === 0) firstH = h;
+          y += h + 14;
+        });
+      }
+      appWindow(c, appK, [300, NOTE_Y + firstH / 2], (a) => {
+        chatScreen2(a, abs, { title: HER, time: "07:10", me: "boy", them: "girl", items: [...HISTORY.slice(-3), ...afterNight("his")], dark: false });
+        // her last line, picked out with a highlighter stroke
+        const hk = smooth(phase(abs, EV.tapNote + 0.45, EV.tapNote + 0.75));
+        if (hk > 0) {
+          a.save();
+          a.globalCompositeOperation = "multiply";
+          a.fillStyle = "rgba(255,214,90,0.75)";
+          rr(a, lx - 6, ly - 22, (lw + 12) * hk, 44, 8);
+          a.fill();
+          a.restore();
         }
-      },
-      { who: "boy", right: REST, cy: PHONE_CY, glowCol: "rgba(255,230,190,0.28)", bg: "#2b2a3a" },
-    );
-    return;
-  }
-  hisFaceReading(ctx, abs);
+      });
+    },
+    { who: "boy", right, cx, cy, s, steady: read > 0, glowCol: "rgba(255,230,190,0.28)", bg: "#2b2a3a" },
+  );
 }
 
 /** after she sends the 「嗯」 the camera pushes in on its bubble (screen 454, 622 on her phone) and brings it towards the
@@ -401,7 +446,8 @@ export function createScene(options: SceneOptions) {
       // her memory — that night and that class — on old film, the same as his memory in act 1; nothing else
       oldFilm(ctx, abs, (c) => (abs < BAR(18) ? shotReplay(c, abs) : shotSchool(c, abs)), "memory");
       memoryNotes(ctx, abs);
-    } else if (abs < EV.dawn) shotSend(ctx, abs);
+    } else if (abs < EV.nightFalls) shotSend(ctx, abs);
+    else if (abs < EV.intoHis[1]) shotNight(ctx, abs);
     else shotDawn(ctx, abs);
   });
 }
