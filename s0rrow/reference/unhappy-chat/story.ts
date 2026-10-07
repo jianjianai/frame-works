@@ -1,5 +1,5 @@
 import { clamp, phase, smooth } from "../../../../src/engine/math";
-import { C, Ctx, Pt, camera, fillBg, filtered, glow, hash } from "./draw";
+import { C, Ctx, H, Pt, W, camera, fillBg, filtered, glow, hash } from "./draw";
 import { drawKid } from "./kid";
 import { classroomFront, deskFront, strawberryMilk } from "./places";
 import { heart } from "./sets";
@@ -173,6 +173,74 @@ export function phoneCloseup(
     ctx.strokeStyle = `rgba(255,255,255,${0.7 * k})`;
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+/** A memory, as old film: faded warm colour, a light flicker and gate weave (both step at the film’s own 18 fps),
+ *  grain, a few dust specks, a thin scratch now and then, dark edges. Both memories (his class at 8.25, her night
+ *  and her class from 32.79) go through this and nothing else. Dust and scratches are dark — white specks read as
+ *  dandruff on a phone. Draw time cards and red-pen notes after it, unfiltered. */
+export function oldFilm(ctx: Ctx, abs: number, draw: (c: Ctx) => void, key = "film") {
+  const f = Math.floor(abs * 18);
+  const r = (k: number) => hash(f * 7.13 + k * 3.7);
+  const flick = 1 + (r(1) - 0.5) * 0.09;
+  const wx = (r(2) - 0.5) * 3,
+    wy = (r(3) - 0.5) * 4;
+  filtered(
+    ctx,
+    `sepia(0.62) saturate(0.7) contrast(1.08) brightness(${flick.toFixed(3)})`,
+    (c) => {
+      // gate weave; scaled a touch so the edges never show
+      c.translate(540 + wx, 960 + wy);
+      c.scale(1.012, 1.012);
+      c.translate(-540, -960);
+      draw(c);
+    },
+    key,
+  );
+  ctx.save();
+  // grain
+  for (let i = 0; i < 160; i++) {
+    ctx.fillStyle = i % 3 ? "rgba(40,25,10,0.18)" : "rgba(255,240,210,0.08)";
+    ctx.fillRect(r(10 + i) * W, r(400 + i) * H, 2.5, 2.5);
+  }
+  // dust: a few dark specks, different on every film frame, and now and then a fibre
+  for (let i = 0; i < 4; i++) {
+    if (r(900 + i) > 0.5) continue;
+    const sz = 3 + r(930 + i) * 7;
+    ctx.fillStyle = "rgba(30,18,8,0.45)";
+    ctx.beginPath();
+    ctx.ellipse(r(910 + i) * W, r(920 + i) * H, sz, sz * (0.5 + r(940 + i) * 0.5), r(950 + i) * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (r(960) < 0.25) {
+    const x = r(961) * W,
+      y = r(962) * H;
+    ctx.strokeStyle = "rgba(30,18,8,0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + 30, y + 10, x + 20 + r(963) * 40, y + 50);
+    ctx.stroke();
+  }
+  // a thin scratch running down the frame, staying a few frames
+  const sf = Math.floor(abs * 3);
+  for (let i = 0; i < 2; i++) {
+    if (hash(sf * 5.1 + i * 11) > 0.55) continue;
+    const x = hash(sf * 2.3 + i * 7) * W + Math.sin(abs * 9 + i) * 4;
+    ctx.strokeStyle = "rgba(50,32,14,0.22)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 6, H);
+    ctx.stroke();
+  }
+  // dark edges
+  const g = ctx.createRadialGradient(540, 900, 430, 540, 900, 1250);
+  g.addColorStop(0, "rgba(40,24,8,0)");
+  g.addColorStop(1, "rgba(40,24,8,0.62)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
 
