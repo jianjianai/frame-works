@@ -9,6 +9,7 @@ import { FingerPos } from "./lib/hand";
 import { SH, SW } from "./lib/phone";
 import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops, phoneBody, herHome, HER_PHOTOS } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
+import { HER_F0, HER_M0, HER_WIN, HIS_WIN, Z_IN, street, winC } from "./lib/street";
 
 /** ACT 2 (16.43 – 32.79s) · chorus 1
  *  2A he flicks through her photos and stops on her sunflower portrait (so pretty) → the screen times out → his own face in the black glass (so ugly)
@@ -339,22 +340,6 @@ function underBlanket(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 2D 00:52 — out of his window, in through hers
-/** The street at night in world units (= design units at zoom 1): his block on the left, hers across the street.
- *  Every window sits on its block's grid; his and hers are 72×128 (the frame's shape) so either can fill the frame. */
-type Rect = { x: number; y: number; w: number; h: number };
-const HIS_WIN: Rect = { x: 150, y: 870, w: 72, h: 128 };
-const HER_WIN: Rect = { x: 720, y: 1100, w: 72, h: 128 };
-const winC = (r: Rect): [number, number] => [r.x + r.w / 2, r.y + r.h / 2];
-/** the zoom at which a window fills the frame, its frame just out of shot */
-const Z_IN = 16.2;
-/** the room behind the glass grows slower than the window as the camera gets closer (it is further away),
- *  so more of the room shows the closer we get */
-const DEPTH = 0.75;
-/** each room's centre and scale at the moment its window fills the frame */
-const HIS_F0: [number, number] = [620, 920];
-const HIS_M0 = 1.08;
-const HER_F0: [number, number] = [480, 900];
-const HER_M0 = 1.04;
 /** where her face is in her room, for the push-in */
 const HER_FACE: [number, number] = [322, 770];
 
@@ -421,125 +406,6 @@ function herRoomTears(ctx: Ctx, abs: number, blur = 0) {
   lightPool(ctx, 320, 900, 1100, 0.45, "rgba(255,190,140,0.1)");
 }
 
-function darkWindow(ctx: Ctx, x: number, y: number) {
-  rr(ctx, x, y, 72, 128, 4);
-  ctx.fillStyle = "#0f1329";
-  ctx.fill();
-  ctx.lineWidth = 2.5;
-  ctx.strokeStyle = C.ink;
-  ctx.stroke();
-  ctx.fillStyle = "rgba(170,185,255,0.06)";
-  ctx.fillRect(x + 9, y + 9, 16, 110);
-}
-
-/** a lit window with its room behind the glass, for a camera at zoom Z (see DEPTH) */
-function roomWindow(ctx: Ctx, r: Rect, Z: number, m: number, focus: [number, number], room: (c: Ctx) => void, sill: string) {
-  const s = (m * Math.pow(Z / Z_IN, DEPTH)) / Z; // world units per room unit
-  ctx.save();
-  rr(ctx, r.x, r.y, r.w, r.h, 4);
-  ctx.clip();
-  ctx.save();
-  ctx.translate(r.x + r.w / 2, r.y + r.h / 2);
-  ctx.scale(s, s);
-  ctx.translate(-focus[0], -focus[1]);
-  room(ctx);
-  ctx.restore();
-  // the glass: a soft sheen that fades as we get close enough to go through
-  const sheen = clamp(Math.log(Z_IN / Z) / Math.log(3));
-  if (sheen > 0) {
-    const g = ctx.createLinearGradient(r.x, r.y, r.x + r.w, r.y + r.h * 0.7);
-    g.addColorStop(0, `rgba(255,255,255,${0.18 * sheen})`);
-    g.addColorStop(0.45, "rgba(255,255,255,0)");
-    ctx.fillStyle = g;
-    ctx.fillRect(r.x, r.y, r.w, r.h);
-  }
-  ctx.restore();
-  rr(ctx, r.x, r.y, r.w, r.h, 4);
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = C.ink;
-  ctx.stroke();
-  rr(ctx, r.x - 6, r.y + r.h, r.w + 12, 6, 2);
-  ctx.fillStyle = sill;
-  ctx.fill();
-}
-
-/** a string of fairy lights over her window, outside */
-function fairyString(ctx: Ctx, abs: number, r: Rect) {
-  const at = (u: number): [number, number] => [r.x - 8 + u * (r.w + 16), r.y - 7 + Math.sin(u * Math.PI) * 5];
-  ctx.strokeStyle = "#1a1530";
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  for (let i = 0; i <= 12; i++) {
-    const [x, y] = at(i / 12);
-    if (i) ctx.lineTo(x, y);
-    else ctx.moveTo(x, y);
-  }
-  ctx.stroke();
-  for (let i = 0; i < 7; i++) {
-    const [x, y] = at((i + 0.5) / 7);
-    glow(ctx, x, y + 3, 10, i % 2 ? "rgba(255,150,190,0.8)" : "rgba(255,230,150,0.8)", 0.7 + 0.3 * Math.sin(abs * 2.3 + i * 1.7));
-    ctx.fillStyle = i % 2 ? "#ffb3cf" : "#fff1a8";
-    ctx.beginPath();
-    ctx.arc(x, y + 3, 2.2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-/** the street at 00:52 through a camera centred on world point `cam` at zoom `Z` */
-function nightStreet(ctx: Ctx, abs: number, cam: [number, number], Z: number) {
-  const lit = abs < EV.hisLightOff;
-  fillBg(ctx, "#0b1030");
-  ctx.save();
-  ctx.translate(540, 960);
-  ctx.scale(Z, Z);
-  ctx.translate(-cam[0], -cam[1]);
-  // sky, moon, stars
-  ctx.fillStyle = vgrad(ctx, 200, 1500, [[0, "#0b1030"], [1, "#28315f"]]);
-  ctx.fillRect(-400, -300, 2000, 2700);
-  glow(ctx, 360, 590, 110, "rgba(243,236,207,0.22)");
-  oval(ctx, 360, 590, 30, 30, 3760, 0.5);
-  paint(ctx, "#f3eccf", null);
-  for (let i = 0; i < 26; i++) {
-    ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.45 * hash(i * 9.1)})`;
-    ctx.fillRect(-220 + hash(i * 3.1) * 1500, 240 + hash(i * 5.3) * 560, 2.5, 2.5);
-  }
-  // far blocks between the two, every window dark
-  for (let i = 0; i < 9; i++) {
-    const bx = -180 + i * 170,
-      top = 560 + hash(i * 2.7) * 280;
-    ctx.fillStyle = "#151a37";
-    ctx.fillRect(bx, top, 152, 2400 - top);
-  }
-  // his block (left)…
-  poly(ctx, [[-280, 652], [432, 640], [438, 2400], [-280, 2400]], 3770, 0.6);
-  paint(ctx, "#1c2140", C.ink, 4);
-  for (let r = 0; r < 8; r++)
-    for (let c = 0; c < 4; c++) {
-      const x = -90 + c * 120,
-        y = 700 + r * 170;
-      if (x !== HIS_WIN.x || y !== HIS_WIN.y) darkWindow(ctx, x, y);
-    }
-  // …and hers across the street
-  poly(ctx, [[548, 712], [1380, 700], [1380, 2400], [542, 2400]], 3771, 0.6);
-  paint(ctx, "#221f46", C.ink, 4);
-  for (let r = 0; r < 8; r++)
-    for (let c = 0; c < 6; c++) {
-      const x = 600 + c * 120,
-        y = 760 + r * 170;
-      if (x !== HER_WIN.x || y !== HER_WIN.y) darkWindow(ctx, x, y);
-    }
-  // his window: his room behind the glass, lit until the light goes out
-  const [hx, hy] = winC(HIS_WIN);
-  if (lit) glow(ctx, hx, hy, 140, "rgba(255,205,140,0.45)");
-  roomWindow(ctx, HIS_WIN, Z, HIS_M0, HIS_F0, (c) => hisRoomNight(c, abs, lit), lit ? "#6d5b55" : "#2b3050");
-  // hers: the only light still on
-  const [gx, gy] = winC(HER_WIN);
-  glow(ctx, gx, gy, 150, "rgba(255,190,150,0.48)");
-  roomWindow(ctx, HER_WIN, Z, HER_M0, HER_F0, (c) => herRoomTears(c, abs), "#6d5560");
-  fairyString(ctx, abs, HER_WIN);
-  ctx.restore();
-}
-
 /** 26.45 → 28.10 "…live without me / That makes me": the camera backs out of his room through his window; his light
  *  goes out on "me"; then it swings across the street to the only window still lit — hers — and in through it */
 function shotWindows(ctx: Ctx, abs: number) {
@@ -562,7 +428,8 @@ function shotWindows(ctx: Ctx, abs: number) {
     const g = -1.4 * w * w * w + 2.4 * w * w; // eases in, leaves at speed 0.6
     Z = Math.exp(Math.log(z0) + Math.log(Z_IN / z0) * g - 0.42 * Math.sin(Math.PI * clamp(w / 0.6)) ** 2);
   }
-  nightStreet(ctx, abs, cam, Z);
+  const lit = abs < EV.hisLightOff;
+  street(ctx, abs, cam, Z, { day: 0, hisLit: lit, herLit: true, hisRoom: (c) => hisRoomNight(c, abs, lit), herRoom: (c) => herRoomTears(c, abs) });
   card(ctx, "00:52", 70, 330, smooth(phase(abs, EV.leaveRoom + 0.1, EV.leaveRoom + 0.35)) * (1 - phase(abs, EV.twist - 0.3, EV.twist - 0.1)));
 }
 
