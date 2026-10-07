@@ -90,3 +90,4 @@
 - `code/places.ts`：来源 work-d1187f37《unhappy》：新增 bookFingers（举书的指尖）、huggedPillow（抱枕头：胳膊交叉在前、圆手）
 - `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 act3：抱枕头和书后偷看重画
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）
+- `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 act3：发出的「嗯」停留 + 推近 + 脉冲 + 红笔「删掉了 37 个字」

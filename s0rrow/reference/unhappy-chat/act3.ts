@@ -1,13 +1,13 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text } from "./lib/draw";
+import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text, writeOn } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook } from "./lib/places";
 import { heart } from "./lib/sets";
 import { BACKSPACE_AT, ChatItem, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW, lockScreen, notification } from "./lib/phone";
-import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
@@ -70,20 +70,32 @@ function shotReplay(ctx: Ctx, abs: number) {
     card(ctx, "10月6日 23:12", 70, 330, smooth(phase(abs, BAR(16) + 0.15, BAR(16) + 0.4)));
     return;
   }
-  if (abs < 35.95) {
+  if (abs < EV.umHold) {
+    // types a long happy reply → her friend's advice → deletes it all → types just 「嗯」 → sends,
+    // and the chat holds on that 「嗯」 so it sinks in (it's the same 「嗯」 he got at 0:01.85)
+    const umTyped = EV.send2 - 0.17;
     let draft = "";
     if (abs < EV.del3[0]) draft = typed(HER_REPLY_DRAFT, abs, EV.type3[0], EV.type3[1]);
     else if (abs < EV.del3[1]) draft = deleted(HER_REPLY_DRAFT, abs, EV.del3[0], EV.del3[1]);
-    else if (abs < EV.send2) draft = abs > 35.8 ? "嗯" : "";
+    else if (abs < EV.send2) draft = abs > umTyped ? "嗯" : "";
     const view = { title: HIM, time: "23:13", me: "girl" as const, them: "boy" as const, items: herItems(abs, "replay"), dark: true, draft: abs < EV.send2 ? draft : "", caret: abs < EV.send2, keyboard: true, sendHot: abs > EV.send2 - 0.08 && abs < EV.send2 ? 1 : 0 };
+    // after sending, push in on the 「嗯」 bubble (screen 454, 622 on her phone) and bring it towards the middle
+    const zk = smooth(phase(abs, EV.send2 + 0.08, EV.send2 + 0.55));
+    const zs = PHONE_S + 0.38 * zk;
+    const ux = 694 + (590 - 694) * zk,
+      uy = 892 + (860 - 892) * zk;
+    const zx = ux - (454 - 300) * zs,
+      zy = uy - (622 - 640) * zs;
     let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
     if (inWin(abs, EV.type3)) hands = typingThumbs(abs, EV.type3[0], EV.type3[1], 31);
     else if (inWin(abs, EV.del3)) {
       const f = ((abs - EV.del3[0]) * 12) % 1;
       hands = { right: { x: BACKSPACE_AT[0], y: BACKSPACE_AT[1], touch: f < 0.5 ? 1 : 0.4 }, left: hands.left };
-    } else if (abs > 35.75) {
+    } else if (abs > EV.del3[1] && abs < EV.send2 + 0.12) {
+      // one tap on 「嗯」's key, then send
       const sb = sendButtonAt(ctx, { ...view, draft: "嗯" });
-      hands = { right: { x: abs < 35.82 ? 300 : sb[0], y: abs < 35.82 ? 1000 : sb[1], touch: abs > EV.send2 - 0.06 || (abs > 35.78 && abs < 35.81) ? 1 : 0.2 }, left: hands.left };
+      const onKey = abs < umTyped + 0.05;
+      hands = { right: { x: onKey ? 300 : sb[0], y: onKey ? 1000 : sb[1], touch: (abs > umTyped - 0.04 && abs < umTyped + 0.03) || (abs > EV.send2 - 0.06 && abs < EV.send2 + 0.08) ? 1 : 0.2 }, left: hands.left };
     } else if (abs > EV.type3[1] && abs < EV.del3[0]) {
       // hovering over send… hesitating
       const sb = sendButtonAt(ctx, view);
@@ -94,7 +106,7 @@ function shotReplay(ctx: Ctx, abs: number) {
       abs,
       (c) => {
         chatScreen2(c, abs, view);
-        const nk = smooth(phase(abs, EV.friendNote, EV.friendNote + 0.18)) * (1 - smooth(phase(abs, 35.5, 35.7)));
+        const nk = smooth(phase(abs, EV.friendNote, EV.friendNote + 0.18)) * (1 - smooth(phase(abs, EV.del3[0] + 0.1, EV.del3[0] + 0.3)));
         if (nk > 0) {
           c.save();
           c.translate(0, -160 * (1 - nk));
@@ -102,15 +114,43 @@ function shotReplay(ctx: Ctx, abs: number) {
           c.restore();
         }
       },
-      { who: "girl", cy: PHONE_CY, glowCol: "rgba(255,170,200,0.22)", ...hands },
+      { who: "girl", cx: zx, cy: zy, s: zs, glowCol: "rgba(255,170,200,0.22)", ...hands },
     );
+    if (abs > EV.send2) {
+      // two yellow pulses round the sent 「嗯」 (like the hook) and a red-pen note: everything else was deleted
+      for (const t0 of [EV.send2 + 0.12, EV.send2 + 0.48]) {
+        const k = phase(abs, t0, t0 + 0.4);
+        if (k <= 0 || k >= 1) continue;
+        ctx.save();
+        ctx.globalAlpha = 1 - k;
+        ctx.strokeStyle = "#ffd166";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.ellipse(ux, uy, (64 + 70 * k) * zs, (46 + 40 * k) * zs, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      const nk = phase(abs, EV.send2 + 0.3, EV.send2 + 0.75);
+      if (nk > 0) {
+        ctx.save();
+        ctx.translate(ux - 40, uy + 150);
+        ctx.rotate(-0.04);
+        text(ctx, writeOn(`删掉了 ${Array.from(HER_REPLY_DRAFT).length} 个字`, nk), 0, 0, { size: 60, font: F.pen, fill: "#ff3b3b", stroke: "#fff", lw: 10 });
+        ctx.restore();
+        ctx.save();
+        ctx.globalAlpha = clamp(nk * 3);
+        inkLine(ctx, [[ux - 20, uy + 104], [ux - 6, uy + 70], [ux + 4, uy + 56]], 3840, 6, "#ff3b3b");
+        inkLine(ctx, [[ux - 16, uy + 66], [ux + 4, uy + 56], [ux + 10, uy + 78]], 3841, 6, "#ff3b3b");
+        ctx.restore();
+      }
+    }
     return;
   }
   // regret: she hugs her pillow tight, chin on top of it
   ctx.save();
   camera(ctx, 400, 860, 1.25);
   herRoom(ctx, abs, { lights: 1 });
-  const squeeze = 1 + 0.02 * Math.sin((abs - 35.95) * 9);
+  const squeeze = 1 + 0.02 * Math.sin((abs - EV.umHold) * 9);
   drawKid(ctx, 340, 700, 0.66, {
     who: "girl",
     outfit: "pajamas",
