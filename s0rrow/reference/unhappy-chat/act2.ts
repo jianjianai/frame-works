@@ -35,7 +35,7 @@ function pillow(ctx: Ctx, x: number, y: number, s: number) {
 // ---------------------------------------------------------------- 2A
 /** "You are very pretty / I'm so very ugly": her sunny profile photo; the screen times out and his own face
  *  surfaces in the black glass exactly where hers was (match dissolve). He looks at himself; on "ugly" the camera
- *  pushes in slowly and the edges close in; then he can't hold his own gaze — eyes away, head turned. */
+ *  pushes in slowly and the edges close in; then he can't hold his own gaze — eyes and head go down. */
 function shotPretty(ctx: Ctx, abs: number) {
   const out = smooth(phase(abs, 18.2, 18.75)); // her photo fading to black glass
   const refl = abs < 18.3 ? 0 : 0.28 * smooth(phase(abs, 18.3, 18.9)) + 0.32 * smooth(phase(abs, 19.4, 20.0));
@@ -59,9 +59,9 @@ function shotPretty(ctx: Ctx, abs: number) {
             eyes: "sad",
             brows: avert > 0.5 ? "sad" : "worried",
             mouth: avert > 0.5 ? "frown" : "flat",
-            look: [-0.7 * avert, -0.1 + 0.6 * avert],
-            turn: -0.35 * avert,
-            tilt: 0.08 * avert,
+            // he lowers his eyes and his head — he can't look at himself
+            look: [0, -0.1 + 1.0 * avert],
+            headY: 14 * avert,
           });
         }, "refl", refl);
         // a glare sliding across the glass, over his face on "ugly"
