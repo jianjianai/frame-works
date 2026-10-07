@@ -33,46 +33,60 @@ function pillow(ctx: Ctx, x: number, y: number, s: number) {
 }
 
 // ---------------------------------------------------------------- 2A
+/** "You are very pretty / I'm so very ugly": her sunny profile photo; the screen times out and his own face
+ *  surfaces in the black glass exactly where hers was (match dissolve). He looks at himself; on "ugly" the camera
+ *  pushes in slowly and the edges close in; then he can't hold his own gaze — eyes away, head turned. */
 function shotPretty(ctx: Ctx, abs: number) {
-  if (abs < 18.5) {
-    const dim = smooth(phase(abs, 18.2, EV.timeout));
-    phoneCloseup(
-      ctx,
-      abs,
-      (c) => {
-        profileScreen(c, abs);
-        if (dim > 0) {
-          c.fillStyle = `rgba(0,0,0,${0.7 * dim})`;
-          c.fillRect(0, 0, SW, SH);
-        }
-      },
-      // tight on the photo so her picture fills the frame
-      { who: "boy", right: REST, cx: 540, cy: 1180 - 120 * smooth(phase(abs, BAR(8), 18.5)), s: 1.5 },
-    );
-    return;
-  }
-  // his reflection in the black glass
-  const clear = smooth(phase(abs, 19.4, 20.0));
+  const out = smooth(phase(abs, 18.2, 18.75)); // her photo fading to black glass
+  const refl = abs < 18.3 ? 0 : 0.28 * smooth(phase(abs, 18.3, 18.9)) + 0.32 * smooth(phase(abs, 19.4, 20.0));
+  const push = smooth(phase(abs, 19.45, BAR(10)));
+  const s = 1.5 + 0.45 * push;
+  const ay = 805 + 55 * push; // where both faces sit on screen (face at screen 300, 470)
+  const avert = smooth(phase(abs, 19.9, 20.25));
   phoneCloseup(
     ctx,
     abs,
     (c) => {
-      c.fillStyle = "#050507";
-      c.fillRect(0, 0, SW, SH);
-      filtered(c, "grayscale(0.7) brightness(0.9)", (k) => {
-        drawKid(k, SW / 2, 560, 1.15, { body: "bust", eyes: "sad", mouth: "frown", look: [0, -0.2] });
-      }, "refl", 0.22 + 0.25 * clear);
-      // glare across the glass
-      c.fillStyle = "rgba(255,255,255,0.06)";
-      c.beginPath();
-      c.moveTo(80, 0);
-      c.lineTo(260, 0);
-      c.lineTo(60, SH);
-      c.lineTo(-120, SH);
-      c.fill();
+      if (out < 1) profileScreen(c, abs);
+      if (out > 0) {
+        c.fillStyle = `rgba(5,5,7,${out})`;
+        c.fillRect(0, 0, SW, SH);
+      }
+      if (refl > 0) {
+        filtered(c, "grayscale(0.75) brightness(0.85)", (k) => {
+          drawKid(k, SW / 2, 470, 1.15, {
+            body: "bust",
+            eyes: "sad",
+            brows: avert > 0.5 ? "sad" : "worried",
+            mouth: avert > 0.5 ? "frown" : "flat",
+            look: [-0.7 * avert, -0.1 + 0.6 * avert],
+            turn: -0.35 * avert,
+            tilt: 0.08 * avert,
+          });
+        }, "refl", refl);
+        // a glare sliding across the glass, over his face on "ugly"
+        const gx = -320 + 760 * phase(abs, 18.6, BAR(10));
+        c.fillStyle = "rgba(255,255,255,0.07)";
+        c.beginPath();
+        c.moveTo(gx + 160, 0);
+        c.lineTo(gx + 300, 0);
+        c.lineTo(gx + 40, SH);
+        c.lineTo(gx - 100, SH);
+        c.fill();
+      }
     },
-    { who: "boy", right: REST, cy: PHONE_CY, glowCol: "rgba(60,70,120,0.2)" },
+    // the same framing for both faces, then a slow push into his
+    { who: "boy", right: REST, cx: 540, cy: abs < 18.5 ? 1180 - 120 * smooth(phase(abs, BAR(8), 18.5)) : ay + 170 * s, s, glowCol: `rgba(${Math.round(255 - 195 * out)},${Math.round(200 - 130 * out)},${Math.round(150 - 30 * out)},0.22)` },
   );
+  // the room closes in around him
+  const v = smooth(phase(abs, 19.5, BAR(10)));
+  if (v > 0) {
+    const g = ctx.createRadialGradient(540, 860, 260, 540, 860, 1000);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, `rgba(0,0,0,${0.65 * v})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 
 // ---------------------------------------------------------------- 2B
