@@ -1,9 +1,12 @@
 import { beatAt } from "./draw";
 
-/** Bar n starts at beat 4n (work time = song time − 16.332). Song sections:
- *  verse 1 = bars 0–7, chorus 1 = 8–15, verse 2 = 16–23, chorus 2 = 24–31, outro = 32– (to 80.2). */
+/** Bar n starts at beat 4n (work time = song time − 16.332). Song as cut for this work:
+ *  verse 1 = bars 0–7, chorus 1 = 8–15, verse 2 = 16–23, then (CUT) the last loop of the outro, which keeps
+ *  the same grid: work bars 24–27 = song bars 36–39 (the song fades out by END). Chorus 2 is skipped. */
 export const BAR = (n: number) => beatAt(n * 4);
-export const END = 73.3;
+/** where verse 2 jumps to the outro (work time; 11 ms before the bar-24 downbeat) */
+export const CUT = 49.123;
+export const END = 57.0;
 
 /** Story events shared by the pictures and the sound effects (work time, seconds).
  *  《unhappy》· 同一段聊天两个视角：他以为她只回「嗯」是不喜欢他，其实她每个「嗯」后面都删掉了一整段话。 */
@@ -43,23 +46,23 @@ export const EV = {
   send2: 35.9, // the 「嗯」 she sends
   turn2: 36.9,
   hide2: 37.3,
-  shutter: 39.95,
-  type4: [41.7, 44.2] as const,
-  send3: 45.563, // the whole paragraph, finally
-  // act 4 — the next morning
-  wakeHer: 49.3,
-  mirror: BAR(25),
-  powerOn: 53.4,
-  um2: 54.5, // her message lands on his lock screen
-  run: 57.4,
-  shop: 59.5,
-  pay: 60.1,
-  door: 61.9,
-  milk: 63.5, // strawberry milk + 「我也是」, on "piercing"
-  eyes: 65.35,
-  // outro (one loop of the accompaniment, then the song fades out)
-  type5: [68.1, 68.6] as const,
-  send4: 68.75,
-  typingC: [68.9, 69.5] as const,
-  um3: 69.6, // 「嗯！！」 — lands on the outro joint
+  now: 39.43, // back to 00:52
+  type4: [40.2, 42.35] as const,
+  send3: 43.008, // the whole paragraph, finally (on "misery")
+  asleep: 44.6,
+  dawn: BAR(22), // 07:10, his room
+  boot: 46.585,
+  um2: BAR(23), // her message lands on his lock screen
+  read: 48.2,
+  // act 4 — the outro (one loop, then the song fades out)
+  joy: BAR(24),
+  reply: 50.0,
+  type6: [50.1, 50.45] as const, // 「我也是」
+  send5: 50.674,
+  type7: [50.85, 51.5] as const, // 「那周末一起去图书馆？」
+  send6: 51.696,
+  typingC: [51.85, 52.6] as const,
+  um3: 52.719, // 「嗯！！」
+  heart: 52.97,
+  split: BAR(26),
 };
