@@ -112,3 +112,4 @@
 - `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（新增 curledUp）
 - `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：新增 editing() 与改稿步骤，表白加长
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：反转改为打好了却犹豫不发
+- `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 act3：00:52 改稿后发出
