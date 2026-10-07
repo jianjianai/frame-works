@@ -43,7 +43,9 @@ export const EV = {
   hisLightOff: beatAt(53), // 27.16 "…without me": his light goes out
   herWindow: [27.42, 28.1] as const, // across the street and in through the only window still lit
   twist: 28.1, // her room: she is crying too ("unhappy")
-  hesitate: beatAt(58), // 29.72 her phone: the paragraph is typed; three times to 发送 and back
+  hesitate: beatAt(58), // 29.72 her phone: the paragraph is typed out — time to read it
+  pressSend: beatAt(61), // 31.25 her thumb comes down on 发送 and stays there (never lets go, so nothing is sent)…
+  toHome: 32.02, // …then she swipes the app away to the home screen — into her memory
   // act 3 — her side
   rewind: 32.55,
   ding2: 33.05,
@@ -55,7 +57,9 @@ export const EV = {
   turn2: 36.9,
   hide2: 37.3,
   now: 39.43, // back to 00:52
-  type4: [40.2, 42.35] as const,
+  phoneAgain: 39.9, // her home screen…
+  openApp: 40.08, // …she taps 微信 and it opens on the paragraph she left
+  type4: [40.45, 42.35] as const,
   send3: 43.008, // the whole paragraph, finally (on "misery")
   asleep: 44.6,
   dawn: BAR(22), // 07:10, his room
