@@ -3,7 +3,7 @@ import { phase, smooth } from "../../../src/engine/math";
 import { C, Ctx, F, H, Pt, W, backOut, blob, camera, card, designScene, fillBg, filtered, glow, inkLine, oval, paint, poly, rr, shaded, text, tubePts } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { CAST, drawPerson } from "./lib/people";
-import { bedBlanket, bedroom, classroomBoard, classroomFront, deskFront, strawberryMilk, textbook } from "./lib/places";
+import { bedBlanket, bedroom, bookFingers, classroomBoard, classroomFront, deskFront, strawberryMilk, textbook } from "./lib/places";
 import { lightPool } from "./lib/sets";
 import { BACKSPACE_AT, chatScreen2, momentsScreen, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
@@ -116,20 +116,6 @@ function roundHand(ctx: Ctx, x: number, y: number, r: number, seed: number) {
   ctx.clip();
   oval(ctx, x + r * 0.45, y + r * 0.4, r * 0.75, r * 0.7, seed + 1, 1);
   paint(ctx, "rgba(196,140,90,0.3)", null);
-  ctx.restore();
-}
-
-/** her fingertips curled over both edges of the book (book-local units) */
-function bookFingers(ctx: Ctx, x: number, y: number, s: number, rot: number) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rot);
-  ctx.scale(s, s);
-  for (const side of [-1, 1])
-    for (let k = 0; k < 4; k++) {
-      rr(ctx, side < 0 ? -176 : 136, 18 + k * 31, 40, 27, 13);
-      paint(ctx, "#f6e1c3", C.ink, 3.5);
-    }
   ctx.restore();
 }
 
