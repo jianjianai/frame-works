@@ -133,9 +133,38 @@ function shotPretty(ctx: Ctx, abs: number) {
 function shotTyping(ctx: Ctx, abs: number) {
   if (abs < EV.lieDown) {
     const typing = inWin(abs, EV.typingA) || inWin(abs, EV.typingB);
-    // push in on the title bar: 「对方正在输入...」 big
-    const push = smooth(phase(abs, EV.uglyEnd, EV.uglyEnd + 0.55));
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing })), { who: "boy", right: REST, cx: 540, cy: lerp(PHONE_CY, 1225, push), s: lerp(PHONE_S, 1.62, push) });
+    // his eyes are fixed on her 「嗯」 (screen 145, 948): a spotlight on it, the camera creeping closer. The clue he
+    // misses — 「对方正在输入...」 in the title bar (screen 293, 95) — gets the video's yellow "look here" pulse,
+    // but the camera never goes there.
+    const zs = 1 + 0.03 * smooth(phase(abs, EV.uglyEnd, EV.lieDown));
+    const ux = 390,
+      uy = 1182;
+    const zx = ux - (145 - 300) * zs,
+      zy = uy - (948 - 640) * zs;
+    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing })), { who: "boy", right: REST, cx: zx, cy: zy, s: zs, steady: true });
+    const g = ctx.createRadialGradient(ux, uy, 110, ux, uy, 760);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(1, `rgba(0,0,0,${0.5 * smooth(phase(abs, EV.uglyEnd, EV.uglyEnd + 0.4))})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const tx = zx + (293 - 300) * zs,
+      ty = zy + (95 - 640) * zs;
+    // a soft glow behind the indicator while it shows
+    const on = Math.max(...[EV.typingA, EV.typingB].map((w) => smooth(phase(abs, w[0], w[0] + 0.12)) * (1 - smooth(phase(abs, w[1], w[1] + 0.12)))));
+    if (on > 0) glow(ctx, tx, ty, 190 * zs, `rgba(255,209,102,${0.35 * on})`);
+    for (const w of [EV.typingA, EV.typingB])
+      for (const t0 of [w[0] + 0.02, w[0] + 0.32]) {
+        const k = phase(abs, t0, t0 + 0.45);
+        if (k <= 0 || k >= 1) continue;
+        ctx.save();
+        ctx.globalAlpha = 1 - k;
+        ctx.strokeStyle = "#ffd166";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.ellipse(tx, ty, (150 + 90 * k) * zs, (40 + 34 * k) * zs, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
     return;
   }
   // lying in bed, phone held above his face
