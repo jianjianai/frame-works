@@ -95,3 +95,4 @@
 - `code/chat.ts`：来源 work-d1187f37《unhappy》：朋友圈时间戳放大到 28px、夜间模式提亮
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：朋友圈镜头上移并推近「5分钟前」
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：开场镜头语言（屏息推近、急推震动、惊讶→失落、回忆暖/现在冷+内心独白）
+- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：聊天记录平稳下翻 → 点头像 → 朋友圈翻页滑入
