@@ -1,7 +1,7 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
 import { C, Ctx, F, H, Pt, W, backOut, blob, camera, card, designScene, fillBg, filtered, glow, inkLine, oval, paint, poly, rr, shaded, text, tubePts } from "./lib/draw";
-import { drawHand, drawKid } from "./lib/kid";
+import { drawKid } from "./lib/kid";
 import { CAST, drawPerson } from "./lib/people";
 import { bedBlanket, bedroom, classroomBoard, classroomFront, deskFront, strawberryMilk, textbook } from "./lib/places";
 import { lightPool } from "./lib/sets";
@@ -102,9 +102,21 @@ function hisDesk(ctx: Ctx, abs: number) {
   const wrist: Pt = [800 + sway, 1660];
   blob(ctx, tubePts([[1200, 2080], [980, 1830], wrist], [124, 112, 100], false, true), 3721, 1.2);
   paint(ctx, C.hoodie, C.ink, 6);
-  inkLine(ctx, [[688 + sway, 1556], [800 + sway, 1652]], 3722, 10, C.ink);
-  inkLine(ctx, [[688 + sway, 1556], [800 + sway, 1652]], 3722, 6, "#3d6fd1");
-  drawHand(ctx, wrist[0], wrist[1], 1.0, Math.atan2(1660 - 1830, 800 - 980), "hold", false, false, 3723);
+  inkLine(ctx, [[688 + sway, 1556], [790 + sway, 1644]], 3722, 10, C.ink);
+  inkLine(ctx, [[688 + sway, 1556], [790 + sway, 1644]], 3722, 6, "#3d6fd1");
+  roundHand(ctx, wrist[0] - 6, wrist[1] - 6, 46, 3723);
+}
+
+/** his hand as a simple round fist at the end of the sleeve */
+function roundHand(ctx: Ctx, x: number, y: number, r: number, seed: number) {
+  oval(ctx, x, y, r, r * 0.94, seed, 1);
+  paint(ctx, C.skin, C.ink, 6);
+  ctx.save();
+  oval(ctx, x, y, r, r * 0.94, seed, 1);
+  ctx.clip();
+  oval(ctx, x + r * 0.45, y + r * 0.4, r * 0.75, r * 0.7, seed + 1, 1);
+  paint(ctx, "rgba(196,140,90,0.3)", null);
+  ctx.restore();
 }
 
 /** her fingertips curled over both edges of the book (book-local units) */
@@ -164,7 +176,7 @@ function shotMilkLeft(ctx: Ctx, abs: number) {
   const wrist: Pt = [lerp(760, 960, away), lerp(lerp(640, 720, down), 260, away)];
   blob(ctx, tubePts([[1240, -120], [1080, 260], wrist], [190, 176, 160], false, true), 3915, 1.2);
   paint(ctx, C.hoodie, C.ink, 7);
-  drawHand(ctx, wrist[0], wrist[1], 2.1, Math.atan2(wrist[1] - 260, wrist[0] - 1080), away > 0 ? "relax" : "hold", false, false, 3916);
+  roundHand(ctx, wrist[0] - 10, wrist[1] + 10, 92, 3916);
 }
 
 /** 10.30 → 12.34 after class: he brings the strawberry milk; she grabs her friend and runs */
