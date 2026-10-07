@@ -31,12 +31,11 @@ export const EV = {
   lampOff: 16.15,
   // act 2
   timeout: 18.6,
-  // cuts sit on phrase ends that are also beats: the reflection holds through "ugly", the chat takes
-  // "Will you even love me anymore", his face on the pillow comes in on the echo "Love me"
+  // cuts sit on phrase ends that are also beats: the reflection holds through "ugly", then the chat — his eyes on
+  // her 「嗯」 — runs on to the power-off at BAR(12)
   uglyEnd: 21.541,
   typingA: [21.85, 22.45] as const,
   typingB: [22.95, 23.6] as const,
-  lieDown: 23.955,
   powerOff: 25.85,
   blanket: 26.2,
   muffle: [26.65, 29.82] as const,
