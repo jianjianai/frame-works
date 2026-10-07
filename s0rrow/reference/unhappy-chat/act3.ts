@@ -7,11 +7,11 @@ import { heart } from "./lib/sets";
 import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW, lockScreen, notification } from "./lib/phone";
-import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT, herHome } from "./lib/story";
+import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT, herHome, oldFilm } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
- *  3A rewind to 23:12: his long message lands; she squeals, types a long happy reply… her friend's advice
+ *  3A her memory (on old film, like his in act 1) — 23:12: his long message lands; she squeals, types a long happy reply… her friend's advice
  *     pops up — she deletes it all and sends 「嗯」 (that's why 「对方正在输入...」 flickered)
  *  3B class, her side: he smiled at her when their eyes met — she went bright red behind the book ("You never ever pay attention to me")
  *  3C back to 00:52: she wipes her tears, opens 微信 again from her home screen, rewrites the paragraph and sends it —
@@ -68,7 +68,6 @@ function shotReplay(ctx: Ctx, abs: number) {
     herBlanket(ctx);
     if (happy) littleHearts(ctx, abs, EV.ding2 + 0.1, 330, 520);
     ctx.restore();
-    card(ctx, "10月6日 23:12", 70, 330, smooth(phase(abs, BAR(16) + 0.15, BAR(16) + 0.4)));
     return;
   }
   if (abs < EV.umHold) {
@@ -80,11 +79,7 @@ function shotReplay(ctx: Ctx, abs: number) {
     else if (abs < EV.del3[1]) draft = deleted(HER_REPLY_DRAFT, abs, EV.del3[0], EV.del3[1]);
     else if (abs < EV.send2) draft = abs > umTyped ? "嗯" : "";
     const view = { title: HIM, time: "23:13", me: "girl" as const, them: "boy" as const, items: herItems(abs, "replay"), dark: true, draft: abs < EV.send2 ? draft : "", caret: abs < EV.send2, keyboard: true, sendHot: abs > EV.send2 - 0.08 && abs < EV.send2 ? 1 : 0 };
-    // after sending, push in on the 「嗯」 bubble (screen 454, 622 on her phone) and bring it towards the middle
-    const zk = smooth(phase(abs, EV.send2 + 0.08, EV.send2 + 0.55));
-    const zs = PHONE_S + 0.38 * zk;
-    const ux = 694 + (590 - 694) * zk,
-      uy = 892 + (860 - 892) * zk;
+    const { ux, uy, zs } = umSpot(abs);
     const zx = ux - (454 - 300) * zs,
       zy = uy - (622 - 640) * zs;
     let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
@@ -117,34 +112,6 @@ function shotReplay(ctx: Ctx, abs: number) {
       },
       { who: "girl", cx: zx, cy: zy, s: zs, glowCol: "rgba(255,170,200,0.22)", ...hands },
     );
-    if (abs > EV.send2) {
-      // two yellow pulses round the sent 「嗯」 (like the hook) and a red-pen note: everything else was deleted
-      for (const t0 of [EV.send2 + 0.12, EV.send2 + 0.48]) {
-        const k = phase(abs, t0, t0 + 0.4);
-        if (k <= 0 || k >= 1) continue;
-        ctx.save();
-        ctx.globalAlpha = 1 - k;
-        ctx.strokeStyle = "#ffd166";
-        ctx.lineWidth = 7;
-        ctx.beginPath();
-        ctx.ellipse(ux, uy, (64 + 70 * k) * zs, (46 + 40 * k) * zs, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-      const nk = phase(abs, EV.send2 + 0.3, EV.send2 + 0.75);
-      if (nk > 0) {
-        ctx.save();
-        ctx.translate(ux - 40, uy + 150);
-        ctx.rotate(-0.04);
-        text(ctx, writeOn(`删掉了 ${Array.from(HER_REPLY_DRAFT).length} 个字`, nk), 0, 0, { size: 60, font: F.pen, fill: "#ff3b3b", stroke: "#fff", lw: 10 });
-        ctx.restore();
-        ctx.save();
-        ctx.globalAlpha = clamp(nk * 3);
-        inkLine(ctx, [[ux - 20, uy + 104], [ux - 6, uy + 70], [ux + 4, uy + 56]], 3840, 6, "#ff3b3b");
-        inkLine(ctx, [[ux - 16, uy + 66], [ux + 4, uy + 56], [ux + 10, uy + 78]], 3841, 6, "#ff3b3b");
-        ctx.restore();
-      }
-    }
     return;
   }
   // regret: she hugs her pillow tight, chin on top of it
@@ -179,7 +146,6 @@ function shotSchool(ctx: Ctx, abs: number) {
   if (abs < EV.hide2) {
     // what she saw when she turned round: him, smiling at her
     hisClassFace(ctx, abs, BAR(18), "smile");
-    card(ctx, "那天上课", 70, 330, smooth(phase(abs, BAR(18) + 0.05, BAR(18) + 0.3)));
     return;
   }
   // behind the book: bright red, heart going crazy
@@ -345,26 +311,54 @@ function shotDawn(ctx: Ctx, abs: number) {
   hisFaceReading(ctx, abs);
 }
 
+/** after she sends the 「嗯」 the camera pushes in on its bubble (screen 454, 622 on her phone) and brings it towards the
+ *  middle: where that bubble is on screen, and the phone scale */
+function umSpot(abs: number) {
+  const zk = smooth(phase(abs, EV.send2 + 0.08, EV.send2 + 0.55));
+  return { ux: 694 + (590 - 694) * zk, uy: 892 + (860 - 892) * zk, zs: PHONE_S + 0.38 * zk };
+}
+
+/** over her memory, outside the film: the time cards, and round the sent 「嗯」 two yellow pulses (like the hook) and
+ *  a red-pen note — everything else was deleted */
+function memoryNotes(ctx: Ctx, abs: number) {
+  card(ctx, "10月6日 23:12", 70, 330, smooth(phase(abs, BAR(16) + 0.15, BAR(16) + 0.4)) * (1 - phase(abs, 33.5, 33.6)));
+  card(ctx, "那天上课", 70, 330, smooth(phase(abs, BAR(18) + 0.05, BAR(18) + 0.3)) * (1 - phase(abs, EV.hide2 - 0.1, EV.hide2)));
+  if (abs <= EV.send2 || abs >= EV.umHold) return;
+  const { ux, uy, zs } = umSpot(abs);
+  for (const t0 of [EV.send2 + 0.12, EV.send2 + 0.48]) {
+    const k = phase(abs, t0, t0 + 0.4);
+    if (k <= 0 || k >= 1) continue;
+    ctx.save();
+    ctx.globalAlpha = 1 - k;
+    ctx.strokeStyle = "#ffd166";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.ellipse(ux, uy, (64 + 70 * k) * zs, (46 + 40 * k) * zs, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  const nk = phase(abs, EV.send2 + 0.3, EV.send2 + 0.75);
+  if (nk > 0) {
+    ctx.save();
+    ctx.translate(ux - 40, uy + 150);
+    ctx.rotate(-0.04);
+    text(ctx, writeOn(`删掉了 ${Array.from(HER_REPLY_DRAFT).length} 个字`, nk), 0, 0, { size: 60, font: F.pen, fill: "#ff3b3b", stroke: "#fff", lw: 10 });
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = clamp(nk * 3);
+    inkLine(ctx, [[ux - 20, uy + 104], [ux - 6, uy + 70], [ux + 4, uy + 56]], 3840, 6, "#ff3b3b");
+    inkLine(ctx, [[ux - 16, uy + 66], [ux + 4, uy + 56], [ux + 10, uy + 78]], 3841, 6, "#ff3b3b");
+    ctx.restore();
+  }
+}
+
 export function createScene(options: SceneOptions) {
   return designScene(options, BAR(16), (ctx, abs) => {
-    if (abs < BAR(18)) shotReplay(ctx, abs);
-    else if (abs < EV.now) shotSchool(ctx, abs);
-    else if (abs < EV.dawn) shotSend(ctx, abs);
+    if (abs < EV.now) {
+      // her memory — that night and that class — on old film, the same as his memory in act 1; nothing else
+      oldFilm(ctx, abs, (c) => (abs < BAR(18) ? shotReplay(c, abs) : shotSchool(c, abs)), "memory");
+      memoryNotes(ctx, abs);
+    } else if (abs < EV.dawn) shotSend(ctx, abs);
     else shotDawn(ctx, abs);
-    // rewind flicker into her point of view
-    const rw = 1 - phase(abs, BAR(16), BAR(16) + 0.7);
-    if (rw > 0) {
-      ctx.save();
-      ctx.globalAlpha = rw;
-      ctx.fillStyle = "rgba(20,10,30,0.35)";
-      ctx.fillRect(0, 0, W, H);
-      for (let i = 0; i < 7; i++) {
-        const y = ((abs * 2600 + i * 331) % (H + 200)) - 100;
-        ctx.fillStyle = i % 2 ? "rgba(255,255,255,0.22)" : "rgba(255,170,210,0.2)";
-        ctx.fillRect(0, y, W, 6 + (i % 3) * 8);
-      }
-      text(ctx, "◀◀", W - 150, 330, { size: 64, font: F.ui, weight: 700, fill: "#fff", stroke: C.ink, lw: 8 });
-      ctx.restore();
-    }
   });
 }
