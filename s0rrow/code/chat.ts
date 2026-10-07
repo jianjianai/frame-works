@@ -8,7 +8,7 @@ import { SH, SW, statusBar } from "./phone";
  *  voice notes, stickers, the 「对方正在输入...」 title, a multi-line draft that can be typed / deleted,
  *  dark mode for night scenes. Plus 朋友圈 post, profile card, power-off slider. */
 
-export type Who = "boy" | "girl";
+export type Who = "boy" | "girl" | "mei";
 export type ChatItem =
   | { t: "time"; text: string }
   | { t: "msg"; me?: boolean; text: string; pop?: number; /** a phrase picked out with a highlighter… */ mark?: string; /** …drawn left to right, 0..1 */ markK?: number }
@@ -73,10 +73,11 @@ export function wrapText(ctx: Ctx, s: string, maxW: number, size = FS): string[]
 export function avatar(ctx: Ctx, x: number, y: number, who: Who, size = 68) {
   ctx.save();
   rr(ctx, x - size / 2, y - size / 2, size, size, size * 0.18);
-  ctx.fillStyle = who === "girl" ? "#ffd9e2" : "#bcd8ec";
+  ctx.fillStyle = who === "girl" ? "#ffd9e2" : who === "mei" ? "#ffe9b0" : "#bcd8ec";
   ctx.fill();
   ctx.clip();
-  drawKid(ctx, x, y + size * 0.12, size / 300, { who, body: "bust", eyes: who === "girl" ? "happy" : "sleepy", mouth: who === "girl" ? "smile" : "flat" });
+  if (who === "mei") drawPerson(ctx, x, y + size * 0.14, size / 300, { ...CAST.mei, x: 0, face: "smile", body: "bust" });
+  else drawKid(ctx, x, y + size * 0.12, size / 300, { who, body: "bust", eyes: who === "girl" ? "happy" : "sleepy", mouth: who === "girl" ? "smile" : "flat" });
   ctx.restore();
 }
 
@@ -281,6 +282,21 @@ export function chatScreen2(ctx: Ctx, abs: number, v: ChatView) {
         }
       }
       lines.forEach((l, j) => text(ctx, l, bx + 22, y + 38 + j * LH, { size: FS, font: F.ui, fill: me ? P.mineText : P.theirsText, align: "left" }));
+      if (it.mark && (it.markK ?? 1) > 0) {
+        const sp = markSpans(ctx, it.text, lines, it.mark);
+        let left = (it.markK ?? 1) * sp.reduce((n, q) => n + q.w, 0);
+        for (const q of sp) {
+          const w = Math.min(q.w, left);
+          left -= q.w;
+          if (w <= 0) break;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(bx + 22 + q.x - 3, y + 38 + q.j * LH - FS * 0.55, w + 6, FS * 1.1);
+          ctx.clip();
+          text(ctx, lines[q.j], bx + 22, y + 38 + q.j * LH, { size: FS, font: F.ui, fill: "#141414", align: "left" });
+          ctx.restore();
+        }
+      }
     } else if (it.t === "voice") {
       const bw = 120 + it.secs * 3;
       const bx = me ? SW - 106 - bw : 106;
