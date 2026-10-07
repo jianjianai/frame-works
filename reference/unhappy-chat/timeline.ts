@@ -40,6 +40,7 @@ export const EV = {
   powerOff: 25.85,
   blanket: 26.2,
   muffle: [26.65, 29.82] as const,
+  curledUp: 27.674, // "That makes me unhappy": the dark room, then out of the window to her lit one
   twist: 29.82,
   del2: [30.8, 31.8] as const,
   // act 3 — her side
