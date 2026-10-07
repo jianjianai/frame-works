@@ -8,7 +8,7 @@ import { lightPool } from "./lib/sets";
 import { BACKSPACE_AT, chatScreen2, momentsScreen, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW } from "./lib/phone";
-import { GIVE_UP, HIS_DRAFT, PHONE_CY, REST_L, REST_R, deleted, hisClassFace, hisNightChat, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { GIVE_UP, HIS_DRAFT, PHONE_CY, REST_L, REST_R, deleted, hisClassFace, hisNightChat, inWin, oldFilm, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 1 (0 – 16.43s) · 他的视角
@@ -158,12 +158,6 @@ function shotHistory(ctx: Ctx, abs: number) {
     },
     { who: "boy", right, cx: mk > 0 ? dx - (312 - 300) * s : cx1, cy: mk > 0 ? dy - (796 - 640) * s : cy1, s, steady: true },
   );
-  // fading to a warm white: into the memory
-  const wf = smooth(phase(abs, 7.95, BAR(4)));
-  if (wf > 0) {
-    ctx.fillStyle = `rgba(255,244,228,${wf})`;
-    ctx.fillRect(0, 0, W, H);
-  }
 }
 
 // ---------------------------------------------------------------- 1C class: from his seat, then after class
@@ -396,20 +390,9 @@ function shotGiveUp(ctx: Ctx, abs: number) {
   ctx.restore();
 }
 
-/** today's class, remembered that night: an old-photo tone, a soft glowing edge, a time card; it comes out of the
- *  warm white the moments photo faded into */
+/** today's class, remembered that night: on old film (the same as her memory in act 3), with a time card */
 function memory(ctx: Ctx, abs: number) {
-  filtered(ctx, "sepia(0.32) saturate(0.85) brightness(1.04)", (c) => shotClass(c, abs), "memory");
-  const g = ctx.createRadialGradient(540, 900, 520, 540, 900, 1150);
-  g.addColorStop(0, "rgba(255,240,220,0)");
-  g.addColorStop(1, "rgba(255,240,220,0.45)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  const wf = 1 - smooth(phase(abs, BAR(4), BAR(4) + 0.4));
-  if (wf > 0) {
-    ctx.fillStyle = `rgba(255,244,228,${wf})`;
-    ctx.fillRect(0, 0, W, H);
-  }
+  oldFilm(ctx, abs, (c) => shotClass(c, abs), "memory");
   card(ctx, "今天 · 物理课", 70, 330, smooth(phase(abs, BAR(4) + 0.2, BAR(4) + 0.45)) * (1 - phase(abs, 9.7, 9.95)));
 }
 
