@@ -1,5 +1,5 @@
 import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, blob, curve, fillBg, glow, hash, inkLine, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
+import { C, Ctx, F, H, Pt, W, blob, curve, fillBg, glow, hash, inkLine, oval, paint, poly, rbox, rr, shaded, text, tubePts, vgrad } from "./draw";
 import { ballToy, fluffPuppy } from "./dog";
 import { helmetProp } from "./kid";
 
@@ -1189,6 +1189,57 @@ export function textbook(ctx: Ctx, x: number, y: number, s: number, rot = 0, see
   }
   oval(ctx, 22, 140, 7, 7, seed + 9, 0.3);
   paint(ctx, "#fff", null);
+  ctx.restore();
+}
+
+/** fingertips curled over both edges of a held-up textbook (same x, y, s, rot as textbook()) */
+export function bookFingers(ctx: Ctx, x: number, y: number, s: number, rot: number, skin = "#f6e1c3") {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  for (const side of [-1, 1])
+    for (let k = 0; k < 4; k++) {
+      rr(ctx, side < 0 ? -176 : 136, 18 + k * 31, 40, 27, 13);
+      paint(ctx, skin, C.ink, 3.5);
+    }
+  ctx.restore();
+}
+
+/** A pillow hugged to the chest: the upper arms go down the pillow's sides, the forearms cross over its front
+ *  and end in simple round hands. Kid-local units: (x, y, s) = the same as the drawKid call it belongs to;
+ *  draw it after drawKid (it covers her own arms) and before any blanket. */
+export function huggedPillow(ctx: Ctx, x: number, y: number, s: number, sleeve: string, cuff: string, skin: string, seed = 3800) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.save();
+  ctx.rotate(-0.05);
+  const pillow: Pt[] = [[-206, 196], [-70, 182], [70, 180], [206, 194], [222, 300], [204, 420], [66, 432], [-70, 434], [-212, 420], [-224, 300]];
+  shaded(ctx, () => blob(ctx, pillow, seed, 1.4), "#cfe2f5", () => {
+    blob(ctx, [[60, 300], [230, 250], [240, 450], [-80, 450], [20, 400]], seed + 1, 1.2);
+    paint(ctx, "rgba(110,140,185,0.3)", null);
+    // a few little stars printed on it
+    for (const [sx, sy] of [[-150, 260], [-40, 410], [150, 400], [120, 250]] as Pt[]) {
+      blob(ctx, [[sx, sy - 14], [sx + 4, sy - 4], [sx + 14, sy], [sx + 4, sy + 4], [sx, sy + 14], [sx - 4, sy + 4], [sx - 14, sy], [sx - 4, sy - 4]], seed + 20 + sx, 0.3);
+      paint(ctx, "#fff7d1", null);
+    }
+  }, C.ink, 6);
+  inkLine(ctx, [[-196, 236], [0, 226], [196, 234]], seed + 2, 2.4, "#9fbbdc");
+  ctx.restore();
+  const arm = (pts: Pt[], hand: Pt, sd: number) => {
+    blob(ctx, tubePts(pts, [58, 54, 50, 48], true, false), sd, 1);
+    paint(ctx, sleeve, C.ink, 5.5);
+    const a = pts[pts.length - 2],
+      b = pts[pts.length - 1];
+    blob(ctx, tubePts([[a[0] + (b[0] - a[0]) * 0.82, a[1] + (b[1] - a[1]) * 0.82], b], [52, 50], false, false), sd + 1, 0.8);
+    paint(ctx, cuff, C.ink, 4.5);
+    oval(ctx, hand[0], hand[1], 30, 28, sd + 2, 0.8);
+    paint(ctx, skin, C.ink, 5);
+  };
+  // her right arm (image left) underneath, left arm on top — crossed over the front of the pillow
+  arm([[-90, 200], [-182, 300], [-130, 372], [10, 386]], [34, 384], seed + 3);
+  arm([[90, 200], [186, 300], [126, 352], [-6, 352]], [-30, 352], seed + 7);
   ctx.restore();
 }
 

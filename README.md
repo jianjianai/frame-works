@@ -87,3 +87,4 @@
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1：教室里主角的手改成简单的圆（roundHand）
 - `code/kid.ts`：来源 work-d1187f37《unhappy》：新增 bendL/bendR（肘部弯向，递东西的 V 字臂）
 - `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：递牛奶用 V 字臂
+- `code/places.ts`：来源 work-d1187f37《unhappy》：新增 bookFingers（举书的指尖）、huggedPillow（抱枕头：胳膊交叉在前、圆手）
