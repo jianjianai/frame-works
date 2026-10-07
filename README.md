@@ -70,3 +70,4 @@
 - `reference/unhappy-chat/story.ts`：来源 《unhappy》聊天版的剧情文字与工具（聊天记录、打字/删除进度、双拇指打字、手机近景、泪滴）
 - `reference/unhappy-chat/timeline.ts`：来源 《unhappy》聊天版的小节与事件时间表（整首歌、尾奏缩成一遍后 73.3 秒）
 - `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：主歌2 她的视角 → 第二天他开机
+- `reference/unhappy-chat/act4.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：尾奏 我也是 → 嗯！！ → 上下分屏
