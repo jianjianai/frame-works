@@ -189,6 +189,29 @@ export function markAt(ctx: Ctx, v: ChatView): { x: number; y: number; w: number
   return null;
 }
 
+/** the screen box (600×1280 units) of message `index` in a chat view (its bubble, at full size) — to aim pulses or the
+ *  camera at it */
+export function bubbleAt(ctx: Ctx, v: ChatView, index: number): { x: number; y: number; w: number; h: number } | null {
+  setMetrics(v.big !== false);
+  const kb = v.keyboard ? 420 : 0;
+  const dl = v.draft ? Math.min(7, draftLines(ctx, v.draft).length) : 1;
+  const inputTop = SH - kb - (48 + dl * LH + 30);
+  let y = inputTop - 24 + (v.scroll ?? 0);
+  for (let i = v.items.length - 1; i >= 0; i--) {
+    const it = v.items[i];
+    y -= itemHeight(ctx, it);
+    if (i !== index) continue;
+    if (it.t !== "msg") return null;
+    const lines = wrapText(ctx, it.text, MAXW, FS);
+    ctx.save();
+    ctx.font = `400 ${FS}px ${F.ui}`;
+    const bw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 44;
+    ctx.restore();
+    return { x: it.me ? SW - 106 - bw : 106, y, w: bw, h: lines.length * LH + 36 };
+  }
+  return null;
+}
+
 /** height an item takes in the list */
 function itemHeight(ctx: Ctx, it: ChatItem) {
   if (it.t === "time") return 70;
