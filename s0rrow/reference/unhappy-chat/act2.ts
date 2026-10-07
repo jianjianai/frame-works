@@ -4,7 +4,7 @@ import { C, Ctx, H, W, blob, camera, card, designScene, fillBg, filtered, glow, 
 import { drawKid } from "./lib/kid";
 import { bedroom, herBlanket, herRoom } from "./lib/places";
 import { lightPool } from "./lib/sets";
-import { BACKSPACE_AT, chatScreen2, powerOffScreen, profileScreen } from "./lib/chat";
+import { BACKSPACE_AT, chatScreen2, powerOffScreen, profileScreen, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW } from "./lib/phone";
 import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops, phoneBody } from "./lib/story";
@@ -379,16 +379,18 @@ function shotTwist(ctx: Ctx, abs: number) {
     return;
   }
   if (abs < 31.84) {
-    // her phone: the whole paragraph, deleted one character at a time
-    const draft = abs < EV.del2[0] ? HER_NIGHT_DRAFT : deleted(HER_NIGHT_DRAFT, abs, EV.del2[0], EV.del2[1]);
-    const f = ((abs - EV.del2[0]) * 11) % 1;
-    const right: FingerPos = abs < EV.del2[0] ? { x: BACKSPACE_AT[0] - 20, y: BACKSPACE_AT[1] - 60, touch: 0 } : { x: BACKSPACE_AT[0], y: BACKSPACE_AT[1], touch: f < 0.5 ? 1 : 0.5 };
-    const [sx, sy] = shake(abs, 1.5, 9);
+    // her phone: the whole paragraph is typed out; her thumb goes to 发送… almost… and pulls back, twice
+    const view = herNightView(abs, HER_NIGHT_DRAFT);
+    const sb = sendButtonAt(ctx, view);
+    const near = (t: number) => Math.max(0, 1 - Math.abs(abs - t) / 0.16);
+    const press = Math.max(near(EV.del2[0] + 0.3), near(EV.del2[0] + 0.75));
+    const right: FingerPos = { x: sb[0] - 10 + Math.sin(abs * 4) * 8, y: sb[1] + 70 * (1 - press), touch: 0.15 + 0.6 * press };
+    const [sx, sy] = shake(abs, 1.2, 9);
     phoneCloseup(
       ctx,
       abs,
       (c) => {
-        chatScreen2(c, abs, herNightView(abs, draft));
+        chatScreen2(c, abs, { ...view, sendHot: press > 0.5 ? press : 0 });
         tearDrops(c, abs, 30.6, 3);
       },
       { who: "girl", right, cx: 540 + sx, cy: PHONE_CY + sy, glowCol: "rgba(255,170,200,0.22)" },
