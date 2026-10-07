@@ -108,3 +108,4 @@
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：切点对齐乐句结尾的拍点
 - `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（uglyEnd / typingA / typingB / lieDown 按乐句对齐）
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：头像留到 pretty 唱完再熄屏
+- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：被子里 → 黑房间 → 推出窗外只有她的窗亮着

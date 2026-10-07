@@ -1,8 +1,8 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, H, W, blob, camera, card, designScene, fillBg, filtered, glow, inkLine, paint, shake } from "./lib/draw";
+import { C, Ctx, H, W, blob, camera, card, designScene, fillBg, filtered, glow, hash, inkLine, oval, paint, poly, rr, shake, vgrad } from "./lib/draw";
 import { drawKid } from "./lib/kid";
-import { herBlanket, herRoom } from "./lib/places";
+import { bedroom, herBlanket, herRoom } from "./lib/places";
 import { lightPool } from "./lib/sets";
 import { BACKSPACE_AT, chatScreen2, powerOffScreen, profileScreen } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
@@ -185,7 +185,128 @@ function shotOff(ctx: Ctx, abs: number) {
     ctx.fillRect(0, 0, W, H);
     return;
   }
-  underBlanket(ctx, abs);
+  if (abs < EV.curledUp) underBlanket(ctx, abs);
+  else {
+    shotCurledUp(ctx, abs);
+    card(ctx, "00:52", 70, 330, smooth(phase(abs, EV.curledUp + 0.05, EV.curledUp + 0.3)));
+  }
+}
+
+/** 27.67 → 28.70 "That makes me…": the dark room from above the bed — he is a lump under the duvet, the phone off
+ *  beside the pillow — and the camera drifts towards the window */
+function shotCurledUp(ctx: Ctx, abs: number) {
+  const k = smooth(phase(abs, EV.curledUp, BAR(14)));
+  ctx.save();
+  camera(ctx, 640 - 300 * k, 860 - 300 * k, 1.0 + 0.3 * k);
+  bedroom(ctx, abs, {});
+  // hair peeking out at the pillow, then the duvet over him, curled up
+  for (let i = 0; i < 5; i++) {
+    const hx = 600 + i * 22;
+    poly(ctx, [[hx - 16, 838], [hx, 790 - (i % 2) * 14], [hx + 16, 838]], 3740 + i, 0.8);
+    paint(ctx, C.hair, C.ink, 4);
+  }
+  blob(ctx, [[560, 880], [660, 812], [800, 786], [940, 806], [1060, 862], [1160, 920], [1160, 1150], [420, 1162], [440, 990]], 3745, 1.6);
+  paint(ctx, "#33456e", C.ink, 6);
+  inkLine(ctx, [[640, 900], [780, 860], [920, 880]], 3746, 4, "#26375a");
+  inkLine(ctx, [[560, 1040], [820, 1000], [1100, 1050]], 3747, 4, "#26375a");
+  // his phone, switched off, on the mattress
+  ctx.save();
+  ctx.translate(500, 1010);
+  ctx.rotate(-0.25);
+  rr(ctx, -34, -60, 68, 120, 14);
+  ctx.fillStyle = "#0b0b0e";
+  ctx.fill();
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = C.ink;
+  ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+  // lamp off: only the window light
+  ctx.fillStyle = "rgba(4,6,20,0.5)";
+  ctx.fillRect(0, 0, W, H);
+  glow(ctx, 250 + 300 * k, 470 + 300 * k, 520, "rgba(120,140,220,0.18)");
+}
+
+/** 28.70 → 29.82 "…unhappy": out of his window, across the dark blocks — one window is still lit, with fairy
+ *  lights and someone holding a glowing phone. The camera pushes into it; the twist cuts inside. */
+function shotLitWindow(ctx: Ctx, abs: number) {
+  const k = phase(abs, BAR(14), EV.twist);
+  const z = 1 + 1.9 * k * k;
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#0b1030"], [1, "#232b57"]]));
+  ctx.save();
+  camera(ctx, 580, 1025, z);
+  // moon and a few stars
+  oval(ctx, 860, 300, 46, 46, 3760, 0.8);
+  paint(ctx, "#f3eccf", null);
+  for (let i = 0; i < 18; i++) {
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.fillRect(hash(i * 3.1) * 1080, hash(i * 5.3) * 640, 3, 3);
+  }
+  // far blocks
+  for (let i = 0; i < 8; i++) {
+    const bx = -40 + i * 150,
+      bh = 600 + hash(i * 2.7) * 500;
+    ctx.fillStyle = "#151a35";
+    ctx.fillRect(bx, H - bh, 140, bh);
+    for (let r = 0; r < 10; r++)
+      for (let c = 0; c < 3; c++)
+        if (hash(i * 31 + r * 7 + c) > 0.86) {
+          ctx.fillStyle = "rgba(255,214,150,0.25)";
+          ctx.fillRect(bx + 18 + c * 40, H - bh + 30 + r * 70, 22, 30);
+        }
+  }
+  // her block, every window dark but one
+  poly(ctx, [[380, 640], [760, 630], [770, 2000], [372, 2000]], 3761, 1.2);
+  paint(ctx, "#1d2342", C.ink, 6);
+  for (let r = 0; r < 12; r++)
+    for (let c = 0; c < 3; c++) {
+      const x = 420 + c * 120,
+        y = 700 + r * 140;
+      if (r === 2 && c === 1) continue;
+      rr(ctx, x, y, 80, 90, 6);
+      ctx.fillStyle = "#11152b";
+      ctx.fill();
+    }
+  // the lit window: warm light, a string of fairy lights, a small figure with a glowing phone
+  glow(ctx, 580, 1025, 180, "rgba(255,200,140,0.45)");
+  rr(ctx, 540, 980, 80, 90, 6);
+  ctx.fillStyle = "#ffd59a";
+  ctx.fill();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = C.ink;
+  ctx.stroke();
+  for (let i = 0; i < 6; i++) {
+    ctx.fillStyle = i % 2 ? "#ff8fb1" : "#fff1a8";
+    ctx.beginPath();
+    ctx.arc(546 + i * 13.5, 990 + Math.sin(i * 1.3) * 3, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#3a2a2e";
+  ctx.beginPath();
+  ctx.arc(588, 1030, 11, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(588, 1066, 22, 18, 0, Math.PI, 0);
+  ctx.fill();
+  ctx.fillStyle = "#bfe0ff";
+  ctx.fillRect(582, 1046, 9, 6);
+  ctx.restore();
+  // his window frame, left behind as the camera goes out through it
+  const f = 1 + 3.5 * k;
+  ctx.save();
+  ctx.translate(560, 990);
+  ctx.scale(f, f);
+  ctx.globalAlpha = 1 - smooth(phase(abs, BAR(14), BAR(14) + 0.6));
+  ctx.strokeStyle = "#141830";
+  ctx.lineWidth = 26;
+  ctx.strokeRect(-470, -820, 940, 1640);
+  ctx.beginPath();
+  ctx.moveTo(0, -820);
+  ctx.lineTo(0, 820);
+  ctx.moveTo(-470, -80);
+  ctx.lineTo(470, -80);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function underBlanket(ctx: Ctx, abs: number) {
@@ -193,7 +314,8 @@ function underBlanket(ctx: Ctx, abs: number) {
   fillBg(ctx, "#05060f");
   ctx.save();
   camera(ctx, 540, 860, 1.06 + 0.04 * smooth(phase(abs, EV.muffle[0], EV.twist)));
-  drawKid(ctx, 540, 860, 1.45, { body: "head", eyes: "teary", tears: 0.7, look: [0, 0.2], mouth: "wobble", brows: "sad" });
+  // a tear wells up and runs down
+  drawKid(ctx, 540, 860, 1.45, { body: "head", eyes: "teary", tears: 0.35 + 0.65 * smooth(phase(abs, EV.muffle[0], EV.curledUp)), look: [0, 0.2], mouth: "wobble", brows: "sad" });
   ctx.restore();
   const g = ctx.createRadialGradient(540, 860, 120, 540, 860, 760);
   g.addColorStop(0, "rgba(10,14,40,0.35)");
@@ -216,8 +338,8 @@ function herNightView(abs: number, draft: string) {
 
 function shotTwist(ctx: Ctx, abs: number) {
   if (abs < EV.twist) {
-    underBlanket(ctx, abs);
-    card(ctx, "00:52", 70, 330, smooth(phase(abs, 28.75, 29.05)) * (1 - phase(abs, 29.6, 29.82)));
+    shotLitWindow(ctx, abs);
+    card(ctx, "00:52", 70, 330, 1 - phase(abs, 29.6, 29.82));
     return;
   }
   if (abs < 30.4) {
