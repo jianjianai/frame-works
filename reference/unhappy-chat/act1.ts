@@ -7,7 +7,7 @@ import { bedBlanket, bedroom, classroomBoard, classroomFront, deskFront, strawbe
 import { lightPool } from "./lib/sets";
 import { BACKSPACE_AT, chatScreen2, momentsScreen, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
-import { GIVE_UP, HIS_DRAFT, deleted, hisClassFace, hisNightChat, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
+import { GIVE_UP, HIS_DRAFT, PHONE_CY, REST_L, REST_R, deleted, hisClassFace, hisNightChat, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 1 (0 – 16.43s) · 他的视角
@@ -18,14 +18,15 @@ import { BAR, EV } from "./lib/timeline";
  *  1D night: he types, deletes, sends 「以后不打扰你了」, turns off the lamp */
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const REST: FingerPos = { x: 480, y: 1180, touch: 0.2 };
+/** the hook phone sits under the two-line hook text */
+const HOOK_CY = 1100;
+const REST: FingerPos = REST_R;
 
 // ---------------------------------------------------------------- 1A
 function shotHook(ctx: Ctx, abs: number) {
   if (abs < 2.95) {
     const typing = inWin(abs, EV.typing1) || inWin(abs, EV.typing2);
-    const right: FingerPos = { x: 470 + Math.sin(abs * 2.2) * 6, y: 1150 - Math.sin(abs * 1.3) * 8, touch: 0.2 };
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing, keyboard: true })), { who: "boy", right, cy: 1010, s: 0.8 });
+    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing, keyboard: true })), { who: "boy", cy: HOOK_CY, s: 1 });
     // a soft pulse around the new 「嗯」
     const k = pop(abs, EV.um1, 0.35);
     if (k > 0 && k < 1) {
@@ -34,7 +35,8 @@ function shotHook(ctx: Ctx, abs: number) {
       ctx.strokeStyle = "#ffd166";
       ctx.lineWidth = 6;
       ctx.beginPath();
-      ctx.ellipse(424, 1004, 64 + k * 60, 44 + k * 30, 0, 0, Math.PI * 2);
+      // around the 「嗯」 bubble (screen 155, 632)
+      ctx.ellipse(540 + (155 - 300), HOOK_CY + (632 - 640), 80 + k * 75, 55 + k * 38, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -63,11 +65,11 @@ function shotHistory(ctx: Ctx, abs: number) {
       const f = ((abs - (swipingUp ? EV.scrollUp : EV.scrollDown)) * 3.4) % 1;
       right = swipingUp ? { x: 420, y: 520 + f * 420, touch: f < 0.8 ? 1 : 0 } : { x: 420, y: 940 - f * 420, touch: f < 0.8 ? 1 : 0 };
     }
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { scroll })), { who: "boy", right, cy: 900 });
+    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { scroll })), { who: "boy", right, cy: PHONE_CY });
     return;
   }
   const mark = smooth(phase(abs, 7.15, 7.6));
-  phoneCloseup(ctx, abs, (c) => momentsScreen(c, abs, { dark: true, mark }), { who: "boy", right: REST, cy: 900 });
+  phoneCloseup(ctx, abs, (c) => momentsScreen(c, abs, { dark: true, mark }), { who: "boy", right: REST, cy: PHONE_CY });
 }
 
 // ---------------------------------------------------------------- 1C class: from his seat, then after class
@@ -228,15 +230,15 @@ function thumbsGiveUp(abs: number, sendAt: [number, number]): { right: FingerPos
   if (inWin(abs, EV.type2)) return typingThumbs(abs, EV.type2[0], EV.type2[1], 13);
   if (inWin(abs, EV.del1)) {
     const f = ((abs - EV.del1[0]) * 10) % 1;
-    return { right: { x: BACKSPACE_AT[0], y: BACKSPACE_AT[1], touch: f < 0.5 ? 1 : 0.4 }, left: { x: 120, y: 1180, touch: 0.2 } };
+    return { right: { x: BACKSPACE_AT[0], y: BACKSPACE_AT[1], touch: f < 0.5 ? 1 : 0.4 }, left: REST_L };
   }
   if (abs >= EV.type2[1] && abs < EV.send1 + 0.2) {
     // hovering over 发送 … then pressing it
     const press = abs > EV.send1 - 0.08;
     const hover = smooth(phase(abs, EV.type2[1], 14.75));
-    return { right: { x: lerp(480, sendAt[0], hover), y: lerp(1180, sendAt[1], hover), touch: press ? 1 : 0.1 + Math.sin(abs * 7) * 0.05 }, left: { x: 120, y: 1180, touch: 0.2 } };
+    return { right: { x: lerp(REST.x, sendAt[0], hover), y: lerp(REST.y, sendAt[1], hover), touch: press ? 1 : 0.1 + Math.sin(abs * 7) * 0.05 }, left: REST_L };
   }
-  return { right: REST, left: { x: 120, y: 1180, touch: 0.2 } };
+  return { right: REST, left: REST_L };
 }
 
 function lamp(ctx: Ctx, on: number) {
@@ -255,7 +257,7 @@ function shotGiveUp(ctx: Ctx, abs: number) {
     else if (abs < EV.send1) draft = typed(GIVE_UP, abs, EV.type2[0], EV.type2[1]);
     const view = hisNightChat(abs, { draft: abs < EV.send1 ? draft : "", caret: abs < EV.send1, keyboard: true, sendHot: abs > EV.send1 - 0.1 && abs < EV.send1 ? 1 : 0 });
     const sendAt = sendButtonAt(ctx, { ...view, draft: GIVE_UP }) as [number, number];
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "boy", cy: 860, ...thumbsGiveUp(abs, sendAt) });
+    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, view), { who: "boy", cy: PHONE_CY, ...thumbsGiveUp(abs, sendAt) });
     return;
   }
   // his room: phone face down, lamp off
