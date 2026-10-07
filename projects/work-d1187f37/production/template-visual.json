@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "background": "#0b0e1f",
+  "clips": [
+    {
+      "id": "act1",
+      "name": "第一幕 · 钩子与设定",
+      "source": { "kind": "scene", "module": "act1", "engine": "canvas" },
+      "start": 0,
+      "duration": 15,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act2",
+      "name": "第二幕 · 铺垫",
+      "source": { "kind": "scene", "module": "act2", "engine": "canvas" },
+      "start": 15,
+      "duration": 15,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act3",
+      "name": "第三幕 · 反转",
+      "source": { "kind": "scene", "module": "act3", "engine": "canvas" },
+      "start": 30,
+      "duration": 15,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act4",
+      "name": "尾声",
+      "source": { "kind": "scene", "module": "act4", "engine": "canvas" },
+      "start": 45,
+      "duration": 10,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "lyrics",
+      "name": "中英歌词",
+      "source": { "kind": "scene", "module": "lyrics", "engine": "canvas" },
+      "start": 0,
+      "duration": 55,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "grain",
+      "name": "胶片颗粒",
+      "source": { "kind": "scene", "module": "grain", "engine": "canvas" },
+      "start": 0,
+      "duration": 55,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "transform": { "opacity": 0.5 },
+      "fit": "contain",
+      "blend": "overlay"
+    }
+  ]
+}

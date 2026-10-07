@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "background": "#0b0e1f",
+  "clips": [
+    {
+      "id": "act1",
+      "name": "第一幕 · 小狗视角",
+      "source": {
+        "kind": "scene",
+        "module": "act1",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 16.43
+    },
+    {
+      "id": "act2",
+      "name": "第二幕 · 雨夜与反转",
+      "source": {
+        "kind": "scene",
+        "module": "act2",
+        "engine": "canvas"
+      },
+      "start": 16.43,
+      "duration": 16.356
+    },
+    {
+      "id": "act3",
+      "name": "第三幕 · 他的视角",
+      "source": {
+        "kind": "scene",
+        "module": "act3",
+        "engine": "canvas"
+      },
+      "start": 32.786,
+      "duration": 16.755
+    },
+    {
+      "id": "act4",
+      "name": "尾声 · 树下",
+      "source": {
+        "kind": "scene",
+        "module": "act4",
+        "engine": "canvas"
+      },
+      "start": 49.141,
+      "duration": 6.159,
+      "fadeIn": 0.45
+    },
+    {
+      "id": "lyrics",
+      "name": "中英歌词 + 钩子",
+      "source": {
+        "kind": "scene",
+        "module": "lyrics",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 55.3
+    },
+    {
+      "id": "grain",
+      "name": "胶片颗粒",
+      "source": {
+        "kind": "scene",
+        "module": "grain",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 55.3,
+      "transform": {
+        "opacity": 0.5
+      },
+      "blend": "overlay"
+    }
+  ]
+}
