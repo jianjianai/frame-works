@@ -38,9 +38,10 @@ export const EV = {
   typingB: [22.95, 23.6] as const,
   powerOff: 25.85,
   blanket: 26.2,
-  muffle: [26.65, 29.82] as const,
+  muffle: [26.65, 27.674] as const, // only while he is under the duvet
   curledUp: 27.674, // "That makes me unhappy": the dark room, then out of the window to her lit one
-  twist: 29.82,
+  twist: BAR(14), // 28.70: his light goes out, cut into her room (was 29.82)
+  hisLightOff: 28.185,
   del2: [30.8, 31.8] as const,
   // act 3 — her side
   rewind: 32.55,
