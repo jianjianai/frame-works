@@ -1,8 +1,8 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text, writeOn } from "./lib/draw";
+import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text, writeOn, pulse, filtered, rr } from "./lib/draw";
 import { drawKid } from "./lib/kid";
-import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook } from "./lib/places";
+import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook, classroomFront, strawberryMilk } from "./lib/places";
 import { heart } from "./lib/sets";
 import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
@@ -142,50 +142,92 @@ function shotReplay(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 3B class, her side
+/** "You never ever pay attention to me", three shots on the beat (each one new): she turns round and he is smiling
+ *  at her → up goes the book, she peeks over it, bright red, heart pounding → after class she slips back into the
+ *  empty classroom and takes the strawberry milk he left, holding it to her cheek (why it is her wallpaper) */
 function shotSchool(ctx: Ctx, abs: number) {
   if (abs < EV.hide2) {
     // what she saw when she turned round: him, smiling at her
     hisClassFace(ctx, abs, BAR(18), "smile");
     return;
   }
-  // behind the book: bright red, heart going crazy
-  const beat = Math.max(0, Math.sin((abs - EV.hide2) * Math.PI * 4.2));
-  fillBg(ctx, "#efe6cf");
+  if (abs < EV.afterClass) {
+    // behind the book: it comes up fast, then the camera pushes in on her eyes peeking over it
+    const p = phase(abs, EV.hide2, EV.afterClass);
+    const up = 1 - smooth(phase(abs, EV.hide2, EV.hide2 + 0.16));
+    const beat = pulse(abs, 6);
+    fillBg(ctx, "#efe6cf");
+    ctx.save();
+    camera(ctx, 540, 820, 1.0 + 0.24 * smooth(p) + 0.03 * beat);
+    glow(ctx, 540, 860, 800, "rgba(255,170,190,0.4)");
+    drawKid(ctx, 540, 860, 1.3, {
+      who: "girl",
+      outfit: "cardigan",
+      body: "bust",
+      eyes: "wide",
+      brows: "worried",
+      mouth: "bite",
+      blush: 1,
+      look: (abs < 37.85 ? [0.3, 0.1] : [-0.45, 0.3]) as [number, number],
+      arms: "custom",
+      // arms straight down behind the book (bent elbows would stick out at the sides)
+      handL: [-128, 440],
+      handR: [128, 440],
+      shapeL: "hidden",
+      shapeR: "hidden",
+    });
+    const bookY = 860 + (66 + 196) * 1.3 + 4 * beat + 260 * up;
+    textbook(ctx, 546, bookY, 1.3, -0.03);
+    bookFingers(ctx, 546, bookY, 1.3, -0.03);
+    ctx.restore();
+    // pounding heart doodle + 扑通, on the beat
+    ctx.save();
+    ctx.translate(840, 600);
+    const k = 1 + 0.3 * beat;
+    ctx.scale(k, k);
+    heart(ctx, 0, 0, 46, "#ff4d6d", 3822);
+    ctx.restore();
+    text(ctx, "扑通 扑通", 820, 480, { size: 52, font: F.cn, fill: "#ff4d6d", stroke: C.ink, lw: 8, alpha: 0.6 + 0.4 * beat });
+    return;
+  }
+  // after class: the empty classroom in the evening sun; she holds his strawberry milk to her cheek, eyes shut, smiling
+  const p = phase(abs, EV.afterClass, EV.now);
   ctx.save();
-  camera(ctx, 540, 900, 1.0 + 0.04 * beat + 0.05 * smooth(phase(abs, EV.hide2, EV.now)));
-  glow(ctx, 540, 860, 800, "rgba(255,170,190,0.4)");
-  // the same 物理 textbook as in his memory, but now we see what was behind it: wide eyes peeking over
-  // the top, bright red, steaming
-  const peek = abs < 38.35 ? [0.25, 0.1] : [-0.55, 0.35];
-  drawKid(ctx, 540, 860, 1.3, {
+  camera(ctx, 560, 900, 1.0 + 0.08 * smooth(p));
+  filtered(ctx, "blur(3px)", (c) => classroomFront(c, abs, { sun: 1 }), "afterClassBg");
+  glow(ctx, 900, 520, 760, "rgba(255,200,130,0.4)");
+  const lean = 0.1 + 0.05 * smooth(p);
+  drawKid(ctx, 500, 880, 1.35, {
     who: "girl",
     outfit: "cardigan",
     body: "bust",
-    eyes: "wide",
-    brows: "worried",
-    mouth: "bite",
-    blush: 1,
-    look: peek as [number, number],
+    eyes: "happy",
+    mouth: "smile",
+    blush: 0.8,
+    tilt: lean,
     arms: "custom",
-    // arms straight down behind the book (bent elbows would stick out at the sides)
-    handL: [-128, 440],
-    handR: [128, 440],
-    shapeL: "hidden",
+    // her right hand up under the carton, the left arm hanging at her side
+    handR: [122, 228],
+    bendR: -1, // elbow down: a "V" arm, not an upside-down one (the right arm bends +1 by default)
+    handL: [-112, 430],
     shapeR: "hidden",
+    shapeL: "hidden",
   });
-  const bob = 4 * beat;
-  const bookY = 860 + (66 + 196) * 1.3 + bob;
-  textbook(ctx, 546, bookY, 1.3, -0.03);
-  bookFingers(ctx, 546, bookY, 1.3, -0.03);
-  ctx.restore();
-  // pounding heart doodle + 扑通
+  // the milk against her cheek, her fingertips round it
+  const mx = 500 + 175,
+    my = 880 + 175;
+  strawberryMilk(ctx, mx, my, 0.95, 0.16, 3395);
   ctx.save();
-  ctx.translate(840, 640);
-  const k = 1 + 0.25 * beat;
-  ctx.scale(k, k);
-  heart(ctx, 0, 0, 46, "#ff4d6d", 3822);
+  ctx.translate(mx, my);
+  ctx.rotate(0.16);
+  ctx.scale(0.95, 0.95);
+  for (const [fx, fy] of [[-72, 30], [-72, 62], [-72, 94], [52, 40], [52, 72]] as [number, number][]) {
+    rr(ctx, fx, fy, 24, 28, 12);
+    paint(ctx, "#f6e1c3", C.ink, 3.5);
+  }
   ctx.restore();
-  text(ctx, "扑通 扑通", 820, 520, { size: 52, font: F.cn, fill: "#ff4d6d", stroke: C.ink, lw: 8, alpha: 0.6 + 0.4 * beat });
+  littleHearts(ctx, abs, EV.afterClass + 0.12, 640, 640);
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------- 3C present: she sends everything
@@ -323,6 +365,7 @@ function umSpot(abs: number) {
 function memoryNotes(ctx: Ctx, abs: number) {
   card(ctx, "10月6日 23:12", 70, 330, smooth(phase(abs, BAR(16) + 0.15, BAR(16) + 0.4)) * (1 - phase(abs, 33.5, 33.6)));
   card(ctx, "那天上课", 70, 330, smooth(phase(abs, BAR(18) + 0.05, BAR(18) + 0.3)) * (1 - phase(abs, EV.hide2 - 0.1, EV.hide2)));
+  card(ctx, "放学后", 70, 330, smooth(phase(abs, EV.afterClass + 0.05, EV.afterClass + 0.25)) * (1 - phase(abs, EV.now - 0.1, EV.now)));
   if (abs <= EV.send2 || abs >= EV.umHold) return;
   const { ux, uy, zs } = umSpot(abs);
   for (const t0 of [EV.send2 + 0.12, EV.send2 + 0.48]) {
