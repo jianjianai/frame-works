@@ -144,10 +144,11 @@ function shotPretty(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 2B
-/** "Will you even love me anymore / Love me", cut on the beat: the phone (his eyes on her 「嗯」, the first
- *  「对方正在输入...」) → his eyes, the screen in them, not moving → the phone again, darker (the second one) → his
- *  face: a tear on "Love me", he shuts his eyes — and powers the phone off. */
-const T2 = [beatAt(42), beatAt(44), beatAt(45), beatAt(46), BAR(12)];
+/** "Will you even love me anymore / Love me", two shots of about 1.5 s each (four 0.5–1 s cuts were too fast to
+ *  take in): the phone — his eyes on her 「嗯」 while 「对方正在输入...」 comes and goes twice — then one slow move
+ *  out from his eyes (the screen in them, not moving) to his face: a tear on "Love me", he shuts his eyes, and powers
+ *  the phone off. */
+const T2 = [beatAt(42), beatAt(45), BAR(12)];
 
 /** her 「嗯」 (screen 145, 948) is held at (390, 1182) under a spotlight that closes to darkness `dk`; the clue he
  *  misses — 「对方正在输入...」 in the title bar (screen 293, 95) — gets the video's yellow "look here" pulse, but the
@@ -212,55 +213,50 @@ function screenLit(ctx: Ctx, cy: number, band: number) {
   ctx.fillRect(0, 0, W, H);
 }
 
-/** 22.56 "love": his eyes, very close — fixed on the screen, which shows in them as two small bright squares */
-function hisEyes(ctx: Ctx, abs: number) {
-  const p = phase(abs, T2[1], T2[2]);
-  const z = 4.0 + 0.3 * p;
-  fillBg(ctx, "#06070f");
-  ctx.save();
-  camera(ctx, 540, 900, z, 0, 0, 0);
-  ctx.translate(0, -EYE_DY);
-  drawKid(ctx, 540, 900, 1.0, { body: "head", eyes: "teary", brows: "sad", look: [0, 0.85], mouth: "flat" });
-  // the screen reflected in each eye
-  for (const side of [-1, 1]) {
-    const x = 540 + side * EYE_DX + 3,
-      y = 900 + EYE_DY + 3;
-    ctx.fillStyle = "rgba(225,235,255,0.85)";
-    rr(ctx, x - 3.2, y - 5.5, 6.4, 11, 1.6);
-    ctx.fill();
-    ctx.fillStyle = "rgba(90,110,140,0.9)";
-    rr(ctx, x - 2.2, y + 0.5, 3.4, 2.2, 0.8);
-    ctx.fill();
-  }
-  ctx.restore();
-  screenLit(ctx, 900, 160);
-}
-
-/** 23.59 "anymore / Love me": his face, the screen's light on it; a tear on "Love me", then he shuts his eyes */
+/** 23.07 → 24.61 "me anymore / Love me": very close on his eyes — fixed on the screen, which shows in them as two
+ *  small bright squares — the camera slowly pulling out to his face; a tear on "Love me"; he shuts his eyes */
 function hisStare(ctx: Ctx, abs: number) {
-  const p = phase(abs, T2[3], T2[4]);
+  const S = 1.25; // his head
+  const eyeY = 860 + EYE_DY * S;
+  const out = smooth(phase(abs, T2[1] + 0.25, 23.95));
+  const z = Math.exp(Math.log(3.3) + (Math.log(1.3) - Math.log(3.3)) * out) * (1 + 0.04 * phase(abs, 23.95, T2[2]));
+  const fy = eyeY + (860 - eyeY) * out; // the point held at screen (540, 900)
   const shut = abs > 24.36;
   fillBg(ctx, "#06070f");
   ctx.save();
-  camera(ctx, 540, 860, 1.28 + 0.14 * smooth(p));
-  drawKid(ctx, 540, 860, 1.25, {
+  ctx.translate(540, 900);
+  ctx.scale(z, z);
+  ctx.translate(-540, -fy);
+  drawKid(ctx, 540, 860, S, {
     body: "bust",
     eyes: shut ? "shut" : "teary",
     brows: "sad",
     mouth: abs > 23.95 ? "wobble" : "flat",
-    look: [0, 0.8],
+    look: [0, 0.85],
     arms: "phone",
     tears: smooth(phase(abs, 23.95, 24.45)),
   });
+  if (!shut)
+    for (const side of [-1, 1]) {
+      // the screen reflected in each eye
+      const x = 540 + (side * EYE_DX + 3) * S,
+        y = eyeY + 3 * S;
+      ctx.fillStyle = "rgba(225,235,255,0.85)";
+      rr(ctx, x - 3.2 * S, y - 5.5 * S, 6.4 * S, 11 * S, 1.6 * S);
+      ctx.fill();
+      ctx.fillStyle = "rgba(90,110,140,0.9)";
+      rr(ctx, x - 2.2 * S, y + 0.5 * S, 3.4 * S, 2.2 * S, 0.8 * S);
+      ctx.fill();
+    }
   ctx.restore();
-  screenLit(ctx, 860, 230);
+  screenLit(ctx, 900 + (eyeY - fy) * z, 160 + 70 * out); // the cold light stays on his eyes
 }
 
 function shotTyping(ctx: Ctx, abs: number) {
-  if (abs < T2[1]) typingPhone(ctx, abs, 0.45 * smooth(phase(abs, T2[0], T2[1])), 1 + 0.02 * smooth(phase(abs, T2[0], T2[1])), 0);
-  else if (abs < T2[2]) hisEyes(ctx, abs);
-  else if (abs < T2[3]) typingPhone(ctx, abs, 0.62 + 0.33 * smooth(phase(abs, T2[2], T2[3])), 1.03, -0.05);
-  else hisStare(ctx, abs);
+  if (abs < T2[1]) {
+    const p = phase(abs, T2[0], T2[1]);
+    typingPhone(ctx, abs, 0.95 * smooth(phase(abs, T2[0], T2[1] - 0.12)), 1 + 0.03 * smooth(p), -0.04 * smooth(p));
+  } else hisStare(ctx, abs);
 }
 
 // ---------------------------------------------------------------- 2C
