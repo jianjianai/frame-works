@@ -4,10 +4,10 @@ import { C, Ctx, H, W, beatAt, blob, camera, card, designScene, fillBg, filtered
 import { drawKid } from "./lib/kid";
 import { bedroom, herBlanket, herRoom } from "./lib/places";
 import { lightPool } from "./lib/sets";
-import { BACKSPACE_AT, chatScreen2, powerOffScreen, profileScreen, sendButtonAt } from "./lib/chat";
+import { BACKSPACE_AT, WECHAT_AT, appWindow, chatScreen2, powerOffScreen, profileScreen, sendButtonAt } from "./lib/chat";
 import { FingerPos } from "./lib/hand";
 import { SH, SW } from "./lib/phone";
-import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops, phoneBody } from "./lib/story";
+import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops, phoneBody, herHome } from "./lib/story";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 2 (16.43 – 32.79s) · chorus 1
@@ -16,7 +16,8 @@ import { BAR, EV } from "./lib/timeline";
  *  2C he powers the phone off and pulls the duvet over his head (the music goes muffled)
  *  2D one camera move: out of his room through his window — his light goes out — across the street and in through
  *     the only window still lit: hers. She is crying too; the camera keeps creeping in on her face
- *  2E her phone: the paragraph is typed out; her thumb goes to 发送 three times and pulls back — into her memory */
+ *  2E her phone: the paragraph is typed out; her thumb comes down on 发送 and never lets go — she swipes the app away
+ *     to the home screen — into her memory */
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const REST: FingerPos = REST_R;
@@ -487,46 +488,36 @@ function herNightView(abs: number, draft: string) {
   return { title: HIM, time: "00:52", me: "girl" as const, them: "boy" as const, items, dark: true, draft, caret: true, keyboard: true };
 }
 
-/** 29.72 → 32.79 "I should get a piercing through my heart": her phone, close enough to read the whole paragraph;
- *  then her thumb goes to 发送 — and pulls back — three times on the beat, a little closer each time; never pressed.
- *  Straight on into her memory. */
+/** 29.72 → 32.79 "I should get a piercing through my heart": her phone, close enough to read the whole paragraph.
+ *  31.25 her thumb comes down on 发送 and stays there — she never lets go, so it never sends; 32.02 she swipes the app
+ *  away (it shrinks back into 微信 on her home screen) — and on into her memory. */
 function shotHesitate(ctx: Ctx, abs: number) {
   const view = herNightView(abs, HER_NIGHT_DRAFT);
   const sb = sendButtonAt(ctx, view);
-  let reach = 0;
-  [beatAt(61), beatAt(62), beatAt(63)].forEach((t, i) => {
-    reach = Math.max(reach, (0.75 + 0.125 * i) * Math.pow(Math.max(0, 1 - Math.abs(abs - t) / 0.26), 0.8));
-  });
-  const up = smooth(phase(abs, 30.8, 31.02)) * (1 - smooth(phase(abs, 32.42, 32.62)));
-  const thumb: FingerPos = {
-    x: lerp(450, sb[0] - 6, up) + Math.sin(abs * 23) * 3 * up,
-    y: lerp(1040, sb[1] + 120 - 106 * reach, up),
-    touch: 0.62 + up * (0.12 + 0.16 * reach),
-  };
-  // the camera reads down the paragraph, then edges towards 发送 and leans in a little with each try
-  const k = smooth(phase(abs, 30.6, 31.4));
-  const s = 1.34 + 0.08 * smooth(phase(abs, EV.hesitate, BAR(16))) + 0.02 * reach;
-  const fx = lerp(284, 336, k),
-    fy = lerp(606, 636, k) + 16 * smooth(phase(abs, EV.hesitate, 30.6));
-  const [sx, sy] = shake(abs, 1, 9);
+  const land = smooth(phase(abs, EV.pressSend - 0.22, EV.pressSend));
+  const down = abs >= EV.pressSend && abs < EV.toHome + 0.06;
+  const appK = 1 - smooth(phase(abs, EV.toHome, EV.toHome + 0.3)); // the app closing back into its icon
+  const swipe = phase(abs, EV.toHome - 0.04, EV.toHome + 0.26);
+  const right: FingerPos = { x: sb[0] - 4, y: sb[1] + 30 * (1 - land), touch: down ? 1 : 0.6 + 0.25 * land * (abs < EV.toHome ? 1 : 0) };
+  const left: FingerPos = { x: 300, y: lerp(1255, 950, swipe), touch: swipe > 0 && swipe < 1 ? 1 : 0 };
+  // the camera reads down the paragraph and drifts towards 发送; while she holds it, a slow push; then it pulls back to
+  // the whole phone as the app closes
+  const k = smooth(phase(abs, 30.5, EV.pressSend));
+  const e = smooth(phase(abs, EV.toHome - 0.05, EV.toHome + 0.32));
+  const s = lerp(1.34 + 0.06 * smooth(phase(abs, EV.hesitate, EV.pressSend)) + 0.06 * smooth(phase(abs, EV.pressSend, EV.toHome)), 1.0, e);
+  const fx = lerp(lerp(284, 336, k), 300, e),
+    fy = lerp(lerp(606, 636, k) + 16 * smooth(phase(abs, EV.hesitate, 30.5)), 640, e);
   phoneCloseup(
     ctx,
     abs,
     (c) => {
-      chatScreen2(c, abs, view);
-      if (reach > 0.02) {
-        // 发送 lights up under her thumb… but never gets pressed
-        c.save();
-        c.globalAlpha = clamp(reach * 1.2);
-        c.strokeStyle = "#ffd166";
-        c.lineWidth = 5;
-        rr(c, sb[0] - 54 - 6 * reach, sb[1] - 40 - 4 * reach, 108 + 12 * reach, 80 + 8 * reach, 16);
-        c.stroke();
-        c.restore();
-      }
-      tearDrops(c, abs, 31.35, 2);
+      if (appK < 1) herHome(c, abs, "00:52", { zoom: 1 + 0.08 * appK });
+      appWindow(c, appK, WECHAT_AT, (a) => {
+        chatScreen2(a, abs, { ...view, sendHot: down ? 1 : 0 });
+        tearDrops(a, abs, 31.45, 2);
+      });
     },
-    { who: "girl", right: thumb, cx: 540 - (fx - 300) * s + sx, cy: 860 - (fy - 640) * s + sy, s, steady: true, glowCol: "rgba(255,170,200,0.22)" },
+    { who: "girl", right, left, cx: 540 - (fx - 300) * s, cy: lerp(860, PHONE_CY, e) - (fy - 640) * s, s, steady: true, glowCol: "rgba(255,170,200,0.22)" },
   );
 }
 
