@@ -55,7 +55,8 @@ export const EV = {
   send2: 35.55, // the 「嗯」 she sends — the chat holds on it until umHold
   umHold: 36.45,
   turn2: 36.9,
-  hide2: 37.3,
+  hide2: beatAt(73), // 37.39 up goes the book
+  afterClass: beatAt(75), // 38.41 she comes back for the strawberry milk
   now: 39.43, // back to 00:52
   phoneAgain: 39.9, // her home screen…
   openApp: 40.08, // …she taps 微信 and it opens on the paragraph she left
