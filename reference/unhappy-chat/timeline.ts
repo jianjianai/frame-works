@@ -40,10 +40,11 @@ export const EV = {
   // act 3 — her side
   rewind: 32.55,
   ding2: 33.05,
-  type3: [33.6, 34.5] as const,
-  friendNote: 34.6,
-  del3: [35.2, 35.75] as const,
-  send2: 35.9, // the 「嗯」 she sends
+  type3: [33.6, 34.3] as const,
+  friendNote: 34.4,
+  del3: [34.85, 35.3] as const,
+  send2: 35.55, // the 「嗯」 she sends — the chat holds on it until umHold
+  umHold: 36.45,
   turn2: 36.9,
   hide2: 37.3,
   now: 39.43, // back to 00:52
