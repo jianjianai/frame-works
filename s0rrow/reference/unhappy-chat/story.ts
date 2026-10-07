@@ -3,7 +3,7 @@ import { C, Ctx, H, Pt, W, camera, fillBg, filtered, glow, hash } from "./draw";
 import { drawKid } from "./kid";
 import { classroomFront, deskFront, strawberryMilk } from "./places";
 import { heart } from "./sets";
-import { ChatItem, ChatView, chatScreen2, homeScreen } from "./chat";
+import { ChatItem, ChatView, chatScreen2, homeScreen, selfiePhoto } from "./chat";
 import { FingerPos, HandsLook } from "./hand";
 import { SH, SW, phone } from "./phone";
 import { EV } from "./timeline";
@@ -243,6 +243,43 @@ export function oldFilm(ctx: Ctx, abs: number, draw: (c: Ctx) => void, key = "fi
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
+
+/** the photos in her profile album, before her sunflower portrait (each draws into 600×860) — he flicks through them
+ *  at 16.4 ("You are, you are very pretty") and stops on the portrait */
+export const HER_PHOTOS: ((c: Ctx) => void)[] = [
+  // a strawberry milk against her cheek — the drink he keeps buying her
+  (c) => {
+    const g = c.createLinearGradient(0, 0, 0, 860);
+    g.addColorStop(0, "#ffd3de");
+    g.addColorStop(1, "#fff3f6");
+    c.fillStyle = g;
+    c.fillRect(0, 0, SW, 860);
+    for (let i = 0; i < 7; i++) heart(c, 60 + ((i * 151) % 500), 120 + ((i * 263) % 640), 14 + (i % 3) * 6, "rgba(255,140,170,0.45)", 3396 + i);
+    drawKid(c, 255, 480, 1.05, { who: "girl", outfit: "cardigan", body: "bust", eyes: "happy", mouth: "smile", blush: 0.8, tilt: -0.1 });
+    strawberryMilk(c, 455, 560, 0.85, 0.18, 3395);
+  },
+  // with her friends (the same selfie she posted)
+  (c) => selfiePhoto(c, 0, 0, SW, 860, 0),
+  // by the classroom window, looking out
+  (c) => {
+    const g = c.createLinearGradient(0, 0, 0, 860);
+    g.addColorStop(0, "#8ec9ef");
+    g.addColorStop(1, "#e6f4fb");
+    c.fillStyle = g;
+    c.fillRect(0, 0, SW, 860);
+    c.fillStyle = "rgba(255,255,255,0.85)";
+    for (const [x, y, r] of [[110, 170, 40], [160, 150, 52], [215, 175, 38], [430, 250, 34], [475, 232, 44]] as [number, number, number][]) {
+      c.beginPath();
+      c.arc(x, y, r, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillStyle = "#e9e1cf";
+    c.fillRect(0, 0, 26, 860);
+    c.fillRect(SW / 2 - 10, 0, 20, 470);
+    c.fillRect(0, 440, SW, 22);
+    drawKid(c, 330, 540, 1.0, { who: "girl", outfit: "cardigan", body: "bust", eyes: "open", look: [-0.7, -0.15], mouth: "smile", blush: 0.4, tilt: 0.08 });
+  },
+];
 
 /** her home screen: the wallpaper is the strawberry milk he tried to give her (a detail for rewatchers) */
 export function herHome(c: Ctx, abs: number, time: string, o: { press?: number; zoom?: number } = {}) {
