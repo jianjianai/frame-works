@@ -3,7 +3,7 @@ import { C, Ctx, Pt, camera, fillBg, filtered, glow, hash } from "./draw";
 import { drawKid } from "./kid";
 import { classroomFront, deskFront, strawberryMilk } from "./places";
 import { heart } from "./sets";
-import { ChatItem, ChatView, chatScreen2 } from "./chat";
+import { ChatItem, ChatView, chatScreen2, homeScreen } from "./chat";
 import { FingerPos, HandsLook } from "./hand";
 import { SH, SW, phone } from "./phone";
 import { EV } from "./timeline";
@@ -174,6 +174,11 @@ export function phoneCloseup(
     ctx.stroke();
   }
   ctx.restore();
+}
+
+/** her home screen: the wallpaper is the strawberry milk he tried to give her (a detail for rewatchers) */
+export function herHome(c: Ctx, abs: number, time: string, o: { press?: number; zoom?: number } = {}) {
+  homeScreen(c, abs, { time, ...o, art: (k) => strawberryMilk(k, 300, 900, 1.25, -0.08, 3390) });
 }
 
 /** Make a phone read as a phone when its screen is dark: a rim light round the frame and the side buttons.
