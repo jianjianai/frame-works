@@ -1,9 +1,9 @@
 import { clamp, phase, smooth } from "../../../../src/engine/math";
-import { C, Ctx, Pt, camera, fillBg, filtered, glow, hash } from "./draw";
+import { C, Ctx, H, Pt, W, backOut, camera, fillBg, filtered, glow, hash } from "./draw";
 import { drawKid } from "./kid";
-import { classroomFront, deskFront, strawberryMilk } from "./places";
+import { bedBlanket, bedroom, classroomFront, deskFront, herBlanket, herRoom, huggedPillow, strawberryMilk } from "./places";
 import { heart } from "./sets";
-import { ChatItem, ChatView, chatScreen2 } from "./chat";
+import { ChatItem, ChatView, chatScreen2, homeScreen, selfiePhoto } from "./chat";
 import { FingerPos, HandsLook } from "./hand";
 import { SH, SW, phone } from "./phone";
 import { EV } from "./timeline";
@@ -55,7 +55,33 @@ export function editing(abs: number, t0: number, t1: number, start: string, step
   return cur;
 }
 export const ASK_AGAIN = "那周末一起去图书馆？";
+/** what she sends while she waits for an answer that never comes (his phone is off) */
+export const LATE1 = "你睡了吗？";
+export const LATE2 = "晚安。";
+
+/** everything after her 「嗯」 that night, on either phone: his 「以后不打扰你了」, her paragraph at 00:58, and her two
+ *  messages while she waited (01:30, 03:00). `upto` cuts it off at a moment of the night (pops as they arrive). */
+export function afterNight(side: "his" | "hers", abs = 99, popAt: { conf?: number; late1?: number; late2?: number } = {}): ChatItem[] {
+  const mine = side === "hers";
+  const items: ChatItem[] = [];
+  items.push({ t: "msg", me: mine, text: "嗯" });
+  items.push({ t: "msg", me: !mine, text: GIVE_UP });
+  items.push({ t: "time", text: "00:58" });
+  items.push({ t: "msg", me: mine, text: HER_CONFESSION, pop: popAt.conf !== undefined ? pop(abs, popAt.conf, 0.25) : 1 });
+  if (popAt.late1 === undefined || abs >= popAt.late1) {
+    items.push({ t: "time", text: "01:30" });
+    items.push({ t: "msg", me: mine, text: LATE1, pop: popAt.late1 !== undefined ? pop(abs, popAt.late1) : 1 });
+  }
+  if (popAt.late2 === undefined || abs >= popAt.late2) {
+    items.push({ t: "time", text: "03:00" });
+    items.push({ t: "msg", me: mine, text: LATE2, pop: popAt.late2 !== undefined ? pop(abs, popAt.late2) : 1 });
+  }
+  return items;
+}
 export const FRIEND_ADVICE = "别回太快！回个嗯就行，显得你没那么在意";
+export const MEI = "小美";
+/** what she had told 小美 the moment his message came in (above 小美’s advice in their chat) */
+export const MEI_FIRST = "他给我发了好长一段！！";
 
 /** three months of chatting: long and lively in July, short by October */
 export const HISTORY: ChatItem[] = [
@@ -176,6 +202,116 @@ export function phoneCloseup(
   ctx.restore();
 }
 
+/** A memory, as old film: faded warm colour, a light flicker and gate weave (both step at the film’s own 18 fps),
+ *  grain, a few dust specks, a thin scratch now and then, dark edges. Both memories (his class at 8.25, her night
+ *  and her class from 32.79) go through this and nothing else. Dust and scratches are dark — white specks read as
+ *  dandruff on a phone. Draw time cards and red-pen notes after it, unfiltered. */
+export function oldFilm(ctx: Ctx, abs: number, draw: (c: Ctx) => void, key = "film") {
+  const f = Math.floor(abs * 18);
+  const r = (k: number) => hash(f * 7.13 + k * 3.7);
+  const flick = 1 + (r(1) - 0.5) * 0.09;
+  const wx = (r(2) - 0.5) * 3,
+    wy = (r(3) - 0.5) * 4;
+  filtered(
+    ctx,
+    `sepia(0.62) saturate(0.7) contrast(1.08) brightness(${flick.toFixed(3)})`,
+    (c) => {
+      // gate weave; scaled a touch so the edges never show
+      c.translate(540 + wx, 960 + wy);
+      c.scale(1.012, 1.012);
+      c.translate(-540, -960);
+      draw(c);
+    },
+    key,
+  );
+  ctx.save();
+  // grain
+  for (let i = 0; i < 160; i++) {
+    ctx.fillStyle = i % 3 ? "rgba(40,25,10,0.18)" : "rgba(255,240,210,0.08)";
+    ctx.fillRect(r(10 + i) * W, r(400 + i) * H, 2.5, 2.5);
+  }
+  // dust: a few dark specks, different on every film frame, and now and then a fibre
+  for (let i = 0; i < 4; i++) {
+    if (r(900 + i) > 0.5) continue;
+    const sz = 3 + r(930 + i) * 7;
+    ctx.fillStyle = "rgba(30,18,8,0.45)";
+    ctx.beginPath();
+    ctx.ellipse(r(910 + i) * W, r(920 + i) * H, sz, sz * (0.5 + r(940 + i) * 0.5), r(950 + i) * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (r(960) < 0.25) {
+    const x = r(961) * W,
+      y = r(962) * H;
+    ctx.strokeStyle = "rgba(30,18,8,0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.quadraticCurveTo(x + 30, y + 10, x + 20 + r(963) * 40, y + 50);
+    ctx.stroke();
+  }
+  // a thin scratch running down the frame, staying a few frames
+  const sf = Math.floor(abs * 3);
+  for (let i = 0; i < 2; i++) {
+    if (hash(sf * 5.1 + i * 11) > 0.55) continue;
+    const x = hash(sf * 2.3 + i * 7) * W + Math.sin(abs * 9 + i) * 4;
+    ctx.strokeStyle = "rgba(50,32,14,0.22)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + 6, H);
+    ctx.stroke();
+  }
+  // dark edges
+  const g = ctx.createRadialGradient(540, 900, 430, 540, 900, 1250);
+  g.addColorStop(0, "rgba(40,24,8,0)");
+  g.addColorStop(1, "rgba(40,24,8,0.62)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+/** the photos in her profile album, before her sunflower portrait (each draws into 600×860) — he flicks through them
+ *  at 16.4 ("You are, you are very pretty") and stops on the portrait */
+export const HER_PHOTOS: ((c: Ctx) => void)[] = [
+  // a strawberry milk against her cheek — the drink he keeps buying her
+  (c) => {
+    const g = c.createLinearGradient(0, 0, 0, 860);
+    g.addColorStop(0, "#ffd3de");
+    g.addColorStop(1, "#fff3f6");
+    c.fillStyle = g;
+    c.fillRect(0, 0, SW, 860);
+    for (let i = 0; i < 7; i++) heart(c, 60 + ((i * 151) % 500), 120 + ((i * 263) % 640), 14 + (i % 3) * 6, "rgba(255,140,170,0.45)", 3396 + i);
+    drawKid(c, 255, 480, 1.05, { who: "girl", outfit: "cardigan", body: "bust", eyes: "happy", mouth: "smile", blush: 0.8, tilt: -0.1 });
+    strawberryMilk(c, 455, 560, 0.85, 0.18, 3395);
+  },
+  // with her friends (the same selfie she posted)
+  (c) => selfiePhoto(c, 0, 0, SW, 860, 0),
+  // by the classroom window, looking out
+  (c) => {
+    const g = c.createLinearGradient(0, 0, 0, 860);
+    g.addColorStop(0, "#8ec9ef");
+    g.addColorStop(1, "#e6f4fb");
+    c.fillStyle = g;
+    c.fillRect(0, 0, SW, 860);
+    c.fillStyle = "rgba(255,255,255,0.85)";
+    for (const [x, y, r] of [[110, 170, 40], [160, 150, 52], [215, 175, 38], [430, 250, 34], [475, 232, 44]] as [number, number, number][]) {
+      c.beginPath();
+      c.arc(x, y, r, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillStyle = "#e9e1cf";
+    c.fillRect(0, 0, 26, 860);
+    c.fillRect(SW / 2 - 10, 0, 20, 470);
+    c.fillRect(0, 440, SW, 22);
+    drawKid(c, 330, 540, 1.0, { who: "girl", outfit: "cardigan", body: "bust", eyes: "open", look: [-0.7, -0.15], mouth: "smile", blush: 0.4, tilt: 0.08 });
+  },
+];
+
+/** her home screen: the wallpaper is the strawberry milk he tried to give her (a detail for rewatchers) */
+export function herHome(c: Ctx, abs: number, time: string, o: { press?: number; zoom?: number } = {}) {
+  homeScreen(c, abs, { time, ...o, art: (k) => strawberryMilk(k, 300, 900, 1.25, -0.08, 3390) });
+}
+
 /** Make a phone read as a phone when its screen is dark: a rim light round the frame and the side buttons.
  *  Same cx, cy, s, rot as the phone() / phoneCloseup call (use steady: true so they match). */
 export function phoneBody(ctx: Ctx, cx: number, cy: number, s: number, rot: number) {
@@ -237,22 +373,138 @@ export function hisNightChat(abs: number, extra: Partial<ChatView> = {}): ChatVi
   if (abs >= EV.send1) items.push({ t: "msg", me: true, text: GIVE_UP, pop: pop(abs, EV.send1) });
   return { title: HER, time: abs < 20 ? "23:12" : "00:47", me: "boy", them: "girl", items, dark: true, ...extra };
 }
-/** his face as her message sinks in: shock (from EV.read), then joy on the outro downbeat (EV.joy).
- *  Drawn by act 3 and act 4 so the shot runs across the layer boundary. */
-export function hisFaceReading(ctx: Ctx, abs: number) {
-  const k = phase(abs, EV.joy - 0.05, EV.joy + 0.3);
-  fillBg(ctx, "#f1e4d2");
+/** his room in the morning, through the window or full frame: asleep under the duvet, or sitting up with his
+ *  phone (`mood`: "sleep" | "tired" | "grin") */
+export function hisRoomMorning(ctx: Ctx, abs: number, day: number, mood: "sleep" | "tired" | "grin") {
+  bedroom(ctx, abs, { dawn: day });
+  if (mood === "sleep") {
+    blobDuvet(ctx);
+  } else {
+    drawKid(ctx, 840, 620, 0.78, { body: "bust", eyes: mood === "grin" ? "happy" : "tired", mouth: mood === "grin" ? "grin" : "flat", blush: mood === "grin" ? 0.8 : 0, look: [0, 0.9], arms: "phone" });
+    bedBlanket(ctx);
+  }
+  if (day < 1) {
+    ctx.fillStyle = `rgba(4,6,20,${0.66 * (1 - day)})`;
+    ctx.fillRect(-60, -60, W + 120, H + 120);
+  }
+}
+function blobDuvet(ctx: Ctx) {
+  // the duvet pulled right over him, a tuft of hair on the pillow
+  ctx.beginPath();
+  ctx.moveTo(470, 1010);
+  ctx.bezierCurveTo(560, 860, 760, 790, 900, 800);
+  ctx.bezierCurveTo(1060, 810, 1170, 900, 1170, 960);
+  ctx.lineTo(1170, 1170);
+  ctx.lineTo(440, 1180);
+  ctx.closePath();
+  ctx.fillStyle = "#5f77a8";
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = C.ink;
+  ctx.stroke();
+}
+
+/** her room in the night and the morning: `state` "awake" (lamp on, phone in hand), "asleep" (lamp off, asleep sitting up
+ *  with the phone), "grin" (morning, beaming at her phone) */
+export function herRoomAt(ctx: Ctx, abs: number, day: number, state: "awake" | "asleep" | "grin") {
+  herRoom(ctx, abs, { lights: state === "awake" ? 1 : 0.3 * (1 - day), dawn: day });
+  drawKid(ctx, 320, 720, 0.64, {
+    who: "girl",
+    outfit: "pajamas",
+    body: "full",
+    legs: "sitFloor",
+    eyes: state === "asleep" ? "shut" : state === "grin" ? "happy" : "sad",
+    mouth: state === "grin" ? "grin" : "flat",
+    blush: state === "grin" ? 1 : 0,
+    tilt: state === "asleep" ? 0.25 : 0.05,
+    look: [0, 0.8],
+    arms: "phone",
+  });
+  herBlanket(ctx);
+  if (state === "asleep" && day < 1) {
+    ctx.fillStyle = `rgba(6,4,20,${0.55 * (1 - day)})`;
+    ctx.fillRect(-60, -60, W + 120, H + 120);
+  }
+}
+
+/** one of them hugging a pillow, rocking with joy (from time t0) */
+export function hugJoy(ctx: Ctx, abs: number, who: "boy" | "girl", x: number, y: number, s: number, t0 = 0) {
+  const rock = Math.sin((abs - t0) * 7) * 0.12;
   ctx.save();
-  camera(ctx, 540, 860, 1.0 + 0.07 * smooth(phase(abs, EV.read, EV.reply)));
-  glow(ctx, 540, 1100, 800, `rgba(255,240,200,${0.45 + 0.25 * k})`);
-  drawKid(ctx, 540, 880, 1.3, { body: "bust", eyes: k < 0.3 ? "wide" : "happy", mouth: k < 0.3 ? "o" : "grin", blush: k, look: [0, 0.6], arms: "phone", tears: k > 0.5 ? 0.25 : 0 });
+  ctx.translate(x, y + 30 * s);
+  ctx.rotate(rock);
+  ctx.translate(-x, -y - 30 * s);
+  drawKid(ctx, x, y, s, {
+    ...(who === "girl" ? { who: "girl" as const, outfit: "pajamas" as const } : {}),
+    body: "full",
+    legs: "sitFloor",
+    eyes: "happy",
+    mouth: "grin",
+    blush: 1,
+    tilt: 0.12 * Math.sin((abs - t0) * 7 + 0.5),
+    headY: 14,
+    arms: "custom",
+    handL: [-60, 300],
+    handR: [60, 300],
+    shapeL: "hidden",
+    shapeR: "hidden",
+  });
+  if (who === "girl") huggedPillow(ctx, x, y, s, "#f3b6c4", "#fff4f6", "#f6e1c3", 3810);
+  else huggedPillow(ctx, x, y, s, "#2e6f96", "#22536f", "#f3dcae", 3812);
   ctx.restore();
-  if (k <= 0) return;
-  for (let i = 0; i < 6; i++) {
-    const t = ((abs - EV.joy) * 0.8 + i * 0.17) % 1;
+}
+
+/** his face as her message sinks in (EV.read): the camera creeping in on him, frozen, eyes wide — then on the outro
+ *  downbeat (EV.joy) a burst: a warm flash, the camera jumps back and settles, he beams, hearts. Drawn by act 3 and
+ *  act 4 so the shot runs across the layer boundary. */
+export function hisFaceReading(ctx: Ctx, abs: number) {
+  const joy = abs >= EV.joy;
+  const k = phase(abs, EV.joy, EV.joy + 0.3);
+  const creep = smooth(phase(abs, EV.read, EV.joy));
+  const bounce = joy ? 1 - backOut(phase(abs, EV.joy, EV.joy + 0.35)) : 0;
+  fillBg(ctx, joy ? "#f6e3cf" : "#e9e0d4");
+  ctx.save();
+  camera(ctx, 540, 860, (joy ? 1.08 + 0.12 * bounce + 0.04 * smooth(phase(abs, EV.joy + 0.35, EV.reply)) : 1.0 + 0.16 * creep), joy ? 0 : -0.03 * creep);
+  glow(ctx, 540, 1000, 900, `rgba(255,226,170,${0.35 + 0.35 * k})`);
+  if (joy) {
+    // rays of light behind him
+    ctx.save();
+    ctx.globalAlpha = 0.18 * k;
+    ctx.fillStyle = "#fff4cf";
+    for (let i = 0; i < 10; i++) {
+      const a0 = (i / 10) * Math.PI * 2 + (abs - EV.joy) * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(540, 760);
+      ctx.lineTo(540 + Math.cos(a0) * 1400, 760 + Math.sin(a0) * 1400);
+      ctx.lineTo(540 + Math.cos(a0 + 0.18) * 1400, 760 + Math.sin(a0 + 0.18) * 1400);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  drawKid(ctx, 540, 880, 1.3, {
+    body: "bust",
+    eyes: joy ? "happy" : "wide",
+    mouth: joy ? "grin" : "o",
+    brows: joy ? "up" : "up",
+    blush: joy ? 0.6 + 0.4 * k : 0.25 * creep,
+    look: [0, 0.6],
+    arms: "phone",
+    tears: joy ? 0.25 : 0,
+  });
+  ctx.restore();
+  if (joy && abs < EV.joy + 0.22) {
+    ctx.save();
+    ctx.globalAlpha = 0.7 * (1 - phase(abs, EV.joy, EV.joy + 0.22));
+    ctx.fillStyle = "#fff6e0";
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+  if (!joy) return;
+  for (let i = 0; i < 8; i++) {
+    const t = ((abs - EV.joy) * 0.9 + i * 0.13) % 1;
     ctx.save();
     ctx.globalAlpha = (1 - t) * clamp((abs - EV.joy) * 5);
-    heart(ctx, 540 + Math.sin(i * 2.1) * 330, 700 - t * 320, 20 + (i % 3) * 8, "#ff7fa8", 3930 + i);
+    heart(ctx, 540 + Math.sin(i * 2.1) * 360, 760 - t * 380, 22 + (i % 3) * 9, "#ff7fa8", 3930 + i);
     ctx.restore();
   }
 }

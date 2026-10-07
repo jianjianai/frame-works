@@ -1,6 +1,7 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, W, backOut, curve, designScene, easeOut, font, jit, measure, paint, rr, text, writeOn } from "./lib/draw";
+import { C, Ctx, F, W, backOut, curve, designScene, easeOut, font, jit, measure, paint, rr, sinceBeat, text, writeOn } from "./lib/draw";
+import { heart } from "./lib/sets";
 import { LINES, Line } from "./lib/lyrics-data";
 import { END, EV } from "./lib/timeline";
 
@@ -240,9 +241,9 @@ function drawLine(ctx: Ctx, li: number, abs: number) {
 
 // ---------------------------------------------------------------- hook / title pill / captions
 const HOOK_SHRINK = 4.16;
-const POV_FLIP = 29.82; // 他的视角 → 她的视角 (the twist)
+const POV_FLIP = EV.twist; // 他的视角 → 她的视角 (the twist)
 const NEXT_DAY = EV.dawn;
-const PILL_END = EV.split;
+const PILL_END = EV.outside;
 
 /** text made of parts with their own size/font/colour, centred at (0, y) */
 function parts(ctx: Ctx, y: number, ps: [string, number, string, string][], lw = 14) {
@@ -284,7 +285,8 @@ function hook(ctx: Ctx, abs: number) {
     ctx.globalAlpha = a;
     ctx.translate(W / 2, 214);
     ctx.scale(1, Math.abs(Math.cos(flip * Math.PI)) || 0.001);
-    const label = stage === 0 ? "她的第 37 个「嗯」" : stage === 1 ? "她的视角 · 删掉的第 37 段话" : "第二天";
+    // plain markers of whose side we are on (the numbered labels didn’t match anything on screen)
+    const label = stage === 0 ? "他的视角" : stage === 1 ? "她的视角" : "第二天";
     const w = measure(ctx, label, 38, F.cn) + 70;
     ctx.fillStyle = stage === 1 ? "rgba(255,170,200,0.94)" : "rgba(12,12,18,0.62)";
     rr(ctx, -w / 2, -36, w, 72, 36);
@@ -320,26 +322,83 @@ function caption(ctx: Ctx, abs: number, a0: number, a1: number, l1: [string, num
   ctx.restore();
 }
 
+/** the end card, over the street: a like prompt (a double tap on the screen — two ripples and a big heart — then
+ *  「点赞的人，喜欢的人都会秒回你」, tied to the story: a quick reply instead of a slow 「嗯」) and a comment prompt (the
+ *  rewatch question with something to type: 「答案打在评论区」). Both stay to the last frame. */
 function captions(ctx: Ctx, abs: number) {
-  // the twist, mirroring the hook
-  caption(ctx, abs, 31.95, 33.65, [["她打了一大段", 92, F.cn, "#fff"]], [["最后只发出一个", 80, F.cn, "#fff"], ["「嗯」", 100, F.cn, "#ffd166"]]);
-  // the last word
-  const last = EV.split + 0.2;
-  caption(ctx, abs, last, END, [["这一次的", 88, F.cn, "#fff"], ["「嗯」", 108, F.cn, "#ffd166"]], [["后面什么都没删", 88, F.cn, "#fff"]], 400);
-  // rewatch hint
-  const hint = last + 1.05;
-  if (abs > hint && abs < END) {
-    const a = smooth(phase(abs, hint, hint + 0.3)) * (1 - phase(abs, END - 0.4, END));
+  const t0 = EV.outside + 0.15;
+  if (abs < t0 || abs > END) return;
+  const out = 1 - phase(abs, END - 0.12, END);
+  const hx = W / 2,
+    hy = 430;
+  ctx.save();
+  ctx.globalAlpha = out;
+  // 1) like: double tap — ripples, then the heart pops and throws off little ones, beating with the music
+  for (const t of [t0, t0 + 0.14]) {
+    const k = phase(abs, t, t + 0.35);
+    if (k <= 0 || k >= 1) continue;
     ctx.save();
-    ctx.globalAlpha = a;
-    const s = "回看第 1 秒 · 「对方正在输入...」闪了几次？";
-    const w = measure(ctx, s, 38, F.cn) + 56;
-    ctx.fillStyle = "rgba(12,12,18,0.7)";
-    rr(ctx, W / 2 - w / 2, 1300, w, 72, 36);
-    ctx.fill();
-    text(ctx, s, W / 2, 1338, { size: 38, font: F.cn, fill: "#fff" });
+    ctx.globalAlpha *= 0.8 * (1 - k);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(hx, hy, 30 + 120 * k, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
   }
+  const pop = backOut(phase(abs, t0 + 0.14, t0 + 0.45));
+  if (pop > 0) {
+    const burst = phase(abs, t0 + 0.14, t0 + 0.75);
+    if (burst < 1)
+      for (let i = 0; i < 7; i++) {
+        const ang = -Math.PI / 2 + (i - 3) * 0.42;
+        ctx.save();
+        ctx.globalAlpha *= 1 - burst;
+        heart(ctx, hx + Math.cos(ang) * (60 + 170 * burst), hy + Math.sin(ang) * (60 + 170 * burst), 16 + (i % 3) * 6, "#ff7fa8", 5100 + i);
+        ctx.restore();
+      }
+    const beat = Math.exp(-7 * sinceBeat(abs));
+    heart(ctx, hx, hy, 74 * pop * (1 + 0.07 * beat), "#ff4d6d", 5090);
+  }
+  const lk = smooth(phase(abs, t0 + 0.3, t0 + 0.55));
+  if (lk > 0) {
+    ctx.save();
+    ctx.globalAlpha *= lk;
+    ctx.translate(0, 24 * (1 - lk));
+    text(ctx, "点赞的人，喜欢的人都会秒回你", W / 2, 580, { size: 58, font: F.cn, fill: "#fff", stroke: C.ink, lw: 12 });
+    ctx.restore();
+  }
+  // 2) comment: the rewatch question, and what to do with the answer
+  const ck = smooth(phase(abs, t0 + 0.5, t0 + 0.8));
+  if (ck > 0) {
+    const l1 = "回看第 1 秒：「对方正在输入...」闪了几次？",
+      l2 = "答案打在评论区";
+    const w = Math.max(measure(ctx, l1, 38, F.cn), measure(ctx, l2, 46, F.cn) + 60) + 64;
+    ctx.save();
+    ctx.globalAlpha *= ck;
+    ctx.translate(0, 30 * (1 - ck));
+    ctx.fillStyle = "rgba(12,12,18,0.72)";
+    rr(ctx, W / 2 - w / 2, 1250, w, 160, 36);
+    ctx.fill();
+    text(ctx, l1, W / 2, 1300, { size: 38, font: F.cn, fill: "#fff" });
+    const w2 = measure(ctx, l2, 46, F.cn);
+    text(ctx, l2, W / 2 - 22, 1366, { size: 46, font: F.cn, fill: "#ffd166" });
+    // a little arrow pointing down at the comments, nudging on the beat
+    const ax = W / 2 - 22 + w2 / 2 + 34,
+      ay = 1362 + 6 * Math.exp(-7 * sinceBeat(abs));
+    ctx.strokeStyle = "#ffd166";
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(ax, ay - 18);
+    ctx.lineTo(ax, ay + 14);
+    ctx.moveTo(ax - 12, ay + 2);
+    ctx.lineTo(ax, ay + 16);
+    ctx.lineTo(ax + 12, ay + 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 export function createScene(options: SceneOptions) {

@@ -31,45 +31,59 @@ export const EV = {
   lampOff: 16.15,
   // act 2
   timeout: 18.6,
-  // cuts sit on phrase ends that are also beats: the reflection holds through "ugly", the chat takes
-  // "Will you even love me anymore", his face on the pillow comes in on the echo "Love me"
+  // cuts sit on phrase ends that are also beats: the reflection holds through "ugly", then the chat — his eyes on
+  // her 「嗯」 — runs on to the power-off at BAR(12)
   uglyEnd: 21.541,
-  typingA: [21.85, 22.45] as const,
-  typingB: [22.95, 23.6] as const,
-  lieDown: 23.955,
-  powerOff: 25.85,
-  blanket: 26.2,
-  muffle: [26.65, 29.82] as const,
-  curledUp: 27.674, // "That makes me unhappy": the dark room, then out of the window to her lit one
-  twist: 29.82,
-  del2: [30.8, 31.8] as const,
+  typingA: [22.66, 22.98] as const, // both on the phone, before the camera sinks into her 「嗯」 (23.45)
+  typingB: [23.1, 23.42] as const,
+  powerOff: 25.06, // one quick swipe, the screen goes black
+  blanket: 25.25, // the duvet goes up over his head
+  muffle: [25.7, 26.45] as const, // under the duvet with him (the music is muffled only here)
+  leaveRoom: 26.45, // his room — the camera backs out through his window
+  hisLightOff: beatAt(53), // 27.16 "…without me": his light goes out
+  herWindow: [27.42, 28.1] as const, // across the street and in through the only window still lit
+  twist: 28.1, // her room: she is crying too ("unhappy")
+  hesitate: beatAt(58), // 29.72 her phone: the paragraph is typed out — time to read it
+  pressSend: beatAt(61), // 31.25 her thumb comes down on 发送 and stays there (never lets go, so nothing is sent)…
+  toHome: 32.02, // …then she swipes the app away to the home screen — into her memory
   // act 3 — her side
   rewind: 32.55,
   ding2: 33.05,
-  type3: [33.6, 34.3] as const,
-  friendNote: 34.4,
-  del3: [34.85, 35.3] as const,
-  send2: 35.55, // the 「嗯」 she sends — the chat holds on it until umHold
-  umHold: 36.45,
-  turn2: 36.9,
-  hide2: 37.3,
+  type3: [33.6, 34.2] as const, // her long, happy reply
+  friendNote: 34.25, // 小美’s message drops in…
+  openNote: 34.55, // …she taps it and reads 小美’s chat: 「回个嗯就行」
+  backToHim: 35.6, // back to his chat, her reply still in the box…
+  del3: [35.9, 36.22] as const, // …all of it deleted
+  send2: beatAt(71), // 36.36 the 「嗯」 she sends — the chat holds on it until umHold
+  umHold: beatAt(73), // 37.39 that class (his smile and her pillow were cut to make room for 小美)
+  hide2: beatAt(73), // 37.39 up goes the book
+  afterClass: beatAt(75), // 38.41 she comes back for the strawberry milk
   now: 39.43, // back to 00:52
-  type4: [40.2, 42.35] as const,
+  phoneAgain: 39.9, // her home screen…
+  openApp: 40.08, // …she taps 微信 and it opens on the paragraph she left
+  type4: [40.45, 42.35] as const,
   send3: 43.008, // the whole paragraph, finally (on "misery")
-  asleep: 44.6,
+  late1: 43.85, // 01:30 「你睡了吗？」
+  late2: 44.25, // 03:00 「晚安。」 — then the screen goes to sleep
+  nightFalls: 44.75, // outside: the two windows across the street…
+  herLightOff: 44.95, // …her light goes out too; the night turns into morning
+  intoHis: [45.7, 46.3] as const, // in through his window: 07:10
   dawn: BAR(22), // 07:10, his room
   boot: 46.585,
-  um2: BAR(23), // her message lands on his lock screen
-  read: 48.2,
+  um2: BAR(23), // her three messages land on his lock screen
+  tapNote: 47.55, // he taps the first one: the chat opens on her paragraph
+  read: 48.6, // his face
   // act 4 — the outro (one loop, then the song fades out)
   joy: BAR(24),
+  // one continuous shot on his phone, sending and receiving — no cutaways (the split screen that followed was cut too;
+  // the street is the last shot)
   reply: 50.0,
-  type6: [50.1, 50.45] as const, // 「我也是」
-  send5: 50.674,
-  type7: [50.85, 51.5] as const, // 「那周末一起去图书馆？」
-  send6: 51.696,
-  typingC: [51.85, 52.6] as const,
-  um3: 52.719, // 「嗯！！」
-  heart: 52.97,
-  split: BAR(26),
+  type6: [50.15, 50.55] as const, // 「我也是」
+  send5: beatAt(99), // 50.67
+  type7: [50.95, 51.95] as const, // 「那周末一起去图书馆？」
+  send6: beatAt(102), // 52.21
+  typingC: [52.35, beatAt(104)] as const, // 「对方正在输入...」 — this time it ends in an answer…
+  um3: beatAt(104), // 53.23 …「嗯！！」
+  heart: 53.48,
+  outside: beatAt(107), // 54.76 the street again, in the morning sun — to the end
 };

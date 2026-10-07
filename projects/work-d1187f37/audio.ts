@@ -100,6 +100,21 @@ const sounds: Record<string, () => StereoPcm> = {
     add(pcm, 0, 0.7, (t) => nz() * Math.sin((Math.PI * t) / 0.7) * (1.6 + Math.sin(t * 40) * 0.4), 0.3);
     return pcm;
   },
+  // the camera swinging across the street and in through her window: noise that brightens, swells and dies
+  whoosh: () => {
+    const pcm = buffer(0.8);
+    const r = seeded(140);
+    let a = 0,
+      b = 0;
+    add(pcm, 0, 0.7, (t) => {
+      const u = t / 0.7;
+      const k = 0.015 + 0.22 * u * u;
+      a += k * (r() * 2 - 1 - a);
+      b += k * (a - b);
+      return b * 3.4 * Math.sin(Math.PI * Math.min(1, u * 1.12)) ** 1.5;
+    }, 0.3);
+    return pcm;
+  },
   rewind: () => {
     const pcm = buffer(0.7);
     const r = seeded(55);
