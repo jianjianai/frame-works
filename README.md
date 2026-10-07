@@ -74,3 +74,4 @@
 - `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：剧情文字和共用镜头（phoneCloseup、typingThumbs、hisFaceReading）
 - `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：小节和事件表（主歌2 接尾奏最后一遍）
 - `code/places.ts`：来源 work-d1187f37《unhappy》：新增 classroomBoard（后排看黑板）、textbook（物理课本）
+- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版：重拍的教室（越肩→对视→课本→他的脸→放学递牛奶→空桌牛奶）
