@@ -55,3 +55,4 @@
 - `reference/unhappy/act3.ts`：来源 《unhappy》第三幕参考（倒带切主人视角、便利贴、睡着后摸头、手机三连屏、手术中延时、住院日历翻页、醒来舔手），只看不拷
 - `reference/unhappy/act4.ts`：来源 《unhappy》尾声参考（封面的树下、落叶、回扣钩子的金句、回看彩蛋），只看不拷
 - `reference/unhappy/timeline.ts`：来源 《unhappy》的小节和事件时间表（画面和音效共用一份时间），新作品照这个写法
+- `code/kid.ts`：来源 work-d1187f37 聊天版：新增女主 who:"girl"（波波头+刘海+侧发+向日葵发卡、大眼睛+睫毛、雀斑腮红、睡衣/开衫百褶裙、背面），手的肤色跟随角色
