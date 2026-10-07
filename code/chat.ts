@@ -382,13 +382,8 @@ export function momentsScreen(ctx: Ctx, abs: number, o: { dark?: boolean; mark?:
 }
 
 /** her contact card: a sunny photo, name and signature */
-export function profileScreen(ctx: Ctx, abs: number) {
-  ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, SW, SH);
-  // big portrait photo
-  ctx.save();
-  rr(ctx, 0, 0, SW, 860, 0);
-  ctx.clip();
+/** her sunflower portrait (her profile photo) in the 600×860 photo area: her face at screen (300, 470), scale 1.15 */
+function sunflowerPortrait(ctx: Ctx) {
   const g = ctx.createLinearGradient(0, 0, 0, 860);
   g.addColorStop(0, "#9fd4f5");
   g.addColorStop(0.62, "#fff1b8");
@@ -407,7 +402,33 @@ export function profileScreen(ctx: Ctx, abs: number) {
     paint(ctx, "#7a4a24", null);
   }
   drawKid(ctx, SW / 2, 470, 1.15, { who: "girl", outfit: "cardigan", body: "bust", eyes: "happy", mouth: "grin", tilt: 0.06, blush: 0.5 });
-  ctx.restore();
+}
+
+/** her profile page. `photos` adds a swipeable album in front of her sunflower portrait (each draws into 600×860);
+ *  `at` is the (fractional) photo being shown, default the portrait */
+export function profileScreen(ctx: Ctx, abs: number, o: { photos?: ((c: Ctx) => void)[]; at?: number } = {}) {
+  ctx.fillStyle = "#111";
+  ctx.fillRect(0, 0, SW, SH);
+  const photos = [...(o.photos ?? []), sunflowerPortrait];
+  const at = o.at ?? photos.length - 1;
+  photos.forEach((draw, i) => {
+    const dx = (i - at) * (SW + 16);
+    if (Math.abs(dx) >= SW + 16) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(dx, 0, SW, 860);
+    ctx.clip();
+    ctx.translate(dx, 0);
+    draw(ctx);
+    ctx.restore();
+  });
+  if (photos.length > 1) {
+    const label = `${Math.min(photos.length, Math.round(at) + 1)}/${photos.length}`;
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    rr(ctx, SW - 128, 96, 92, 48, 24);
+    ctx.fill();
+    text(ctx, label, SW - 82, 121, { size: 28, font: F.ui, weight: 700, fill: "#fff" });
+  }
   statusBar(ctx, { time: "23:31", airplane: false, battery: 0.38 });
   text(ctx, "林夏", 50, 930, { size: 52, font: F.ui, weight: 700, fill: "#f2f2f2", align: "left" });
   // signature with a little drawn sun
