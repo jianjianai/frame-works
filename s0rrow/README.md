@@ -110,3 +110,4 @@
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：头像留到 pretty 唱完再熄屏
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：被子里 → 黑房间 → 推出窗外只有她的窗亮着
 - `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（新增 curledUp）
+- `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：新增 editing() 与改稿步骤，表白加长
