@@ -21,6 +21,9 @@ import { BAR, EV } from "./lib/timeline";
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const REST: FingerPos = REST_R;
+/** his eyes relative to drawKid's head centre at s = 1 (for the close-up of his eyes) */
+const EYE_DX = 52,
+  EYE_DY = 36;
 
 /** his blue duvet, top edge at y */
 function duvet(ctx: Ctx, top: number) {
@@ -141,44 +144,123 @@ function shotPretty(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 2B
-function shotTyping(ctx: Ctx, abs: number) {
-  {
-    const typing = inWin(abs, EV.typingA) || inWin(abs, EV.typingB);
-    // his eyes are fixed on her 「嗯」 (screen 145, 948): a spotlight on it, the camera creeping closer. The clue he
-    // misses — 「对方正在输入...」 in the title bar (screen 293, 95) — gets the video's yellow "look here" pulse,
-    // but the camera never goes there.
-    const zs = 1 + 0.03 * smooth(phase(abs, EV.uglyEnd, BAR(12)));
-    const ux = 390,
-      uy = 1182;
-    const zx = ux - (145 - 300) * zs,
-      zy = uy - (948 - 640) * zs;
-    phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing })), { who: "boy", right: REST, cx: zx, cy: zy, s: zs, steady: true });
-    // the darkness keeps closing in until only her 「嗯」 is left in the light
-    const dk = smooth(phase(abs, EV.uglyEnd, BAR(12) - 0.1));
-    const g = ctx.createRadialGradient(ux, uy, 120 - 30 * dk, ux, uy, 760 - 430 * dk);
-    g.addColorStop(0, "rgba(0,0,0,0)");
-    g.addColorStop(1, `rgba(0,0,0,${(0.4 + 0.55 * dk) * smooth(phase(abs, EV.uglyEnd, EV.uglyEnd + 0.3))})`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-    const tx = zx + (293 - 300) * zs,
-      ty = zy + (95 - 640) * zs;
-    // a soft glow behind the indicator while it shows
-    const on = Math.max(...[EV.typingA, EV.typingB].map((w) => smooth(phase(abs, w[0], w[0] + 0.12)) * (1 - smooth(phase(abs, w[1], w[1] + 0.12)))));
-    if (on > 0) glow(ctx, tx, ty, 190 * zs, `rgba(255,209,102,${0.35 * on})`);
-    for (const w of [EV.typingA, EV.typingB])
-      for (const t0 of [w[0] + 0.02, w[0] + 0.32]) {
-        const k = phase(abs, t0, t0 + 0.45);
-        if (k <= 0 || k >= 1) continue;
-        ctx.save();
-        ctx.globalAlpha = 1 - k;
-        ctx.strokeStyle = "#ffd166";
-        ctx.lineWidth = 7;
-        ctx.beginPath();
-        ctx.ellipse(tx, ty, (150 + 90 * k) * zs, (40 + 34 * k) * zs, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-      }
+/** "Will you even love me anymore / Love me", cut on the beat: the phone (his eyes on her 「嗯」, the first
+ *  「对方正在输入...」) → his eyes, the screen in them, not moving → the phone again, darker (the second one) → his
+ *  face: a tear on "Love me", he shuts his eyes — and powers the phone off. */
+const T2 = [beatAt(42), beatAt(44), beatAt(45), beatAt(46), BAR(12)];
+
+/** her 「嗯」 (screen 145, 948) is held at (390, 1182) under a spotlight that closes to darkness `dk`; the clue he
+ *  misses — 「对方正在输入...」 in the title bar (screen 293, 95) — gets the video's yellow "look here" pulse, but the
+ *  camera never goes there */
+function typingPhone(ctx: Ctx, abs: number, dk: number, zs: number, rot: number) {
+  const typing = inWin(abs, EV.typingA) || inWin(abs, EV.typingB);
+  const ux = 390,
+    uy = 1182;
+  const cos = Math.cos(rot),
+    sin = Math.sin(rot);
+  const at = (x: number, y: number): [number, number] => {
+    const dx = (x - 300) * zs,
+      dy = (y - 640) * zs;
+    return [dx * cos - dy * sin, dx * sin + dy * cos];
+  };
+  const [ox, oy] = at(145, 948);
+  const zx = ux - ox,
+    zy = uy - oy;
+  phoneCloseup(ctx, abs, (c) => chatScreen2(c, abs, hisNightChat(abs, { typing })), { who: "boy", right: REST, cx: zx, cy: zy, s: zs, rot, steady: true });
+  const g = ctx.createRadialGradient(ux, uy, 120 - 30 * dk, ux, uy, 760 - 430 * dk);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, `rgba(0,0,0,${0.4 + 0.55 * dk})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  const [qx, qy] = at(293, 95);
+  const tx = zx + qx,
+    ty = zy + qy;
+  const on = Math.max(...[EV.typingA, EV.typingB].map((w) => smooth(phase(abs, w[0], w[0] + 0.12)) * (1 - smooth(phase(abs, w[1], w[1] + 0.12)))));
+  if (on > 0) glow(ctx, tx, ty, 190 * zs, `rgba(255,209,102,${0.35 * on})`);
+  for (const w of [EV.typingA, EV.typingB])
+    for (const t0 of [w[0] + 0.02, w[0] + 0.32]) {
+      const k = phase(abs, t0, t0 + 0.45);
+      if (k <= 0 || k >= 1) continue;
+      ctx.save();
+      ctx.globalAlpha = 1 - k;
+      ctx.strokeStyle = "#ffd166";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.ellipse(tx, ty, (150 + 90 * k) * zs, (40 + 34 * k) * zs, rot, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+}
+
+/** his face in the dark, lit from below by the screen: a band of cold light across the eyes */
+function screenLit(ctx: Ctx, cy: number, band: number) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  glow(ctx, 540, cy + 260, 620, "rgba(70,95,150,0.35)");
+  ctx.restore();
+  const g = ctx.createLinearGradient(0, cy - band * 2.2, 0, cy + band * 2.2);
+  g.addColorStop(0, "rgba(3,4,12,0.92)");
+  g.addColorStop(0.3, "rgba(3,4,12,0.15)");
+  g.addColorStop(0.7, "rgba(3,4,12,0.1)");
+  g.addColorStop(1, "rgba(3,4,12,0.85)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  const v = ctx.createRadialGradient(540, cy, 260, 540, cy, 900);
+  v.addColorStop(0, "rgba(3,4,12,0)");
+  v.addColorStop(1, "rgba(3,4,12,0.9)");
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, W, H);
+}
+
+/** 22.56 "love": his eyes, very close — fixed on the screen, which shows in them as two small bright squares */
+function hisEyes(ctx: Ctx, abs: number) {
+  const p = phase(abs, T2[1], T2[2]);
+  const z = 4.0 + 0.3 * p;
+  fillBg(ctx, "#06070f");
+  ctx.save();
+  camera(ctx, 540, 900, z, 0, 0, 0);
+  ctx.translate(0, -EYE_DY);
+  drawKid(ctx, 540, 900, 1.0, { body: "head", eyes: "teary", brows: "sad", look: [0, 0.85], mouth: "flat" });
+  // the screen reflected in each eye
+  for (const side of [-1, 1]) {
+    const x = 540 + side * EYE_DX + 3,
+      y = 900 + EYE_DY + 3;
+    ctx.fillStyle = "rgba(225,235,255,0.85)";
+    rr(ctx, x - 3.2, y - 5.5, 6.4, 11, 1.6);
+    ctx.fill();
+    ctx.fillStyle = "rgba(90,110,140,0.9)";
+    rr(ctx, x - 2.2, y + 0.5, 3.4, 2.2, 0.8);
+    ctx.fill();
   }
+  ctx.restore();
+  screenLit(ctx, 900, 160);
+}
+
+/** 23.59 "anymore / Love me": his face, the screen's light on it; a tear on "Love me", then he shuts his eyes */
+function hisStare(ctx: Ctx, abs: number) {
+  const p = phase(abs, T2[3], T2[4]);
+  const shut = abs > 24.36;
+  fillBg(ctx, "#06070f");
+  ctx.save();
+  camera(ctx, 540, 860, 1.28 + 0.14 * smooth(p));
+  drawKid(ctx, 540, 860, 1.25, {
+    body: "bust",
+    eyes: shut ? "shut" : "teary",
+    brows: "sad",
+    mouth: abs > 23.95 ? "wobble" : "flat",
+    look: [0, 0.8],
+    arms: "phone",
+    tears: smooth(phase(abs, 23.95, 24.45)),
+  });
+  ctx.restore();
+  screenLit(ctx, 860, 230);
+}
+
+function shotTyping(ctx: Ctx, abs: number) {
+  if (abs < T2[1]) typingPhone(ctx, abs, 0.45 * smooth(phase(abs, T2[0], T2[1])), 1 + 0.02 * smooth(phase(abs, T2[0], T2[1])), 0);
+  else if (abs < T2[2]) hisEyes(ctx, abs);
+  else if (abs < T2[3]) typingPhone(ctx, abs, 0.62 + 0.33 * smooth(phase(abs, T2[2], T2[3])), 1.03, -0.05);
+  else hisStare(ctx, abs);
 }
 
 // ---------------------------------------------------------------- 2C
