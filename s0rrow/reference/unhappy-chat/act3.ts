@@ -5,6 +5,7 @@ import { drawKid } from "./lib/kid";
 import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook, classroomFront, strawberryMilk } from "./lib/places";
 import { heart } from "./lib/sets";
 import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, markAt, sendButtonAt } from "./lib/chat";
+import { MEI, MEI_FIRST } from "./lib/story";
 import { FingerPos } from "./lib/hand";
 import { SH, SW, lockScreen, notification } from "./lib/phone";
 import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT, herHome, oldFilm, afterNight, LATE1, LATE2, hisRoomMorning, herRoomAt } from "./lib/story";
@@ -12,8 +13,9 @@ import { HIS_WIN, Z_IN, street, winC } from "./lib/street";
 import { BAR, EV } from "./lib/timeline";
 
 /** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
- *  3A her memory (on old film, like his in act 1) — 23:12: his long message lands; she squeals, types a long happy reply… her friend's advice
- *     pops up — she deletes it all and sends 「嗯」 (that's why 「对方正在输入...」 flickered)
+ *  3A her memory (on old film, like his in act 1) — 23:12: his long message lands; she squeals, types a long happy reply…
+ *     小美's message drops in; she opens it — 「回个嗯就行」 — goes back, deletes it all and sends 「嗯」 (that's why
+ *     「对方正在输入...」 flickered)
  *  3B class, her side: he smiled at her when their eyes met — she went bright red behind the book ("You never ever pay attention to me")
  *  3C back to 00:52: she wipes her tears, opens 微信 again from her home screen, rewrites the paragraph and sends it —
  *     he never answers; she falls asleep
@@ -71,87 +73,100 @@ function shotReplay(ctx: Ctx, abs: number) {
     ctx.restore();
     return;
   }
-  if (abs < EV.umHold) {
-    // types a long happy reply → her friend's advice → deletes it all → types just 「嗯」 → sends,
-    // and the chat holds on that 「嗯」 so it sinks in (it's the same 「嗯」 he got at 0:01.85)
-    const umTyped = EV.send2 - 0.17;
-    let draft = "";
-    if (abs < EV.del3[0]) draft = typed(HER_REPLY_DRAFT, abs, EV.type3[0], EV.type3[1]);
-    else if (abs < EV.del3[1]) draft = deleted(HER_REPLY_DRAFT, abs, EV.del3[0], EV.del3[1]);
-    else if (abs < EV.send2) draft = abs > umTyped ? "嗯" : "";
-    const view = { title: HIM, time: "23:13", me: "girl" as const, them: "boy" as const, items: herItems(abs, "replay"), dark: true, draft: abs < EV.send2 ? draft : "", caret: abs < EV.send2, keyboard: true, sendHot: abs > EV.send2 - 0.08 && abs < EV.send2 ? 1 : 0 };
-    const { ux, uy, zs } = umSpot(abs);
-    const zx = ux - (454 - 300) * zs,
-      zy = uy - (622 - 640) * zs;
-    let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
-    if (inWin(abs, EV.type3)) hands = typingThumbs(abs, EV.type3[0], EV.type3[1], 31);
-    else if (inWin(abs, EV.del3)) {
-      const f = ((abs - EV.del3[0]) * 12) % 1;
-      hands = { right: { x: BACKSPACE_AT[0], y: BACKSPACE_AT[1], touch: f < 0.5 ? 1 : 0.4 }, left: hands.left };
-    } else if (abs > EV.del3[1] && abs < EV.send2 + 0.12) {
-      // one tap on 「嗯」's key, then send
-      const sb = sendButtonAt(ctx, { ...view, draft: "嗯" });
-      const onKey = abs < umTyped + 0.05;
-      hands = { right: { x: onKey ? 300 : sb[0], y: onKey ? 1000 : sb[1], touch: (abs > umTyped - 0.04 && abs < umTyped + 0.03) || (abs > EV.send2 - 0.06 && abs < EV.send2 + 0.08) ? 1 : 0.2 }, left: hands.left };
-    } else if (abs > EV.type3[1] && abs < EV.del3[0]) {
-      // hovering over send… hesitating
-      const sb = sendButtonAt(ctx, view);
-      hands = { right: { x: sb[0], y: sb[1] + 40, touch: 0 }, left: hands.left };
-    }
-    phoneCloseup(
-      ctx,
-      abs,
-      (c) => {
-        chatScreen2(c, abs, view);
-        const nk = smooth(phase(abs, EV.friendNote, EV.friendNote + 0.18)) * (1 - smooth(phase(abs, EV.del3[0] + 0.1, EV.del3[0] + 0.3)));
-        if (nk > 0) {
-          c.save();
-          c.translate(0, -160 * (1 - nk));
-          notification(c, 24, 24, 552, { title: "小美", body: FRIEND_ADVICE, time: "现在" }, nk);
-          c.restore();
-        }
-      },
-      { who: "girl", cx: zx, cy: zy, s: zs, glowCol: "rgba(255,170,200,0.22)", ...hands },
-    );
-    return;
+  // types a long happy reply → 小美's message drops in → she opens it and reads 「回个嗯就行」 → back to his chat →
+  // deletes all of it → types just 「嗯」 → sends; the chat holds on that 「嗯」 (the same one he got at 0:01.85)
+  const umTyped = EV.del3[1] + 0.04;
+  let draft = "";
+  if (abs < EV.del3[0]) draft = typed(HER_REPLY_DRAFT, abs, EV.type3[0], EV.type3[1]);
+  else if (abs < EV.del3[1]) draft = deleted(HER_REPLY_DRAFT, abs, EV.del3[0], EV.del3[1]);
+  else if (abs < EV.send2) draft = abs > umTyped ? "嗯" : "";
+  const view = { title: HIM, time: "23:13", me: "girl" as const, them: "boy" as const, items: herItems(abs, "replay"), dark: true, draft: abs < EV.send2 ? draft : "", caret: abs < EV.send2, keyboard: true, sendHot: abs > EV.send2 - 0.08 && abs < EV.send2 ? 1 : 0 };
+  // 小美's chat slides in over his when she taps the banner, and back out when she taps ‹
+  const meiK = smooth(phase(abs, EV.openNote, EV.openNote + 0.25)) * (1 - smooth(phase(abs, EV.backToHim, EV.backToHim + 0.25)));
+  const meiView = {
+    title: MEI,
+    time: "23:13",
+    me: "girl" as const,
+    them: "mei" as const,
+    items: [
+      { t: "time", text: "23:12" },
+      { t: "msg", me: true, text: MEI_FIRST },
+      { t: "msg", text: FRIEND_ADVICE, mark: "回个嗯就行", markK: smooth(phase(abs, EV.openNote + 0.35, EV.openNote + 0.7)) },
+    ] as ChatItem[],
+    dark: true,
+    // a short conversation sits at the top, under 小美’s name (not down by the input bar)
+    scroll: -470,
+  };
+  // camera: the whole phone → closer on 小美's advice while she reads it → back → (after sending) in on the 「嗯」
+  const { ux, uy, zs } = umSpot(abs);
+  let cx = ux - (454 - 300) * zs,
+    cy = uy - (622 - 640) * zs,
+    s = zs;
+  const rd = smooth(phase(abs, EV.openNote + 0.15, EV.openNote + 0.55)) * (1 - smooth(phase(abs, EV.backToHim, EV.backToHim + 0.3)));
+  const mk = rd > 0 ? markAt(ctx, meiView) : null;
+  if (mk) {
+    const sR = 1.22, // close enough to read, with 小美’s name still in the title bar
+      ax = mk.x + mk.w / 2,
+      ay = mk.y + mk.h / 2;
+    cx += (540 - (ax - 300) * sR - cx) * rd;
+    cy += (880 - (ay - 640) * sR - cy) * rd;
+    s += (sR - s) * rd;
   }
-  // regret: she hugs her pillow tight, chin on top of it
-  ctx.save();
-  camera(ctx, 400, 860, 1.25);
-  herRoom(ctx, abs, { lights: 1 });
-  const squeeze = 1 + 0.02 * Math.sin((abs - EV.umHold) * 9);
-  drawKid(ctx, 340, 700, 0.66, {
-    who: "girl",
-    outfit: "pajamas",
-    body: "full",
-    legs: "sitFloor",
-    eyes: "shut",
-    mouth: "wobble",
-    brows: "sad",
-    blush: 0.7,
-    tilt: 0.1,
-    headY: 14,
-    arms: "custom",
-    handL: [-60, 300],
-    handR: [60, 300],
-    shapeL: "hidden",
-    shapeR: "hidden",
-  });
-  huggedPillow(ctx, 340, 700, 0.66 * squeeze, "#f3b6c4", "#fff4f6", "#f6e1c3", 3810);
-  herBlanket(ctx);
-  ctx.restore();
+  let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
+  const tap = (t: number, x: number, y: number): FingerPos => ({ x, y: y + 30 * (1 - smooth(phase(abs, t - 0.14, t - 0.03))), touch: abs > t - 0.04 ? 1 : 0.75 });
+  if (inWin(abs, EV.type3)) hands = typingThumbs(abs, EV.type3[0], EV.type3[1], 31);
+  else if (abs >= EV.openNote - 0.14 && abs < EV.openNote + 0.06) hands = { right: tap(EV.openNote, 300, 100), left: REST_L }; // the banner
+  else if (abs >= EV.backToHim - 0.14 && abs < EV.backToHim + 0.06) hands = { right: tap(EV.backToHim, 42, 118), left: REST_L }; // ‹
+  else if (inWin(abs, EV.del3)) {
+    const k = ((abs - EV.del3[0]) * 12) % 1;
+    hands = { right: { x: BACKSPACE_AT[0], y: BACKSPACE_AT[1], touch: k < 0.5 ? 1 : 0.4 }, left: REST_L };
+  } else if (abs > EV.del3[1] && abs < EV.send2 + 0.12) {
+    // one tap on 「嗯」's key, then send
+    const sb = sendButtonAt(ctx, { ...view, draft: "嗯" });
+    const onKey = abs < umTyped + 0.05;
+    hands = { right: { x: onKey ? 300 : sb[0], y: onKey ? 1000 : sb[1], touch: (abs > umTyped - 0.04 && abs < umTyped + 0.03) || (abs > EV.send2 - 0.06 && abs < EV.send2 + 0.08) ? 1 : 0.2 }, left: REST_L };
+  } else if (abs > EV.type3[1] && abs < EV.openNote - 0.14) {
+    // hovering over send… then the banner comes down
+    const sb = sendButtonAt(ctx, view);
+    hands = { right: { x: sb[0], y: sb[1] + 40, touch: 0 }, left: REST_L };
+  }
+  phoneCloseup(
+    ctx,
+    abs,
+    (c) => {
+      // his chat underneath — slid a little left and dimmed while 小美's is on top
+      c.save();
+      c.translate(-0.3 * SW * meiK, 0);
+      chatScreen2(c, abs, view);
+      c.restore();
+      if (meiK > 0) {
+        c.fillStyle = `rgba(0,0,0,${0.35 * meiK})`;
+        c.fillRect(0, 0, SW, SH);
+        c.save();
+        c.translate(SW * (1 - meiK), 0);
+        chatScreen2(c, abs, meiView);
+        c.fillStyle = "rgba(0,0,0,0.35)";
+        c.fillRect(-14, 0, 14, SH);
+        c.restore();
+      }
+      // 小美's banner: down from the top, up and away as she taps it
+      const nk = smooth(phase(abs, EV.friendNote, EV.friendNote + 0.18)) * (1 - smooth(phase(abs, EV.openNote, EV.openNote + 0.15)));
+      if (nk > 0) {
+        c.save();
+        c.translate(0, -160 * (1 - nk));
+        notification(c, 24, 24, 552, { title: MEI, body: FRIEND_ADVICE, time: "现在" }, nk);
+        c.restore();
+      }
+    },
+    { who: "girl", cx, cy, s, glowCol: "rgba(255,170,200,0.22)", ...hands },
+  );
 }
 
 // ---------------------------------------------------------------- 3B class, her side
-/** "You never ever pay attention to me", three shots on the beat (each one new): she turns round and he is smiling
- *  at her → up goes the book, she peeks over it, bright red, heart pounding → after class she slips back into the
- *  empty classroom and takes the strawberry milk he left, holding it to her cheek (why it is her wallpaper) */
+/** "You never ever pay attention to me", two shots on the beat: up goes the book, she peeks over it, bright red,
+ *  heart pounding → after class she slips back into the empty classroom and takes the strawberry milk he left,
+ *  holding it to her cheek (why it is her wallpaper). (His smile and her pillow were cut to make room for 小美.) */
 function shotSchool(ctx: Ctx, abs: number) {
-  if (abs < EV.hide2) {
-    // what she saw when she turned round: him, smiling at her
-    hisClassFace(ctx, abs, BAR(18), "smile");
-    return;
-  }
   if (abs < EV.afterClass) {
     // behind the book: it comes up fast, then the camera pushes in on her eyes peeking over it
     const p = phase(abs, EV.hide2, EV.afterClass);
@@ -401,7 +416,7 @@ function umSpot(abs: number) {
  *  a red-pen note — everything else was deleted */
 function memoryNotes(ctx: Ctx, abs: number) {
   card(ctx, "10月6日 23:12", 70, 330, smooth(phase(abs, BAR(16) + 0.15, BAR(16) + 0.4)) * (1 - phase(abs, 33.5, 33.6)));
-  card(ctx, "那天上课", 70, 330, smooth(phase(abs, BAR(18) + 0.05, BAR(18) + 0.3)) * (1 - phase(abs, EV.hide2 - 0.1, EV.hide2)));
+  card(ctx, "那天上课", 70, 330, smooth(phase(abs, EV.hide2 + 0.05, EV.hide2 + 0.3)) * (1 - phase(abs, EV.afterClass - 0.1, EV.afterClass)));
   card(ctx, "放学后", 70, 330, smooth(phase(abs, EV.afterClass + 0.05, EV.afterClass + 0.25)) * (1 - phase(abs, EV.now - 0.1, EV.now)));
   if (abs <= EV.send2 || abs >= EV.umHold) return;
   const { ux, uy, zs } = umSpot(abs);
@@ -436,7 +451,7 @@ export function createScene(options: SceneOptions) {
   return designScene(options, BAR(16), (ctx, abs) => {
     if (abs < EV.now) {
       // her memory — that night and that class — on old film, the same as his memory in act 1; nothing else
-      oldFilm(ctx, abs, (c) => (abs < BAR(18) ? shotReplay(c, abs) : shotSchool(c, abs)), "memory");
+      oldFilm(ctx, abs, (c) => (abs < EV.umHold ? shotReplay(c, abs) : shotSchool(c, abs)), "memory");
       memoryNotes(ctx, abs);
     } else if (abs < EV.nightFalls) shotSend(ctx, abs);
     else if (abs < EV.intoHis[1]) shotNight(ctx, abs);
