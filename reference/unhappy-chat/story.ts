@@ -17,7 +17,43 @@ export const HIS_DRAFT = "林夏，我是不是哪里惹你不开心了？我们
 export const GIVE_UP = "以后不打扰你了";
 export const HER_REPLY_DRAFT = "哇！！你也太厉害了吧！！明天一定要讲给我听！还有你也要多穿点，别光顾着说我";
 export const HER_NIGHT_DRAFT = "才不是这样的！！我每天都在等你的消息，每次都写了好多好多，又怕你嫌我烦，就全删了。其实我……";
-export const HER_CONFESSION = "才不是这样的。我每天都在等你的消息，每次都写了好多好多，又怕你嫌我烦，就全删了。其实，我喜欢你，很久很久了。";
+/** what she finally sends at 00:58: the night draft, edited — the hesitant ending cut, a line added, the last words
+ *  typed, deleted and typed again */
+export const HER_CONFESSION = "才不是这样的！！我每天都在等你的消息，每次都写了好多好多，又怕你嫌我烦，就全删了。你发的每一条我都看了好多遍。其实，我喜欢你，很久很久了。";
+const CONF_BASE = "才不是这样的！！我每天都在等你的消息，每次都写了好多好多，又怕你嫌我烦，就全删了。";
+/** her editing at 00:52 (times are fractions of the editing window) */
+export const CONFESSION_EDITS: { u0: number; u1: number; to: string }[] = [
+  { u0: 0.0, u1: 0.12, to: CONF_BASE },
+  { u0: 0.12, u1: 0.5, to: CONF_BASE + "你发的每一条我都看了好多遍。" },
+  { u0: 0.5, u1: 0.68, to: CONF_BASE + "你发的每一条我都看了好多遍。其实，我喜欢你" },
+  { u0: 0.68, u1: 0.78, to: CONF_BASE + "你发的每一条我都看了好多遍。其实，我" },
+  { u0: 0.8, u1: 1.0, to: HER_CONFESSION },
+];
+
+/** A draft being edited: each step goes from the current text to its target by deleting back to their common
+ *  prefix (twice as fast) and then typing the rest, within its [u0, u1] slice of [t0, t1]. */
+export function editing(abs: number, t0: number, t1: number, start: string, steps: { u0: number; u1: number; to: string }[]): string {
+  let cur = start;
+  for (const st of steps) {
+    const a0 = t0 + (t1 - t0) * st.u0,
+      a1 = t0 + (t1 - t0) * st.u1;
+    if (abs < a0) return cur;
+    if (abs >= a1) {
+      cur = st.to;
+      continue;
+    }
+    const a = Array.from(cur),
+      b = Array.from(st.to);
+    let p = 0;
+    while (p < a.length && p < b.length && a[p] === b[p]) p++;
+    const del = (a.length - p) * 0.5,
+      add = b.length - p;
+    const u = ((abs - a0) / (a1 - a0)) * (del + add || 1);
+    if (u < del) return a.slice(0, a.length - Math.floor(u / 0.5)).join("");
+    return b.slice(0, p + Math.floor(u - del)).join("");
+  }
+  return cur;
+}
 export const ASK_AGAIN = "那周末一起去图书馆？";
 export const FRIEND_ADVICE = "别回太快！回个嗯就行，显得你没那么在意";
 
