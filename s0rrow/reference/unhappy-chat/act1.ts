@@ -110,9 +110,16 @@ function shotHistory(ctx: Ctx, abs: number) {
   const mark = smooth(phase(abs, 7.15, 7.6));
   // camera: still while reading; after the page change it moves up and in on 「5分钟前」 (screen 160, 1040)
   const pk = smooth(phase(abs, 6.95, 7.4));
-  const s = 0.92 + (1.3 - 0.92) * pk;
+  const s1 = 0.92 + (1.3 - 0.92) * pk;
   const px = 411 + (440 - 411) * pk,
     py = 1168 + (1060 - 1168) * pk;
+  // then on into the photo (screen 312, 796) — the way into his memory of today's class
+  const mk = smooth(phase(abs, 7.7, BAR(4)));
+  const s = s1 + (2.5 - s1) * mk;
+  const cx1 = px - (160 - 300) * s1,
+    cy1 = py - (1040 - 640) * s1;
+  const dx = cx1 + (312 - 300) * s1 + (540 - (cx1 + (312 - 300) * s1)) * mk,
+    dy = cy1 + (796 - 640) * s1 + (860 - (cy1 + (796 - 640) * s1)) * mk;
   // thumb: slow swipes up while scrolling down, then one tap on her avatar
   let right: FingerPos = REST;
   if (inWin(abs, EV.scrollUp)) {
@@ -149,8 +156,14 @@ function shotHistory(ctx: Ctx, abs: number) {
         c.restore();
       }
     },
-    { who: "boy", right, cx: px - (160 - 300) * s, cy: py - (1040 - 640) * s, s, steady: true },
+    { who: "boy", right, cx: mk > 0 ? dx - (312 - 300) * s : cx1, cy: mk > 0 ? dy - (796 - 640) * s : cy1, s, steady: true },
   );
+  // fading to a warm white: into the memory
+  const wf = smooth(phase(abs, 7.95, BAR(4)));
+  if (wf > 0) {
+    ctx.fillStyle = `rgba(255,244,228,${wf})`;
+    ctx.fillRect(0, 0, W, H);
+  }
 }
 
 // ---------------------------------------------------------------- 1C class: from his seat, then after class
@@ -383,11 +396,28 @@ function shotGiveUp(ctx: Ctx, abs: number) {
   ctx.restore();
 }
 
+/** today's class, remembered that night: an old-photo tone, a soft glowing edge, a time card; it comes out of the
+ *  warm white the moments photo faded into */
+function memory(ctx: Ctx, abs: number) {
+  filtered(ctx, "sepia(0.32) saturate(0.85) brightness(1.04)", (c) => shotClass(c, abs), "memory");
+  const g = ctx.createRadialGradient(540, 900, 520, 540, 900, 1150);
+  g.addColorStop(0, "rgba(255,240,220,0)");
+  g.addColorStop(1, "rgba(255,240,220,0.45)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  const wf = 1 - smooth(phase(abs, BAR(4), BAR(4) + 0.4));
+  if (wf > 0) {
+    ctx.fillStyle = `rgba(255,244,228,${wf})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+  card(ctx, "今天 · 物理课", 70, 330, smooth(phase(abs, BAR(4) + 0.2, BAR(4) + 0.45)) * (1 - phase(abs, 9.7, 9.95)));
+}
+
 export function createScene(options: SceneOptions) {
   return designScene(options, 0, (ctx, abs) => {
     if (abs < BAR(2)) shotHook(ctx, abs);
     else if (abs < BAR(4)) shotHistory(ctx, abs);
-    else if (abs < BAR(6)) shotClass(ctx, abs);
+    else if (abs < BAR(6)) memory(ctx, abs);
     else shotGiveUp(ctx, abs);
   });
 }
