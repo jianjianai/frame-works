@@ -8,7 +8,8 @@ import { seeded } from "../../src/engine/math";
  *  第二支《unhappy》：keys/doorOpen/doorClose/roomDoor/ball/slam/cough/squeak/rain/heartbeat/click/splash/
  *  whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps（小狗版）
  *  《unhappy》聊天版：um/note/typing2/typingLong/del/send2/lamp/powerOff/rustle/whoosh2/rewind2/heartFast/bell/steps/shutter/
- *  birds/boot/run/store/pay/door/milk/sparkle/stickerPop */
+ *  birds/boot/run/store/pay/door/milk/sparkle/stickerPop
+ *  《i have no friends》重置版：bellElectric（电铃上课铃）/horn（派对喇叭，放「不压歌曲」的音效轨）/floodFast（七条通知间隔 0.12 秒） */
 const SR = 48000;
 const TAU = Math.PI * 2;
 
@@ -519,6 +520,55 @@ const sounds: Record<string, () => StereoPcm> = {
   stickerPop: () => {
     const pcm = buffer(0.3);
     add(pcm, 0, 0.12, (t) => Math.sin(TAU * (400 + 900 * t * 8) * t) * Math.exp(-t * 30), 0.25);
+    return pcm;
+  },
+  // ---------------- 《i have no friends》重置版
+  // 上课铃: an electric school bell, the clapper hammering ~22 times a second on a bell with a few inharmonic
+  // partials, then ringing out
+  bellElectric: () => {
+    const dur = 0.85;
+    const pcm = buffer(dur + 0.4);
+    const partials: [number, number][] = [[1240, 0.5], [2980, 0.28], [4310, 0.12], [620, 0.18]];
+    const r = seeded(81);
+    add(pcm, 0, dur + 0.35, (t) => {
+      const env = attack(t, 0.01) * (t < dur ? 1 : Math.exp(-(t - dur) * 9));
+      const hit = (t * 22) % 1;
+      const strikes = t < dur ? Math.exp(-hit * 4) : 0;
+      const ring = partials.reduce((s, [f, a]) => s + a * Math.sin(TAU * f * t), 0);
+      const click = t < dur ? (r() * 2 - 1) * Math.exp(-hit * 40) * 0.25 : 0;
+      return env * (ring * (0.35 + 0.65 * strikes) + click);
+    }, 0.32);
+    return pcm;
+  },
+  // a party horn blown alone: a buzzy paper reed with a flutter, cut short, then a weak little deflating bleat as it
+  // sags back (phase integrated, so the pitch bends cleanly). Put it on a track the music does not duck under.
+  horn: () => {
+    const pcm = buffer(1.1);
+    let ph = 0;
+    add(pcm, 0, 0.44, (t) => {
+      const env = Math.min(1, t / 0.025) * (t < 0.3 ? 1 : Math.max(0, 1 - (t - 0.3) / 0.14));
+      const f = 400 + 16 * Math.sin(TAU * 8 * t) - 40 * Math.max(0, t - 0.24);
+      ph += (TAU * f) / SR;
+      const reed = Math.tanh(2.4 * Math.sin(ph)) + 0.3 * Math.sin(2 * ph) + 0.18 * Math.sin(3 * ph);
+      return env * reed * (0.82 + 0.18 * Math.sin(TAU * 33 * t));
+    }, 0.14);
+    let ph2 = 0;
+    add(pcm, 0.5, 0.55, (t) => {
+      const env = Math.min(1, t / 0.05) * Math.exp(-t * 4.5);
+      ph2 += (TAU * (310 - 150 * t)) / SR;
+      return env * Math.tanh(1.8 * Math.sin(ph2)) * (0.8 + 0.2 * Math.sin(TAU * 21 * t));
+    }, 0.07);
+    return pcm;
+  },
+  // the notification flood, faster: seven bells + vibration every 0.12 s (match the notifications on screen)
+  floodFast: () => {
+    const pcm = buffer(2.6);
+    const pitches = [1, 1.122, 1, 0.891, 1.189, 1, 1.26];
+    for (let i = 0; i < 7; i++) {
+      bell(pcm, i * 0.12, 0.42, pitches[i], i % 2 ? 0.3 : -0.3);
+      buzz(pcm, i * 0.12, 0.1, 0.16);
+    }
+    buzz(pcm, 0.84, 0.4, 0.18);
     return pcm;
   },
 };
