@@ -10,10 +10,10 @@ export type Pt = [number, number];
 
 // ---------------------------------------------------------------- 每支视频要改的
 /** 字体目录：fetch-fonts.mjs 写到作品的 public/fonts/，这里写 films/<作品名>/fonts/。 */
-export const FONT_DIR = "films/work-bdd5c2f8/fonts/";
+export const FONT_DIR = "films/work-xxxxxxxx/fonts/"; // ← 改成本作品的内部名称（work-…）
 
 // ---------------------------------------------------------------- music grid
-/** 换歌要改：BPM 和第一拍的时间（秒）。 */
+/** 换歌要改：BPM 和第一拍的时间（秒）。现在是《i have no friends》的（115 BPM，第一拍 0.265）。 */
 export const BPM = 115;
 export const BEAT = 60 / BPM;
 export const BEAT0 = 0.265;
@@ -343,10 +343,9 @@ export function writeOn(s: string, p: number) {
 
 // ---------------------------------------------------------------- fonts
 let fontsReady: Promise<void> | null = null;
-/** [family, file, weight, unicode-range?]. The "-extra" files are small Google Fonts subsets with only the characters
- *  the 重置版 added (fetched through asset_import from fonts.googleapis.com/css2?family=…&text=…, since fetch-fonts.mjs
- *  can't run here). Their unicode-range makes the browser take just those characters from them, the rest from the
- *  main subsets. To add more text: fetch another "-extra" subset the same way and list it here. */
+/** [family, file, weight, unicode-range?]. 主子集由 fetch-fonts.mjs 生成。不能跑脚本时补字：用 asset_import 下载
+ *  fonts.googleapis.com/css2?family=…&text=…（只含新字的小子集），存成 public/fonts/<名字>-extra.ttf，在下面加一行并写上这些字的
+ *  unicode-range（这些字从 extra 文件取，其余从主子集取）。extra 放在列表最后。 */
 const FONT_FILES: [string, string, string, string?][] = [
   ["Gochi Hand", "gochi-hand.woff2", "400"],
   ["Permanent Marker", "permanent-marker.woff2", "400"],
@@ -354,18 +353,7 @@ const FONT_FILES: [string, string, string, string?][] = [
   ["Long Cang", "long-cang.woff2", "400"],
   ["Noto Sans SC", "noto-sans-sc-400.woff2", "400"],
   ["Noto Sans SC", "noto-sans-sc-700.woff2", "700"],
-  // 结尾引导：点赞的人，生日那天消息 99+ / 回看：他在第几秒开的飞行模式？/ 答案打在评论区
-  ["ZCOOL KuaiLe", "zcool-kuaile-extra.ttf", "400", "U+70B9,U+8D5E,U+7684,U+4EBA,U+FF0C,U+751F,U+65E5,U+90A3,U+5929,U+6D88,U+606F,U+56DE,U+770B,U+FF1A,U+4ED6,U+5728,U+7B2C,U+51E0,U+79D2,U+5F00,U+98DE,U+884C,U+6A21,U+5F0F,U+FF1F,U+7B54,U+6848,U+6253,U+8BC4,U+8BBA,U+533A"],
-  // 小雨的通知和回复：上课大家是在笑阿杰差点说漏嘴…不是笑你啦 / 横幅上的字是我写的！
-  ["Noto Sans SC", "noto-sans-sc-400-extra.ttf", "400", "U+4E0A,U+8BFE,U+5927,U+5BB6,U+662F,U+5728,U+7B11,U+963F,U+6770,U+5DEE,U+70B9,U+8BF4,U+6F0F,U+5634,U+2026,U+4E0D,U+4F60,U+5566,U+6A2A,U+5E45,U+7684,U+5B57,U+6211,U+5199,U+FF01"],
-  // 班群：昨天 22:30 / 明天都早点来！！ / 收到收到（文件里还有「当前网络不可用」，已不用）
-  ["Noto Sans SC", "noto-sans-sc-400-extra2.ttf", "400", "U+5F53,U+524D,U+7F51,U+7EDC,U+4E0D,U+53EF,U+7528,U+6628,U+5929,U+660E,U+90FD,U+65E9,U+70B9,U+6765,U+FF01,U+6536,U+5230"],
-  // 评论引导：回看：第几秒就能看出他开着飞行模式？
-  ["ZCOOL KuaiLe", "zcool-kuaile-extra2.ttf", "400", "U+5C31,U+80FD,U+51FA,U+7740"],
-  // 重新翻译的中文歌词（lyrics-data.ts 的 CHORUS）里用到的全部字
-  ["ZCOOL KuaiLe", "zcool-kuaile-extra6.ttf", "400", "U+4ECA,U+5929,U+6211,U+624D,U+660E,U+767D,U+539F,U+6765,U+8EAB,U+8FB9,U+6CA1,U+6709,U+670B,U+53CB,U+53EA,U+5269,U+597D,U+5B64,U+5355,U+50CF,U+88AB,U+5168,U+4E16,U+754C,U+7ACB,U+4E00,U+4E2A,U+4EBA,U+4F1A,U+53D1,U+6D88,U+606F,U+7ED9,U+6BCF,U+90FD,U+90A3,U+4E48,U+865A,U+4F2A,U+60F3,U+8EB2,U+8D77,U+56E0,U+4E3A,U+5728,U+4E4E,U+4ED6,U+4EEC,U+5632,U+7B11,U+5F53,U+7740,U+7684,U+9762"],
-  // 班群里的彩蛋：阿杰 撤回了一条消息
-  ["Noto Sans SC", "noto-sans-sc-400-extra3.ttf", "400", "U+64A4,U+56DE,U+4E86,U+4E00,U+6761,U+6D88,U+606F"],
+  // 例（重置版结尾引导新增的字）：["ZCOOL KuaiLe", "zcool-kuaile-extra.ttf", "400", "U+70B9,U+8D5E,U+7684"],
 ];
 export function loadFonts(): Promise<void> {
   fontsReady ??= Promise.all(
