@@ -1,10 +1,10 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, ik2, inkLine, measure, oval, paint, poly, rr, shaded, shake, text, tubePts, vgrad, writeOn } from "./lib/draw";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, ik2, inkLine, measure, oval, paint, poly, rr, shaded, shake, text, tubePts, vgrad, writeOn } from "./lib/draw";
 import { KidPose, drawHand, drawKid } from "./lib/kid";
 import { CAST } from "./lib/people";
 import { Msg, SH, SW, chatScreen, phone, phoneBack } from "./lib/phone";
-import { bigCake, bokeh, cupcake, street } from "./lib/sets";
+import { bigCake, bokeh, cupcake, screenSpill, street, streetBokeh } from "./lib/sets";
 import { birthdayDesk } from "./lib/shared";
 
 /** ACT 4 · 第三遍副歌「他试着开口」(song 50.48 – 67.05 = work 17.08 – 33.66; this act draws in song time, its layer
@@ -116,6 +116,17 @@ function shotBakery(ctx: Ctx, abs: number) {
     filtered(g, `blur(${(6 * (1 - rack)).toFixed(2)}px)`, (b) => outsideBakery(b, abs), "bg");
     glass(g, abs);
     filtered(g, `blur(${(5 * rack).toFixed(2)}px)`, (b) => display(b, abs), "fg");
+    // 光影: the shop's lights from above — the cake glows, a pool of light on the counter round it, the front of the
+    // counter falls away into shadow (it was a flat grey slab under the lyrics)
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    glow(g, 340, COUNTER - 250, 420, "rgba(255,246,228,0.13)");
+    g.translate(380, COUNTER + 40);
+    g.scale(1, 0.24);
+    glow(g, 0, 0, 560, "rgba(255,240,215,0.24)");
+    g.restore();
+    g.fillStyle = vgrad(g, COUNTER + 70, COUNTER + 560, [[0, "rgba(16,12,10,0)"], [1, "rgba(16,12,10,0.62)"]]);
+    g.fillRect(-80, COUNTER + 70, W + 160, H);
     g.restore();
   });
   card(ctx, "21:52 · 回家的路上", 70, 330, smooth(phase(abs, T0 + 0.15, T0 + 0.45)) * (1 - phase(abs, WALK - 0.4, WALK - 0.1)));
@@ -388,12 +399,12 @@ function shotChat(ctx: Ctx, abs: number) {
   const fx = 540 + (mx - SW / 2) * ps,
     fy = 800 + (my - SH / 2) * ps;
   const view = (c: Ctx) => camera(c, fx, fy, 1 + 0.05 * easeInOut(phase(abs, N2, FAIL)) + zoom * 0.9, hr, sx + hx, sy + hy);
+  // 光影: the street behind the phone, far out of focus (the lamp he stopped under, the ones further on)
+  streetBokeh(ctx, abs, hx);
   grade(ctx, GREY, (g) => {
-    fillBg(g, "#0f1124");
-    glow(g, 540, 800, 900, "rgba(170,200,255,0.25)");
-    bokeh(g, abs, 14, 401, 0.7);
     g.save();
     view(g);
+    screenSpill(g, 540, 800, ps, 1);
     phone(g, 540, 800, ps, 0, chat(abs));
     g.restore();
   });
@@ -417,10 +428,9 @@ function shotChat(ctx: Ctx, abs: number) {
 function shotDelete(ctx: Ctx, abs: number) {
   const [hx, hy, hr] = handheld(abs, 4, 8);
   const ps = 0.72;
+  streetBokeh(ctx, abs, hx);
   grade(ctx, GREY, (g) => {
-    fillBg(g, "#0f1124");
-    glow(g, 540, 800, 900, "rgba(170,200,255,0.25)");
-    bokeh(g, abs, 14, 401, 0.7);
+    screenSpill(g, 540 + hx, 800 + hy, ps, 1);
     phone(g, 540 + hx, 800 + hy, ps, hr, chat(abs));
   });
   if (abs < 59.55) {
@@ -514,5 +524,7 @@ export function createScene(options: SceneOptions) {
     else if (abs < N3b) shotDelete(ctx, abs);
     else if (abs < N4) shotDesk(ctx, abs);
     else shotWish(ctx, abs);
+    // night (光影): lamps, screens and the flame bleed a soft glow into the dark
+    bloom(ctx, 0.3);
   });
 }

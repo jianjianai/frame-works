@@ -1,11 +1,12 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shaded, shake, text } from "./lib/draw";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shaded, shake, text } from "./lib/draw";
 import { drawHand, drawKid } from "./lib/kid";
 import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
 import { Msg, Note, SH, SW, chatScreen, glassGlare, lockScreen, notification, notificationHeight, phone, phoneButtons, statusBar, wallpaper } from "./lib/phone";
-import { bokeh, classroom, corridor, schoolDesk } from "./lib/sets";
+import { bokeh, classroom, corridor, roomBokeh, schoolDesk, screenSpill } from "./lib/sets";
 import { birthdayDesk } from "./lib/shared";
+import { TILT, phoneReflectionAt, shotBirthday, shotDeskPhone } from "./lib/opening";
 import { FingerKey, FingerPos, fingerAt, onScreen, tapRipple, touchDot } from "./lib/hand";
 
 /** ACT 1 · 第一遍副歌「他眼里的今天」(0 – 16.96) · 重新设计版.
@@ -14,14 +15,11 @@ import { FingerKey, FingerPos, fingerAt, onScreen, tapRipple, touchDot } from ".
  *  wears the cover's X face.
  *  (用户 asked for better 2 s / 5 s retention; three opening shots in front of this one were tried — a 99+
  *   flash-forward, a midnight countdown, 「全班都在笑我」 — and then dropped: 「还是不要开头钩子了」)
- *  0     the first frame is the premise: his face in a party hat and the one candle (under the hook text) → ease
- *        back to the room; his eyes slide to the phone on the desk and back; a sigh. Outside the window, far below:
- *        a few phone lights and a pink banner (彩蛋 — they are already waiting) → whip into his phone
- *  2.35  his phone: wake (2.61), pull to refresh (3.14) — still 0 条新消息, ✈ top right
- *  4.44  the class group: last message 10:12; he scrolls, nothing — but there's a grey line in the history,
- *        「阿杰 撤回了一条消息」, pulsing yellow once he's back at the bottom (彩蛋: A-Jie nearly gave it away
- *        here too — a new question at 5–6 s)
- *  6.79  side button: the screen goes black → push toward his reflection
+ *  0 – 8.09  the three opening shots live in lib/opening.ts (用户定的结构：主角自己在家过生日 → 俯拍桌面 →
+ *        手机 0 条消息 → 回忆; the class-group chat and its 「阿杰 撤回了一条消息」 were cut): his birthday alone
+ *        with a party horn (0) → a whip-tilt down to the desk from above (1.83) → the screen wakes (2.61) and the
+ *        camera pushes into the phone lying face up (3.40): still 0 条新消息, 23:58 → 23:59 → the side button
+ *        (6.79), the black glass, his reflection
  *  8.09  the cut into the memory, like an old screen: the picture breaks into flickering vertical lines and a jitter;
  *        under them (8.35) his grey reflection dissolves into the same face, same size, same place — this morning,
  *        in colour (a match cut: it is his memory) — and the lines thin out
@@ -41,12 +39,6 @@ import { FingerKey, FingerPos, fingerAt, onScreen, tapRipple, touchDot } from ".
  *        sure it's at him. A-Jie's phone: 惊喜策划群（不含寿星）, pink frosting on its case
  *  14.87 how it feels to him: they loom in from the edges, the room goes dark, 哈哈哈, tears → slam → 哈 */
 const T0 = 0;
-const LOCK = beatAt(4); // 2.35
-const WAKE = beatAt(4.5); // 2.61
-const PULL = beatAt(5.5); // 3.14
-const NUDGE = beatAt(7); // 3.92
-const CHAT = beatAt(8); // 4.44
-const OFF = beatAt(12.5); // 6.79
 const REW = beatAt(15); // 8.09 the old-screen cut into the memory (two beats of vertical lines)
 const MEM = beatAt(16); // 8.61
 const NOTICE = beatAt(17); // 9.14
@@ -57,305 +49,9 @@ const END = beatAt(32); // 16.96
 /** saturation of his world before the twist */
 const GREY = 0.38;
 
-// ---------------------------------------------------------------- 0 – 2.35 the candle
-function shotCandle(ctx: Ctx, abs: number) {
-  // The first frame is the whole premise in one picture: his face (party hat, big, under the hook text) and the one
-  // candle lit in front of him. (It used to open on the flame alone, huge, with half his face cut off at the edge.)
-  // Then the camera eases back to the room — the phone face-up on the desk, the window (彩蛋: lights and a pink banner
-  // far below) — while his eyes slide from the candle to the phone and back: nothing. A sigh, and the whip into it.
-  const k = easeInOut(phase(abs, 0.3, 1.7));
-  const whip = easeIn(phase(abs, LOCK - 0.3, LOCK));
-  const zoom = 1.6 + (1.04 - 1.6) * k + whip * 1.6;
-  const cx = 495 + 45 * k + whip * 300,
-    cy = 792 + 108 * k + whip * 300;
-  const [hx, hy, hr] = handheld(abs, 4 + 1 * k * (1 - whip), 1);
-  const glance = smooth(phase(abs, 0.8, 0.95)) * (1 - smooth(phase(abs, 1.5, 1.65))); // over to the phone
-  const sigh = smooth(phase(abs, 1.65, 1.95));
-  const kid = {
-    eyes: (abs > 1.72 && abs < 1.84 ? "shut" : "sleepy") as "shut" | "sleepy",
-    look: lerp2([-0.55, 0.7], [0.8, 0.75], glance),
-    headY: Math.sin(abs * 1.6) * 3 + 8 * sigh,
-  };
-  const shot = (c: Ctx, layer: "scene" | "flame") => {
-    c.save();
-    camera(c, cx, cy, zoom, hr, hx, hy);
-    birthdayDesk(c, abs, { lit: 1, kid, layer, clue: 1 });
-    c.restore();
-  };
-  const draw = (c: Ctx) => {
-    grade(c, GREY, (g) => shot(g, "scene"));
-    shot(c, "flame");
-  };
-  const blurPx = 14 * Math.sin(Math.PI * whip);
-  if (blurPx > 0.6) filtered(ctx, `blur(${blurPx.toFixed(1)}px)`, draw, "whip");
-  else draw(ctx);
-}
-
-// ---------------------------------------------------------------- 2.35 – 4.44 his phone
-// right thumb [time, screen x, screen y, touch]: tap to wake, pull down to refresh, then swipe up into WeChat
-const LOCK_FINGER: FingerKey[] = [
-  [LOCK, 450, 960, 0.2],
-  [WAKE - 0.16, 405, 810, 0],
-  [WAKE - 0.04, 390, 780, 1],
-  [WAKE + 0.1, 390, 780, 1],
-  [WAKE + 0.26, 450, 960, 0.2],
-  [PULL - 0.22, 440, 320, 0],
-  [PULL - 0.1, 430, 300, 1],
-  [PULL + 0.4, 430, 410, 1],
-  [PULL + 0.46, 430, 410, 1],
-  [PULL + 0.64, 450, 960, 0.2],
-  [CHAT - 0.36, 450, 960, 0.2],
-  [CHAT - 0.24, 300, 1190, 0],
-  [CHAT - 0.16, 300, 1180, 1],
-  [CHAT, 300, 700, 1],
-];
-
-// 用户: the hands holding the phone looked odd → just the phone, drifting a little in his hold, the side buttons on
-// its frame, and a "show touches" dot where his thumb is (fingerAt keys, screen coordinates).
-const PS = 0.88, // phone scale: chat text ≈ 33px
-  PY = 860; // phone centre: the status bar (✈) clears the title pill; the 10:12 message stays above the lyrics
-
-// (phoneButtons / glassGlare live in lib/phone.ts — act5 and act6 use them too)
-
-function shotLock(ctx: Ctx, abs: number) {
-  // the whip lands: the phone comes in from the lower right (the way the whip was going), its blur clearing
-  const land = easeOut(phase(abs, LOCK, LOCK + 0.32));
-  const wake = smooth(phase(abs, WAKE, WAKE + 0.22));
-  const pull = 110 * smooth(phase(abs, PULL - 0.1, PULL + 0.38)) * (1 - smooth(phase(abs, PULL + 0.44, PULL + 0.8)));
-  const spinning = abs > PULL + 0.05 && abs < PULL + 0.85;
-  const nudge = abs > NUDGE ? Math.sin((abs - NUDGE) * 40) * 14 * Math.exp(-(abs - NUDGE) * 6) : 0;
-  const unlock = easeIn(phase(abs, CHAT - 0.16, CHAT));
-  // after the refresh the camera leans in on "0 条新消息", then lets go as he shakes the phone
-  const zero = easeInOut(phase(abs, PULL + 0.45, NUDGE)) * (1 - easeInOut(phase(abs, NUDGE + 0.1, CHAT)));
-  const [hx, hy, hr] = handheld(abs, 4, 2);
-  const s = PS;
-  const cx = 540 + 170 * (1 - land) + nudge + hx,
-    cy = PY + 170 * (1 - land) + hy,
-    rot = -0.02 - 0.06 * (1 - land) + hr + nudge * 0.002;
-  const tap = fingerAt(abs, LOCK_FINGER);
-  const draw = (ctx: Ctx) => grade(ctx, GREY, (c) => {
-    fillBg(c, "#20160f");
-    glow(c, 120, 1100, 900, "rgba(255,160,70,0.3)");
-    bokeh(c, abs, 12, 101, 0.55, ["255,190,110", "255,160,90", "200,170,255"]);
-    c.save();
-    // (and sinks a little as it leans in, so the status bar never goes up under the title pill)
-    camera(c, 540, PY + (568 - SH / 2) * s, 1 + 0.12 * zero, 0, 0, 70 * zero);
-    phoneButtons(c, cx, cy, s, rot);
-    phone(c, cx, cy, s, rot, (p) => {
-      p.save();
-      p.translate(0, pull - unlock * SH);
-      lockScreen(p, { time: "23:58", airplane: true, battery: 0.21 }, { note: "0 条新消息", noteAlpha: smooth(phase(abs, WAKE + 0.3, WAKE + 0.55)) });
-      p.restore();
-      if (spinning) {
-        p.save();
-        p.translate(SW / 2, 70 + pull * 0.6);
-        p.rotate(abs * 10);
-        p.strokeStyle = "#fff";
-        p.lineWidth = 5;
-        p.beginPath();
-        p.arc(0, 0, 18, 0, Math.PI * 1.5);
-        p.stroke();
-        p.restore();
-      }
-      if (unlock > 0) {
-        // WeChat coming up from under the lock screen
-        p.save();
-        p.translate(0, SH * (1 - unlock));
-        chatScreen(p, { time: "23:58", airplane: true }, "高二(3)班 (46)", CHAT_MSGS, "", false);
-        p.restore();
-      }
-      p.fillStyle = `rgba(0,0,0,${0.82 * (1 - wake)})`;
-      p.fillRect(0, 0, SW, SH);
-      glassGlare(p, hx);
-      touchDot(p, tap);
-    });
-    const [rx, ry] = onScreen(cx, cy, s, 390, 780);
-    tapRipple(c, rx, ry, phase(abs, WAKE, WAKE + 0.45), 1.2);
-    c.restore();
-  });
-  const blurPx = 12 * (1 - land);
-  if (blurPx > 0.6) filtered(ctx, `blur(${blurPx.toFixed(1)}px)`, draw, "whipIn");
-  else draw(ctx);
-}
-
-// ---------------------------------------------------------------- 4.44 – 8.61 the class group → screen off → the reflection
-const CHAT_MSGS: Msg[] = [
-  { from: "班长", text: "数学作业记得交", avatar: CAST.monitor, time: "前天 21:10" },
-  { from: "小雨", text: "收到", avatar: CAST.yu },
-  { from: "阿杰", text: "明天都在吗？", avatar: CAST.jie },
-  { from: "大刘", text: "收到收到", avatar: CAST.a },
-  { from: "阿杰", text: "明天都早点来！！", avatar: CAST.jie, time: "昨天 22:30" },
-  { from: "班长", text: "收到收到", avatar: CAST.monitor },
-  { from: "班长", text: "明天记得交数学作业", avatar: CAST.monitor, time: "10:12" },
-  // 彩蛋: A-Jie nearly gave it away in the group too (his thing — the slip in class)
-  { text: "阿杰 撤回了一条消息", system: true },
-  { from: "大刘", text: "收到", avatar: CAST.a },
-];
-/** where the 「撤回」 line sits in the chat (screen units, at scroll 0) and when it pulses */
-const RECALL_Y = 942;
-const RECALL_AT = CHAT + 1.62; // 6.06, once he's flicked back to the newest messages
-// The list scrolls like a real phone: while the thumb is down the messages move exactly with it; let go while moving
-// and the list keeps sliding and slows down by itself (momentum, exponential decay); flick back to the newest
-// message and it overshoots past the end, stretches (rubber band) and springs back. Closed-form, so it is a pure
-// function of time: drag 1 = p² (accelerating, lifted at speed), momentum s = v·τ·(1−e^(−t/τ)), overshoot = a
-// critically damped spring launched with the speed it hit the end with (−v·t·e^(−kt)).
-const T_DOWN = CHAT + 0.3; // 4.74 thumb down
-const T_REL1 = T_DOWN + 0.42; // 5.16 lifted while still moving → the list slides on into yesterday's messages
-const D1 = 180,
-  TAU1 = 0.18,
-  V1 = (2 * D1) / (T_REL1 - T_DOWN);
-const T_FLICK = CHAT + 1.3; // 5.74 the flick back up
-const FLICK_T = 0.16,
-  D2 = 150,
-  TAU2 = 0.22,
-  SPRING = 8,
-  V2 = (2 * D2) / FLICK_T;
-
-function chatScroll(abs: number): number {
-  if (abs < T_DOWN) return 0;
-  if (abs < T_REL1) return D1 * ((abs - T_DOWN) / (T_REL1 - T_DOWN)) ** 2;
-  const coast = (t: number) => D1 + V1 * TAU1 * (1 - Math.exp(-(t - T_REL1) / TAU1));
-  if (abs < T_FLICK) return coast(abs);
-  const s0 = coast(T_FLICK);
-  if (abs < T_FLICK + FLICK_T) return s0 - D2 * ((abs - T_FLICK) / FLICK_T) ** 2;
-  const s1 = s0 - D2,
-    dt = abs - T_FLICK - FLICK_T;
-  // momentum until it reaches the newest message (scroll 0)
-  const hit = s1 < V2 * TAU2 ? -TAU2 * Math.log(1 - s1 / (V2 * TAU2)) : Infinity;
-  if (dt < hit) return s1 - V2 * TAU2 * (1 - Math.exp(-dt / TAU2));
-  // past the end: stretch and spring back
-  const vHit = V2 * Math.exp(-hit / TAU2),
-    t = dt - hit;
-  return -vHit * t * Math.exp(-SPRING * t);
-}
-
-function chatThumb(abs: number): FingerPos {
-  const s = chatScroll(abs);
-  if (abs < T_DOWN)
-    return fingerAt(abs, [
-      [CHAT, 300, 700, 1],
-      [CHAT + 0.1, 300, 670, 0.2],
-      [T_DOWN - 0.06, 300, 520, 0.2],
-      [T_DOWN, 300, 520, 1],
-    ])!;
-  if (abs < T_REL1) return { x: 300, y: 520 + s, touch: 1 };
-  if (abs < T_FLICK)
-    return fingerAt(abs, [
-      [T_REL1, 300, 520 + D1, 1],
-      [T_REL1 + 0.1, 306, 520 + D1 + 40, 0.2],
-      [T_FLICK - 0.12, 300, 900, 0.2],
-      [T_FLICK - 0.03, 300, 900, 1],
-    ])!;
-  const s0 = chatScroll(T_FLICK);
-  if (abs < T_FLICK + FLICK_T) return { x: 300, y: 900 - (s0 - s), touch: 1 };
-  const ry = 900 - D2;
-  return fingerAt(abs, [
-    [T_FLICK + FLICK_T, 300, ry, 1],
-    [T_FLICK + FLICK_T + 0.1, 300, ry - 60, 0.2],
-    [OFF - 0.3, 560, 430, 0.2],
-    [OFF - 0.04, 604, 380, 1],
-    [OFF + 0.14, 604, 380, 1],
-    [OFF + 0.4, 450, 960, 0.2],
-    [MEM, 450, 960, 0.2],
-  ])!;
-}
-
-/** The phone in the chat shot (and the dive into his reflection): steady while we read, the power key pressed at
- *  6.79 (the phone gives a little under it), then the dive toward his reflected eye in the black glass. */
-function chatPose(abs: number) {
-  // the push into his reflection starts as soon as the screen goes black (it used to hold still for half a second)
-  const dive = 0.45 * easeInOut(phase(abs, OFF + 0.08, REW));
-  const press = Math.sin(Math.PI * phase(abs, OFF - 0.06, OFF + 0.14));
-  const [hx, hy, hr] = handheld(abs, 2.5 * (1 - dive / 0.45), 2);
-  const s = PS,
-    cx = 540 + hx - 6 * press,
-    cy = PY + hy,
-    rot = -0.02 + hr - 0.012 * press;
-  // his reflected eye in the black glass (reflection drawn at screen 300, 560 × 1.05)
-  const ex = cx + (250 - SW / 2) * s,
-    ey = cy + (598 - SH / 2) * s;
-  return { dive, press, hx, s, cx, cy, rot, ex, ey };
-}
-
-function shotChat(ctx: Ctx, abs: number) {
-  // drag down to look at older messages (yesterday's), flick back: nothing new since 10:12
-  const scroll = chatScroll(abs);
-  const off = abs >= OFF;
-  const { dive, press, hx, s, cx, cy, rot, ex, ey } = chatPose(abs);
-  grade(ctx, GREY, (c) => {
-    fillBg(c, "#20160f");
-    glow(c, 120, 1100, 900, "rgba(255,160,70,0.3)");
-    bokeh(c, abs, 12, 101, 0.55, ["255,190,110", "255,160,90", "200,170,255"]);
-    c.save();
-    camera(c, ex, ey, 1 + 3.6 * dive, 0, (540 - ex) * dive, (960 - ey) * dive);
-    phoneButtons(c, cx, cy, s, rot, press);
-    phone(c, cx, cy, s, rot, (p) => {
-      if (!off) {
-        chatScreen(p, { time: "23:58", airplane: true }, "高二(3)班 (46)", CHAT_MSGS, "", false, { scroll });
-        // the clue gets the film's yellow pulse (the camera doesn't move to it)
-        const pu = phase(abs, RECALL_AT, RECALL_AT + 0.7);
-        if (pu > 0 && pu < 1) {
-          const w = 290 + 40 * pu;
-          p.save();
-          p.globalAlpha = Math.sin(Math.PI * pu);
-          p.strokeStyle = "#ffd84a";
-          p.lineWidth = 6;
-          rr(p, SW / 2 - w / 2, RECALL_Y + scroll - 30 - 10 * pu, w, 60 + 20 * pu, 14);
-          p.stroke();
-          glow(p, SW / 2, RECALL_Y + scroll, 200, "rgba(255,216,74,0.25)");
-          p.restore();
-        }
-        glassGlare(p, hx);
-        // his thumb on the glass (not once it heads for the power key on the side)
-        if (abs < OFF - 0.4) touchDot(p, chatThumb(abs));
-        return;
-      }
-      p.fillStyle = "#060608";
-      p.fillRect(0, 0, SW, SH);
-      // his face in the black glass, mirrored: a dim reflection — drawn solid, then darkened (not see-through, which
-      // read as a ghost). Soft (the glass is not a mirror), and it fades out below his chest: his arms go forward to
-      // the phone we are looking through, so no hands in it (they were clasped on nothing before)
-      filtered(
-        p,
-        "blur(1.6px)",
-        (r) => {
-          r.translate(SW, 0);
-          r.scale(-1, 1);
-          drawKid(r, SW - 300, 560, 1.05, { body: "bust", hat: true, eyes: blinkEyes(abs, 3, "sleepy"), look: [0, 0.3], arms: "down" });
-        },
-        "reflection",
-      );
-      p.fillStyle = `rgba(4,4,6,${(0.97 - 0.27 * smooth(phase(abs, OFF, OFF + 0.3))).toFixed(3)})`;
-      p.fillRect(0, 0, SW, SH);
-      const fade = p.createLinearGradient(0, 760, 0, 1060);
-      fade.addColorStop(0, "rgba(6,6,8,0)");
-      fade.addColorStop(1, "rgba(6,6,8,1)");
-      p.fillStyle = fade;
-      p.fillRect(0, 760, SW, SH - 760);
-      const g = p.createLinearGradient(0, 0, SW, SH);
-      g.addColorStop(0.18, "rgba(255,255,255,0)");
-      g.addColorStop(0.3, "rgba(255,255,255,0.07)");
-      g.addColorStop(0.42, "rgba(255,255,255,0)");
-      p.fillStyle = g;
-      p.fillRect(0, 0, SW, SH);
-    });
-    c.restore();
-  });
-}
-
 // ---------------------------------------------------------------- 8.09 – 8.61 the old-screen cut into the memory
 const CUT = REW + 0.26; // 8.35 his reflection dissolves into his face this morning
-/** Where his reflected face sits on screen in shotChat: [x, y, scale, rotation] (same maths as shotChat's camera,
- *  phone and mirrored drawKid at screen (300, 560) × 1.05), so the memory can start on exactly the same face. */
-function reflectionAt(abs: number): [number, number, number, number] {
-  const { dive, s, cx, cy, rot, ex, ey } = chatPose(abs);
-  const z = 1 + 3.6 * dive;
-  const lx = (300 - SW / 2) * s,
-    ly = (560 - SH / 2) * s;
-  const px = cx + lx * Math.cos(rot) - ly * Math.sin(rot),
-    py = cy + lx * Math.sin(rot) + ly * Math.cos(rot);
-  return [ex + (540 - ex) * dive + z * (px - ex), ey + (960 - ey) * dive + z * (py - ey), z * s * 1.05, rot];
-}
+// (where his reflected face sits on screen: lib/opening.ts phoneReflectionAt)
 
 /** An old screen's vertical lines: the present (his reflection) breaks up into flickering vertical scratches and a
  *  jitter; underneath them the grey reflection dissolves into the same face this morning, and the lines thin out
@@ -367,7 +63,7 @@ function shotOldScreen(ctx: Ctx, abs: number) {
   const mix = smooth(phase(abs, CUT - 0.06, CUT + 0.08));
   ctx.save();
   ctx.translate((hash(f * 1.9) - 0.5) * 7 * dens, (hash(f * 2.7) - 0.5) * 3 * dens);
-  if (mix < 1) shotChat(ctx, abs);
+  if (mix < 1) shotDeskPhone(ctx, abs);
   if (mix > 0) filtered(ctx, "none", (c) => oldFilm(c, abs, (cc) => corridorScene(cc, abs)), "xfade", mix);
   ctx.restore();
   // the vertical lines: dark and light, mostly thin, a few thick, jumping every frame — faint inside a circle in the
@@ -633,7 +329,7 @@ function corridorScene(c: Ctx, abs: number) {
   // drifts in on him for the hood
   const pull = easeInOut(phase(abs, CUT, 9.05));
   const drift = easeInOut(phase(abs, 9.9, HOOD));
-  const [x0, y0, s0, r0] = reflectionAt(CUT);
+  const [x0, y0, s0, r0] = phoneReflectionAt(CUT);
   const z = (s0 / KS + (1 - s0 / KS) * pull) * (1 + 0.06 * drift);
   const [hx, hy, hr] = handheld(abs, 4 * pull, 3);
   // (ends with him centred and his face the size it is in the hood shot, so the cut on "hide away" is seamless)
@@ -1190,10 +886,11 @@ function shotLaugh(ctx: Ctx, abs: number) {
 
 export function createScene(options: SceneOptions) {
   return designScene(options, T0, (ctx, abs) => {
-    if (abs < LOCK) shotCandle(ctx, abs);
-    else if (abs < CHAT) shotLock(ctx, abs);
-    else if (abs < REW) shotChat(ctx, abs);
+    if (abs < TILT) shotBirthday(ctx, abs);
+    else if (abs < REW) shotDeskPhone(ctx, abs);
     else if (abs < MEM) shotOldScreen(ctx, abs);
+    // night (光影): the flame and the lit screen bleed a soft glow into the dark
+    if (abs < CUT) bloom(ctx, 0.32);
     else if (abs < HOOD) shotCorridor(ctx, abs);
     else if (abs < LAUGH) shotHood(ctx, abs);
     else if (abs < END + 0.12) shotLaugh(ctx, abs);

@@ -160,6 +160,26 @@ const sounds: Record<string, () => StereoPcm> = {
     }, 0.32);
     return pcm;
   },
+  // the party horn he blows alone at 0.30 (act1 / lib/opening.ts): a buzzy paper reed with a flutter, cut short, then
+  // a weak little deflating bleat as it sags back (phase integrated, so the pitch bends cleanly)
+  horn: () => {
+    const pcm = buffer(1.1);
+    let ph = 0;
+    add(pcm, 0, 0.44, (t) => {
+      const env = Math.min(1, t / 0.025) * (t < 0.3 ? 1 : Math.max(0, 1 - (t - 0.3) / 0.14));
+      const f = 400 + 16 * Math.sin(TAU * 8 * t) - 40 * Math.max(0, t - 0.24);
+      ph += (TAU * f) / SR;
+      const reed = Math.tanh(2.4 * Math.sin(ph)) + 0.3 * Math.sin(2 * ph) + 0.18 * Math.sin(3 * ph);
+      return env * reed * (0.82 + 0.18 * Math.sin(TAU * 33 * t));
+    }, 0.14);
+    let ph2 = 0;
+    add(pcm, 0.5, 0.55, (t) => {
+      const env = Math.min(1, t / 0.05) * Math.exp(-t * 4.5);
+      ph2 += (TAU * (310 - 150 * t)) / SR;
+      return env * Math.tanh(1.8 * Math.sin(ph2)) * (0.8 + 0.2 * Math.sin(TAU * 21 * t));
+    }, 0.07);
+    return pcm;
+  },
   // a light tap on the glass: the double tap of the like prompt at the end
   tap: () => {
     const pcm = buffer(0.2);

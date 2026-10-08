@@ -89,6 +89,13 @@
       "module": "sfx",
       "trackId": "bell",
       "engine": "custom"
+    },
+    {
+      "id": "fx_horn",
+      "kind": "generated",
+      "module": "sfx",
+      "trackId": "horn",
+      "engine": "custom"
     }
   ],
   "tracks": [
@@ -166,6 +173,21 @@
         {
           "bus": "room",
           "gain": 0.5
+        }
+      ]
+    },
+    {
+      "id": "sfxSoft",
+      "name": "音效（不压歌曲）",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": [
+        {
+          "bus": "room",
+          "gain": 0.2
         }
       ]
     }
@@ -645,6 +667,26 @@
       "preservePitch": false,
       "gain": 0.7,
       "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "c_horn",
+      "track": "sfxSoft",
+      "source": "fx_horn",
+      "name": "自己吹派对喇叭",
+      "start": 0.3,
+      "duration": 1.1,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.9,
+      "pan": 0.15,
       "muted": false,
       "fadeIn": 0,
       "fadeOut": 0,

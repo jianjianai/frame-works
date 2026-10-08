@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { BEAT, C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, camera, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, inkLine, lerp2, oldFilm, paint, poly, oval, pulse, rbox, rr, shaded, shake, text, vgrad } from "./lib/draw";
+import { BEAT, C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, camera, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, inkLine, lerp2, oldFilm, paint, poly, oval, pulse, rbox, rr, shaded, shake, text, vgrad } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
 import { replayCorridor, replaySlip } from "./act1";
@@ -1096,5 +1096,7 @@ export function createScene(options: SceneOptions) {
     else if (abs < T3) shotFlood(ctx, abs);
     else if (abs < T4) shotWindow(ctx, abs);
     else shotParty(ctx, abs);
+    // night (光影): torches, screens, the candles bleed a soft glow into the dark (not over the daylight replays)
+    if (abs < R1 || abs >= REAL) bloom(ctx, abs < T4 ? 0.3 : 0.22);
   });
 }

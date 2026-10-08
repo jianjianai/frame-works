@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, backOut, beatAt, camera, designScene, easeInOut, fillBg, filtered, flash, glow, handheld, text, writeOn } from "./lib/draw";
+import { C, Ctx, F, H, W, backOut, beatAt, bloom, camera, designScene, easeInOut, fillBg, filtered, flash, glow, handheld, text, writeOn } from "./lib/draw";
 import { CAST, Person, drawPerson } from "./lib/people";
 import { Msg, SW, chatScreen, glassGlare, phone, phoneButtons } from "./lib/phone";
 import { FingerKey, fingerAt, touchDot } from "./lib/hand";
@@ -138,5 +138,8 @@ function shotThanks(ctx: Ctx, abs: number) {
 }
 
 export function createScene(options: SceneOptions) {
-  return designScene(options, T0, (ctx, abs) => shotThanks(ctx, abs));
+  return designScene(options, T0, (ctx, abs) => {
+    shotThanks(ctx, abs);
+    bloom(ctx, 0.22); // 光影: the party lights and the screen glow softly
+  });
 }

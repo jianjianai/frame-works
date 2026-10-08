@@ -1,5 +1,5 @@
 import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, blob, curve, fillBg, glow, hash, inkLine, jit, line, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
+import { C, Ctx, F, H, Pt, W, blob, bokehDisc, curve, fillBg, flicker, glow, hash, inkLine, jit, line, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
 
 /** Sets. 重置版: bedroom, desk, corridor, classroom and the night street were redrawn with more detail — props that
  *  say something (the calendar with today circled), light that has a source (moon, window shafts, lamps, the candle),
@@ -39,6 +39,12 @@ export function bedroom(ctx: Ctx, abs: number, moon = 1, clue = 0) {
     ctx.fillStyle = "#fff";
     ctx.fillRect(x, y, 3 + big, 3 + big);
   }
+  // a few faint far stars between the bright ones
+  for (let i = 0; i < 26; i++) {
+    ctx.globalAlpha = 0.25 + 0.3 * Math.abs(Math.sin(abs * 0.9 + i * 2.3));
+    ctx.fillStyle = "#dfe6ff";
+    ctx.fillRect(wx + 6 + hash(i * 4.9 + 1) * (ww - 12), wy + 6 + hash(i * 8.3 + 2) * (wh * 0.62), 1.6, 1.6);
+  }
   ctx.globalAlpha = 1;
   glow(ctx, 870, 390, 190, "rgba(255,244,200,0.38)", moon);
   oval(ctx, 870, 390, 46, 46, 12, 1.2);
@@ -46,6 +52,18 @@ export function bedroom(ctx: Ctx, abs: number, moon = 1, clue = 0) {
   for (const [cx, cy, r] of [[856, 378, 9], [884, 402, 6], [872, 372, 4]] as [number, number, number][]) {
     oval(ctx, cx, cy, r, r, 18 + r, 0.4);
     paint(ctx, "rgba(220,200,140,0.55)", null);
+  }
+  // thin clouds drifting slowly across the moon, their undersides lit
+  for (const [cx, cy, w, k] of [[760, 352, 120, 0], [915, 452, 105, 1], [700, 520, 90, 2]] as [number, number, number, number][]) {
+    const ox = ((abs * 9 + k * 37) % 70) - 35;
+    const pts: Pt[] = [[cx - w + ox, cy + 6], [cx - w * 0.55 + ox, cy - 16], [cx - w * 0.1 + ox, cy - 28], [cx + w * 0.4 + ox, cy - 18], [cx + w + ox, cy + 4], [cx + w * 0.3 + ox, cy + 15], [cx - w * 0.4 + ox, cy + 16]];
+    blob(ctx, pts, 3140 + k, 1.4);
+    paint(ctx, "rgba(52,62,120,0.62)", null);
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    curve(ctx, [[cx - w * 0.7 + ox, cy + 14], [cx + ox, cy + 18], [cx + w * 0.7 + ox, cy + 10]], 3150 + k, 1);
+    paint(ctx, null, "rgba(190,200,255,0.8)", 3);
+    ctx.restore();
   }
   const roofs: Pt[] = [
     [wx - 10, wy + wh + 10], [wx - 10, wy + 300], [wx + 50, wy + 300], [wx + 50, wy + 270], [wx + 110, wy + 270], [wx + 110, wy + 318],
@@ -119,23 +137,9 @@ export function bedroom(ctx: Ctx, abs: number, moon = 1, clue = 0) {
     blob(ctx, [[292, 206], [292 + (k - 1.5) * 26, 150 - (k % 2) * 20], [292 + (k - 1.5) * 34, 176]], 28 + k, 1);
     paint(ctx, "#5f9a58", C.ink, 3.5);
   }
-  // poster, pinned and a little crooked
-  ctx.save();
-  ctx.translate(225, 480);
-  ctx.rotate(-0.03);
-  shaded(ctx, () => rbox(ctx, -115, -150, 230, 300, 6, 15, 2), "#3a2f55", () => {
-    ctx.fillStyle = "rgba(255,255,255,0.05)";
-    ctx.fillRect(-115, -150, 230, 120);
-  }, C.ink, 5);
-  line(ctx, -85, -100, 75, -100, 16);
-  paint(ctx, null, "#8d7bb8", 6);
-  oval(ctx, 0, 20, 60, 60, 17, 2);
-  paint(ctx, null, "#8d7bb8", 6);
-  for (const tx of [-100, 100]) {
-    poly(ctx, [[tx - 14, -158], [tx + 14, -154], [tx + 12, -140], [tx - 12, -144]], 29 + tx, 0.6);
-    paint(ctx, "rgba(240,235,210,0.85)", null);
-  }
-  ctx.restore();
+  // 美感: a string of fairy lights across the wall behind him, three photos pegged to it (it replaced a poster of
+  // a plain circle) — close on his face they become soft discs of light behind his head
+  fairyString(ctx);
   // the calendar: today (the 5th) circled in red
   ctx.save();
   ctx.translate(150, 775);
@@ -149,6 +153,85 @@ export function bedroom(ctx: Ctx, abs: number, moon = 1, clue = 0) {
   for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) ctx.fillRect(-58 + c * 25, -28 + r * 28, 12, 10);
   oval(ctx, -58 + 25 * 4 + 6, -28 + 5, 17, 15, 31, 0.8);
   paint(ctx, null, C.red, 4);
+  ctx.restore();
+}
+
+// ---------------------------------------------------------------- his wall: fairy lights and photos
+const FAIRY_A: Pt = [-30, 490],
+  FAIRY_B: Pt = [630, 500],
+  FAIRY_SAG = 110;
+const fairyAt = (t: number): Pt => [
+  FAIRY_A[0] + (FAIRY_B[0] - FAIRY_A[0]) * t,
+  FAIRY_A[1] + (FAIRY_B[1] - FAIRY_A[1]) * t + FAIRY_SAG * 4 * t * (1 - t),
+];
+/** the fairy lights' bulbs (centre of each glass bulb) */
+export const FAIRY_BULBS: Pt[] = Array.from({ length: 13 }, (_, i) => {
+  const [x, y] = fairyAt((i + 0.5) / 13);
+  return [x, y + 15];
+});
+function fairyString(ctx: Ctx) {
+  inkLine(ctx, Array.from({ length: 21 }, (_, i) => fairyAt(i / 20)), 3101, 3, "#23242e");
+  // three photos pegged to the string (a sunny day, a sunset over a hill, a tree)
+  const photos: [number, number, string][] = [[0.12, -0.09, "#8fc6e8"], [0.3, 0.06, "#f0a982"], [0.5, -0.05, "#a9d4ee"]];
+  photos.forEach(([t, rot, sky], k) => {
+    const [px, py] = fairyAt(t);
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(rot);
+    shaded(ctx, () => rbox(ctx, -38, 2, 76, 92, 3, 3110 + k, 0.6), "#efe6d2", () => {
+      ctx.fillStyle = "rgba(60,40,20,0.12)";
+      ctx.fillRect(10, 2, 30, 92);
+    }, C.ink, 3);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-30, 10, 60, 58);
+    ctx.clip();
+    ctx.fillStyle = sky;
+    ctx.fillRect(-30, 10, 60, 58);
+    if (k === 0) {
+      oval(ctx, 12, 26, 9, 9, 3120, 0.3);
+      paint(ctx, "#ffd84a", null);
+      ctx.fillStyle = "#6fae5c";
+      ctx.fillRect(-30, 54, 60, 14);
+    } else if (k === 1) {
+      oval(ctx, -4, 50, 13, 13, 3121, 0.3);
+      paint(ctx, "#ffe08a", null);
+      oval(ctx, 0, 76, 46, 18, 3122, 0.6);
+      paint(ctx, "#5b4a6e", null);
+    } else {
+      ctx.fillStyle = "#7a5a3a";
+      ctx.fillRect(-3, 40, 6, 28);
+      oval(ctx, 0, 34, 18, 16, 3123, 0.8);
+      paint(ctx, "#5f9a58", null);
+    }
+    ctx.restore();
+    ctx.strokeStyle = C.ink;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(-30, 10, 60, 58);
+    // the wooden peg
+    rbox(ctx, -5, -8, 10, 20, 2, 3125 + k, 0.3);
+    paint(ctx, "#c9a36a", C.ink, 2);
+    ctx.restore();
+  });
+  // the bulbs on their sockets
+  FAIRY_BULBS.forEach(([bx, by], i) => {
+    ctx.fillStyle = "#23242e";
+    ctx.fillRect(bx - 4, by - 19, 8, 9);
+    oval(ctx, bx, by, 7, 10, 3130 + i, 0.3);
+    paint(ctx, "#fff1cf", C.ink, 2);
+  });
+}
+/** The fairy lights' light, for after the room has been darkened (they are lights): a glow round each bulb, gently
+ *  breathing; `blur` (the depth of field, design px) turns them into soft discs of light. */
+export function fairyGlow(ctx: Ctx, abs: number, blur = 0, a = 1) {
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  FAIRY_BULBS.forEach(([bx, by], i) => {
+    const tw = a * (0.82 + 0.18 * Math.sin(abs * 1.7 + i * 2.3));
+    glow(ctx, bx, by, 30, "rgba(255,228,180,0.6)", tw);
+    glow(ctx, bx, by, 95, "rgba(255,215,160,0.1)", tw);
+    if (blur > 0.3) bokehDisc(ctx, bx, by, 9 + blur * 6, "255,228,182", 0.2 * tw);
+  });
   ctx.restore();
 }
 
@@ -253,6 +336,61 @@ export function cupcake(ctx: Ctx, x: number, y: number, s: number, abs: number, 
     }
   }
   ctx.restore();
+}
+
+/** A party horn (吹龙) held in the lips at (x, y): `u` 0 = rolled up, 1 = blown all the way out; `droop` 0..1 sags it
+ *  (the sad deflate). Drawn in chunks so the coil overlaps itself with its outline. */
+export function partyHorn(c: Ctx, x: number, y: number, u: number, droop: number, abs: number, dir = 0.3) {
+  const L = 200,
+    WD = 17,
+    ds = 4,
+    r0 = 15;
+  const out = Math.max(1, L * u);
+  const pts: Pt[] = [];
+  let ang = dir,
+    px = x + Math.cos(dir) * 24,
+    py = y + Math.sin(dir) * 24;
+  for (let s = 0; s <= L; s += ds) {
+    pts.push([px, py]);
+    let k: number;
+    if (s < out) k = droop * 0.014 * Math.pow(s / out, 0.8) + 0.002 * u * Math.sin(abs * 11 + s * 0.05);
+    else k = 1 / (r0 * (1 - 0.72 * ((s - out) / Math.max(1, L - out))));
+    ang += k * ds;
+    px += Math.cos(ang) * ds;
+    py += Math.sin(ang) * ds;
+  }
+  c.save();
+  c.lineCap = "round";
+  c.lineJoin = "round";
+  const CH = 6;
+  for (let i = 0; i < pts.length - 1; i += CH) {
+    const seg = pts.slice(i, Math.min(pts.length, i + CH + 1));
+    const path = () => {
+      c.beginPath();
+      seg.forEach(([a, b], j) => (j ? c.lineTo(a, b) : c.moveTo(a, b)));
+    };
+    path();
+    c.strokeStyle = C.ink;
+    c.lineWidth = WD + 7;
+    c.stroke();
+    path();
+    c.strokeStyle = "#ff8fb8";
+    c.lineWidth = WD;
+    c.stroke();
+    path();
+    c.setLineDash([9, 13]);
+    c.lineDashOffset = -i * ds;
+    c.strokeStyle = "#ffd84a";
+    c.lineWidth = WD - 2;
+    c.stroke();
+    c.setLineDash([]);
+  }
+  // the mouthpiece in his lips
+  c.translate(x, y);
+  c.rotate(dir);
+  rbox(c, -6, -10, 32, 20, 5, 3201, 0.4);
+  paint(c, "#f4f1ea", C.ink, 3.5);
+  c.restore();
 }
 
 /** Darkness everywhere except a pool of warm light. */
@@ -774,6 +912,74 @@ export function bokeh(ctx: Ctx, abs: number, n: number, seed: number, alpha = 1,
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.restore();
+}
+
+/** Behind the phone in his hands at the desk: his room, far out of focus — near-black blue, the candle a big warm
+ *  disc low on the left (the only warm thing in his room) with its haze, the moonlit window a cold blur high on the
+ *  right, a few small lights. Draw it OUTSIDE grade() (it is already dim and nearly colourless but for the flame);
+ *  `candle` 0..1, `drift` slides it a little with his hand (parallax). */
+export function roomBokeh(ctx: Ctx, abs: number, candle = 1, drift = 0) {
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#0d1026"], [0.5, "#0a0c1c"], [1, "#05060b"]]));
+  const fl = flicker(abs);
+  const dx = drift * 0.6;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  // the window and the moon
+  glow(ctx, 940 + dx, 280, 620, "rgba(90,110,200,0.16)");
+  bokehDisc(ctx, 965 + dx, 250, 125, "215,225,255", 0.2);
+  bokehDisc(ctx, 820 + dx, 470, 46, "170,185,255", 0.12);
+  // the candle and its haze
+  if (candle > 0.01) {
+    glow(ctx, 110 + dx, 1520, 900, `rgba(255,140,50,${(0.2 * fl * candle).toFixed(3)})`);
+    bokehDisc(ctx, 150 + dx, 1470, 215, "255,165,75", 0.36 * fl * candle);
+    bokehDisc(ctx, 380 + dx, 1730, 74, "255,190,110", 0.2 * candle);
+    bokehDisc(ctx, 40 + dx, 1170, 58, "255,175,95", 0.14 * candle);
+  }
+  // the fairy lights on his wall, a sagging arc of small soft discs
+  for (let i = 0; i < 9; i++) {
+    const t = i / 8;
+    const x = -40 + t * 760 + dx * 1.2,
+      y = 600 + 150 * 4 * t * (1 - t) + Math.sin(abs * 0.5 + i) * 3;
+    bokehDisc(ctx, x, y, 34 + 6 * hash(i * 2.2), "255,226,182", 0.16 * (0.8 + 0.2 * Math.sin(abs * 1.7 + i * 2.3)));
+  }
+  // small far lights (the town through the window, the phone's own glow on the wall)
+  for (let i = 0; i < 7; i++) {
+    const x = 560 + hash(i * 3.1) * 520 + dx + Math.sin(abs * 0.3 + i) * 8,
+      y = 120 + hash(i * 7.7) * 700 + Math.cos(abs * 0.25 + i) * 6;
+    bokehDisc(ctx, x, y, 22 + hash(i * 1.9) * 40, i % 3 ? "160,175,240" : "255,205,150", 0.08 + 0.06 * hash(i * 4.4));
+  }
+  ctx.restore();
+}
+/** Behind the phone on the walk home: the street far out of focus — deep blue night, the lamp he has just stopped
+ *  under as a huge soft disc high on the right, the lamps further down the street smaller and dimmer, a shop window's
+ *  cold light low on the right. Draw it OUTSIDE grade(): its colours are already his — a cold blue night, lamps a
+ *  colourless white (grey discs inside the grade read as dust, not lights). */
+export function streetBokeh(ctx: Ctx, abs: number, drift = 0) {
+  fillBg(ctx, vgrad(ctx, 0, H, [[0, "#0c1028"], [0.55, "#0d1023"], [1, "#06070e"]]));
+  const dx = drift * 0.6;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  glow(ctx, 880 + dx, 150, 760, "rgba(200,210,240,0.15)");
+  bokehDisc(ctx, 890 + dx, 170, 240, "236,236,232", 0.3);
+  const lamps: [number, number, number, number][] = [[150, 380, 130, 0.24], [320, 560, 84, 0.2], [440, 660, 58, 0.17], [520, 720, 40, 0.14], [70, 1060, 150, 0.12]];
+  for (const [x, y, r, a] of lamps) bokehDisc(ctx, x + dx + Math.sin(abs * 0.4 + x) * 6, y, r, "232,232,228", a);
+  glow(ctx, 1000 + dx, 1520, 560, "rgba(140,170,255,0.13)");
+  for (let i = 0; i < 6; i++) {
+    const x = 720 + hash(i * 2.9) * 380 + dx,
+      y = 1250 + hash(i * 6.1) * 520;
+    bokehDisc(ctx, x, y, 30 + hash(i * 3.7) * 50, i % 2 ? "150,175,255" : "220,230,255", 0.07 + 0.06 * hash(i * 8.3));
+  }
+  ctx.restore();
+}
+/** The cold light a lit phone screen throws into the air around it (call before drawing the phone, same centre). */
+export function screenSpill(ctx: Ctx, cx: number, cy: number, s: number, a: number) {
+  if (a <= 0.01) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.translate(cx, cy);
+  ctx.scale(1, 1.5);
+  glow(ctx, 0, 0, 640 * s, "rgba(150,170,240,0.14)", a);
   ctx.restore();
 }
 

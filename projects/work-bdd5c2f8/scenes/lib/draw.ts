@@ -498,10 +498,9 @@ export function card(ctx: Ctx, s: string, x: number, y: number, a: number, size 
 
 // ---------------------------------------------------------------- offscreen filter pass
 const offscreens = new Map<string, HTMLCanvasElement>();
-/** Draw `draw` into an offscreen copy of the canvas (same transform), then composite it back
- *  through a CSS filter, e.g. "blur(2px)" (depth of field) or "sepia(0.8)". `key` lets several passes keep
- *  their own buffer. */
-export function filtered(ctx: Ctx, filter: string, draw: (c: Ctx) => void, key = "a", alpha = 1) {
+/** A cleared offscreen copy of the canvas (same size) with ctx's transform, for multi-pass effects. `key` lets
+ *  several passes keep their own buffer (don't nest two passes with the same key). */
+export function buffer(ctx: Ctx, key: string): Ctx {
   const cv = ctx.canvas;
   let off = offscreens.get(key);
   if (!off || off.width !== cv.width || off.height !== cv.height) {
@@ -512,17 +511,240 @@ export function filtered(ctx: Ctx, filter: string, draw: (c: Ctx) => void, key =
   }
   const oc = off.getContext("2d")!;
   oc.setTransform(1, 0, 0, 1, 0, 0);
+  oc.globalAlpha = 1;
+  oc.globalCompositeOperation = "source-over";
+  oc.filter = "none";
   oc.clearRect(0, 0, off.width, off.height);
   oc.setTransform(ctx.getTransform());
+  return oc;
+}
+/** Lay a buffer back over ctx pixel for pixel. */
+export function blit(ctx: Ctx, src: Ctx, op: GlobalCompositeOperation = "source-over", alpha = 1, filter = "none") {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = op;
+  ctx.globalAlpha *= alpha;
+  ctx.filter = filter;
+  ctx.drawImage(src.canvas, 0, 0);
+  ctx.restore();
+}
+/** Draw `draw` into an offscreen copy of the canvas (same transform), then composite it back
+ *  through a CSS filter, e.g. "blur(2px)" (depth of field) or "sepia(0.8)". `key` lets several passes keep
+ *  their own buffer. */
+export function filtered(ctx: Ctx, filter: string, draw: (c: Ctx) => void, key = "a", alpha = 1, op: GlobalCompositeOperation = "source-over") {
+  const oc = buffer(ctx, key);
   oc.save();
   draw(oc);
   oc.restore();
+  blit(ctx, oc, op, alpha, filter);
+}
+
+// ---------------------------------------------------------------- light and shadow (重置版 · 光影)
+// 用户：光影和美感也是留存的关键，特别是开头。Light comes from somewhere: a key light that colours what it touches
+// (the candle, warm), the dark that swallows what it doesn't, a cold rim from behind (the moon), shadows thrown by
+// the figures, and glow/dust in the air. These work on any figure drawn with drawKid/drawPerson.
+/** Device pixels per design unit at ctx's transform (shifts and blurs that must follow the camera). */
+export function devScale(ctx: Ctx) {
+  const t = ctx.getTransform();
+  return Math.hypot(t.a, t.b);
+}
+/** A candle's flicker: about 1 ± 0.1, never periodic-looking. */
+export const flicker = (abs: number, seed = 0) =>
+  1 + 0.045 * Math.sin(abs * 23 + seed) + 0.03 * Math.sin(abs * 37.3 + seed * 2) + 0.025 * Math.sin(abs * 9.1 + seed * 3);
+/** A figure's alpha, for lighting it: `draw` once into its own buffer. Use the result before drawing another mask
+ *  with the same key. */
+export function figureMask(ctx: Ctx, draw: (c: Ctx) => void, key = "figure"): Ctx {
+  const m = buffer(ctx, "mask:" + key);
+  m.save();
+  draw(m);
+  m.restore();
+  return m;
+}
+/** erase `cut` (a path filled in design units: what stands in front of the figure, e.g. a desk) from a buffer */
+function cutOut(b: Ctx, cut?: (c: Ctx) => void) {
+  if (!cut) return;
+  b.save();
+  b.globalCompositeOperation = "destination-out";
+  b.fillStyle = "#000";
+  cut(b);
+  b.restore();
+}
+/** Light (or shade) on the figure only: `paint` fills in design units; the result is cut to the mask (minus `cut`)
+ *  and laid over with `op` ("screen" for a key light that tints, "lighter" for a glow, "source-over" for shade). */
+export function onFigure(ctx: Ctx, mask: Ctx, paint: (c: Ctx) => void, op: GlobalCompositeOperation = "source-over", alpha = 1, cut?: (c: Ctx) => void) {
+  if (alpha <= 0.005) return;
+  const b = buffer(ctx, "onFigure");
+  b.save();
+  paint(b);
+  b.restore();
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalCompositeOperation = "destination-in";
+  b.drawImage(mask.canvas, 0, 0);
+  b.restore();
+  cutOut(b, cut);
+  blit(ctx, b, op, alpha);
+}
+/** Rim light, the way a cel painter does it: a band of light just inside the ink outline, along the edges of a
+ *  figure that face a light. (ux, uy) points from the figure toward the light; `width` = the band, `ink` = the
+ *  outline it sits inside (design units). `cut` erases what stands in front of the figure. */
+export function rimLight(ctx: Ctx, mask: Ctx, ux: number, uy: number, width: number, color: string, alpha = 1, op: GlobalCompositeOperation = "lighter", ink = 7, cut?: (c: Ctx) => void, reach?: [number, number, number]) {
+  if (alpha <= 0.005) return;
+  const k = devScale(ctx);
+  const n = Math.hypot(ux, uy) || 1;
+  const sx = -ux / n,
+    sy = -uy / n;
+  const b = buffer(ctx, "rim");
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.drawImage(mask.canvas, 0, 0);
+  b.globalCompositeOperation = "destination-in"; // at least `ink` in from the lit edge…
+  b.drawImage(mask.canvas, sx * ink * k, sy * ink * k);
+  b.globalCompositeOperation = "destination-out"; // …and no more than ink + width
+  b.drawImage(mask.canvas, sx * (ink + width) * k, sy * (ink + width) * k);
+  b.globalCompositeOperation = "source-in";
+  b.fillStyle = color;
+  b.fillRect(0, 0, b.canvas.width, b.canvas.height);
+  b.restore();
+  if (reach) {
+    // strongest near the light, gone at `reach[2]` from it
+    const [rx, ry, rr] = reach;
+    const g = b.createRadialGradient(rx, ry, 0, rx, ry, rr);
+    g.addColorStop(0, "rgba(0,0,0,1)");
+    g.addColorStop(0.45, "rgba(0,0,0,0.6)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    b.save();
+    b.globalCompositeOperation = "destination-in";
+    b.fillStyle = g;
+    b.fillRect(rx - rr, ry - rr, rr * 2, rr * 2);
+    b.restore();
+  }
+  cutOut(b, cut);
+  blit(ctx, b, op, alpha, `blur(${Math.max(0.6, width * k * 0.3).toFixed(1)}px)`);
+}
+/** The shadow a point light at `light` throws of a figure onto the wall behind it: the figure scaled `k` away from
+ *  the light, flattened to `color`, softened by `soft` design units. `clip` (optional) limits where it can fall
+ *  (it must call c.clip()); `figure` (its mask) keeps it off the figure itself, so it can be laid over the finished
+ *  picture — after the light — and darken the light on the wall too. */
+export function castShadow(ctx: Ctx, light: Pt, k: number, draw: (c: Ctx) => void, color: string, soft: number, alpha = 1, clip?: (c: Ctx) => void, figure?: Ctx) {
+  if (alpha <= 0.005) return;
+  const b = buffer(ctx, "cast");
+  b.save();
+  if (clip) clip(b);
+  b.translate(light[0], light[1]);
+  b.scale(k, k);
+  b.translate(-light[0], -light[1]);
+  draw(b);
+  b.restore();
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalCompositeOperation = "source-in";
+  b.fillStyle = color;
+  b.fillRect(0, 0, b.canvas.width, b.canvas.height);
+  b.restore();
+  const out = figure ? buffer(ctx, "cast2") : b;
+  if (figure) {
+    // blur first, then take the figure out (sharp), so no dark fringe creeps onto him
+    blit(out, b, "source-over", 1, `blur(${(soft * devScale(ctx)).toFixed(1)}px)`);
+    out.save();
+    out.setTransform(1, 0, 0, 1, 0, 0);
+    out.globalCompositeOperation = "destination-out";
+    out.drawImage(figure.canvas, 0, 0);
+    out.restore();
+    blit(ctx, out, "source-over", alpha);
+  } else blit(ctx, b, "source-over", alpha, `blur(${(soft * devScale(ctx)).toFixed(1)}px)`);
+}
+/** Dust turning in a light: `n` specks inside the ellipse (x, y, rx, ry), rising slowly, brightest in the middle.
+ *  `rgb` is "r,g,b". */
+export function motes(ctx: Ctx, abs: number, x: number, y: number, rx: number, ry: number, n: number, seed: number, rgb = "255,225,180", alpha = 1, size = 2.6) {
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.filter = filter;
-  ctx.globalAlpha *= alpha;
-  ctx.drawImage(off, 0, 0);
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < n; i++) {
+    const u = hash(seed + i * 3.7) * 2 - 1;
+    const v = ((hash(seed + i * 5.1) + abs * (0.025 + 0.03 * hash(seed + i * 1.9))) % 1) * 2 - 1; // rising
+    const px = x + rx * (u * 0.9 + Math.sin(abs * (0.6 + hash(seed + i) * 0.6) + i) * 0.06),
+      py = y - ry * v;
+    const d = Math.min(1, Math.hypot(u, v));
+    const tw = 0.55 + 0.45 * Math.sin(abs * (2 + 3 * hash(seed + i * 7.3)) + i * 1.3);
+    const a = alpha * (1 - d) * tw;
+    if (a <= 0.01) continue;
+    const r = size * (0.6 + 0.8 * hash(seed + i * 2.3));
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r * 2.2);
+    g.addColorStop(0, `rgba(${rgb},${a.toFixed(3)})`);
+    g.addColorStop(0.4, `rgba(${rgb},${(a * 0.6).toFixed(3)})`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(px - r * 2.2, py - r * 2.2, r * 4.4, r * 4.4);
+  }
   ctx.restore();
+}
+/** Vertical motion blur for a whip-tilt: `draw` once, then average `n` copies spread over `px` design units up and
+ *  down (additive, so it stays a true average). */
+export function smearV(ctx: Ctx, draw: (c: Ctx) => void, px: number, key = "smear", n = 9) {
+  if (px < 2) {
+    draw(ctx);
+    return;
+  }
+  const a = buffer(ctx, key + "A");
+  a.save();
+  draw(a);
+  a.restore();
+  const b = buffer(ctx, key + "B");
+  const k = devScale(ctx);
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalCompositeOperation = "lighter";
+  b.globalAlpha = 1 / n;
+  for (let i = 0; i < n; i++) b.drawImage(a.canvas, 0, (i / (n - 1) - 0.5) * px * k);
+  b.restore();
+  blit(ctx, b);
+}
+/** Bloom: the bright parts of the finished picture (a flame, a lit screen, a lit face) bleed a soft glow into the
+ *  dark around them, the way a lens does at night. Call it last, on the scene's own canvas. `threshold` (contrast)
+ *  decides how bright a thing must be to glow. */
+export function bloom(ctx: Ctx, amount = 0.3, radius = 26, threshold = 2.6) {
+  if (amount <= 0.005) return;
+  const b = buffer(ctx, "bloom");
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.filter = `brightness(0.72) contrast(${threshold}) blur(${(radius * devScale(ctx)).toFixed(1)}px)`;
+  b.drawImage(ctx.canvas, 0, 0);
+  b.filter = "none";
+  blit(ctx, b, "screen", amount);
+}
+/** An out-of-focus light: a soft disc with a slightly brighter rim (the way a lens draws a far point of light). */
+export function bokehDisc(ctx: Ctx, x: number, y: number, r: number, rgb: string, a: number) {
+  if (a <= 0.005) return;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(${rgb},${(a * 0.55).toFixed(3)})`);
+  g.addColorStop(0.8, `rgba(${rgb},${(a * 0.72).toFixed(3)})`);
+  g.addColorStop(0.93, `rgba(${rgb},${a.toFixed(3)})`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+/** A soft light shaft (moonlight through a window, sun through a door): the quad `pts` filled with `rgb`, fading
+ *  from `a0` at (x0, y0) to nothing at (x1, y1), its edges softened by `soft` design units, added as light. */
+export function lightShaft(ctx: Ctx, pts: Pt[], x0: number, y0: number, x1: number, y1: number, rgb: string, a0: number, soft = 24, key = "shaft") {
+  if (a0 <= 0.005) return;
+  filtered(
+    ctx,
+    `blur(${(soft * devScale(ctx)).toFixed(1)}px)`,
+    (c) => {
+      const g = c.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, `rgba(${rgb},${a0.toFixed(3)})`);
+      g.addColorStop(1, `rgba(${rgb},0)`);
+      c.fillStyle = g;
+      c.beginPath();
+      pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+      c.closePath();
+      c.fill();
+    },
+    key,
+    1,
+    "lighter",
+  );
 }
 
 // ---------------------------------------------------------------- the look (重新设计版)

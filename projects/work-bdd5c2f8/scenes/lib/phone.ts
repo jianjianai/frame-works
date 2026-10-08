@@ -15,6 +15,17 @@ export function phone(ctx: Ctx, cx: number, cy: number, s: number, rot: number, 
   ctx.translate(-SW / 2, -SH / 2);
   blob(ctx, rrectPts(-26, -26, SW + 52, SH + 52, 92), seed, 1.6);
   paint(ctx, "#121214", C.ink, 7);
+  // 光影: the metal frame catches the light — warm down the left side, cold down the right — so the phone reads
+  // against a dark room
+  const rim = ctx.createLinearGradient(-26, 0, SW + 26, 0);
+  rim.addColorStop(0, "rgba(255,196,140,0.5)");
+  rim.addColorStop(0.16, "rgba(255,196,140,0)");
+  rim.addColorStop(0.84, "rgba(185,200,255,0)");
+  rim.addColorStop(1, "rgba(185,200,255,0.4)");
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 6;
+  rr(ctx, -14, -14, SW + 28, SH + 28, 84);
+  ctx.stroke();
   ctx.save();
   rr(ctx, 0, 0, SW, SH, 70);
   ctx.clip();
@@ -194,34 +205,114 @@ export function statusBar(ctx: Ctx, st: Status) {
   ctx.restore();
 }
 
+/** His lock-screen wallpaper (美感): a dusk sky going from deep blue to a rose glow on the horizon, stars, a thin
+ *  moon, and an empty swing on a hill in silhouette, its seat still swaying a little. */
 export function wallpaper(ctx: Ctx) {
   const g = ctx.createLinearGradient(0, 0, 0, SH);
-  g.addColorStop(0, "#1c2550");
-  g.addColorStop(0.6, "#3a2c5c");
-  g.addColorStop(1, "#11152b");
+  g.addColorStop(0, "#121843");
+  g.addColorStop(0.42, "#262a66");
+  g.addColorStop(0.68, "#4d3a7a");
+  g.addColorStop(0.82, "#9a5f86");
+  g.addColorStop(0.9, "#c98a8e");
+  g.addColorStop(1, "#c98a8e");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, SW, SH);
-  // a doodle swing set on the wallpaper
+  // stars (fixed), a few of them with a little cross of light
+  let s = 77;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 46; i++) {
+    const x = rnd() * SW,
+      y = 60 + rnd() * 820,
+      big = rnd() > 0.86;
+    ctx.fillStyle = `rgba(235,238,255,${(0.35 + 0.5 * rnd()) * (1 - y / 1100)})`;
+    ctx.beginPath();
+    ctx.arc(x, y, big ? 3 : 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    if (big) {
+      ctx.fillRect(x - 9, y - 0.8, 18, 1.6);
+      ctx.fillRect(x - 0.8, y - 9, 1.6, 18);
+    }
+  }
+  // a thin crescent moon with its halo
+  const mg = ctx.createRadialGradient(470, 448, 0, 470, 448, 130);
+  mg.addColorStop(0, "rgba(255,240,215,0.35)");
+  mg.addColorStop(1, "rgba(255,240,215,0)");
+  ctx.fillStyle = mg;
+  ctx.fillRect(340, 318, 260, 260);
   ctx.save();
-  ctx.globalAlpha = 0.28;
-  ctx.strokeStyle = "#cfd6ff";
-  ctx.lineWidth = 8;
-  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(110, 1180);
-  ctx.lineTo(170, 760);
-  ctx.lineTo(230, 1180);
-  ctx.moveTo(370, 1180);
-  ctx.lineTo(430, 760);
-  ctx.lineTo(490, 1180);
-  ctx.moveTo(150, 770);
-  ctx.lineTo(450, 770);
-  ctx.moveTo(260, 775);
-  ctx.lineTo(260, 1010);
-  ctx.moveTo(340, 775);
-  ctx.lineTo(340, 1010);
-  ctx.moveTo(240, 1012);
-  ctx.lineTo(360, 1012);
+  ctx.arc(470, 448, 32, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = "#fff1d6";
+  ctx.fillRect(430, 410, 80, 80);
+  ctx.fillStyle = "#2c2d6b";
+  ctx.beginPath();
+  ctx.arc(484, 438, 30, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // the glow behind the hill
+  const hg = ctx.createRadialGradient(300, 1080, 0, 300, 1080, 460);
+  hg.addColorStop(0, "rgba(255,190,170,0.35)");
+  hg.addColorStop(1, "rgba(255,190,170,0)");
+  ctx.fillStyle = hg;
+  ctx.fillRect(-160, 620, 920, 920);
+  // the hill, its crest catching the last light
+  const hill = () => {
+    ctx.beginPath();
+    ctx.moveTo(-10, 1110);
+    ctx.bezierCurveTo(140, 1010, 420, 990, 610, 1090);
+    ctx.lineTo(610, SH + 10);
+    ctx.lineTo(-10, SH + 10);
+    ctx.closePath();
+  };
+  hill();
+  ctx.fillStyle = "#14143a";
+  ctx.fill();
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(-10, 1110);
+  ctx.bezierCurveTo(140, 1010, 420, 990, 610, 1090);
+  ctx.strokeStyle = "rgba(255,200,190,0.45)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+  // the swing set on top of it, in silhouette, the seat hanging a little off true (someone just left it)
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const frame = () => {
+    ctx.beginPath();
+    ctx.moveTo(196, 1022);
+    ctx.lineTo(240, 820);
+    ctx.lineTo(268, 1018);
+    ctx.moveTo(392, 1020);
+    ctx.lineTo(420, 820);
+    ctx.lineTo(452, 1030);
+    ctx.moveTo(226, 822);
+    ctx.lineTo(436, 822);
+  };
+  frame();
+  ctx.strokeStyle = "rgba(255,200,190,0.3)";
+  ctx.lineWidth = 13;
+  ctx.stroke();
+  frame();
+  ctx.strokeStyle = "#14143a";
+  ctx.lineWidth = 8;
+  ctx.stroke();
+  ctx.translate(330, 824);
+  ctx.rotate(0.07);
+  ctx.strokeStyle = "#14143a";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(-34, 0);
+  ctx.lineTo(-34, 140);
+  ctx.moveTo(34, 0);
+  ctx.lineTo(34, 140);
+  ctx.stroke();
+  ctx.lineWidth = 9;
+  ctx.beginPath();
+  ctx.moveTo(-46, 142);
+  ctx.lineTo(46, 142);
   ctx.stroke();
   ctx.restore();
 }
