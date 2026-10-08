@@ -124,3 +124,4 @@
 - `code/draw.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/draw.ts
 - `code/people.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/people.ts
 - `code/phone.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/phone.ts
+- `code/sets.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/sets.ts
