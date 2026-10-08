@@ -380,7 +380,8 @@ export function corridor(ctx: Ctx, abs = 0) {
   dust(ctx, abs, 720, 360, 300, 740, 700);
 }
 
-export function classroom(ctx: Ctx, abs = 0) {
+/** `backDesks: false` leaves out the back row of empty desks (when a shot seats people at its own desks). */
+export function classroom(ctx: Ctx, abs = 0, backDesks = true) {
   fillBg(ctx, vgrad(ctx, 0, 1100, [[0, "#ece0c3"], [1, "#ddcfae"]]));
   // a broad band of sunlight from the windows on the left
   ctx.save();
@@ -424,7 +425,7 @@ export function classroom(ctx: Ctx, abs = 0) {
   rbox(ctx, 760, 702, 92, 24, 4, 92, 0.6);
   paint(ctx, "#4b5b7a", C.ink, 3);
   // a back row of empty desks between the standing classmates
-  for (let c = 0; c < 4; c++) {
+  for (let c = 0; c < (backDesks ? 4 : 0); c++) {
     const dx = 40 + c * 270;
     shaded(ctx, () => rbox(ctx, dx, 930, 200, 34, 5, 120 + c, 1), "#d79a55", () => {
       ctx.fillStyle = "rgba(255,255,255,0.18)";

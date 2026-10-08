@@ -142,6 +142,23 @@ const sounds: Record<string, () => StereoPcm> = {
     ding(pcm, 0, 0.3, 1.189);
     return pcm;
   },
+  // 上课铃 in the corridor memory (act1 11.69): an electric school bell, the clapper hammering ~22 times a second on a
+  // bell with a few inharmonic partials, then ringing out
+  bell: () => {
+    const dur = 0.85;
+    const pcm = buffer(dur + 0.4);
+    const partials: [number, number][] = [[1240, 0.5], [2980, 0.28], [4310, 0.12], [620, 0.18]];
+    const r = seeded(81);
+    add(pcm, 0, dur + 0.35, (t) => {
+      const env = attack(t, 0.01) * (t < dur ? 1 : Math.exp(-(t - dur) * 9));
+      const hit = (t * 22) % 1;
+      const strikes = t < dur ? Math.exp(-hit * 4) : 0;
+      const ring = partials.reduce((s, [f, a]) => s + a * Math.sin(TAU * f * t), 0);
+      const click = t < dur ? (r() * 2 - 1) * Math.exp(-hit * 40) * 0.25 : 0;
+      return env * (ring * (0.35 + 0.65 * strikes) + click);
+    }, 0.32);
+    return pcm;
+  },
   // a light tap on the glass: the double tap of the like prompt at the end
   tap: () => {
     const pcm = buffer(0.2);
