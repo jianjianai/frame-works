@@ -132,3 +132,4 @@
 - `reference/no-friends-remake/act6.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/act6.ts
 - `reference/no-friends-remake/opening.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/opening.ts
 - `reference/no-friends-remake/lyrics.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lyrics.ts
+- `reference/no-friends-remake/visual.json`：来源 work-afa1129b（i have no friends 重置版）visual.json
