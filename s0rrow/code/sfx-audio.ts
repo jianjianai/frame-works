@@ -4,6 +4,7 @@ import { seeded } from "../../src/engine/math";
 
 /** 合成音效库（全部确定性）。复制为作品根目录的 audio.ts；audio.json 里每个音效是一个 generated 源
  *  （module "sfx", trackId = 下面的名字），clip 的 start 对齐画面事件时间。不用的音效可以删掉。
+ *  混音：音乐轨不要对音效做 duck（用户要求：音效响时不压低音乐；只有人声在明确要求时才压）。
  *  第一支《i have no friends》：typing/send/fail/match/blow/flood/splat/pop/reply
  *  第二支《unhappy》：keys/doorOpen/doorClose/roomDoor/ball/slam/cough/squeak/rain/heartbeat/click/splash/
  *  whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps（小狗版）
@@ -11,7 +12,7 @@ import { seeded } from "../../src/engine/math";
  *  birds/boot/run/store/pay/door/milk/sparkle/stickerPop
  *  《i have no friends》重置版：bellElectric（电铃上课铃）/horn（派对喇叭，放「不压歌曲」的音效轨）/floodFast（七条通知间隔 0.12 秒）
  *  《mirrors》（瑕疵：0）：paperSlap/tape/scribble/ring/hangup/slider/zero/dive/ticks/alarm/peel/metalDoor/slip/freeze/
- *  flip/sheet/whip/rip/doubleTap（音效轨增益 1.3、送混响 0.2，音乐按音效闪避 0.35；用法见 reference/mirrors/audio.json） */
+ *  flip/sheet/whip/rip/doubleTap（音效轨增益 1.3、送混响 0.2、不压音乐；各音效的时间点见 reference/mirrors/timeline.ts 的 EV） */
 const SR = 48000;
 const TAU = Math.PI * 2;
 
@@ -556,7 +557,7 @@ const sounds: Record<string, () => StereoPcm> = {
     return pcm;
   },
   // a party horn blown alone: a buzzy paper reed with a flutter, cut short, then a weak little deflating bleat as it
-  // sags back (phase integrated, so the pitch bends cleanly). Put it on a track the music does not duck under.
+  // sags back (phase integrated, so the pitch bends cleanly). (The music is never ducked under sound effects.)
   horn: () => {
     const pcm = buffer(1.1);
     let ph = 0;
