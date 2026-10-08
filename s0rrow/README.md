@@ -121,3 +121,4 @@
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：两扇窗一暗一亮的过渡镜头
 - `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：他的灯灭 → 她的房间 → 犹豫直接进回忆
 - `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（twist 提前到 28.70，hisLightOff）
+- `code/draw.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/draw.ts
