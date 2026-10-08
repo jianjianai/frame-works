@@ -4,7 +4,8 @@ import { HandShape, drawHand } from "./kid";
 /** Everyone else (adults/classmates), drawn in the same refined style as the protagonist:
  *  shaded face, eyes with iris + catchlights, brows, styled hair with lock lines, jointed sleeves and real hands.
  *  `x` (0..1) overlays the cover's crossed-out "X" face (used before a twist). (x, y) = head centre.
- *  重置版: the refined model from the s0rrow material library (code/people.ts, from 《unhappy》), unchanged. */
+ *  重置版 added `handL/handR` (wrist target, head units) + `shapeL/shapeR` + `bendL/bendR`: they override one arm of any
+ *  preset (e.g. one hand waving, the other holding a gift behind the back). */
 export interface Person {
   hair?: "short" | "long" | "bob" | "pony" | "buzz" | "cap" | "bun" | "curly";
   hairColor?: string;
