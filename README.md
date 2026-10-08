@@ -142,3 +142,4 @@
 - `code/mirrors/story.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
 - `code/mirrors/README.md`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
 - `reference/mirrors/act1.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
+- `reference/mirrors/night.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
