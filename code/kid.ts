@@ -44,6 +44,11 @@ export interface KidPose {
    *  Flip it (e.g. bendL: 1) for an elbow that hangs down — a "V" arm holding something out. */
   bendL?: number;
   bendR?: number;
+  /** explicit elbows (head units): skips the IK, so an arm pointing at / away from the camera can look foreshortened
+   *  (running arms with the elbows by the body, a hand brought up to the face with the elbow kept low — with the IK a
+   *  wrist target close to the shoulder pushes the elbow out like a chicken wing; 《mirrors》 act3/act4) */
+  elbowL?: Pt;
+  elbowR?: Pt;
   legs?: "stand" | "walk" | "run" | "sit" | "sitFloor" | "kneel";
   walk?: number; // gait phase (rad)
   /** drawn after the torso, before the arms (things held against the body) */
@@ -685,6 +690,7 @@ interface ArmSpec {
   wrist: Pt;
   bend: number;
   shape: HandShape;
+  elbow?: Pt;
 }
 function armSpecs(p: KidPose): [ArmSpec, ArmSpec] {
   const a = p.arms ?? "down";
@@ -720,6 +726,8 @@ function armSpecs(p: KidPose): [ArmSpec, ArmSpec] {
   if (p.shapeR) R = { ...R, shape: p.shapeR };
   if (p.bendL) L = { ...L, bend: p.bendL };
   if (p.bendR) R = { ...R, bend: p.bendR };
+  if (p.elbowL) L = { ...L, elbow: p.elbowL };
+  if (p.elbowR) R = { ...R, elbow: p.elbowR };
   return [L, R];
 }
 
@@ -729,7 +737,7 @@ function sleeveArm(ctx: Ctx, shoulder: Pt, spec: ArmSpec, side: number, p: KidPo
   const [gc, gd, gcuff] = girlSleeve(p);
   const col = girl ? gc : rider ? K.rider : K.hood,
     dk = girl ? gd : rider ? K.riderDk : K.hoodDk;
-  const [elbow, wrist] = ik2(shoulder, spec.wrist, girl ? 134 : 142, girl ? 128 : 134, spec.bend);
+  const [elbow, wrist]: [Pt, Pt] = spec.elbow ? [spec.elbow, spec.wrist] : ik2(shoulder, spec.wrist, girl ? 134 : 142, girl ? 128 : 134, spec.bend);
   // sleeve tube ends a little before the wrist, then the cuff
   const cuffStart = lerp2(elbow, wrist, 0.86);
   const spine = sub([shoulder, elbow, cuffStart]);
