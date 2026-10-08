@@ -9,11 +9,12 @@
 - 发布后的复盘数据和结论（时长、结构、开场、发布时间）在经验库「剧情音乐短片」。
 
 ## 素材库 s0rrow（materials/s0rrow/）
-- `code/`：draw（手绘引擎+tubePts/ik2/shaded/filtered）、kid（主角+女主 who:"girl"，精细版）、people（路人/朋友/兽医，精细版）、dog（小狗豆豆）、chat（微信风格聊天/朋友圈/资料卡/关机）、phone、screens（相册/存钱/接单）、hand、sets（第一支场景）、places（玄关/卧室/女生房间/教室/走廊/清晨街道便利店/雨夜/公交站/宠物医院/封面的树）、shared、grain、lyrics、sfx-audio（三套合成音效）。
+- 2026-10 用《i have no friends》重置版更新过；素材库自己的说明（内容、用法、字体许可）在 `docs/README.md`。
+- `code/`：draw（手绘引擎+tubePts/ik2/shaded/filtered，镜头 handheld/easeInOut/smearV，光影工具，灰色世界 grade，回忆 oldFilm/oldScreenCut）、kid（主角+女主 who:"girl"，精细版）、people（路人/朋友/兽医，精细版，可单独覆盖一只手臂）、dog（小狗豆豆）、chat（微信风格聊天/朋友圈/资料卡/关机）、phone（含背面/手电/侧键/玻璃反光）、screens（相册/存钱/接单）、hand（含 touchDot）、sets（《i have no friends》场景，重置版精细化+光影）、places（玄关/卧室/女生房间/教室/走廊/清晨街道便利店/雨夜/公交站/宠物医院/封面的树）、shared（烛光生日书桌 birthdayDesk）、grain、lyrics（《unhappy》版）、sfx-audio（四套合成音效）。
 - `templates/`：scene.ts、visual.json（55 秒四幕）、歌词数据模板。
 - `tools/`：fetch-krc.mjs（酷狗逐词时间）、fetch-fonts.mjs（字体子集）。
 - `fonts/`：六个手绘风字体（按原作品用字子集化，换文案要重新取）。
-- `reference/`：《i have no friends》六幕和封面；`reference/unhappy/`：《unhappy》小狗版四幕；`reference/unhappy-chat/`：《unhappy》聊天版五幕 + story.ts + timeline.ts。只看不拷。
+- `reference/`：《i have no friends》六幕和封面；`reference/no-friends-remake/`：重置版（开头三镜 opening.ts、四幕、歌词层、visual.json）；`reference/unhappy/`：《unhappy》小狗版四幕；`reference/unhappy-chat/`：《unhappy》聊天版五幕 + story.ts + timeline.ts。只看不拷。
 
 ## 作品
 - work-bdd5c2f8《i have no friends》：生日没人记得→飞行模式反转（99 秒）。
