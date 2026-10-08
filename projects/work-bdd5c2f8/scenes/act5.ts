@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { BEAT, C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, camera, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, inkLine, lerp2, oldFilm, paint, poly, pulse, rbox, rr, shaded, shake, text, vgrad } from "./lib/draw";
+import { BEAT, C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, camera, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, inkLine, lerp2, oldFilm, paint, poly, oval, pulse, rbox, rr, shaded, shake, text, vgrad } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
 import { replayCorridor, replaySlip } from "./act1";
@@ -782,7 +782,250 @@ function cakeSlice(c: Ctx, x: number, y: number, whole: boolean) {
   c.restore();
 }
 
+// 用户: 「蛋糕糊脸片段也优化一下」 (it was one static group photo for 4 s: the hit was a tiny plate you couldn't
+// see, the cake in front of 小雨's face, his fists on the lyrics, the bottom third empty). Now three shots:
+//  79.57 (46.18) the lobby door flies open and he runs out at us — a slice of the big cake swings in from the right
+//  80.09 (46.70) SPLAT, a close-up of his face: cream flying, the plate sliding off; a beat of stunned stillness, eyes
+//        shut → they blink open → 81.13 he bursts out laughing, and 哈哈哈 all round him — warm now, the same laughter
+//        that closed in on him in the classroom (laugh in my face → 还把蛋糕砸在了我脸上)
+//  81.66 (48.27) wide: all of them round him laughing, the big cake on a little table in front of him with its gold
+//        17 lit, singing (notes floating up) → 82.45 confetti → 83.22 he blows the 17 out — not alone this time (the
+//        candle he blew out alone at 31.86) — and they cheer
+const HIT_END = beatAt(156); // 81.66 (48.27)
+const LAUGH_AT = beatAt(155); // 81.13 (47.75)
+const BLOW2 = beatAt(159); // 83.22 (49.83)
+
+function shotBurstOut(ctx: Ctx, abs: number) {
+  const open = easeOut(phase(abs, T4, T4 + 0.14));
+  const run = easeOut(phase(abs, T4 + 0.04, SPLAT));
+  const swing = easeIn(phase(abs, SPLAT - 0.22, SPLAT));
+  const [hx, hy, hr] = handheld(abs, 6, 15);
+  ctx.save();
+  camera(ctx, 540, 820, 1.05 + 0.08 * run, hr, hx, hy);
+  filtered(ctx, "blur(2px)", (b) => buildingEntrance(b, abs), "bg");
+  // the two door leaves flying open
+  for (const side of [-1, 1]) {
+    const w = 190 * (1 - 0.82 * open);
+    const x0 = side < 0 ? 350 : 730 - w;
+    poly(ctx, [[x0, 430], [x0 + w, 430 + side * 10 * open], [x0 + w, 1090 - side * 10 * open], [x0, 1090]], 1990 + side, 1);
+    paint(ctx, "#7d5a3a", C.ink, 5);
+  }
+  // him, running out at us
+  drawKid(ctx, 540, 640 + 140 * run, 0.7 + 0.35 * run, {
+    body: "full",
+    legs: "run",
+    walk: abs * 16,
+    hat: true,
+    eyes: "wide",
+    mouth: "open",
+    brows: "up",
+    // arms bent and pumping in front of him as he runs (open hands read as jazz hands, fists at the hips as hands
+    // on hips)
+    arms: "custom",
+    handL: [-125, 270 + 70 * Math.sin(abs * 16)],
+    handR: [125, 270 - 70 * Math.sin(abs * 16)],
+    shapeL: "fist",
+    shapeR: "fist",
+  });
+  ctx.restore();
+  // them, waiting either side of the door, in the foreground and out of focus, arms up
+  filtered(
+    ctx,
+    "blur(5px)",
+    (b) => {
+      drawPerson(b, 40, 900, 1.15, { ...CAST.monitor, x: 0, face: "laugh", arms: "up", body: "full" });
+      drawPerson(b, 1060, 940, 1.15, { ...CAST.a, x: 0, face: "laugh", arms: "up", body: "full" });
+    },
+    "sides",
+  );
+  // the slice swinging in from the right, big and blurred with speed
+  if (swing > 0) {
+    filtered(
+      ctx,
+      `blur(${(3 + 6 * swing).toFixed(1)}px)`,
+      (b) => {
+        b.save();
+        b.translate(1250 - 650 * swing, 1050 - 230 * swing);
+        b.rotate(-0.4 + 0.3 * swing);
+        b.scale(2.4, 2.4);
+        cakeSlice(b, 0, 0, true);
+        b.restore();
+      },
+      "slice",
+    );
+  }
+  flash(ctx, 0.95 * (1 - easeOut(phase(abs, T4, T4 + 0.25))), "#fff1d0");
+}
+
+function shotSplat(ctx: Ctx, abs: number) {
+  const t = abs - SPLAT;
+  const plate = easeIn(phase(abs, SPLAT + 0.18, SPLAT + 0.6)); // the plate slides off and drops
+  const blink = abs > SPLAT + 0.86; // his eyes come open
+  const laugh = abs >= LAUGH_AT;
+  const pull = easeInOut(phase(abs, LAUGH_AT, HIT_END));
+  const [sx, sy] = shake(abs, 20 * Math.exp(-t * 7));
+  const [hx, hy, hr] = handheld(abs, 4, 18);
+  ctx.save();
+  camera(ctx, 540, 760, 1 - 0.18 * pull, hr, sx + hx, sy + hy);
+  filtered(
+    ctx,
+    "blur(7px)",
+    (b) => {
+      b.save();
+      camera(b, 540, 760, 1.6);
+      buildingEntrance(b, abs);
+      b.restore();
+    },
+    "bg",
+  );
+  drawKid(ctx, 540, 820 + (laugh ? Math.abs(Math.sin(abs * 12)) * -10 : 0), 2.2, {
+    body: "bust",
+    hat: true,
+    cake: 1,
+    eyes: laugh ? "happy" : blink ? "open" : "shut",
+    mouth: laugh ? "laugh" : "o",
+    blush: laugh ? 1 : 0,
+    tilt: laugh ? Math.sin(abs * 14) * 0.05 : -0.06 * Math.exp(-t * 5),
+    arms: "pockets", // (no fists along the bottom of the close-up)
+  });
+  // the paper plate, stuck on his face, then sliding off and dropping out of frame
+  if (plate < 1) {
+    ctx.save();
+    ctx.translate(560 + 140 * plate, 900 + 900 * plate);
+    ctx.rotate(0.3 + 1.6 * plate);
+    oval(ctx, 0, 0, 230, 70, 1995, 1.2);
+    paint(ctx, "#fbfbfb", C.ink, 6);
+    oval(ctx, 0, -6, 170, 44, 1996, 1);
+    paint(ctx, "#ffd3e3", null);
+    ctx.restore();
+  }
+  ctx.restore();
+  // the impact: ink lines and pink cream flying out
+  const hit = phase(abs, SPLAT, SPLAT + 0.45);
+  if (hit < 1) {
+    ctx.save();
+    ctx.globalAlpha = 1 - hit;
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 + 0.2;
+      const r0 = 330 + 260 * hit,
+        r1 = r0 + 90;
+      inkLine(ctx, [[540 + Math.cos(a) * r0, 820 + Math.sin(a) * r0], [540 + Math.cos(a) * r1, 820 + Math.sin(a) * r1]], 2000 + i, 9);
+    }
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + 0.6;
+      const d = 260 + 520 * easeOut(hit);
+      oval(ctx, 540 + Math.cos(a) * d, 820 + Math.sin(a) * d + 300 * hit * hit, 26 - 8 * hit, 20 - 6 * hit, 2020 + i, 1);
+      paint(ctx, i % 3 ? "#fff8f0" : "#ff9cc3", C.ink, 4);
+    }
+    ctx.restore();
+  }
+  // the laughter all round him — warm this time
+  if (laugh) {
+    const ht = phase(abs, LAUGH_AT, LAUGH_AT + 0.6) * 1.2;
+    hahas(ctx, 200, 560, 160, ht, 2041, F.cn, 4);
+    hahas(ctx, 880, 600, 160, ht - 0.1, 2047, F.cn, 4);
+    hahas(ctx, 540, 330, 140, ht - 0.2, 2053, F.cn, 3);
+  }
+  flash(ctx, 0.6 * (1 - phase(abs, SPLAT, SPLAT + 0.12)));
+}
+
+/** a music note floating up (they're singing) */
+function note(c: Ctx, x: number, y: number, s: number, a: number, seed: number) {
+  if (a <= 0) return;
+  c.save();
+  c.globalAlpha *= a;
+  c.translate(x, y);
+  c.scale(s, s);
+  c.rotate(-0.2);
+  oval(c, 0, 0, 16, 12, seed, 0.6);
+  paint(c, "#ffe45c", C.ink, 4);
+  inkLine(c, [[14, -2], [14, -56], [36, -44]], seed + 1, 5);
+  c.restore();
+}
+
+function shotCelebrate(ctx: Ctx, abs: number) {
+  const p = pulse(abs);
+  const blow = smooth(phase(abs, BLOW2 - 0.2, BLOW2));
+  const out = abs >= BLOW2 + 0.08;
+  const cheer = smooth(phase(abs, BLOW2 + 0.1, BLOW2 + 0.3));
+  const [hx, hy, hr] = handheld(abs, 5, 19);
+  ctx.save();
+  camera(ctx, 540, 820, 1.02 + 0.03 * p + 0.06 * easeInOut(phase(abs, HIT_END, END)), hr, hx, hy);
+  filtered(ctx, "blur(2px)", (b) => buildingEntrance(b, abs), "bg");
+  banner(ctx, 540, 330, 820, 1, "生日快乐", 740, F.cn);
+  const ring: [Person, number, number, number, Person["arms"]][] = [
+    [CAST.monitor, 270, 560, 0.6, "laugh"],
+    [CAST.a, 810, 560, 0.6, "up"],
+    [CAST.d, 110, 720, 0.72, "up"],
+    [CAST.e, 970, 720, 0.72, "laugh"],
+    [CAST.yu, 200, 900, 0.8, "laugh"],
+  ];
+  ring.forEach(([q, x, y, s, arms], i) =>
+    drawPerson(ctx, x, y - Math.abs(Math.sin(abs * 9 + i)) * (12 + 18 * cheer), s, {
+      ...q,
+      x: 0,
+      face: "laugh",
+      arms: cheer > 0.5 ? "up" : arms,
+      tilt: Math.sin(abs * 14 + i) * 0.08,
+      body: "full",
+    }),
+  );
+  // A-Jie, very pleased with himself, the empty plate in his hand
+  drawPerson(ctx, 890, 900, 0.8, {
+    ...CAST.jie,
+    x: 0,
+    face: "laugh",
+    arms: cheer > 0.5 ? "up" : "point",
+    body: "full",
+    tilt: Math.sin(abs * 12) * 0.06,
+    holding: cheer > 0.5 ? undefined : (h) => cakeSlice(h, -200, 70, false),
+  });
+  // him, cream on his face, laughing — then leaning in to blow
+  drawKid(ctx, 540, 740 + 40 * blow, 1.0, {
+    body: "bust",
+    hat: true,
+    cake: 1,
+    eyes: blow > 0.3 && !out ? "shut" : "happy",
+    mouth: blow > 0.3 && !out ? "blow" : "laugh",
+    blush: 1,
+    tilt: blow > 0.3 ? 0 : Math.sin(abs * 12) * 0.05,
+    arms: "pockets",
+  });
+  // the little table and the big cake from the bakery window, the gold 17 burning (彩蛋)
+  poly(ctx, [[280, 1172], [800, 1166], [810, 1320], [270, 1326]], 2061, 1.2);
+  paint(ctx, "#ff9cc3", C.ink, 5);
+  for (let k = 0; k < 5; k++) inkLine(ctx, [[320 + k * 110, 1180], [316 + k * 110, 1316]], 2062 + k, 2.4, "rgba(180,60,110,0.35)");
+  bigCake(ctx, 540, 1178, 0.42, abs, { candle17: true, lit: out ? 0 : 1 });
+  // the flame goes out: a wisp of smoke
+  if (out) {
+    const sm = phase(abs, BLOW2 + 0.08, BLOW2 + 0.6);
+    ctx.save();
+    ctx.globalAlpha = 0.6 * (1 - sm);
+    inkLine(ctx, [[540, 950], [530 + 10 * Math.sin(abs * 8), 910 - 60 * sm], [550, 850 - 120 * sm]], 2070, 5, "#d8d8e0");
+    ctx.restore();
+  }
+  // singing: notes floating up from them
+  for (let i = 0; i < 6; i++) {
+    const t0 = HIT_END + i * 0.26;
+    const k = phase(abs, t0, t0 + 1.1);
+    if (k <= 0 || k >= 1) continue;
+    const x0 = [270, 810, 110, 970, 200, 890][i];
+    note(ctx, x0 + Math.sin(k * 6 + i) * 20, 640 - 280 * k + (i > 3 ? 200 : 0), 1, Math.sin(Math.PI * k), 2080 + i * 2);
+  }
+  ctx.restore();
+  confetti(ctx, abs, 82.45, 110, 5);
+  if (out) confetti(ctx, abs, BLOW2 + 0.1, 70, 6);
+  flash(ctx, 0.3 * (1 - phase(abs, HIT_END, HIT_END + 0.12)));
+}
+
 function shotParty(ctx: Ctx, abs: number) {
+  if (abs < SPLAT) return shotBurstOut(ctx, abs);
+  if (abs < HIT_END) return shotSplat(ctx, abs);
+  return shotCelebrate(ctx, abs);
+}
+
+/** the old party shot (unused, kept for reference) */
+export function shotPartyOld(ctx: Ctx, abs: number) {
   const burst = phase(abs, T4, T4 + 0.3); // he comes out of the door
   const smash = easeIn(phase(abs, T4 + 0.24, SPLAT));
   const caked = abs >= SPLAT;

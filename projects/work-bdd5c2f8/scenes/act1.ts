@@ -1,9 +1,9 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, beatAt, blinkEyes, blob, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shaded, shake, text } from "./lib/draw";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shaded, shake, text } from "./lib/draw";
 import { drawHand, drawKid } from "./lib/kid";
 import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
-import { Msg, SH, SW, chatScreen, glassGlare, lockScreen, phone, phoneButtons } from "./lib/phone";
+import { Msg, Note, SH, SW, chatScreen, glassGlare, lockScreen, notification, notificationHeight, phone, phoneButtons, statusBar, wallpaper } from "./lib/phone";
 import { bokeh, classroom, corridor, schoolDesk } from "./lib/sets";
 import { birthdayDesk } from "./lib/shared";
 import { FingerKey, FingerPos, fingerAt, onScreen, tapRipple, touchDot } from "./lib/hand";
@@ -12,11 +12,15 @@ import { FingerKey, FingerPos, fingerAt, onScreen, tapRipple, touchDot } from ".
  *  His world at night is grey (`grade`); only the candle stays warm. The morning is a memory: its own colours, seen
  *  through a film camera (`oldFilm`: grain, a slight weave, dust, random old-screen vertical lines, a mild vignette); everyone else
  *  wears the cover's X face.
+ *  (用户 asked for better 2 s / 5 s retention; three opening shots in front of this one were tried — a 99+
+ *   flash-forward, a midnight countdown, 「全班都在笑我」 — and then dropped: 「还是不要开头钩子了」)
  *  0     the first frame is the premise: his face in a party hat and the one candle (under the hook text) → ease
  *        back to the room; his eyes slide to the phone on the desk and back; a sigh. Outside the window, far below:
  *        a few phone lights and a pink banner (彩蛋 — they are already waiting) → whip into his phone
  *  2.35  his phone: wake (2.61), pull to refresh (3.14) — still 0 条新消息, ✈ top right
- *  4.44  the class group: last message 10:12; he scrolls, nothing
+ *  4.44  the class group: last message 10:12; he scrolls, nothing — but there's a grey line in the history,
+ *        「阿杰 撤回了一条消息」, pulsing yellow once he's back at the bottom (彩蛋: A-Jie nearly gave it away
+ *        here too — a new question at 5–6 s)
  *  6.79  side button: the screen goes black → push toward his reflection
  *  8.09  the cut into the memory, like an old screen: the picture breaks into flickering vertical lines and a jitter;
  *        under them (8.35) his grey reflection dissolves into the same face, same size, same place — this morning,
@@ -183,8 +187,13 @@ const CHAT_MSGS: Msg[] = [
   { from: "阿杰", text: "明天都早点来！！", avatar: CAST.jie, time: "昨天 22:30" },
   { from: "班长", text: "收到收到", avatar: CAST.monitor },
   { from: "班长", text: "明天记得交数学作业", avatar: CAST.monitor, time: "10:12" },
+  // 彩蛋: A-Jie nearly gave it away in the group too (his thing — the slip in class)
+  { text: "阿杰 撤回了一条消息", system: true },
   { from: "大刘", text: "收到", avatar: CAST.a },
 ];
+/** where the 「撤回」 line sits in the chat (screen units, at scroll 0) and when it pulses */
+const RECALL_Y = 942;
+const RECALL_AT = CHAT + 1.62; // 6.06, once he's flicked back to the newest messages
 // The list scrolls like a real phone: while the thumb is down the messages move exactly with it; let go while moving
 // and the list keeps sliding and slows down by itself (momentum, exponential decay); flick back to the newest
 // message and it overshoots past the end, stretches (rubber band) and springs back. Closed-form, so it is a pure
@@ -283,6 +292,19 @@ function shotChat(ctx: Ctx, abs: number) {
     phone(c, cx, cy, s, rot, (p) => {
       if (!off) {
         chatScreen(p, { time: "23:58", airplane: true }, "高二(3)班 (46)", CHAT_MSGS, "", false, { scroll });
+        // the clue gets the film's yellow pulse (the camera doesn't move to it)
+        const pu = phase(abs, RECALL_AT, RECALL_AT + 0.7);
+        if (pu > 0 && pu < 1) {
+          const w = 290 + 40 * pu;
+          p.save();
+          p.globalAlpha = Math.sin(Math.PI * pu);
+          p.strokeStyle = "#ffd84a";
+          p.lineWidth = 6;
+          rr(p, SW / 2 - w / 2, RECALL_Y + scroll - 30 - 10 * pu, w, 60 + 20 * pu, 14);
+          p.stroke();
+          glow(p, SW / 2, RECALL_Y + scroll, 200, "rgba(255,216,74,0.25)");
+          p.restore();
+        }
         glassGlare(p, hx);
         // his thumb on the glass (not once it heads for the power key on the side)
         if (abs < OFF - 0.4) touchDot(p, chatThumb(abs));

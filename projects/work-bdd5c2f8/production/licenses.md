@@ -17,3 +17,13 @@
 - public/fonts/noto-sans-sc-400-extra2.ttf: Google Fonts · Noto Sans SC（SIL Open Font License 1.1），重新设计版新增聊天文字的子集
 - public/_tmp/zcool-extra2.css: Google Fonts ZCOOL KuaiLe（SIL OFL 1.1）子集
 - public/fonts/zcool-kuaile-extra2.ttf: Google Fonts · ZCOOL KuaiLe（SIL Open Font License 1.1），新评论引导文字的子集
+- public/fonts/noto-extra3.css: Google Fonts CSS (OFL font)
+- public/fonts/zk-extra3.css: Google Fonts CSS (OFL font)
+- public/fonts/noto-sans-sc-400-extra3.ttf: Noto Sans SC, SIL OFL, via Google Fonts
+- public/fonts/zcool-kuaile-extra3.ttf: ZCOOL KuaiLe, SIL OFL, via Google Fonts
+- public/fonts/zk-extra4.css: Google Fonts CSS (OFL font)
+- public/fonts/zcool-kuaile-extra4.ttf: ZCOOL KuaiLe, SIL OFL, via Google Fonts
+- public/fonts/zk-extra5.css: Google Fonts CSS (OFL font)
+- public/fonts/zcool-kuaile-extra5.ttf: ZCOOL KuaiLe, SIL OFL, via Google Fonts
+- public/fonts/zk-extra6.css: Google Fonts CSS (OFL font)
+- public/fonts/zcool-kuaile-extra6.ttf: ZCOOL KuaiLe, SIL OFL, via Google Fonts

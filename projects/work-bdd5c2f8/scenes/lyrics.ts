@@ -255,7 +255,7 @@ function hook(ctx: Ctx, abs: number) {
     ctx.translate(W / 2, 330);
     ctx.scale(k, k);
     text(ctx, "今天是我17岁生日", 0, -56, { size: 80, font: F.cn, fill: "#fff", stroke: C.ink, lw: 14 });
-    // "手机 0 条新消息" with a red zero
+    // "手机 0 条新消息" with a red zero (用户 tried three other openings for retention and went back to this one)
     const parts: [string, string, number][] = [
       ["手机 ", "#fff", 80],
       ["0", "#ff3b3b", 112],

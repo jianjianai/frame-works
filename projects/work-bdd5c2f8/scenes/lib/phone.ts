@@ -262,6 +262,8 @@ export interface Msg {
   avatar?: Person;
   /** a grey time label above this message, e.g. "10:12" */
   time?: string;
+  /** a grey system line instead of a bubble, e.g. "阿杰 撤回了一条消息" */
+  system?: boolean;
 }
 function avatar(ctx: Ctx, x: number, y: number, p: Person | undefined, me: boolean) {
   ctx.save();
@@ -310,6 +312,20 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
   ctx.clip();
   for (let i = msgs.length - 1; i >= 0; i--) {
     const m = msgs[i];
+    if (m.system) {
+      y -= 52;
+      const w = measure(ctx, m.text, 24, F.ui) + 36;
+      ctx.fillStyle = "#dadada";
+      rr(ctx, SW / 2 - w / 2, y, w, 44, 8);
+      ctx.fill();
+      text(ctx, m.text, SW / 2, y + 23, { size: 24, font: F.ui, fill: "#777" });
+      y -= 30;
+      if (m.time) {
+        text(ctx, m.time, SW / 2, y + 10, { size: 22, font: F.ui, fill: "#9a9a9a" });
+        y -= 48;
+      }
+      continue;
+    }
     ctx.font = `400 30px ${F.ui}`;
     const lines = wrap(ctx, m.text, 330);
     const bh = lines.length * 42 + 36;

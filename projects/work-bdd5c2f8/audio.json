@@ -630,6 +630,26 @@
       "fadeOut": 0,
       "fadeOffset": 0,
       "automation": []
+    },
+    {
+      "id": "c_blow2",
+      "track": "sfx",
+      "source": "fx_blow",
+      "name": "和大家一起吹灭 17",
+      "start": 49.69,
+      "duration": 0.9,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1.1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.7,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
     }
   ],
   "buses": [

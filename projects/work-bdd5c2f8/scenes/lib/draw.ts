@@ -362,6 +362,10 @@ const FONT_FILES: [string, string, string, string?][] = [
   ["Noto Sans SC", "noto-sans-sc-400-extra2.ttf", "400", "U+5F53,U+524D,U+7F51,U+7EDC,U+4E0D,U+53EF,U+7528,U+6628,U+5929,U+660E,U+90FD,U+65E9,U+70B9,U+6765,U+FF01,U+6536,U+5230"],
   // 评论引导：回看：第几秒就能看出他开着飞行模式？
   ["ZCOOL KuaiLe", "zcool-kuaile-extra2.ttf", "400", "U+5C31,U+80FD,U+51FA,U+7740"],
+  // 重新翻译的中文歌词（lyrics-data.ts 的 CHORUS）里用到的全部字
+  ["ZCOOL KuaiLe", "zcool-kuaile-extra6.ttf", "400", "U+4ECA,U+5929,U+6211,U+624D,U+660E,U+767D,U+539F,U+6765,U+8EAB,U+8FB9,U+6CA1,U+6709,U+670B,U+53CB,U+53EA,U+5269,U+597D,U+5B64,U+5355,U+50CF,U+88AB,U+5168,U+4E16,U+754C,U+7ACB,U+4E00,U+4E2A,U+4EBA,U+4F1A,U+53D1,U+6D88,U+606F,U+7ED9,U+6BCF,U+90FD,U+90A3,U+4E48,U+865A,U+4F2A,U+60F3,U+8EB2,U+8D77,U+56E0,U+4E3A,U+5728,U+4E4E,U+4ED6,U+4EEC,U+5632,U+7B11,U+5F53,U+7740,U+7684,U+9762"],
+  // 班群里的彩蛋：阿杰 撤回了一条消息
+  ["Noto Sans SC", "noto-sans-sc-400-extra3.ttf", "400", "U+64A4,U+56DE,U+4E86,U+4E00,U+6761,U+6D88,U+606F"],
 ];
 export function loadFonts(): Promise<void> {
   fontsReady ??= Promise.all(

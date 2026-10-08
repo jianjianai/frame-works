@@ -521,10 +521,10 @@ function cakeCream(ctx: Ctx, k: number, p: KidPose, seed: number) {
     paint(ctx, i % 2 ? "#ff7aa8" : "#ffd84a", null);
   }
   ctx.restore();
-  // keep the (laughing) face readable through the cream
-  eye(ctx, -50, 36, -1, { ...p, eyes: "happy" }, seed + 20);
-  eye(ctx, 50, 36, 1, { ...p, eyes: "happy" }, seed + 21);
-  mouth(ctx, { ...p, mouth: "laugh" }, seed + 22, 6);
+  // keep the face readable through the cream (laughing unless the pose says otherwise: shut eyes, a stunned "o")
+  eye(ctx, -50, 36, -1, { ...p, eyes: p.eyes ?? "happy" }, seed + 20);
+  eye(ctx, 50, 36, 1, { ...p, eyes: p.eyes ?? "happy" }, seed + 21);
+  mouth(ctx, { ...p, mouth: p.mouth ?? "laugh" }, seed + 22, 6);
 }
 
 function headBack(ctx: Ctx, p: KidPose, seed: number) {
