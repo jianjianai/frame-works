@@ -14,7 +14,8 @@
 - `templates/`：scene.ts、visual.json（55 秒四幕）、歌词数据模板。
 - `tools/`：fetch-krc.mjs（酷狗逐词时间）、fetch-fonts.mjs（字体子集）。
 - `fonts/`：六个手绘风字体（按原作品用字子集化，换文案要重新取）。
-- `reference/`：《i have no friends》六幕和封面；`reference/no-friends-remake/`：重置版（开头三镜 opening.ts、四幕、歌词层、visual.json）；`reference/unhappy/`：《unhappy》小狗版四幕；`reference/unhappy-chat/`：《unhappy》聊天版五幕 + story.ts + timeline.ts。只看不拷。
+- `reference/`：《i have no friends》六幕和封面；`reference/no-friends-remake/`：重置版（开头三镜 opening.ts、四幕、歌词层、visual.json）；`reference/unhappy/`：《unhappy》小狗版四幕；`reference/unhappy-chat/`：《unhappy》聊天版五幕 + story.ts + timeline.ts；`reference/mirrors/`：《mirrors》（瑕疵：0）五幕 + night.ts + 歌词层 + timeline + visual.json。只看不拷。
+- `code/mirrors/`：《mirrors》的场景和道具（整组拷进 `scenes/lib/`）：浴室、夜走廊落地镜 + 飞的床单、从前往后拍的教室（黑板报）、黄昏天台、夜客厅、深色聊天/视频来电/美颜 App、速写本、胎记和红笔批注、伪装（目录里有 README）。
 
 ## 作品
 - work-bdd5c2f8《i have no friends》：生日没人记得→飞行模式反转（99 秒）。
