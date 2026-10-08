@@ -1,3 +1,3 @@
-# i have no friends（youtube封面）
+# i have no friends
 
 FRAME 作品。使用 FRAME Studio 打开、预览和导出。
