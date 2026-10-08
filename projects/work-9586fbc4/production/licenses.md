@@ -1,0 +1,24 @@
+- public/production/krc-search.json: 酷狗歌词搜索接口返回（仅制作用，取逐词时间）
+- public/production/krc-search-4.json: 酷狗歌词搜索接口返回（仅制作用）
+- public/production/krc-search-2.json: 酷狗歌词搜索接口返回（仅制作用）
+- public/production/krc-search-3.json: 酷狗歌词搜索接口返回（仅制作用）
+- public/production/krc-541550583.json: 酷狗 KRC 歌词（仅制作用，取逐词时间）
+- public/production/krc-541479728.json: 酷狗 KRC 歌词（仅制作用，取逐词时间）
+- public/production/long-cang.css: Google Fonts css2 子集（OFL 字体），本片用字
+- public/production/noto-sans-sc-700.css: Google Fonts css2 子集（OFL 字体），本片用字
+- public/production/noto-sans-sc-400.css: Google Fonts css2 子集（OFL 字体），本片用字
+- public/production/zcool-kuaile.css: Google Fonts css2 子集（OFL 字体），本片用字
+- public/fonts/long-cang.ttf: Long Cang, SIL Open Font License, Google Fonts 子集
+- public/fonts/noto-sans-sc-700.ttf: Noto Sans SC Bold, SIL Open Font License, Google Fonts 子集
+- public/fonts/zcool-kuaile.ttf: ZCOOL KuaiLe, SIL Open Font License, Google Fonts 子集
+- public/fonts/noto-sans-sc-400.ttf: Noto Sans SC, SIL Open Font License, Google Fonts 子集
+- public/production/permanent-marker.css: Google Fonts css2（OFL），ASCII 全集
+- public/production/gochi-hand.css: Google Fonts css2（OFL），ASCII 全集
+- public/fonts/gochi-hand.ttf: Gochi Hand, SIL Open Font License, Google Fonts
+- public/fonts/permanent-marker.ttf: Permanent Marker, Apache License 2.0, Google Fonts
+- public/production/noto-sans-sc-700-extra.css: Google Fonts CSS (Noto Sans SC, SIL OFL 1.1) — subset request for act 1 phone UI
+- public/production/noto-sans-sc-400-extra.css: Google Fonts CSS (Noto Sans SC, SIL OFL 1.1) — subset request for act 1 phone UI
+- public/fonts/noto-sans-sc-700-extra.ttf: Noto Sans SC (Google Fonts), SIL Open Font License 1.1 — subset: 业交作数知给要道
+- public/fonts/noto-sans-sc-400-extra.ttf: Noto Sans SC (Google Fonts), SIL Open Font License 1.1 — subset: 业交作数知给要道
+- public/production/long-cang-extra.css: Google Fonts CSS (Long Cang, SIL OFL 1.1) — subset request: P
+- public/fonts/long-cang-extra.ttf: Long Cang (Google Fonts), SIL Open Font License 1.1 — subset: P

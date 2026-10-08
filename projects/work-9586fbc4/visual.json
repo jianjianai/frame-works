@@ -1,19 +1,121 @@
 {
   "schemaVersion": 1,
-  "background": "#101418",
+  "background": "#0b0e1f",
   "clips": [
     {
-      "id": "title",
-      "name": "标题",
+      "id": "act1",
+      "name": "第一幕 · 蒙上的镜子",
       "source": {
         "kind": "scene",
-        "module": "title",
+        "module": "act1",
         "engine": "canvas"
       },
       "start": 0,
-      "duration": 60,
-      "fadeIn": 1,
-      "fadeOut": 1
+      "duration": 16.29,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act2",
+      "name": "第二幕 · 天台见？",
+      "source": {
+        "kind": "scene",
+        "module": "act2",
+        "engine": "canvas"
+      },
+      "start": 16.29,
+      "duration": 8.127,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act3",
+      "name": "第三幕 · 天台",
+      "source": {
+        "kind": "scene",
+        "module": "act3",
+        "engine": "canvas"
+      },
+      "start": 24.417,
+      "duration": 8.127,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act4",
+      "name": "第四幕 · 速写本",
+      "source": {
+        "kind": "scene",
+        "module": "act4",
+        "engine": "canvas"
+      },
+      "start": 32.544,
+      "duration": 20.319,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act5",
+      "name": "第五幕 · 撕下报纸",
+      "source": {
+        "kind": "scene",
+        "module": "act5",
+        "engine": "canvas"
+      },
+      "start": 52.863,
+      "duration": 4.637,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "lyrics",
+      "name": "中英歌词 + 钩子",
+      "source": {
+        "kind": "scene",
+        "module": "lyrics",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 57.5,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "grain",
+      "name": "胶片颗粒",
+      "source": {
+        "kind": "scene",
+        "module": "grain",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 57.5,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "transform": {
+        "opacity": 0.5
+      },
+      "fit": "contain",
+      "blend": "overlay"
     }
   ]
 }
