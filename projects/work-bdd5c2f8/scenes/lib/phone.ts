@@ -590,8 +590,9 @@ export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: 
   const toggles: [string, boolean, string][] = [
     ["air", airplaneOn, C.orange],
     ["cell", !airplaneOn, "#34c759"],
-    ["wifi", false, "#0a84ff"],
-    ["bt", false, "#0a84ff"],
+    // (switching airplane mode off brings Wi-Fi and Bluetooth back on too — more colour comes back with the wave)
+    ["wifi", !airplaneOn, "#0a84ff"],
+    ["bt", !airplaneOn, "#0a84ff"],
   ];
   toggles.forEach(([id, on, color], i) => {
     const cx = x0 + gap + cell / 2 + (i % 2) * (cell + gap);

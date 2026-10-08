@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, backOut, beatAt, bloom, camera, designScene, easeInOut, fillBg, filtered, flash, glow, handheld, text, writeOn } from "./lib/draw";
+import { C, Ctx, F, H, W, backOut, beatAt, bloom, bokehDisc, camera, designScene, easeInOut, fillBg, filtered, flash, glow, handheld, text, writeOn } from "./lib/draw";
 import { CAST, Person, drawPerson } from "./lib/people";
 import { Msg, SW, chatScreen, glassGlare, phone, phoneButtons } from "./lib/phone";
 import { FingerKey, fingerAt, touchDot } from "./lib/hand";
@@ -94,10 +94,20 @@ function shotThanks(ctx: Ctx, abs: number) {
     },
     "bg",
   );
-  ctx.fillStyle = "rgba(10,12,30,0.35)";
+  // 光影 · 情绪: the party behind him stays warm — the lobby's light glowing through the blur, the string lights and
+  // the faces gone to soft gold and pink discs (it was a cold blue veil)
+  ctx.fillStyle = "rgba(24,14,22,0.3)";
   ctx.fillRect(-60, -60, W + 120, H + 120);
-  bokeh(ctx, abs, 16, 601, 0.9);
-  glow(ctx, cx, cy, 700, "rgba(255,220,150,0.18)");
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  glow(ctx, 540, 620, 980, "rgba(255,196,120,0.2)");
+  for (let i = 0; i < 9; i++) {
+    const t = i / 8;
+    bokehDisc(ctx, -40 + t * 1160, 180 + 70 * Math.sin(t * Math.PI) + Math.sin(abs * 0.7 + i) * 6, 36 + 10 * Math.sin(i * 2.1), ["255,205,120", "255,150,190", "150,215,255", "255,226,160"][i % 4], 0.22 * (0.8 + 0.2 * Math.sin(abs * 2 + i)));
+  }
+  ctx.restore();
+  bokeh(ctx, abs, 16, 601, 0.9, ["255,205,130", "255,160,190", "255,236,190"]);
+  glow(ctx, cx, cy, 700, "rgba(255,220,150,0.2)");
   ctx.save();
   // (the input box, keyboard up, is at screen y 799 of the phone)
   camera(ctx, 540, cy + (799 - 640) * s, 1 + 0.12 * typing);

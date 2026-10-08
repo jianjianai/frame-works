@@ -269,7 +269,7 @@ function moonPanes(c: Ctx) {
           k.fill();
         }
     },
-    "ohPanes",
+    "panes",
     1,
     "lighter",
   );

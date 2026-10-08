@@ -1,5 +1,56 @@
 import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, blob, bokehDisc, curve, fillBg, flicker, glow, hash, inkLine, jit, line, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
+import { C, Ctx, F, H, Pt, W, blob, bokehDisc, curve, devScale, fillBg, filtered, flicker, glow, hash, inkLine, jit, lightShaft, line, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
+
+/** Shade a daylight set everywhere except round its light sources: a tinted veil with soft holes at `holes` [x, y,
+ *  r] (windows, the patches of sun on the floor) — so the light has somewhere to come from and the room has depth. */
+export function shadeAround(ctx: Ctx, rgb: string, a: number, holes: [number, number, number][], key = "shade") {
+  if (a <= 0.005) return;
+  filtered(
+    ctx,
+    "none",
+    (c) => {
+      c.fillStyle = `rgba(${rgb},${a.toFixed(3)})`;
+      c.fillRect(-400, -400, W + 800, H + 800);
+      c.globalCompositeOperation = "destination-out";
+      for (const [x, y, r] of holes) {
+        const g = c.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, "rgba(0,0,0,1)");
+        g.addColorStop(0.5, "rgba(0,0,0,0.75)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        c.fillStyle = g;
+        c.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+    },
+    key,
+  );
+}
+/** Window panes of sunlight (or moonlight) laid on a floor or desk: the quad q (TL, TR, BR, BL) split into 2×2 panes
+ *  by the window's cross bars, soft-edged, added as light. */
+export function paneLight(ctx: Ctx, q: Pt[], rgb: string, a: number, soft = 5, key = "panes") {
+  if (a <= 0.005) return;
+  filtered(
+    ctx,
+    `blur(${(soft * devScale(ctx)).toFixed(1)}px)`,
+    (c) => {
+      const at = (u: number, v: number): Pt => [
+        (1 - v) * ((1 - u) * q[0][0] + u * q[1][0]) + v * ((1 - u) * q[3][0] + u * q[2][0]),
+        (1 - v) * ((1 - u) * q[0][1] + u * q[1][1]) + v * ((1 - u) * q[3][1] + u * q[2][1]),
+      ];
+      c.fillStyle = `rgba(${rgb},${a.toFixed(3)})`;
+      for (const [u0, u1] of [[0, 0.47], [0.53, 1]])
+        for (const [v0, v1] of [[0, 0.46], [0.54, 1]]) {
+          const p = [at(u0, v0), at(u1, v0), at(u1, v1), at(u0, v1)];
+          c.beginPath();
+          p.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+          c.closePath();
+          c.fill();
+        }
+    },
+    key,
+    1,
+    "lighter",
+  );
+}
 
 /** Sets. 重置版: bedroom, desk, corridor, classroom and the night street were redrawn with more detail — props that
  *  say something (the calendar with today circled), light that has a source (moon, window shafts, lamps, the candle),
@@ -468,6 +519,11 @@ export function corridor(ctx: Ctx, abs = 0) {
     inkLine(ctx, [[x, y + h / 2], [x + w, y + h / 2]], 66 + x, 6, "#8a7f6a");
     rbox(ctx, x - 16, y + h - 4, w + 32, 24, 4, 67 + x, 1);
     paint(ctx, "#d8c9a6", C.ink, 5);
+    // 光影: the morning outside is bright — the panes glow and spill onto the wall round the frame
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    glow(ctx, x + w / 2, y + h * 0.45, 330, "rgba(255,248,225,0.2)");
+    ctx.restore();
   }
   shaded(ctx, () => rbox(ctx, 400, 360, 240, 720, 6, 68, 1.5), "#b9895a", () => {
     rbox(ctx, 440, 420, 160, 180, 4, 69, 1);
@@ -496,24 +552,25 @@ export function corridor(ctx: Ctx, abs = 0) {
       const yy = 1120 + Math.pow(r / 5, 1.6) * 800;
       inkLine(ctx, [[-40, yy], [W + 40, yy - 4]], 90 + r, 2.4, "#a8885e");
     }
+    // the polished floor mirrors the bright windows, faintly
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
     for (const x of [40, 700]) {
-      poly(ctx, [[x + 60, 1130], [x + 300, 1130], [x + 420, 1420], [x + 120, 1420]], 96 + x, 1);
-      ctx.fillStyle = "rgba(255,236,190,0.16)";
-      ctx.fill();
+      ctx.fillStyle = vgrad(ctx, 1122, 1330, [[0, "rgba(225,240,255,0.16)"], [1, "rgba(225,240,255,0)"]]);
+      ctx.fillRect(x + 8, 1122, 284, 210);
     }
     ctx.restore();
   }, C.ink, 6);
-  // light shafts through the air, with dust
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  for (const x of [40, 700]) {
-    poly(ctx, [[x, 330], [x + 300, 330], [x + 420, 1130], [x + 60, 1130]], 98 + x, 1);
-    ctx.fillStyle = "rgba(255,240,200,0.07)";
-    ctx.fill();
-  }
-  ctx.restore();
+  // sunlight through the windows lying on the floor in four panes (the window bars' shadows between them)
+  for (const x of [40, 700]) paneLight(ctx, [[x + 70, 1134], [x + 310, 1134], [x + 450, 1440], [x + 140, 1440]], "255,232,180", 0.24, 5, "panes");
+  // soft shafts of it through the air, with dust turning in them
+  for (const x of [40, 700])
+    lightShaft(ctx, [[x + 10, 345], [x + 290, 345], [x + 440, 1132], [x + 70, 1132]], x + 150, 345, x + 330, 1500, "255,238,200", 0.16, 22, "shaft");
+  // the shadowed corner where the wall meets the floor
+  ctx.fillStyle = vgrad(ctx, 1110, 1190, [[0, "rgba(60,40,20,0.18)"], [1, "rgba(60,40,20,0)"]]);
+  ctx.fillRect(-60, 1110, W + 120, 80);
+  // away from the windows the corridor is in shade (the light has somewhere to come from)
+  shadeAround(ctx, "58,38,24", 0.24, [[190, 540, 560], [850, 540, 560], [330, 1300, 460], [990, 1300, 460]], "shade");
   dust(ctx, abs, 60, 360, 300, 740, 300);
   dust(ctx, abs, 720, 360, 300, 740, 700);
 }
@@ -521,13 +578,6 @@ export function corridor(ctx: Ctx, abs = 0) {
 /** `backDesks: false` leaves out the back row of empty desks (when a shot seats people at its own desks). */
 export function classroom(ctx: Ctx, abs = 0, backDesks = true) {
   fillBg(ctx, vgrad(ctx, 0, 1100, [[0, "#ece0c3"], [1, "#ddcfae"]]));
-  // a broad band of sunlight from the windows on the left
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  poly(ctx, [[-60, 120], [260, 120], [620, 1100], [-60, 1100]], 79, 1);
-  ctx.fillStyle = "rgba(255,236,190,0.10)";
-  ctx.fill();
-  ctx.restore();
   // clock above the board
   oval(ctx, 940, 222, 50, 50, 78, 1);
   paint(ctx, "#fbf7ee", C.ink, 5);
@@ -576,6 +626,11 @@ export function classroom(ctx: Ctx, abs = 0, backDesks = true) {
   shaded(ctx, () => poly(ctx, [[-40, 1080], [W + 40, 1070], [W + 40, H + 40], [-40, H + 40]], 84, 2), "#b99a6c", () => {
     for (let i = -6; i <= 6; i++) inkLine(ctx, [[540 + i * 70, 1080], [540 + i * 300, H + 40]], 93 + i, 2.4, "#a5865a");
   }, C.ink, 6);
+  // 光影: morning sun from the windows on the left — a broad soft beam across the room (the back row sits in it; the
+  // middle, where he sits, is just outside it), its panes on the floor, the right of the room in shade
+  lightShaft(ctx, [[-80, 100], [230, 100], [480, 1090], [-80, 1090]], 60, 100, 330, 1400, "255,236,190", 0.2, 26, "shaft");
+  paneLight(ctx, [[-60, 1092], [250, 1092], [470, 1520], [-60, 1520]], "255,232,180", 0.22, 6, "panes");
+  shadeAround(ctx, "58,38,24", 0.22, [[40, 520, 720], [120, 1300, 560]], "shade");
   dust(ctx, abs, 0, 160, 420, 900, 400, 14);
 }
 
@@ -840,8 +895,23 @@ export function confetti(ctx: Ctx, abs: number, t0: number, count = 90, seed = 7
     ctx.save();
     ctx.translate(x + Math.sin(abs * 3 + i) * 30 * clamp(t - 0.8), yf);
     ctx.rotate(abs * (2 + hash(i * 9) * 4) + i);
-    ctx.fillStyle = ["#ff5a7a", "#ffd84a", "#59c3ff", "#7ee081", "#c58bff"][i % 5];
+    // 美感: each piece tumbles — thin when edge-on, its back a shade darker, a glint as it turns to the light
+    const flip = Math.cos(abs * (5 + hash(i * 5.3) * 7) + i * 1.7);
+    ctx.scale(1, Math.max(0.12, Math.abs(flip)));
+    const col = ["#ff5a7a", "#ffd84a", "#59c3ff", "#7ee081", "#c58bff"][i % 5];
+    ctx.fillStyle = col;
     ctx.fillRect(-9, -5, 18, 10);
+    if (flip < 0) {
+      ctx.fillStyle = "rgba(0,0,0,0.22)";
+      ctx.fillRect(-9, -5, 18, 10);
+    } else if (flip > 0.93) {
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.fillRect(-9, -5, 18, 10);
+      ctx.restore();
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      glow(ctx, x + Math.sin(abs * 3 + i) * 30 * clamp(t - 0.8), yf, 26, "rgba(255,250,230,0.5)");
+    }
     ctx.restore();
   }
 }

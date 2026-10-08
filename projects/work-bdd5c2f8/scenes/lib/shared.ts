@@ -19,6 +19,9 @@ export interface DeskShot {
   bgBlur?: number;
   /** a party horn in his lips: u 0 = rolled up … 1 = blown out, droop 0..1 */
   horn?: { u: number; droop: number };
+  /** another warm light for a moment (the match flaring at the wick): where it is and how strong; while it is
+   *  stronger than the candle it is the key light — his face, his shadow on the wall, the dark round it */
+  light?: { at: Pt; k: number };
 }
 
 /** The candle flame (design units, before the camera). */
@@ -33,10 +36,13 @@ const DESK_Y = 1080;
  *  across the room with dust turning in it; the shadows go blue, the light stays warm. */
 export function birthdayDesk(ctx: Ctx, abs: number, o: DeskShot) {
   const layer = o.layer ?? "all";
-  const lit = o.lit;
+  const candle = o.lit;
+  const extra = o.light && o.light.k > 0.001 ? o.light : null;
+  // the light in the room: the candle, or for a moment the match
+  const lit = Math.max(candle, extra ? extra.k : 0);
   const fl = flicker(abs);
   const r = 1050 * (0.6 + 0.4 * lit);
-  const [lx, ly] = FLAME;
+  const [lx, ly] = extra && extra.k > candle ? extra.at : FLAME;
   const pose: KidPose = {
     body: "bust",
     arms: "table",
@@ -102,7 +108,7 @@ export function birthdayDesk(ctx: Ctx, abs: number, o: DeskShot) {
     ctx.roundRect(-64, -132, 128, 264, 18);
     ctx.fill();
     ctx.restore();
-    cupcake(ctx, 390, 1170, 0.8, abs, lit, o.smoke ?? 0, 1, layer === "scene" ? "body" : "all");
+    cupcake(ctx, 390, 1170, 0.8, abs, candle, 0, 1, layer === "scene" ? "body" : "all");
     // lit from straight above: the frosting shades the top of the paper case, its foot is in shadow
     ctx.save();
     ctx.translate(390, 1170);
@@ -171,7 +177,7 @@ export function birthdayDesk(ctx: Ctx, abs: number, o: DeskShot) {
             c.fill();
           }
       },
-      "deskPanes",
+      "panes",
       1,
       "lighter",
     );
@@ -184,6 +190,9 @@ export function birthdayDesk(ctx: Ctx, abs: number, o: DeskShot) {
     ctx.fillRect(WIN.x, WIN.y, WIN.w, WIN.h);
     ctx.restore();
 
+    // blown out: a thread of smoke rises from the wick, pale in the moonlight, curling and thinning away
+    const smoke = o.smoke ?? 0;
+    if (smoke > 0 && smoke < 1 && candle < 0.01) smokeWisp(ctx, 390, 970, smoke, abs);
     // the phone screen's cold light on the desk around it
     if (phoneOn > 0.01) {
       ctx.save();
@@ -209,7 +218,7 @@ export function birthdayDesk(ctx: Ctx, abs: number, o: DeskShot) {
     lightShaft(
       ctx,
       [[WIN.x + 10, WIN.y + WIN.h - 20], [WIN.x + WIN.w, WIN.y + WIN.h - 20], [WIN.x + WIN.w - 110, H + 60], [WIN.x - 330, H + 60]],
-      810, WIN.y + WIN.h, 560, 1650, "150,175,255", 0.13, 30, "deskMoon",
+      810, WIN.y + WIN.h, 560, 1650, "150,175,255", 0.13, 30, "shaft",
     );
     motes(ctx, abs, 760, 1080, 210, 300, 10, 77, "205,220,255", 0.6, 2.2);
     const m = figureMask(ctx, kid, "deskKid");
@@ -223,7 +232,7 @@ export function birthdayDesk(ctx: Ctx, abs: number, o: DeskShot) {
       onFigure(ctx, m, (c) => glow(c, lx, ly, 600, `rgba(255,168,88,${(0.62 * fl).toFixed(3)})`), "screen", lit, belowDesk);
       // his shadow on the wall behind him: thrown up and to the right, bigger than he is, trembling with the flame
       // (laid over the lit wall so it takes the light away; not on the window glass, not on him, not on the desk)
-      castShadow(ctx, FLAME, 1.5 + 0.4 * (fl - 1), kid, "#03040b", 9, 0.62 * lit, (c) => {
+      castShadow(ctx, [lx, ly], 1.5 + 0.4 * (fl - 1), kid, "#03040b", 9, 0.62 * lit, (c) => {
         c.beginPath();
         c.rect(-200, -200, W + 400, DESK_Y - 4 + 200);
         c.rect(WIN.x + 4, WIN.y + 4, WIN.w - 8, WIN.h - 8);
@@ -249,7 +258,7 @@ export function birthdayDesk(ctx: Ctx, abs: number, o: DeskShot) {
       glow(ctx, 0, 0, 280, `rgba(255,185,100,${(0.3 * fl).toFixed(3)})`, lit);
       ctx.restore();
       // the flame, its halo, a faint horizontal flare, dust glinting in its light
-      cupcake(ctx, 390, 1170, 0.8, abs, lit, 0, 1, "flame");
+      if (candle > 0.01) cupcake(ctx, 390, 1170, 0.8, abs, candle, 0, 1, "flame");
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       glow(ctx, lx, ly, 110, `rgba(255,236,190,${(0.4 * fl).toFixed(3)})`, lit);
@@ -260,5 +269,54 @@ export function birthdayDesk(ctx: Ctx, abs: number, o: DeskShot) {
       ctx.restore();
       motes(ctx, abs, lx + 60, ly - 120, 360, 320, 16, 41, "255,215,160", 0.8 * lit, 2.6);
     }
+    // just blown out: the wick still glows orange for a moment, the last warm thing in the room
+    const smoke = o.smoke ?? 0;
+    if (candle < 0.01 && smoke > 0 && smoke < 0.4) {
+      const e = 1 - smoke / 0.4;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      glow(ctx, 390, 972, 46, "rgba(255,120,50,0.35)", e);
+      glow(ctx, 390, 972, 9, "rgba(255,170,90,1)", e * (0.8 + 0.2 * Math.sin(abs * 30)));
+      ctx.restore();
+    }
   }
+}
+
+/** A thread of smoke from a blown-out wick at (x, y): `t` 0..1 over its life — it rises, sways, curls and thins
+ *  away; pale, as if the moonlight catches it. Layered soft strokes (no blur pass). */
+function smokeWisp(ctx: Ctx, x: number, y: number, t: number, abs: number) {
+  const fade = Math.sin(Math.PI * Math.min(1, t * 1.15)) * (1 - t);
+  if (fade <= 0.01) return;
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (let strand = 0; strand < 2; strand++) {
+    const pts: Pt[] = [];
+    const rise = 0.55 + 0.9 * t;
+    for (let k = 0; k <= 12; k++) {
+      const h = k * 34 * rise;
+      const sway = Math.sin(k * 0.75 + abs * 2.4 + strand * 1.9) * (3 + k * 4.2) * (0.4 + t) + (strand ? 10 : -4) * (k / 12) * t * 3;
+      pts.push([x + sway, y - h]);
+    }
+    const path = () => {
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let k = 1; k < pts.length - 1; k++) {
+        const mx = (pts[k][0] + pts[k + 1][0]) / 2,
+          my = (pts[k][1] + pts[k + 1][1]) / 2;
+        ctx.quadraticCurveTo(pts[k][0], pts[k][1], mx, my);
+      }
+    };
+    for (const [w, a] of [[14, 0.06], [7, 0.12], [2.5, 0.28]] as [number, number][]) {
+      const g = ctx.createLinearGradient(x, y, x, y - 12 * 34 * rise);
+      g.addColorStop(0, `rgba(215,222,240,${(a * fade).toFixed(3)})`);
+      g.addColorStop(0.6, `rgba(215,222,240,${(a * fade * 0.7).toFixed(3)})`);
+      g.addColorStop(1, "rgba(215,222,240,0)");
+      ctx.strokeStyle = g;
+      ctx.lineWidth = w * (1 + 1.5 * t) * (strand ? 0.7 : 1);
+      path();
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
 }

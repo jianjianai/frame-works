@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, ik2, inkLine, measure, oval, paint, poly, rr, shaded, shake, text, tubePts, vgrad, writeOn } from "./lib/draw";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blit, blob, bloom, buffer, camera, card, designScene, devScale, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, ik2, inkLine, measure, oval, paint, poly, rr, shaded, shake, text, tubePts, vgrad, writeOn } from "./lib/draw";
 import { KidPose, drawHand, drawKid } from "./lib/kid";
 import { CAST } from "./lib/people";
 import { Msg, SH, SW, chatScreen, phone, phoneBack } from "./lib/phone";
@@ -49,6 +49,14 @@ function outsideBakery(c: Ctx, abs: number) {
     look: down > 0.5 ? [0.05, 1] : [-0.85, 0.55],
     mouth: "flat",
   });
+  // 光影: the shop's warm light falls out through the glass onto him and the pavement at his feet
+  c.save();
+  c.globalCompositeOperation = "lighter";
+  glow(c, BK.x - 60, BK.y + 160, 460, "rgba(255,226,170,0.17)");
+  c.translate(BK.x - 80, BK.y + 520);
+  c.scale(1, 0.22);
+  glow(c, 0, 0, 520, "rgba(255,226,170,0.22)");
+  c.restore();
 }
 
 function glass(c: Ctx, abs: number) {
@@ -219,10 +227,33 @@ function streetAhead(c: Ctx, abs: number, travel: number, frontOnly: boolean) {
     paint(c, "#bdbdb0", null);
   }
   c.globalAlpha = 1;
+  // 光影: night haze where the street meets the sky, the far end fading into it
+  c.save();
+  c.globalCompositeOperation = "lighter";
+  c.fillStyle = vgrad(c, HZ - 220, HZ + 260, [[0, "rgba(120,130,180,0)"], [0.45, "rgba(120,130,180,0.16)"], [1, "rgba(120,130,180,0)"]]);
+  c.fillRect(-60, HZ - 220, W + 120, 480);
+  c.restore();
   // pools of lamplight on the pavement, then the lamps behind him (far to near)
   c.save();
   c.globalCompositeOperation = "lighter";
   for (const z of lamps) {
+    // the cone of light under each lamp, in the haze, and the lamp's halo
+    const lx = gx(0.7, z),
+      ly = gy(4.25, z),
+      gyz = gy(0, z),
+      half = (FOC * 0.9) / z;
+    const cg = c.createLinearGradient(0, ly, 0, gyz);
+    cg.addColorStop(0, `rgba(255,228,170,${Math.min(0.14, 0.5 / z).toFixed(3)})`);
+    cg.addColorStop(1, "rgba(255,228,170,0.01)");
+    c.fillStyle = cg;
+    c.beginPath();
+    c.moveTo(lx - half * 0.12, ly);
+    c.lineTo(lx + half * 0.12, ly);
+    c.lineTo(lx + half, gyz);
+    c.lineTo(lx - half, gyz);
+    c.closePath();
+    c.fill();
+    glow(c, lx, ly, (FOC * 0.55) / z, `rgba(255,238,200,${Math.min(0.35, 1.2 / z).toFixed(3)})`);
     const rx = (FOC * 1.7) / z,
       ry = Math.max(4, (FOC * CAM_H * 1.7) / (z * z));
     const g = c.createRadialGradient(gx(0.7, z), gy(0, z), 0, gx(0.7, z), gy(0, z), rx);
@@ -240,6 +271,36 @@ function streetAhead(c: Ctx, abs: number, travel: number, frontOnly: boolean) {
   [...lamps].reverse().forEach((z, k) => {
     if (z >= KID_Z) lamp(c, z, k);
   });
+  // the near pavement falls away into the dark below the lyrics
+  c.fillStyle = vgrad(c, 1480, H + 60, [[0, "rgba(6,7,14,0)"], [1, "rgba(6,7,14,0.5)"]]);
+  c.fillRect(-60, 1480, W + 120, H - 1420);
+}
+
+/** 光影: his shadow on the pavement from a lamp at depth z — swinging round him as he walks past it: long toward us
+ *  when the lamp is behind him, sideways as it passes, running ahead of him (up the street) once it is behind us.
+ *  His silhouette is sheared onto the ground from his feet to where the lamp throws the top of his head. */
+function walkShadow(g: Ctx, draw: (k: Ctx) => void, z: number, strength: number) {
+  if (strength <= 0.02) return;
+  const zg = 5 - 0.667 * z; // the top of his head, thrown onto the ground (lamp 4.25 m up, 0.7 m to his right)
+  if (zg < 0.9) return;
+  const fx = 540,
+    fy = gy(0, KID_Z),
+    hk = 860;
+  const kx = (gx(-0.467, zg) - fx) / -hk,
+    ky = (gy(0, zg) - fy) / -hk,
+    sx = Math.min(1.25, Math.max(0.55, KID_Z / zg));
+  const b = buffer(g, "walkShadow");
+  b.save();
+  b.transform(sx, 0, kx, ky, fx - sx * fx - kx * fy, fy - ky * fy);
+  draw(b);
+  b.restore();
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalCompositeOperation = "source-in";
+  b.fillStyle = "#04050b";
+  b.fillRect(0, 0, b.canvas.width, b.canvas.height);
+  b.restore();
+  blit(g, b, "source-over", strength, `blur(${((2 + Math.abs(zg - KID_Z) * 2.5) * devScale(g)).toFixed(1)}px)`);
 }
 
 function shotWalk(ctx: Ctx, abs: number) {
@@ -273,10 +334,7 @@ function shotWalk(ctx: Ctx, abs: number) {
       g.fill();
       g.restore();
     }
-    filtered(
-      g,
-      `brightness(${(0.62 + 0.48 * light).toFixed(3)})`,
-      (k0) =>
+    const walker = (k0: Ctx) =>
     drawKid(k0, 540, KY + bob, 0.93, {
       body: "full",
       legs: moving ? "walk" : "stand",
@@ -313,9 +371,10 @@ function shotWalk(ctx: Ctx, abs: number) {
         phoneBack(k, wrist[0] + Math.cos(ang) * 30, wrist[1] + Math.sin(ang) * 30 - 44, 68, 124, -0.08);
         drawHand(k, wrist[0], wrist[1], 1, ang, "hold", true, false, 2290);
       },
-    }),
-      "walker",
-    );
+    });
+    // his shadows from the lamps near him, swinging round as he walks past them
+    for (const z of lampZs(travel)) walkShadow(g, walker, z, 0.55 * Math.exp(-(((z - KID_Z) / 2.4) ** 2)));
+    filtered(g, `brightness(${(0.62 + 0.48 * light).toFixed(3)})`, walker, "walker");
     // the phone's light on his face
     glow(g, 540 + 0.93 * 20, KY + bob + 0.93 * 170, 260, "rgba(170,205,255,0.28)");
     streetAhead(g, abs, travel, true);
@@ -459,10 +518,15 @@ function shotDesk(ctx: Ctx, abs: number) {
     shapeR: "flat",
     grip: reach > 0.2 ? (k) => inkLine(k, [hand, [hand[0] - 40, hand[1] + 38]], 2301, 4, "#d8b07a") : undefined,
   };
+  // 光影: the match flares at the wick and for a moment it is the light in the room — out of the dark his face
+  // jumps up warm, his shadow leaps up the wall — then the candle takes over, steady
+  const fT = phase(abs, MATCH - 0.1, MATCH + 0.62);
+  const flare = fT <= 0 || fT >= 1 ? 0 : Math.min(1, (abs - MATCH + 0.1) / 0.05) * (1 - easeIn(fT)) * (0.92 + 0.08 * Math.sin(abs * 47));
+  const head: Pt = [600 + 1.1 * (hand[0] - 40), 810 + 1.1 * (hand[1] + 38)];
   const shot = (c: Ctx, layer: "scene" | "flame") => {
     c.save();
     camera(c, 540, 900, zoom, hr, hx, hy);
-    birthdayDesk(c, abs, { lit, kid, phoneOn: 1 - phase(abs, N3b, N3b + 1.2), dark: 0.93, layer, clue: 1 });
+    birthdayDesk(c, abs, { lit, kid, phoneOn: 1 - phase(abs, N3b, N3b + 1.2), dark: 0.93, layer, clue: 1, light: { at: head, k: 0.95 * flare } });
     c.restore();
   };
   grade(ctx, GREY, (g) => shot(g, "scene"));

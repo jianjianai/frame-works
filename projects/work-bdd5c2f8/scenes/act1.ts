@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shaded, shake, text } from "./lib/draw";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, camera, card, designScene, figureMask, lightShaft, onFigure, rimLight, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shaded, shake, text } from "./lib/draw";
 import { drawHand, drawKid } from "./lib/kid";
 import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
 import { Msg, Note, SH, SW, chatScreen, glassGlare, lockScreen, notification, notificationHeight, phone, phoneButtons, statusBar, wallpaper } from "./lib/phone";
@@ -323,6 +323,14 @@ function focus(c: Ctx, px: number, draw: (c: Ctx) => void, key: string) {
   if (px > 0.3) filtered(c, `blur(${px.toFixed(1)}px)`, draw, key);
   else draw(c);
 }
+/** 光影: a figure with the morning sun from a window behind it — drawn, then a warm rim of light along the edges that
+ *  face the window ((ux, uy) points toward it) */
+function sunRim(c: Ctx, draw: (k: Ctx) => void, key: string, ux: number, uy: number, a = 0.5) {
+  draw(c);
+  if (a <= 0.01) return;
+  const m = figureMask(c, draw, "rimFig"); // (one buffer for all of these: each mask is used at once)
+  rimLight(c, m, ux, uy, 5, "rgb(255,238,200)", a, "lighter", 6);
+}
 
 function corridorScene(c: Ctx, abs: number) {
   // one shot: starts on exactly the face that was in the black glass, pulls back to the two planes, and at the end
@@ -352,8 +360,9 @@ function corridorScene(c: Ctx, abs: number) {
     b.restore();
   };
   filtered(c, "blur(1.8px)", par(0.75, (b) => corridor(b, abs)), "bg");
-  focus(c, 3 * (1 - onThem), par(0.4, (b) => huddle(b, abs)), "huddle");
-  focus(c, 4.5 * onThem, (b) => kidNow(b, abs), "kidFocus");
+  // (the sun from the windows behind them rims their hair and shoulders)
+  focus(c, 3 * (1 - onThem), par(0.4, (b) => sunRim(b, (k) => huddle(k, abs), "huddle", 0.3, -0.95, 0.45)), "huddle");
+  focus(c, 4.5 * onThem, (b) => sunRim(b, (k) => kidNow(k, abs), "kid", -0.75, -0.65, 0.55), "kidFocus");
   c.restore();
 }
 
@@ -416,6 +425,12 @@ function hoodScene(c: Ctx, abs: number) {
     },
     "bg",
   );
+  // as the hood goes up the world behind him recedes a little (he is hiding from it)
+  const recede = smooth(phase(abs, HOOD_ON, HOOD_ON + 0.45));
+  if (recede > 0) {
+    c.fillStyle = `rgba(30,20,12,${(0.16 * recede).toFixed(3)})`;
+    c.fillRect(-200, -200, W + 400, H + 400);
+  }
   const ky = 790 + (1 - k) * 60;
   const headY = settle + 8 * smooth(phase(abs, HOOD_ON + 0.05, HOOD_ON + 0.25)) + 6 * smooth(phase(abs, 11.5, AWAY));
   const t = up ? 1 - drop : raise;
@@ -423,21 +438,30 @@ function hoodScene(c: Ctx, abs: number) {
   const hand = (side: number): Pt =>
     t < 0.5 ? lerp2([side * 66, 372], [side * 178, 150], t * 2) : lerp2([side * 178, 150], [side * 112, -64], (t - 0.5) * 2);
   if (!up && rise > 0) hoodShell(c, 540, ky, 1.25, headY + 230 - 280 * rise, false);
-  drawKid(c, 540, ky, 1.25, {
-    body: "full",
-    legs: "stand",
-    hood: up,
-    arms: "custom",
-    handL: hand(-1),
-    handR: hand(1),
-    shapeL: t > 0.2 ? "fist" : "hidden",
-    shapeR: t > 0.2 ? "fist" : "hidden",
-    eyes: "sad",
-    brows: "sad",
-    look: up ? [0, 0.9] : [0.25, 0.55],
-    mouth: "frown",
-    headY,
-  });
+  // (the window behind him rims his hair with sun — until the hood covers it)
+  sunRim(
+    c,
+    (k) =>
+      drawKid(k, 540, ky, 1.25, {
+        body: "full",
+        legs: "stand",
+        hood: up,
+        arms: "custom",
+        handL: hand(-1),
+        handR: hand(1),
+        shapeL: t > 0.2 ? "fist" : "hidden",
+        shapeR: t > 0.2 ? "fist" : "hidden",
+        eyes: "sad",
+        brows: "sad",
+        look: up ? [0, 0.9] : [0.25, 0.55],
+        mouth: "frown",
+        headY,
+      }),
+    "hoodKid",
+    -0.6,
+    -0.8,
+    0.5 * (1 - 0.7 * recede),
+  );
   if (up) {
     // the hood's shadow falls over his eyes
     const g = c.createLinearGradient(0, 700, 0, 900);
@@ -715,15 +739,24 @@ function slipScene(c: Ctx, abs: number) {
   filtered(c, "blur(1.4px)", (b) => classroom(b, abs, false), "bg");
   // the back row, laughing at A-Jie
   SEATED.forEach((q, i) => {
-    drawPerson(c, q.x, 730 + bounce(i), 0.55, {
-      ...q.p,
-      ...unmasked(),
-      body: "full",
-      legs: "sit",
-      turn: laughing ? 0.6 : 0.2,
-      tilt: laughing ? -0.14 + Math.sin(abs * 19 + i) * 0.06 : 0,
-      arms: laughing ? "laugh" : "down",
-    });
+    // (they sit in the sun from the windows; he, in front, is just outside it)
+    sunRim(
+      c,
+      (k) =>
+        drawPerson(k, q.x, 730 + bounce(i), 0.55, {
+          ...q.p,
+          ...unmasked(),
+          body: "full",
+          legs: "sit",
+          turn: laughing ? 0.6 : 0.2,
+          tilt: laughing ? -0.14 + Math.sin(abs * 19 + i) * 0.06 : 0,
+          arms: laughing ? "laugh" : "down",
+        }),
+      "seat" + i,
+      -1,
+      -0.35,
+      0.55,
+    );
     rowDesk(c, q.x, 880, 170, 970 + i * 3);
   });
   // A-Jie jumps up, his left hand up as he talks → claps it over his mouth
@@ -813,7 +846,8 @@ function closeInScene(c: Ctx, abs: number) {
   const [sx, sy] = shake(abs, slam * 14 + close * 3);
   const [hx, hy, hr] = handheld(abs, 7, 7);
   c.save();
-  camera(c, 540, 820, 1.0 + 0.14 * close + slam * 0.8, hr * (1 - slam), sx + hx, sy + hy);
+  // (and the frame tilts as it closes in: the floor going out from under him)
+  camera(c, 540, 820, 1.0 + 0.14 * close + slam * 0.8, hr * (1 - slam) + 0.05 * close, sx + hx, sy + hy);
   filtered(
     c,
     "blur(3px)",
@@ -825,13 +859,25 @@ function closeInScene(c: Ctx, abs: number) {
     },
     "bg",
   );
-  // the room goes dark around him
-  const v = c.createRadialGradient(540, 820, 200, 540, 820, 900);
-  v.addColorStop(0, "rgba(10,8,6,0)");
-  v.addColorStop(1, `rgba(10,8,6,${(0.25 + 0.5 * close).toFixed(2)})`);
+  // the room goes dark and cold around him, the sun gone out of it; a hard light from above pins him
+  const v = c.createRadialGradient(540, 820, 180, 540, 820, 880);
+  v.addColorStop(0, "rgba(8,10,22,0)");
+  v.addColorStop(1, `rgba(8,10,22,${(0.3 + 0.55 * close).toFixed(2)})`);
   c.fillStyle = v;
   c.fillRect(-200, -200, W + 400, H + 400);
+  lightShaft(c, [[450, -200], [630, -200], [800, 1300], [280, 1300]], 540, -200, 540, 1500, "205,218,255", 0.07 + 0.12 * close, 30, "shaft");
+  // the closer they come the more they turn to dark shapes against the light (the X faces stay)
   const loomer = (q: (typeof LOOMERS)[number], i: number) => {
+    const draw = (k: Ctx) => loomerAt(k, q, i);
+    draw(c);
+    const dk = 0.15 + 0.4 * close;
+    const m = figureMask(c, draw, "rimFig");
+    onFigure(c, m, (k) => {
+      k.fillStyle = `rgba(10,12,26,${dk.toFixed(3)})`;
+      k.fillRect(-400, -400, W + 800, H + 800);
+    });
+  };
+  const loomerAt = (c: Ctx, q: (typeof LOOMERS)[number], i: number) => {
     const come = easeOut(phase(abs, CLOSE + i * 0.08, CLOSE + 0.4 + i * 0.08));
     const x = q.x0 + (q.x1 - q.x0) * come + (540 - q.x1) * q.pull * close,
       y = q.y + 50 * close * (q.y > 800 ? -1 : 1) - Math.abs(Math.sin(abs * 11 + i * 1.3)) * 12,
@@ -889,10 +935,10 @@ export function createScene(options: SceneOptions) {
     if (abs < TILT) shotBirthday(ctx, abs);
     else if (abs < REW) shotDeskPhone(ctx, abs);
     else if (abs < MEM) shotOldScreen(ctx, abs);
-    // night (光影): the flame and the lit screen bleed a soft glow into the dark
-    if (abs < CUT) bloom(ctx, 0.32);
     else if (abs < HOOD) shotCorridor(ctx, abs);
     else if (abs < LAUGH) shotHood(ctx, abs);
     else if (abs < END + 0.12) shotLaugh(ctx, abs);
+    // night (光影): the flame and the lit screen bleed a soft glow into the dark
+    if (abs < CUT) bloom(ctx, 0.32);
   });
 }

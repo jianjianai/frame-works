@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { clamp, phase, smooth } from "../../../src/engine/math";
-import { BEAT, C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, camera, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, inkLine, lerp2, oldFilm, paint, poly, oval, pulse, rbox, rr, shaded, shake, text, vgrad } from "./lib/draw";
+import { BEAT, C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, bokehDisc, camera, designScene, figureMask, hash, lightShaft, rimLight, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, inkLine, lerp2, oldFilm, paint, poly, oval, pulse, rbox, rr, shaded, shake, text, vgrad } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
 import { replayCorridor, replaySlip } from "./act1";
@@ -58,13 +58,40 @@ const LEFT_THUMB: FingerKey[] = [
   [T2, 150, 960, 0.25],
 ];
 
-function discoverScene(c: Ctx, abs: number, tapped: boolean) {
+/** Behind the phone, far out of focus: his room — the fairy lights across the wall, the window with the moon and,
+ *  far below it, the street's lights (their torches and a smudge of the pink banner — the lights from the cold open).
+ *  `alive` 0 = his grey world (dim; the grade takes the colour out), 1 = after the toggle: the lights bloom warm and
+ *  the colours come back (光影 · 反转时颜色回到世界). */
+function roomBehind(c: Ctx, abs: number, alive: number) {
+  c.save();
+  c.globalCompositeOperation = "lighter";
+  for (let i = 0; i < 11; i++) {
+    const t = i / 10;
+    const x = -80 + t * 1240,
+      y = 250 + 230 * 4 * t * (1 - t) + Math.sin(abs * 0.6 + i) * 4;
+    const tw = 0.8 + 0.2 * Math.sin(abs * 1.7 + i * 2.3);
+    const col = alive > 0.5 ? (i % 4 === 2 ? "255,150,190" : "255,206,130") : "215,215,215";
+    bokehDisc(c, x, y, (40 + 14 * hash(i * 2.2)) * (1 + 0.25 * alive), col, (0.1 + 0.22 * alive) * tw);
+  }
+  glow(c, 960, 520, 420, `rgba(110,135,230,${(0.1 + 0.12 * alive).toFixed(3)})`);
+  bokehDisc(c, 980, 460, 95, "225,232,255", 0.16 + 0.08 * alive);
+  for (let i = 0; i < 7; i++) {
+    const x = 800 + i * 34 + Math.sin(abs * 2 + i) * 4,
+      y = 760 + (i % 2) * 16;
+    bokehDisc(c, x, y, 20 + 6 * hash(i * 4.1), alive > 0.5 ? "255,250,225" : "205,205,205", (0.16 + 0.3 * alive) * (0.7 + 0.3 * Math.sin(abs * 5 + i)));
+  }
+  bokehDisc(c, 905, 800, 46, alive > 0.5 ? "255,120,175" : "190,190,190", 0.1 + 0.3 * alive);
+  c.restore();
+}
+
+function discoverScene(c: Ctx, abs: number, tapped: boolean, alive = 0) {
   const rise = easeOut(phase(abs, T0, T0 + 0.5));
   const cc = smooth(phase(abs, SWIPE, SWIPE + 0.26));
   const highlight = phase(abs, SNAP + 0.16, SNAP + 0.64);
   const torch = smooth(phase(abs, TORCH, TORCH + 0.12));
   fillBg(c, "#03040b");
-  glow(c, 540, 900, 900, "rgba(120,150,255,0.25)", rise);
+  glow(c, 540, 900, 900, `rgba(${alive > 0.5 ? "150,120,200" : "120,150,255"},0.25)`, rise);
+  roomBehind(c, abs, alive * rise);
   // the torch on the back of the phone: cold white light on the desk beyond it — and on the cupcake he has just blown
   // out, a thread of smoke still rising from the candle
   if (torch > 0) {
@@ -152,10 +179,10 @@ function shotDiscover(ctx: Ctx, abs: number) {
   const [hx0, hy0, hr] = handheld(abs, 5, 12);
   const hx = hx0 + jolt,
     hy = hy0 - jolt * 0.6;
-  const scene = (c: Ctx) => {
+  const scene = (c: Ctx, alive = 0) => {
     c.save();
     camera(c, vx, vy, z, hr, hx, hy);
-    discoverScene(c, abs, tapped);
+    discoverScene(c, abs, tapped, alive);
     c.restore();
   };
   if (!tapped) {
@@ -199,27 +226,62 @@ function shotDiscover(ctx: Ctx, abs: number) {
     }
     return;
   }
-  // the colour comes back: a wave from the toggle (screen position = the camera centre)
+  // the colour comes back: a wave from the toggle (screen position = the camera centre). Behind the front his room
+  // comes alive — the fairy lights bloom warm, the street lights below the window turn pink and gold, Wi-Fi and
+  // the cellular tile light up — the front itself is a band of warm light split into colour at its edge, and it
+  // leaves sparks twinkling out behind it (光影 · 情绪：他的灰色世界在这里结束)
   const w = easeIn(phase(abs, TAP + 0.02, TAP + 0.5));
   const r = 40 + 2300 * w;
-  if (w < 1) grade(ctx, GREY, scene);
+  const ox = 406 + hx,
+    oy = 579 + hy;
+  if (w < 1) grade(ctx, GREY, (g) => scene(g, 0));
   ctx.save();
   ctx.beginPath();
-  ctx.arc(406 + hx, 579 + hy, r, 0, Math.PI * 2);
+  ctx.arc(ox, oy, r, 0, Math.PI * 2);
   ctx.clip();
-  scene(ctx);
+  scene(ctx, 1);
   ctx.restore();
   if (w < 1) {
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    ctx.strokeStyle = `rgba(255,236,190,${(0.75 * (1 - w)).toFixed(3)})`;
-    ctx.lineWidth = 36 * (1 - w) + 6;
-    ctx.beginPath();
-    ctx.arc(406 + hx, 579 + hy, r, 0, Math.PI * 2);
-    ctx.stroke();
+    const band = ctx.createRadialGradient(ox, oy, Math.max(0, r - 180), ox, oy, r + 24);
+    band.addColorStop(0, "rgba(255,214,150,0)");
+    band.addColorStop(0.86, `rgba(255,214,150,${(0.4 * (1 - w)).toFixed(3)})`);
+    band.addColorStop(1, "rgba(255,214,150,0)");
+    ctx.fillStyle = band;
+    ctx.fillRect(-60, -60, W + 120, H + 120);
+    for (const [dr, col] of [[12, "255,90,130"], [0, "255,236,160"], [-12, "90,205,255"]] as [number, string][]) {
+      ctx.strokeStyle = `rgba(${col},${(0.85 * (1 - w)).toFixed(3)})`;
+      ctx.lineWidth = 7 * (1 - w) + 2;
+      ctx.beginPath();
+      ctx.arc(ox, oy, Math.max(1, r + dr * (1 + 2 * w)), 0, Math.PI * 2);
+      ctx.stroke();
+    }
     ctx.restore();
   }
-  flash(ctx, 0.18 * (1 - phase(abs, TAP, TAP + 0.25)));
+  // sparks born where the front passes, twinkling out
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const cols = ["255,214,140", "255,150,195", "150,215,255", "255,255,240"];
+  for (let i = 0; i < 48; i++) {
+    const a = hash(i * 3.7) * Math.PI * 2,
+      d = 70 + hash(i * 5.3) * 1250;
+    const born = TAP + 0.02 + 0.48 * Math.cbrt((d - 40) / 2300);
+    const life = phase(abs, born, born + 0.5);
+    if (life <= 0 || life >= 1) continue;
+    const dd = d + 50 * life,
+      sx = ox + Math.cos(a) * dd,
+      sy = oy + Math.sin(a) * dd;
+    const al = Math.sin(Math.PI * life),
+      sz = 5 + 9 * hash(i * 7.9);
+    const col = cols[i % 4];
+    glow(ctx, sx, sy, sz * 3, `rgba(${col},${(0.5 * al).toFixed(3)})`);
+    ctx.fillStyle = `rgba(${col},${al.toFixed(3)})`;
+    ctx.fillRect(sx - sz, sy - 1, sz * 2, 2);
+    ctx.fillRect(sx - 1, sy - sz, 2, sz * 2);
+  }
+  ctx.restore();
+  flash(ctx, 0.2 * (1 - phase(abs, TAP, TAP + 0.25)), "#fff2d8");
 }
 
 // ---------------------------------------------------------------- 37.83 – 42.00 99+, and the same day from their side
@@ -278,9 +340,11 @@ function shotFlood(ctx: Ctx, abs: number) {
   const cardY = PY + (594 - SH / 2) * PS;
   const dive = easeIn(phase(abs, R1 - 0.32, R1));
   const z = 1 + (NOTE_W / ((SW - 44) * PS) - 1) * dive;
+  // behind the phone: his room, alive now (the same out-of-focus fairy lights and street lights as the wave left)
   fillBg(ctx, "#0b0e22");
-  glow(ctx, 540, 900, 1000, "rgba(255,220,140,0.25)", Math.min(1, shown / 4));
-  bokeh(ctx, abs, 14, 501, 0.4 + 0.6 * Math.min(1, shown / 4));
+  roomBehind(ctx, abs, 1);
+  glow(ctx, 540, 900, 1000, "rgba(255,220,140,0.22)", Math.min(1, shown / 4));
+  bokeh(ctx, abs, 10, 501, 0.3 + 0.4 * Math.min(1, shown / 4));
   const [hx, hy, hr] = handheld(abs, 4 * (1 - dive), 13);
   ctx.save();
   camera(ctx, 540, cardY, z, hr, sx + hx, sy + hy + (NOTE_Y - cardY) * dive);
@@ -795,6 +859,17 @@ const HIT_END = beatAt(156); // 81.66 (48.27)
 const LAUGH_AT = beatAt(155); // 81.13 (47.75)
 const BLOW2 = beatAt(159); // 83.22 (49.83)
 
+/** 光影 · 派对: a figure with the warm light of the lobby door behind it — drawn, then a warm rim along the edges that
+ *  face the door ((ux, uy) points toward it) */
+function doorRim(c: Ctx, draw: (k: Ctx) => void, key: string, ux: number, uy: number, a = 0.55) {
+  draw(c);
+  if (a <= 0.01) return;
+  const m = figureMask(c, draw, "rimFig"); // (one buffer for all of these: each mask is used at once)
+  rimLight(c, m, ux, uy, 6, "rgb(255,222,165)", a, "lighter", 6);
+}
+/** the toward-the-door direction for a figure at x (the door is at the centre, behind everyone) */
+const towardDoor = (x: number): [number, number] => [Math.max(-0.8, Math.min(0.8, (540 - x) / 420)), -0.75];
+
 function shotBurstOut(ctx: Ctx, abs: number) {
   const open = easeOut(phase(abs, T4, T4 + 0.14));
   const run = easeOut(phase(abs, T4 + 0.04, SPLAT));
@@ -803,6 +878,20 @@ function shotBurstOut(ctx: Ctx, abs: number) {
   ctx.save();
   camera(ctx, 540, 820, 1.05 + 0.08 * run, hr, hx, hy);
   filtered(ctx, "blur(2px)", (b) => buildingEntrance(b, abs), "bg");
+  // the lobby's warm light pouring out of the doorway in rays as the doors fly open, fanning out toward us
+  const O: Pt = [540, 820];
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 2 + (-1.05 + i * 0.42) + Math.sin(abs * 1.3 + i) * 0.03;
+    const w0 = 0.05,
+      w1 = 0.12 + 0.04 * hash(i * 3.3),
+      len = 1500;
+    const at = (ang: number, d: number): Pt => [O[0] + Math.cos(ang) * d, O[1] + Math.sin(ang) * d];
+    lightShaft(
+      ctx,
+      [at(a - w0, 80), at(a + w0, 80), at(a + w1, len), at(a - w1, len)],
+      O[0], O[1], ...at(a, len * 0.8), "255,226,170", 0.16 * open * (1 - 0.5 * run), 18, "shaft",
+    );
+  }
   // the two door leaves flying open
   for (const side of [-1, 1]) {
     const w = 190 * (1 - 0.82 * open);
@@ -810,23 +899,31 @@ function shotBurstOut(ctx: Ctx, abs: number) {
     poly(ctx, [[x0, 430], [x0 + w, 430 + side * 10 * open], [x0 + w, 1090 - side * 10 * open], [x0, 1090]], 1990 + side, 1);
     paint(ctx, "#7d5a3a", C.ink, 5);
   }
-  // him, running out at us
-  drawKid(ctx, 540, 640 + 140 * run, 0.7 + 0.35 * run, {
-    body: "full",
-    legs: "run",
-    walk: abs * 16,
-    hat: true,
-    eyes: "wide",
-    mouth: "open",
-    brows: "up",
-    // arms bent and pumping in front of him as he runs (open hands read as jazz hands, fists at the hips as hands
-    // on hips)
-    arms: "custom",
-    handL: [-125, 270 + 70 * Math.sin(abs * 16)],
-    handR: [125, 270 - 70 * Math.sin(abs * 16)],
-    shapeL: "fist",
-    shapeR: "fist",
-  });
+  // him, running out at us — out of the light, the doorway rimming him gold
+  doorRim(
+    ctx,
+    (k) =>
+      drawKid(k, 540, 640 + 140 * run, 0.7 + 0.35 * run, {
+        body: "full",
+        legs: "run",
+        walk: abs * 16,
+        hat: true,
+        eyes: "wide",
+        mouth: "open",
+        brows: "up",
+        // arms bent and pumping in front of him as he runs (open hands read as jazz hands, fists at the hips as
+        // hands on hips)
+        arms: "custom",
+        handL: [-125, 270 + 70 * Math.sin(abs * 16)],
+        handR: [125, 270 - 70 * Math.sin(abs * 16)],
+        shapeL: "fist",
+        shapeR: "fist",
+      }),
+    "run",
+    0,
+    -1,
+    0.7,
+  );
   ctx.restore();
   // them, waiting either side of the door, in the foreground and out of focus, arms up
   filtered(
@@ -878,16 +975,29 @@ function shotSplat(ctx: Ctx, abs: number) {
     },
     "bg",
   );
-  drawKid(ctx, 540, 820 + (laugh ? Math.abs(Math.sin(abs * 12)) * -10 : 0), 2.2, {
-    body: "bust",
-    hat: true,
-    cake: 1,
-    eyes: laugh ? "happy" : blink ? "open" : "shut",
-    mouth: laugh ? "laugh" : "o",
-    blush: laugh ? 1 : 0,
-    tilt: laugh ? Math.sin(abs * 14) * 0.05 : -0.06 * Math.exp(-t * 5),
-    arms: "pockets", // (no fists along the bottom of the close-up)
-  });
+  // 情绪: when he bursts out laughing the light behind him swells warm, like a held breath let go
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  glow(ctx, 540, 640, 980, `rgba(255,200,130,${(0.12 + 0.2 * pull + 0.1 * (laugh ? 1 : 0)).toFixed(3)})`);
+  ctx.restore();
+  doorRim(
+    ctx,
+    (k) =>
+      drawKid(k, 540, 820 + (laugh ? Math.abs(Math.sin(abs * 12)) * -10 : 0), 2.2, {
+        body: "bust",
+        hat: true,
+        cake: 1,
+        eyes: laugh ? "happy" : blink ? "open" : "shut",
+        mouth: laugh ? "laugh" : "o",
+        blush: laugh ? 1 : 0,
+        tilt: laugh ? Math.sin(abs * 14) * 0.05 : -0.06 * Math.exp(-t * 5),
+        arms: "pockets", // (no fists along the bottom of the close-up)
+      }),
+    "splat",
+    0,
+    -1,
+    0.45 + 0.25 * pull,
+  );
   // the paper plate, stuck on his face, then sliding off and dropping out of frame
   if (plate < 1) {
     ctx.save();
@@ -960,42 +1070,74 @@ function shotCelebrate(ctx: Ctx, abs: number) {
     [CAST.e, 970, 720, 0.72, "laugh"],
     [CAST.yu, 200, 900, 0.8, "laugh"],
   ];
+  // 光影: everyone rimmed gold by the lobby light behind them
   ring.forEach(([q, x, y, s, arms], i) =>
-    drawPerson(ctx, x, y - Math.abs(Math.sin(abs * 9 + i)) * (12 + 18 * cheer), s, {
-      ...q,
-      x: 0,
-      face: "laugh",
-      arms: cheer > 0.5 ? "up" : arms,
-      tilt: Math.sin(abs * 14 + i) * 0.08,
-      body: "full",
-    }),
+    doorRim(
+      ctx,
+      (k) =>
+        drawPerson(k, x, y - Math.abs(Math.sin(abs * 9 + i)) * (12 + 18 * cheer), s, {
+          ...q,
+          x: 0,
+          face: "laugh",
+          arms: cheer > 0.5 ? "up" : arms,
+          tilt: Math.sin(abs * 14 + i) * 0.08,
+          body: "full",
+        }),
+      "ring" + i,
+      ...towardDoor(x),
+      0.5,
+    ),
   );
   // A-Jie, very pleased with himself, the empty plate in his hand
-  drawPerson(ctx, 890, 900, 0.8, {
-    ...CAST.jie,
-    x: 0,
-    face: "laugh",
-    arms: cheer > 0.5 ? "up" : "point",
-    body: "full",
-    tilt: Math.sin(abs * 12) * 0.06,
-    holding: cheer > 0.5 ? undefined : (h) => cakeSlice(h, -200, 70, false),
-  });
+  doorRim(
+    ctx,
+    (k) =>
+      drawPerson(k, 890, 900, 0.8, {
+        ...CAST.jie,
+        x: 0,
+        face: "laugh",
+        arms: cheer > 0.5 ? "up" : "point",
+        body: "full",
+        tilt: Math.sin(abs * 12) * 0.06,
+        holding: cheer > 0.5 ? undefined : (h) => cakeSlice(h, -200, 70, false),
+      }),
+    "jie",
+    ...towardDoor(890),
+    0.5,
+  );
   // him, cream on his face, laughing — then leaning in to blow
-  drawKid(ctx, 540, 740 + 40 * blow, 1.0, {
-    body: "bust",
-    hat: true,
-    cake: 1,
-    eyes: blow > 0.3 && !out ? "shut" : "happy",
-    mouth: blow > 0.3 && !out ? "blow" : "laugh",
-    blush: 1,
-    tilt: blow > 0.3 ? 0 : Math.sin(abs * 12) * 0.05,
-    arms: "pockets",
-  });
+  doorRim(
+    ctx,
+    (k) =>
+      drawKid(k, 540, 740 + 40 * blow, 1.0, {
+        body: "bust",
+        hat: true,
+        cake: 1,
+        eyes: blow > 0.3 && !out ? "shut" : "happy",
+        mouth: blow > 0.3 && !out ? "blow" : "laugh",
+        blush: 1,
+        tilt: blow > 0.3 ? 0 : Math.sin(abs * 12) * 0.05,
+        arms: "pockets",
+      }),
+    "kid",
+    0,
+    -1,
+    0.6,
+  );
   // the little table and the big cake from the bakery window, the gold 17 burning (彩蛋)
   poly(ctx, [[280, 1172], [800, 1166], [810, 1320], [270, 1326]], 2061, 1.2);
   paint(ctx, "#ff9cc3", C.ink, 5);
   for (let k = 0; k < 5; k++) inkLine(ctx, [[320 + k * 110, 1180], [316 + k * 110, 1316]], 2062 + k, 2.4, "rgba(180,60,110,0.35)");
   bigCake(ctx, 540, 1178, 0.42, abs, { candle17: true, lit: out ? 0 : 1 });
+  // the gold 17's candlelight on all their faces, warmest on his as he leans in to blow
+  if (!out) {
+    const f = 1 + 0.06 * Math.sin(abs * 23) + 0.04 * Math.sin(abs * 37);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    glow(ctx, 540, 965, 620, `rgba(255,190,110,${((0.16 + 0.14 * blow) * f).toFixed(3)})`);
+    glow(ctx, 540, 965, 150, `rgba(255,236,190,${(0.3 * f).toFixed(3)})`);
+    ctx.restore();
+  }
   // the flame goes out: a wisp of smoke
   if (out) {
     const sm = phase(abs, BLOW2 + 0.08, BLOW2 + 0.6);
