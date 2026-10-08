@@ -868,3 +868,71 @@ export function linesOutsideCentre(ctx: Ctx, draw: (c: Ctx) => void, key = "line
     key,
   );
 }
+
+// ---------------------------------------------------------------- reusable pieces from the 重置版 (素材库)
+/** The cut into a memory, like an old screen (two beats, no sound effect — 用户定的回忆标准): p 0→1. The present
+ *  breaks up into flickering vertical lines and a jitter; around `at` (0..1, default the middle) it dissolves into
+ *  the memory, which is drawn through `oldFilm`, and the lines thin out as the memory settles. Best as a match cut:
+ *  the same face, same size, same place on both sides (重置版 act1 `shotOldScreen`: his reflection in the black
+ *  phone → his face this morning). */
+export function oldScreenCut(ctx: Ctx, abs: number, p: number, drawNow: (c: Ctx) => void, drawMemory: (c: Ctx) => void, at = 0.5) {
+  const dens = Math.sin(Math.PI * Math.min(1, clamp(p) * 1.15));
+  const f = Math.floor(abs * 24);
+  const u = clamp((p - at + 0.115) / 0.27);
+  const mix = u * u * (3 - 2 * u);
+  ctx.save();
+  ctx.translate((hash(f * 1.9) - 0.5) * 7 * dens, (hash(f * 2.7) - 0.5) * 3 * dens);
+  if (mix < 1) drawNow(ctx);
+  if (mix > 0) filtered(ctx, "none", (c) => oldFilm(c, abs, drawMemory), "xfade", mix);
+  ctx.restore();
+  // the lines: dark and light, mostly thin, a few thick, jumping every frame — densest in the middle of the cut
+  const n = Math.floor(8 + 40 * dens);
+  linesOutsideCentre(ctx, (c) => {
+    for (let k = 0; k < n; k++) {
+      c.globalAlpha = (0.3 + 0.6 * hash(f * 2.3 + k)) * (0.35 + 0.65 * dens);
+      c.fillStyle = hash(k * 9.1 + f) > 0.45 ? "#0c0c0c" : "#f3efe6";
+      c.fillRect(hash(f * 3.1 + k * 7.3) * W, -60, 1 + hash(f + k * 1.7) * (k % 6 === 0 ? 7 : 2.5), H + 120);
+    }
+  });
+  // and the screen flickers
+  ctx.save();
+  ctx.globalAlpha = 0.3 * dens * hash(f * 5.7);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(-60, -60, W + 120, H + 120);
+  ctx.restore();
+}
+
+/** A figure lit from behind (the sun in a window, a lit doorway, the moon): draws it, then a rim of light just inside
+ *  its outline along the edges that face the light ((ux, uy) points toward the light). Morning sun:
+ *  "rgb(255,238,200)", 0.5, width 5; a warm doorway: "rgb(255,222,165)", 0.55, width 6; moonlight: a cold blue, lower.
+ *  All figures share one mask buffer ("rimFig") — each mask is used at once. */
+export function rimFigure(ctx: Ctx, draw: (c: Ctx) => void, ux: number, uy: number, color = "rgb(255,238,200)", alpha = 0.5, width = 5, ink = 6) {
+  draw(ctx);
+  if (alpha <= 0.01) return;
+  const m = figureMask(ctx, draw, "rimFig");
+  rimLight(ctx, m, ux, uy, width, color, alpha, "lighter", ink);
+}
+
+/** A figure's shadow on the ground from a lamp or the sun: its silhouette sheared flat onto the floor — the feet at
+ *  `foot` stay put and the top of the head (`height` design units above the feet) lands at `tip` (where the light
+ *  throws it: away from the light, long when the light is low or close). `sx` widens/narrows it, `soft` blurs it
+ *  (design units; softer the further the shadow runs). Draw it on the ground before the figure. 重置版 act4
+ *  `walkShadow` swings it round him as he walks past each street lamp. */
+export function groundShadow(ctx: Ctx, draw: (c: Ctx) => void, foot: Pt, height: number, tip: Pt, alpha = 0.5, soft = 4, sx = 1, color = "#04050b") {
+  if (alpha <= 0.02) return;
+  const [fx, fy] = foot;
+  const kx = (tip[0] - fx) / -height,
+    ky = (tip[1] - fy) / -height;
+  const b = buffer(ctx, "groundShadow");
+  b.save();
+  b.transform(sx, 0, kx, ky, fx - sx * fx - kx * fy, fy - ky * fy);
+  draw(b);
+  b.restore();
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalCompositeOperation = "source-in";
+  b.fillStyle = color;
+  b.fillRect(0, 0, b.canvas.width, b.canvas.height);
+  b.restore();
+  blit(ctx, b, "source-over", alpha, `blur(${(soft * devScale(ctx)).toFixed(1)}px)`);
+}
