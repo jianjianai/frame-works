@@ -10,13 +10,13 @@ export type Pt = [number, number];
 
 // ---------------------------------------------------------------- 每支视频要改的
 /** 字体目录：fetch-fonts.mjs 写到作品的 public/fonts/，这里写 films/<作品名>/fonts/。 */
-export const FONT_DIR = "films/work-d1187f37/fonts/";
+export const FONT_DIR = "films/work-bdd5c2f8/fonts/";
 
 // ---------------------------------------------------------------- music grid
 /** 换歌要改：BPM 和第一拍的时间（秒）。 */
-export const BPM = 117.39;
+export const BPM = 115;
 export const BEAT = 60 / BPM;
-export const BEAT0 = 0.0737;
+export const BEAT0 = 0.265;
 export const beatAt = (k: number) => BEAT0 + k * BEAT;
 /** Seconds since the most recent beat. */
 export const sinceBeat = (abs: number) => {
@@ -188,7 +188,7 @@ export function inkLine(ctx: Ctx, pts: Pt[], seed: number, lw = 4, color = C.ink
   paint(ctx, null, color, lw);
 }
 
-// ---------------------------------------------------------------- construction helpers
+// ---------------------------------------------------------------- construction helpers (精细版，和素材库 s0rrow 一致)
 export const lerp2 = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 export const rotPt = ([x, y]: Pt, a: number, o: Pt = [0, 0]): Pt => {
   const dx = x - o[0],
@@ -343,35 +343,54 @@ export function writeOn(s: string, p: number) {
 
 // ---------------------------------------------------------------- fonts
 let fontsReady: Promise<void> | null = null;
-const FONT_FILES: [string, string, string][] = [
+/** [family, file, weight, unicode-range?]. The "-extra" files are small Google Fonts subsets with only the characters
+ *  the 重置版 added (fetched through asset_import from fonts.googleapis.com/css2?family=…&text=…, since fetch-fonts.mjs
+ *  can't run here). Their unicode-range makes the browser take just those characters from them, the rest from the
+ *  main subsets. To add more text: fetch another "-extra" subset the same way and list it here. */
+const FONT_FILES: [string, string, string, string?][] = [
   ["Gochi Hand", "gochi-hand.woff2", "400"],
   ["Permanent Marker", "permanent-marker.woff2", "400"],
   ["ZCOOL KuaiLe", "zcool-kuaile.woff2", "400"],
   ["Long Cang", "long-cang.woff2", "400"],
   ["Noto Sans SC", "noto-sans-sc-400.woff2", "400"],
   ["Noto Sans SC", "noto-sans-sc-700.woff2", "700"],
+  // 结尾引导：点赞的人，生日那天消息 99+ / 回看：他在第几秒开的飞行模式？/ 答案打在评论区
+  ["ZCOOL KuaiLe", "zcool-kuaile-extra.ttf", "400", "U+70B9,U+8D5E,U+7684,U+4EBA,U+FF0C,U+751F,U+65E5,U+90A3,U+5929,U+6D88,U+606F,U+56DE,U+770B,U+FF1A,U+4ED6,U+5728,U+7B2C,U+51E0,U+79D2,U+5F00,U+98DE,U+884C,U+6A21,U+5F0F,U+FF1F,U+7B54,U+6848,U+6253,U+8BC4,U+8BBA,U+533A"],
+  // 小雨的通知和回复：上课大家是在笑阿杰差点说漏嘴…不是笑你啦 / 横幅上的字是我写的！
+  ["Noto Sans SC", "noto-sans-sc-400-extra.ttf", "400", "U+4E0A,U+8BFE,U+5927,U+5BB6,U+662F,U+5728,U+7B11,U+963F,U+6770,U+5DEE,U+70B9,U+8BF4,U+6F0F,U+5634,U+2026,U+4E0D,U+4F60,U+5566,U+6A2A,U+5E45,U+7684,U+5B57,U+6211,U+5199,U+FF01"],
+  // 班群：昨天 22:30 / 明天都早点来！！ / 收到收到（文件里还有「当前网络不可用」，已不用）
+  ["Noto Sans SC", "noto-sans-sc-400-extra2.ttf", "400", "U+5F53,U+524D,U+7F51,U+7EDC,U+4E0D,U+53EF,U+7528,U+6628,U+5929,U+660E,U+90FD,U+65E9,U+70B9,U+6765,U+FF01,U+6536,U+5230"],
+  // 评论引导：回看：第几秒就能看出他开着飞行模式？
+  ["ZCOOL KuaiLe", "zcool-kuaile-extra2.ttf", "400", "U+5C31,U+80FD,U+51FA,U+7740"],
+  // 重新翻译的中文歌词（lyrics-data.ts 的 CHORUS）里用到的全部字
+  ["ZCOOL KuaiLe", "zcool-kuaile-extra6.ttf", "400", "U+4ECA,U+5929,U+6211,U+624D,U+660E,U+767D,U+539F,U+6765,U+8EAB,U+8FB9,U+6CA1,U+6709,U+670B,U+53CB,U+53EA,U+5269,U+597D,U+5B64,U+5355,U+50CF,U+88AB,U+5168,U+4E16,U+754C,U+7ACB,U+4E00,U+4E2A,U+4EBA,U+4F1A,U+53D1,U+6D88,U+606F,U+7ED9,U+6BCF,U+90FD,U+90A3,U+4E48,U+865A,U+4F2A,U+60F3,U+8EB2,U+8D77,U+56E0,U+4E3A,U+5728,U+4E4E,U+4ED6,U+4EEC,U+5632,U+7B11,U+5F53,U+7740,U+7684,U+9762"],
+  // 班群里的彩蛋：阿杰 撤回了一条消息
+  ["Noto Sans SC", "noto-sans-sc-400-extra3.ttf", "400", "U+64A4,U+56DE,U+4E86,U+4E00,U+6761,U+6D88,U+606F"],
 ];
 export function loadFonts(): Promise<void> {
   fontsReady ??= Promise.all(
-    FONT_FILES.map(async ([family, file, weight]) => {
+    FONT_FILES.map(async ([family, file, weight, unicodeRange]): Promise<FontFace | null> => {
       const url = assetUrl(FONT_DIR + file);
+      const desc: FontFaceDescriptors = unicodeRange ? { weight, unicodeRange } : { weight };
       // Load the bytes ourselves first (works where CSS url() font loading is restricted),
       // then fall back to a quoted URL source.
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error(String(res.status));
-        document.fonts.add(await new FontFace(family, await res.arrayBuffer(), { weight }).load());
-        return;
+        return await new FontFace(family, await res.arrayBuffer(), desc).load();
       } catch {
         // try the URL form below
       }
       try {
-        document.fonts.add(await new FontFace(family, `url("${new URL(url, location.href).href}")`, { weight }).load());
+        return await new FontFace(family, `url("${new URL(url, location.href).href}")`, desc).load();
       } catch {
-        // Fall back to system fonts if a file is missing.
+        return null; // fall back to system fonts if a file is missing
       }
     }),
-  ).then(() => undefined);
+  ).then((faces) => {
+    // added in list order, so the small "-extra" subsets (last) are tried first for their characters
+    for (const f of faces) if (f) document.fonts.add(f);
+  });
   return fontsReady;
 }
 
@@ -408,6 +427,21 @@ export async function designScene(options: SceneOptions, t0: number, draw: DrawF
   };
 }
 
+// ---------------------------------------------------------------- camera
+/** Ease in and out (cubic) — camera moves start and settle softly instead of the linear `phase`. */
+export const easeInOut = (t: number) => {
+  const v = clamp(t);
+  return v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2;
+};
+/** A hand-held camera: a slow, smooth drift (a few sines, no frame-to-frame jitter) → [dx, dy, rot].
+ *  `amp` ≈ pixels; 3–6 for a quiet shot, 8–12 when it should feel nervous. Different `seed` per shot. */
+export function handheld(abs: number, amp = 5, seed = 0): [number, number, number] {
+  const t = abs + seed * 13.7;
+  const dx = (Math.sin(t * 0.83) * 0.6 + Math.sin(t * 1.91 + 1.3) * 0.3 + Math.sin(t * 3.7 + 0.4) * 0.1) * amp;
+  const dy = (Math.sin(t * 0.67 + 2.1) * 0.6 + Math.sin(t * 1.53 + 0.7) * 0.3 + Math.sin(t * 3.1 + 1.9) * 0.1) * amp;
+  const rot = (Math.sin(t * 0.59 + 0.9) * 0.7 + Math.sin(t * 1.37) * 0.3) * amp * 0.0007;
+  return [dx, dy, rot];
+}
 /** Zoom/rotate the whole frame around (cx, cy). */
 export function camera(ctx: Ctx, cx: number, cy: number, zoom: number, rot = 0, dx = 0, dy = 0) {
   ctx.translate(cx + dx, cy + dy);
@@ -464,9 +498,9 @@ export function card(ctx: Ctx, s: string, x: number, y: number, a: number, size 
 
 // ---------------------------------------------------------------- offscreen filter pass
 const offscreens = new Map<string, HTMLCanvasElement>();
-/** Draw `draw` into an offscreen copy of the canvas (same transform), then composite it back
- *  through a CSS filter, e.g. "sepia(0.8) blur(1px)". `key` lets several passes keep their own buffer. */
-export function filtered(ctx: Ctx, filter: string, draw: (c: Ctx) => void, key = "a", alpha = 1) {
+/** A cleared offscreen copy of the canvas (same size) with ctx's transform, for multi-pass effects. `key` lets
+ *  several passes keep their own buffer (don't nest two passes with the same key). */
+export function buffer(ctx: Ctx, key: string): Ctx {
   const cv = ctx.canvas;
   let off = offscreens.get(key);
   if (!off || off.width !== cv.width || off.height !== cv.height) {
@@ -477,15 +511,372 @@ export function filtered(ctx: Ctx, filter: string, draw: (c: Ctx) => void, key =
   }
   const oc = off.getContext("2d")!;
   oc.setTransform(1, 0, 0, 1, 0, 0);
+  oc.globalAlpha = 1;
+  oc.globalCompositeOperation = "source-over";
+  oc.filter = "none";
   oc.clearRect(0, 0, off.width, off.height);
   oc.setTransform(ctx.getTransform());
+  return oc;
+}
+/** Lay a buffer back over ctx pixel for pixel. */
+export function blit(ctx: Ctx, src: Ctx, op: GlobalCompositeOperation = "source-over", alpha = 1, filter = "none") {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalCompositeOperation = op;
+  ctx.globalAlpha *= alpha;
+  ctx.filter = filter;
+  ctx.drawImage(src.canvas, 0, 0);
+  ctx.restore();
+}
+/** Draw `draw` into an offscreen copy of the canvas (same transform), then composite it back
+ *  through a CSS filter, e.g. "blur(2px)" (depth of field) or "sepia(0.8)". `key` lets several passes keep
+ *  their own buffer. */
+export function filtered(ctx: Ctx, filter: string, draw: (c: Ctx) => void, key = "a", alpha = 1, op: GlobalCompositeOperation = "source-over") {
+  const oc = buffer(ctx, key);
   oc.save();
   draw(oc);
   oc.restore();
+  blit(ctx, oc, op, alpha, filter);
+}
+
+// ---------------------------------------------------------------- light and shadow (重置版 · 光影)
+// 用户：光影和美感也是留存的关键，特别是开头。Light comes from somewhere: a key light that colours what it touches
+// (the candle, warm), the dark that swallows what it doesn't, a cold rim from behind (the moon), shadows thrown by
+// the figures, and glow/dust in the air. These work on any figure drawn with drawKid/drawPerson.
+/** Device pixels per design unit at ctx's transform (shifts and blurs that must follow the camera). */
+export function devScale(ctx: Ctx) {
+  const t = ctx.getTransform();
+  return Math.hypot(t.a, t.b);
+}
+/** A candle's flicker: about 1 ± 0.1, never periodic-looking. */
+export const flicker = (abs: number, seed = 0) =>
+  1 + 0.045 * Math.sin(abs * 23 + seed) + 0.03 * Math.sin(abs * 37.3 + seed * 2) + 0.025 * Math.sin(abs * 9.1 + seed * 3);
+/** A figure's alpha, for lighting it: `draw` once into its own buffer. Use the result before drawing another mask
+ *  with the same key. */
+export function figureMask(ctx: Ctx, draw: (c: Ctx) => void, key = "figure"): Ctx {
+  const m = buffer(ctx, "mask:" + key);
+  m.save();
+  draw(m);
+  m.restore();
+  return m;
+}
+/** erase `cut` (a path filled in design units: what stands in front of the figure, e.g. a desk) from a buffer */
+function cutOut(b: Ctx, cut?: (c: Ctx) => void) {
+  if (!cut) return;
+  b.save();
+  b.globalCompositeOperation = "destination-out";
+  b.fillStyle = "#000";
+  cut(b);
+  b.restore();
+}
+/** Light (or shade) on the figure only: `paint` fills in design units; the result is cut to the mask (minus `cut`)
+ *  and laid over with `op` ("screen" for a key light that tints, "lighter" for a glow, "source-over" for shade). */
+export function onFigure(ctx: Ctx, mask: Ctx, paint: (c: Ctx) => void, op: GlobalCompositeOperation = "source-over", alpha = 1, cut?: (c: Ctx) => void) {
+  if (alpha <= 0.005) return;
+  const b = buffer(ctx, "onFigure");
+  b.save();
+  paint(b);
+  b.restore();
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalCompositeOperation = "destination-in";
+  b.drawImage(mask.canvas, 0, 0);
+  b.restore();
+  cutOut(b, cut);
+  blit(ctx, b, op, alpha);
+}
+/** Rim light, the way a cel painter does it: a band of light just inside the ink outline, along the edges of a
+ *  figure that face a light. (ux, uy) points from the figure toward the light; `width` = the band, `ink` = the
+ *  outline it sits inside (design units). `cut` erases what stands in front of the figure. */
+export function rimLight(ctx: Ctx, mask: Ctx, ux: number, uy: number, width: number, color: string, alpha = 1, op: GlobalCompositeOperation = "lighter", ink = 7, cut?: (c: Ctx) => void, reach?: [number, number, number]) {
+  if (alpha <= 0.005) return;
+  const k = devScale(ctx);
+  const n = Math.hypot(ux, uy) || 1;
+  const sx = -ux / n,
+    sy = -uy / n;
+  const b = buffer(ctx, "rim");
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.drawImage(mask.canvas, 0, 0);
+  b.globalCompositeOperation = "destination-in"; // at least `ink` in from the lit edge…
+  b.drawImage(mask.canvas, sx * ink * k, sy * ink * k);
+  b.globalCompositeOperation = "destination-out"; // …and no more than ink + width
+  b.drawImage(mask.canvas, sx * (ink + width) * k, sy * (ink + width) * k);
+  b.globalCompositeOperation = "source-in";
+  b.fillStyle = color;
+  b.fillRect(0, 0, b.canvas.width, b.canvas.height);
+  b.restore();
+  if (reach) {
+    // strongest near the light, gone at `reach[2]` from it
+    const [rx, ry, rr] = reach;
+    const g = b.createRadialGradient(rx, ry, 0, rx, ry, rr);
+    g.addColorStop(0, "rgba(0,0,0,1)");
+    g.addColorStop(0.45, "rgba(0,0,0,0.6)");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    b.save();
+    b.globalCompositeOperation = "destination-in";
+    b.fillStyle = g;
+    b.fillRect(rx - rr, ry - rr, rr * 2, rr * 2);
+    b.restore();
+  }
+  cutOut(b, cut);
+  blit(ctx, b, op, alpha, `blur(${Math.max(0.6, width * k * 0.3).toFixed(1)}px)`);
+}
+/** The shadow a point light at `light` throws of a figure onto the wall behind it: the figure scaled `k` away from
+ *  the light, flattened to `color`, softened by `soft` design units. `clip` (optional) limits where it can fall
+ *  (it must call c.clip()); `figure` (its mask) keeps it off the figure itself, so it can be laid over the finished
+ *  picture — after the light — and darken the light on the wall too. */
+export function castShadow(ctx: Ctx, light: Pt, k: number, draw: (c: Ctx) => void, color: string, soft: number, alpha = 1, clip?: (c: Ctx) => void, figure?: Ctx) {
+  if (alpha <= 0.005) return;
+  const b = buffer(ctx, "cast");
+  b.save();
+  if (clip) clip(b);
+  b.translate(light[0], light[1]);
+  b.scale(k, k);
+  b.translate(-light[0], -light[1]);
+  draw(b);
+  b.restore();
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalCompositeOperation = "source-in";
+  b.fillStyle = color;
+  b.fillRect(0, 0, b.canvas.width, b.canvas.height);
+  b.restore();
+  const out = figure ? buffer(ctx, "cast2") : b;
+  if (figure) {
+    // blur first, then take the figure out (sharp), so no dark fringe creeps onto him
+    blit(out, b, "source-over", 1, `blur(${(soft * devScale(ctx)).toFixed(1)}px)`);
+    out.save();
+    out.setTransform(1, 0, 0, 1, 0, 0);
+    out.globalCompositeOperation = "destination-out";
+    out.drawImage(figure.canvas, 0, 0);
+    out.restore();
+    blit(ctx, out, "source-over", alpha);
+  } else blit(ctx, b, "source-over", alpha, `blur(${(soft * devScale(ctx)).toFixed(1)}px)`);
+}
+/** Dust turning in a light: `n` specks inside the ellipse (x, y, rx, ry), rising slowly, brightest in the middle.
+ *  `rgb` is "r,g,b". */
+export function motes(ctx: Ctx, abs: number, x: number, y: number, rx: number, ry: number, n: number, seed: number, rgb = "255,225,180", alpha = 1, size = 2.6) {
   ctx.save();
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.filter = filter;
-  ctx.globalAlpha *= alpha;
-  ctx.drawImage(off, 0, 0);
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < n; i++) {
+    const u = hash(seed + i * 3.7) * 2 - 1;
+    const v = ((hash(seed + i * 5.1) + abs * (0.025 + 0.03 * hash(seed + i * 1.9))) % 1) * 2 - 1; // rising
+    const px = x + rx * (u * 0.9 + Math.sin(abs * (0.6 + hash(seed + i) * 0.6) + i) * 0.06),
+      py = y - ry * v;
+    const d = Math.min(1, Math.hypot(u, v));
+    const tw = 0.55 + 0.45 * Math.sin(abs * (2 + 3 * hash(seed + i * 7.3)) + i * 1.3);
+    const a = alpha * (1 - d) * tw;
+    if (a <= 0.01) continue;
+    const r = size * (0.6 + 0.8 * hash(seed + i * 2.3));
+    const g = ctx.createRadialGradient(px, py, 0, px, py, r * 2.2);
+    g.addColorStop(0, `rgba(${rgb},${a.toFixed(3)})`);
+    g.addColorStop(0.4, `rgba(${rgb},${(a * 0.6).toFixed(3)})`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(px - r * 2.2, py - r * 2.2, r * 4.4, r * 4.4);
+  }
   ctx.restore();
+}
+/** Vertical motion blur for a whip-tilt: `draw` once, then average `n` copies spread over `px` design units up and
+ *  down (additive, so it stays a true average). */
+export function smearV(ctx: Ctx, draw: (c: Ctx) => void, px: number, key = "smear", n = 9) {
+  if (px < 2) {
+    draw(ctx);
+    return;
+  }
+  const a = buffer(ctx, key + "A");
+  a.save();
+  draw(a);
+  a.restore();
+  const b = buffer(ctx, key + "B");
+  const k = devScale(ctx);
+  b.save();
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.globalCompositeOperation = "lighter";
+  b.globalAlpha = 1 / n;
+  for (let i = 0; i < n; i++) b.drawImage(a.canvas, 0, (i / (n - 1) - 0.5) * px * k);
+  b.restore();
+  blit(ctx, b);
+}
+/** Bloom: the bright parts of the finished picture (a flame, a lit screen, a lit face) bleed a soft glow into the
+ *  dark around them, the way a lens does at night. Call it last, on the scene's own canvas. `threshold` (contrast)
+ *  decides how bright a thing must be to glow. */
+export function bloom(ctx: Ctx, amount = 0.3, radius = 26, threshold = 2.6) {
+  if (amount <= 0.005) return;
+  const b = buffer(ctx, "bloom");
+  b.setTransform(1, 0, 0, 1, 0, 0);
+  b.filter = `brightness(0.72) contrast(${threshold}) blur(${(radius * devScale(ctx)).toFixed(1)}px)`;
+  b.drawImage(ctx.canvas, 0, 0);
+  b.filter = "none";
+  blit(ctx, b, "screen", amount);
+}
+/** An out-of-focus light: a soft disc with a slightly brighter rim (the way a lens draws a far point of light). */
+export function bokehDisc(ctx: Ctx, x: number, y: number, r: number, rgb: string, a: number) {
+  if (a <= 0.005) return;
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(${rgb},${(a * 0.55).toFixed(3)})`);
+  g.addColorStop(0.8, `rgba(${rgb},${(a * 0.72).toFixed(3)})`);
+  g.addColorStop(0.93, `rgba(${rgb},${a.toFixed(3)})`);
+  g.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+}
+/** A soft light shaft (moonlight through a window, sun through a door): the quad `pts` filled with `rgb`, fading
+ *  from `a0` at (x0, y0) to nothing at (x1, y1), its edges softened by `soft` design units, added as light. */
+export function lightShaft(ctx: Ctx, pts: Pt[], x0: number, y0: number, x1: number, y1: number, rgb: string, a0: number, soft = 24, key = "shaft") {
+  if (a0 <= 0.005) return;
+  filtered(
+    ctx,
+    `blur(${(soft * devScale(ctx)).toFixed(1)}px)`,
+    (c) => {
+      const g = c.createLinearGradient(x0, y0, x1, y1);
+      g.addColorStop(0, `rgba(${rgb},${a0.toFixed(3)})`);
+      g.addColorStop(1, `rgba(${rgb},0)`);
+      c.fillStyle = g;
+      c.beginPath();
+      pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+      c.closePath();
+      c.fill();
+    },
+    key,
+    1,
+    "lighter",
+  );
+}
+
+// ---------------------------------------------------------------- the look (重新设计版)
+/** His world before the twist is grey: draw `draw` desaturated (sat 0..1). Things that stay warm (the candle, the
+ *  airplane toggle, the red "!") are drawn after this, outside it. */
+export function grade(ctx: Ctx, sat: number, draw: (c: Ctx) => void, key = "grade") {
+  if (sat >= 0.999) {
+    draw(ctx);
+    return;
+  }
+  filtered(ctx, `saturate(${sat.toFixed(3)}) brightness(0.97)`, draw, key);
+}
+
+// film grain tiles (built once): mid-grey noise, so laid over the picture in "overlay" it adds grain, not colour
+let filmTiles: HTMLCanvasElement[] | null = null;
+function grainTiles(): HTMLCanvasElement[] {
+  if (filmTiles) return filmTiles;
+  let s = 20261005;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  filmTiles = [0, 1, 2, 3].map(() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 256;
+    const g = c.getContext("2d")!;
+    const img = g.createImageData(256, 256);
+    for (let i = 0; i < 256 * 256; i++) {
+      const v = 128 + (rnd() + rnd() + rnd() - 1.5) * 100;
+      img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v;
+      img.data[i * 4 + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  });
+  return filmTiles;
+}
+
+/** Memories, through a film camera. The picture keeps its colours (用户要求：回忆不改变画面颜色); only the camera is laid
+ *  over it: a gate weave at 18 fps, coarse grain, dust, a hair and the odd scratch (dark grey, never white — white
+ *  specks read as dandruff on a phone), a slight exposure flicker and a neutral vignette. */
+export function oldFilm(ctx: Ctx, abs: number, draw: (c: Ctx) => void, _key = "film", amount = 1) {
+  const f = Math.floor(abs * 18);
+  ctx.save();
+  ctx.translate((hash(f * 1.3) - 0.5) * 2.5 * amount, (hash(f * 2.1) - 0.5) * 2.5 * amount);
+  draw(ctx);
+  ctx.restore();
+  // grain
+  ctx.save();
+  ctx.globalCompositeOperation = "overlay";
+  ctx.globalAlpha = 0.34 * amount;
+  ctx.translate(-((f * 97) % 256), -((f * 61) % 256));
+  ctx.scale(1.5, 1.5);
+  ctx.fillStyle = ctx.createPattern(grainTiles()[f % 4], "repeat")!;
+  ctx.fillRect(0, 0, W + 400, H + 400);
+  ctx.restore();
+  ctx.save();
+  // exposure flicker (neutral)
+  const fl = (hash(f * 3.7) - 0.5) * 0.06 * amount;
+  ctx.globalAlpha = Math.abs(fl);
+  ctx.fillStyle = fl > 0 ? "#fff" : "#000";
+  ctx.fillRect(-60, -60, W + 120, H + 120);
+  // dust, a hair, the odd scratch
+  ctx.globalAlpha = 0.55 * amount;
+  ctx.fillStyle = "#1c1c1c";
+  for (let i = 0; i < 8; i++) {
+    if (hash(f + i * 9.7) < 0.55) continue;
+    ctx.beginPath();
+    ctx.arc(hash(f * 7.1 + i) * W, hash(f * 3.3 + i * 2) * H, 1.5 + hash(f + i) * 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (hash(f * 0.61) > 0.8) {
+    const hx = hash(f * 2.9) * W,
+      hy = hash(f * 4.3) * H;
+    ctx.strokeStyle = "rgba(20,20,20,0.6)";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.bezierCurveTo(hx + 30, hy - 20, hx + 50, hy + 30, hx + 80, hy + 10);
+    ctx.stroke();
+  }
+  ctx.restore();
+  // old-screen vertical lines at random (用户要求：回忆播放时也随机出现竖线): two that wander and come and go, one to
+  // three that jump every frame, and now and then a short burst — the same lines as the cut into the memory. Masked by
+  // linesOutsideCentre: faint inside a circle in the middle of the screen, stronger the further out they run.
+  const burst = hash(Math.floor(abs * 3) * 1.37) > 0.72 && (abs * 3) % 1 < 0.35;
+  const lines = (hash(f * 0.37) > 0.45 ? 1 + Math.floor(hash(f * 0.91) * 3) : 0) + (burst ? 10 : 0);
+  linesOutsideCentre(ctx, (c) => {
+    for (let k = 0; k < 2; k++) {
+      if (Math.sin(abs * (0.9 + k * 0.7) + k * 2.1) < 0.1) continue;
+      c.globalAlpha = (0.3 + 0.25 * hash(f + k * 3.3)) * amount;
+      c.fillStyle = k ? "#f3efe6" : "#0c0c0c";
+      c.fillRect(W * (0.25 + 0.5 * hash(k * 5.3)) + Math.sin(abs * (1.3 + k)) * 160 + (hash(f * 1.1 + k) - 0.5) * 6, -60, 1.5 + k, H + 120);
+    }
+    for (let k = 0; k < lines; k++) {
+      c.globalAlpha = (0.25 + 0.5 * hash(f * 2.3 + k)) * amount;
+      c.fillStyle = hash(k * 9.1 + f) > 0.45 ? "#0c0c0c" : "#f3efe6";
+      c.fillRect(hash(f * 3.1 + k * 7.3) * W, -60, 1 + hash(f + k * 1.7) * (k % 6 === 0 ? 5 : 2), H + 120);
+    }
+  });
+  // a mild neutral vignette (a strong one hurt the look — the old-screen cut into the memory carries the cue instead)
+  const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(1, `rgba(0,0,0,${(0.38 * amount).toFixed(2)})`);
+  ctx.save();
+  ctx.fillStyle = g;
+  ctx.fillRect(-60, -60, W + 120, H + 120);
+  ctx.restore();
+}
+
+/** Blink every 2.6–4 s for ~0.12 s: returns "shut" during a blink, else `base`. `seed` desyncs characters. */
+export function blinkEyes<T extends string>(abs: number, seed: number, base: T): T | "shut" {
+  const period = 2.6 + hash(seed) * 1.4;
+  const t = (abs + hash(seed * 3.1) * period) % period;
+  return t < 0.12 ? "shut" : base;
+}
+
+/** Old-screen vertical lines, faint inside a circle in the middle of the screen and stronger the further out they
+ *  run (用户：中心区域圆圈里不明显，越到边缘越明显 — a radial mask, not a per-line fade). `draw` paints the lines. */
+export function linesOutsideCentre(ctx: Ctx, draw: (c: Ctx) => void, key = "lines") {
+  filtered(
+    ctx,
+    "none",
+    (c) => {
+      draw(c);
+      c.save();
+      c.globalAlpha = 1;
+      c.globalCompositeOperation = "destination-in";
+      const g = c.createRadialGradient(W / 2, H / 2, W * 0.3, W / 2, H / 2, W * 0.78);
+      g.addColorStop(0, "rgba(0,0,0,0.08)");
+      g.addColorStop(1, "rgba(0,0,0,1)");
+      c.fillStyle = g;
+      c.fillRect(-100, -100, W + 200, H + 200);
+      c.restore();
+    },
+    key,
+  );
 }
