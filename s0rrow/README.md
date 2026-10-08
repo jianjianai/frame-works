@@ -136,3 +136,4 @@
 - `docs/README.md`：来源 整理自 work-bdd5c2f8、work-d1187f37、work-afa1129b
 - `code/mirrors/sets.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
 - `code/mirrors/roof.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
+- `code/mirrors/living.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
