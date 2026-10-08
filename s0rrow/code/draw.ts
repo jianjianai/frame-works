@@ -384,6 +384,10 @@ export function loadFonts(): Promise<void> {
 
 // ---------------------------------------------------------------- scene scaffold
 export type DrawFn = (ctx: Ctx, abs: number, local: number) => void;
+let ROOT = 1;
+/** Device pixels per design unit at the scene's root (designScene sets a pure scale there). For overlays drawn in
+ *  screen space whatever the camera (red-pen notes, line widths in design px: mirrors 的 story.ts `px`/`toDesign`). */
+export const rootScale = () => ROOT;
 /**
  * Standard canvas scene in 1080×1920 design units.
  * `t0` is the absolute song time at which this layer starts, so drawing code can
@@ -403,6 +407,7 @@ export async function designScene(options: SceneOptions, t0: number, draw: DrawF
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.setTransform(s, 0, 0, s, 0, 0);
+      ROOT = s;
       const abs = t0 + time;
       setBoil(abs);
       ctx.save();
@@ -669,7 +674,14 @@ export function motes(ctx: Ctx, abs: number, x: number, y: number, rx: number, r
 /** Vertical motion blur for a whip-tilt: `draw` once, then average `n` copies spread over `px` design units up and
  *  down (additive, so it stays a true average). */
 export function smearV(ctx: Ctx, draw: (c: Ctx) => void, px: number, key = "smear", n = 9) {
-  if (px < 2) {
+  smear(ctx, draw, 0, px, key, n);
+}
+/** Motion blur along (dx, dy) design units — a whip-pan in any direction: `draw` once, then average `n` copies
+ *  spread along the vector, centred. Call it at the scene's base transform (the camera goes inside `draw`). Smear
+ *  length = the picture's speed (px/s) ÷ 48 (a 1/48 s shutter); the next shot carries on in the same direction,
+ *  slowing, with its own smear (《mirrors》 act1: bathroom → hallway at 1.13–1.54). */
+export function smear(ctx: Ctx, draw: (c: Ctx) => void, dx: number, dy: number, key = "smear", n = 9) {
+  if (Math.hypot(dx, dy) < 2) {
     draw(ctx);
     return;
   }
@@ -683,7 +695,38 @@ export function smearV(ctx: Ctx, draw: (c: Ctx) => void, px: number, key = "smea
   b.setTransform(1, 0, 0, 1, 0, 0);
   b.globalCompositeOperation = "lighter";
   b.globalAlpha = 1 / n;
-  for (let i = 0; i < n; i++) b.drawImage(a.canvas, 0, (i / (n - 1) - 0.5) * px * k);
+  for (let i = 0; i < n; i++) {
+    const u = i / (n - 1) - 0.5;
+    b.drawImage(a.canvas, u * dx * k, u * dy * k);
+  }
+  b.restore();
+  blit(ctx, b);
+}
+/** Zoom blur (a crash zoom, a push through a transition): `draw` once, then average `n` copies scaled from 1 to
+ *  1 + amount about the design point (cx, cy). Call it at the scene's base transform. A rush into something at the
+ *  end of one shot and a decelerating push at the start of the next, both blurred, read as one move (《mirrors》
+ *  act1: his face → the birthmark on the drum hit, 3.95–4.25). */
+export function zoomBlur(ctx: Ctx, draw: (c: Ctx) => void, cx: number, cy: number, amount: number, key = "zoomBlur", n = 10) {
+  if (amount < 0.004) {
+    draw(ctx);
+    return;
+  }
+  const a = buffer(ctx, key + "A");
+  a.save();
+  draw(a);
+  a.restore();
+  const b = buffer(ctx, key + "B");
+  const t = ctx.getTransform();
+  const px = t.a * cx + t.c * cy + t.e,
+    py = t.b * cx + t.d * cy + t.f;
+  b.save();
+  b.globalCompositeOperation = "lighter";
+  b.globalAlpha = 1 / n;
+  for (let i = 0; i < n; i++) {
+    const s = 1 + (amount * i) / (n - 1);
+    b.setTransform(s, 0, 0, s, px - s * px, py - s * py);
+    b.drawImage(a.canvas, 0, 0);
+  }
   b.restore();
   blit(ctx, b);
 }
