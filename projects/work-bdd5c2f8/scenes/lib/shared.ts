@@ -124,7 +124,7 @@ export function birthdayDesk(ctx: Ctx, abs: number, o: DeskShot) {
     ctx.fillRect(-120, -20, 240, 160);
     ctx.restore();
     phone(ctx, 860, 1200, 0.2, -0.32, (c) => {
-      lockScreen(c, { time: o.phoneTime ?? "23:58", airplane: true });
+      lockScreen(c, { time: o.phoneTime ?? "11:58", airplane: true });
       if (phoneOn < 1) {
         c.fillStyle = `rgba(0,0,0,${1 - phoneOn})`;
         c.fillRect(0, 0, 600, 1280);

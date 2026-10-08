@@ -1,4 +1,13 @@
-# i have no friends（重置版）
+# i have no friends（youtube版）
+
+## YouTube 版（本作品）
+- 从重置版 work-afa1129b 复制：新建作品 a85681f0 后恢复到重置版发布前的版本 b8162d8（内部名称仍是 work-bdd5c2f8，素材地址照旧）。下面「重置版」的说明都适用，只是画面文字全部是英文。画幅、时长、音乐和镜头没改（1080×1920、56.6 秒，按 YouTube Shorts 发）。
+- 用户：「把中文内容全部改成英文，并做一些本地化」。做法：
+  - 歌词：只留英文逐词卡拉 OK（去掉中文翻译行，字号 58→68、两行平衡换行）；红笔划英文词、写英文：no friends→airplane mode was ON、no one's ever→99+ unread messages、so fake→I was the one hiding、laugh→smash cake（糊脸那一镜）。
+  - 钩子：his 17th birthday. / 0 new messages（故意用第三人称：抖音版「今天是我生日」被当成作者本人过生日）；标题胶囊 17th birthday · 0 / 99+ new messages；结尾 like = 99+ texts on your birthday、rewatch: when can you first tell he's on airplane mode? comment the timestamp。
+  - 手机：聊天改成 iMessage 样式（phone.ts `chatScreen`：白底、我的蓝色气泡无头像、别人的灰气泡+圆头像+名字、失败时气泡左移、右边红 ! 和 Not Delivered、发成功 Delivered、输入框 iMessage 和蓝色发送箭头，位置和原来的「发送」一样）；`wrap` 按单词换行；通知图标是 Messages 绿，时间 now；锁屏日期 Monday, October 5；12 小时制：11:58→11:59、12:01、9:53、字卡 9:52 PM · walking home、11:58 PM、this morning。act4 的 `failMark` 按新版式算红 ! 的位置（消息换成两行），长按菜单 Copy/Forward/Unsend/Delete 挪到气泡上方。
+  - 人名和班级：阿杰 Jay、小雨 Lily、班长 Emma、大刘 Mike、妈妈 Mom；高二(3)班 → Class 11B（门牌 CLASS 11B）；惊喜策划群 → Surprise Party (NO birthday boy)；横幅 HAPPY BIRTHDAY（people.ts `banner` 自动缩字号适应宽度）；哈哈哈 → HAHA，最后的大字 HA。
+  - 字体：draw.ts 的 `F.cn` / `F.pen` 改成 Gochi Hand 打头（中文字体留在后面只给 · ✓ 等符号兜底），大标题和横幅用 Permanent Marker。不要用 emoji 和箭头符号（字体子集里没有，导出会变方框）。
 
 在这里记录这个作品自己的需求、风格约定和制作说明（AI 每次进入作品都会读取）。
 

@@ -3,68 +3,22 @@ import { clamp, phase, smooth } from "../../../src/engine/math";
 import { BEAT, C, Ctx, F, W, backOut, beatAt, curve, designScene, easeOut, font, jit, measure, paint, rr, sinceBeat, text, writeOn } from "./lib/draw";
 import { LINES, Line } from "./lib/lyrics-data";
 
-/** Lyrics (EN karaoke + CN translation), the hook title and the red-pen corrections. */
+/** Lyrics (English karaoke only — YouTube 版, no Chinese row), the hook title and the red-pen corrections. */
 
-const EN_SIZE = 58;
-const CN_SIZE = 64;
-const MAX_W = 820;
-const CN_MAX_W = 900;
-const ROW_H = 68;
-const CN_ROW_H = 78;
+const EN_SIZE = 68;
+const MAX_W = 900;
+const ROW_H = 80;
+/** centre of the lyric block (the faces and clues stay above y ≈ 1230) */
+const BLOCK_Y = 1335;
 
 // ---------------------------------------------------------------- 每支视频要改的
 /** 最后一句歌词最晚在这里消失（尾声文字从这里开始写）。 */
 const LYRICS_END = 84.3;
-/** 按句下标给段落样式：bridge 桥段（粉色），big 全片最大的一句，outro 末段（暖黄）。 */
+/** 按句下标给段落样式：outro 末段（暖黄）。 */
 function lineStyle(li: number) {
-  return { bridge: li >= 8 && li <= 11, big: li === 11, outro: li >= 16 };
+  return { outro: li >= 16 };
 }
 // 开头钩子和常驻标题胶囊的文案、时间点在下面的 hook() 里，也要改。
-
-interface CnRow {
-  text: string;
-  /** index of the first character in the full line */
-  start: number;
-  w: number;
-  /** left offset and width of every character */
-  xs: number[];
-  cw: number[];
-}
-/** Split a Chinese line at the space that balances the two halves best, if it is too wide. */
-const cnCache = new Map<string, CnRow[]>();
-function cnLines(ctx: Ctx, s: string, size: number): CnRow[] {
-  const key = size + s;
-  const hit = cnCache.get(key);
-  if (hit) return hit;
-  let parts: [string, number][] = [[s, 0]];
-  if (measure(ctx, s, size, F.cn) > CN_MAX_W) {
-    let best = Infinity;
-    for (let i = 0; i < s.length; i++)
-      if (s[i] === " ") {
-        const a = s.slice(0, i),
-          b = s.slice(i + 1);
-        const d = Math.abs(measure(ctx, a, size, F.cn) - measure(ctx, b, size, F.cn));
-        if (d < best) {
-          best = d;
-          parts = [[a, 0], [b, i + 1]];
-        }
-      }
-  }
-  const out = parts.map(([text, start]) => {
-    // lay out character by character; the space between phrases is half a character wide
-    const chars = Array.from(text);
-    const cw = chars.map((ch) => (ch === " " ? size * 0.5 : measure(ctx, ch, size, F.cn)));
-    const xs: number[] = [];
-    let x = 0;
-    for (const w of cw) {
-      xs.push(x);
-      x += w;
-    }
-    return { text, start, w: x, xs, cw };
-  });
-  cnCache.set(key, out);
-  return out;
-}
 
 interface Placed {
   word: [number, number, string];
@@ -91,6 +45,21 @@ function layout(ctx: Ctx, li: number, line: Line, size: number) {
     rows[row].push({ word, index, x: rowW + (rowW > 0 ? space : 0), w, row });
     rowW += (rowW > 0 ? space : 0) + w;
   });
+  // balance two rows: move words down while the second row is clearly shorter (no lonely last word)
+  if (rows.length === 2) {
+    const width = (r: Placed[]) => r.reduce((s, p, i) => s + p.w + (i ? space : 0), 0);
+    while (rows[0].length > 1 && width(rows[1]) + space + rows[0][rows[0].length - 1].w < width(rows[0]) - rows[0][rows[0].length - 1].w) {
+      rows[1].unshift(rows[0].pop()!);
+    }
+    for (const r of rows) {
+      let x = 0;
+      r.forEach((p, i) => {
+        p.x = x + (i ? space : 0);
+        x = p.x + p.w;
+      });
+    }
+    rows[1].forEach((p) => (p.row = 1));
+  }
   const placed: Placed[] = [];
   for (const r of rows) {
     const total = r.length ? r[r.length - 1].x + r[r.length - 1].w : 0;
@@ -118,22 +87,20 @@ function drawLine(ctx: Ctx, li: number, abs: number) {
   const aIn = easeOut(phase(abs, showFrom, showFrom + 0.22));
   const aOut = 1 - phase(abs, hideAt - 0.16, hideAt);
   const alpha = aIn * aOut;
-  const { bridge, big, outro } = lineStyle(li);
-  const size = big ? 84 : EN_SIZE;
+  const { outro } = lineStyle(li);
+  const size = EN_SIZE;
   const { placed, rows } = layout(ctx, li, line, size);
-  const rowH = big ? 96 : ROW_H;
-  const cnCount = cnLines(ctx, line.cn, big ? 76 : CN_SIZE).length;
-  const blockH = (rows - 1) * rowH + (big ? 104 : 88) + (cnCount - 1) * CN_ROW_H;
-  const top = (line.fix ? 1290 : 1335) - blockH / 2 + (1 - aIn) * 24;
+  const blockH = (rows - 1) * ROW_H + 92 + (line.fix ? 96 : 0);
+  const top = BLOCK_Y - blockH / 2 + 46 + (1 - aIn) * 24;
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.font = font(size, F.en);
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  const accent = outro ? "#ffd166" : bridge ? "#ff9ec4" : "#ffe45c";
+  const accent = outro ? "#ffd166" : "#ffe45c";
   for (const p of placed) {
     const [ws, wd, word] = p.word;
-    const y = top + p.row * rowH;
+    const y = top + p.row * ROW_H;
     const sung = abs >= ws;
     const active = sung && abs < ws + Math.max(wd, 0.18);
     const pop = sung ? backOut(phase(abs, ws, ws + 0.18)) : 0;
@@ -141,7 +108,7 @@ function drawLine(ctx: Ctx, li: number, abs: number) {
     ctx.save();
     ctx.translate(p.x + p.w / 2, y - (active ? 3 * (1 - phase(abs, ws, ws + 0.3)) : 0));
     ctx.scale(sc, sc);
-    ctx.lineWidth = 11;
+    ctx.lineWidth = 12;
     ctx.lineJoin = "round";
     ctx.strokeStyle = "rgba(14,12,18,0.92)";
     ctx.strokeText(word, -p.w / 2, 0);
@@ -150,85 +117,29 @@ function drawLine(ctx: Ctx, li: number, abs: number) {
     ctx.fillText(word, -p.w / 2, 0);
     ctx.restore();
   }
-  // English strike-through
-  if (line.fix) {
-    const sp = phase(abs, line.fix.at, line.fix.at + 0.35);
-    for (const p of placed)
-      if (line.fix.en.includes(p.index)) strike(ctx, p.x, p.x + p.w, top + p.row * rowH + 2, sp, 40 + p.index);
-  }
-  // Chinese (wraps at the space nearest the middle when a line is too wide); each character
-  // lights up while the English words it translates are being sung
-  const cnSize = big ? 76 : CN_SIZE;
-  const cnRows = cnLines(ctx, line.cn, cnSize);
-  const cnY = top + (rows - 1) * rowH + (big ? 104 : 88);
-  const cnA = phase(abs, line.start - 0.1, line.start + 0.35);
-  const cnDone = bridge ? "#ffe0ec" : "#ffffff";
-  ctx.font = font(cnSize, F.cn);
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  cnRows.forEach((row, r) => {
-    const y = cnY + r * CN_ROW_H;
-    const x0 = W / 2 - row.w / 2;
-    // horizontal extent of each word in this row, so a word pops as one piece
-    const span = new Map<number, [number, number]>();
-    Array.from(row.text).forEach((ch, j) => {
-      const id = line.cnTimes[row.start + j]?.[2] ?? -1;
-      if (ch === " " || id < 0) return;
-      const sp = span.get(id);
-      const a = row.xs[j],
-        b = row.xs[j] + row.cw[j];
-      span.set(id, sp ? [Math.min(sp[0], a), Math.max(sp[1], b)] : [a, b]);
-    });
-    Array.from(row.text).forEach((ch, j) => {
-      if (ch === " ") return;
-      const [cs, cd, id] = line.cnTimes[row.start + j] ?? [-1, 0, -1];
-      const sung = cs >= 0 && abs >= cs;
-      const active = sung && abs < cs + Math.max(cd, 0.18);
-      const k = active ? 1 - phase(abs, cs, cs + 0.25) : 0;
-      const [wa, wb] = span.get(id) ?? [row.xs[j], row.xs[j] + row.cw[j]];
-      const wc = x0 + (wa + wb) / 2;
-      ctx.save();
-      ctx.translate(wc, y - 3 * k);
-      ctx.scale(1 + 0.08 * k, 1 + 0.08 * k);
-      ctx.globalAlpha = alpha * cnA;
-      ctx.lineWidth = 11;
-      ctx.lineJoin = "round";
-      ctx.strokeStyle = "rgba(14,12,18,0.92)";
-      const lx = x0 + row.xs[j] - wc;
-      ctx.strokeText(ch, lx, 0);
-      ctx.fillStyle = active ? accent : sung ? cnDone : "rgba(255,255,255,0.5)";
-      ctx.fillText(ch, lx, 0);
-      ctx.restore();
-    });
-  });
-  ctx.globalAlpha = alpha * cnA;
+  // the red pen: strike the claim, write the truth under the line, a caret up to the struck words
   if (line.fix) {
     const f = line.fix;
-    let r = cnRows.findIndex((row) => row.text.includes(f.cn));
-    if (r < 0) r = 0;
-    const cr = cnRows[r];
-    const i = Math.max(0, cr.text.indexOf(f.cn));
-    const end = cr.text.includes(f.cn) ? i + f.cn.length : cr.text.length;
-    const left = W / 2 - cr.w / 2;
-    const x0 = left + cr.xs[i];
-    const x1 = left + (end < cr.xs.length ? cr.xs[end] : cr.w);
-    const rowY = cnY + r * CN_ROW_H;
-    const sp = phase(abs, f.at + 0.12, f.at + 0.5);
-    strike(ctx, x0, x1, rowY, sp, 77, 9);
-    const np = phase(abs, f.at + 0.45, f.at + 1.25);
-    if (np > 0) {
-      const lastY = cnY + (cnRows.length - 1) * CN_ROW_H;
-      const s = writeOn(f.note, np);
+    const struck = placed.filter((p) => f.en.includes(p.index));
+    const sp = phase(abs, f.at, f.at + 0.35);
+    for (const p of struck) strike(ctx, p.x, p.x + p.w, top + p.row * ROW_H + 4, sp, 40 + p.index, 8);
+    const np = phase(abs, f.at + 0.4, f.at + 1.2);
+    if (np > 0 && struck.length) {
+      const lastRow = rows - 1;
+      const noteY = top + lastRow * ROW_H + 96;
       ctx.save();
-      ctx.translate(W / 2 + 10, lastY + 86);
+      ctx.translate(W / 2 + 10, noteY);
       ctx.rotate(-0.035 + jit(5, 0.004));
-      text(ctx, s, 0, 0, { size: 70, font: F.pen, fill: "#ff3b3b", stroke: "#fff", lw: 12 });
+      text(ctx, writeOn(f.note, np), 0, 0, { size: 70, font: F.pen, fill: "#ff3b3b", stroke: "#fff", lw: 12 });
       ctx.restore();
-      // caret pointing up to the struck words (only when nothing sits between them)
-      if (r === cnRows.length - 1) {
+      // the caret, when the struck words sit on the last row (nothing between them and the note)
+      const onLast = struck.filter((p) => p.row === lastRow);
+      if (onLast.length) {
+        const cx = (onLast[0].x + onLast[onLast.length - 1].x + onLast[onLast.length - 1].w) / 2;
+        const rowY = top + lastRow * ROW_H;
         ctx.save();
         ctx.globalAlpha *= clamp(np * 3);
-        curve(ctx, [[(x0 + x1) / 2 - 16, rowY + 50], [(x0 + x1) / 2, rowY + 36], [(x0 + x1) / 2 + 16, rowY + 50]], 91, 1);
+        curve(ctx, [[cx - 16, rowY + 54], [cx, rowY + 40], [cx + 16, rowY + 54]], 91, 1);
         paint(ctx, null, "#ff3b3b", 6);
         ctx.restore();
       }
@@ -254,23 +165,23 @@ function hook(ctx: Ctx, abs: number) {
     ctx.globalAlpha = a;
     ctx.translate(W / 2, 330);
     ctx.scale(k, k);
-    text(ctx, "今天是我17岁生日", 0, -56, { size: 80, font: F.cn, fill: "#fff", stroke: C.ink, lw: 14 });
-    // "手机 0 条新消息" with a red zero (用户 tried three other openings for retention and went back to this one)
-    const parts: [string, string, number][] = [
-      ["手机 ", "#fff", 80],
-      ["0", "#ff3b3b", 112],
-      [" 条新消息", "#fff", 80],
+    // third person on purpose: on Douyin 「今天是我17岁生日」 was read as the uploader's own birthday (six in ten
+    // comments were birthday wishes, not the story)
+    text(ctx, "his 17th birthday.", 0, -60, { size: 86, font: F.cn, fill: "#fff", stroke: C.ink, lw: 14 });
+    // "0 new messages" with a big red zero
+    const parts: [string, string, number, string][] = [
+      ["0", "#ff3b3b", 116, F.marker],
+      [" new messages", "#fff", 86, F.cn],
     ];
-    const fam = (str: string) => (str === "0" ? F.marker : F.cn);
-    const total = parts.reduce((s, [str, , sz]) => s + measure(ctx, str, sz, fam(str)), 0);
+    const total = parts.reduce((s, [str, , sz, fam]) => s + measure(ctx, str, sz, fam), 0);
     let x = -total / 2;
-    for (const [str, col, sz] of parts) {
-      const w = measure(ctx, str, sz, fam(str));
+    for (const [str, col, sz, fam] of parts) {
+      const w = measure(ctx, str, sz, fam);
       const wob = str === "0" ? Math.sin(abs * 9) * 0.06 : 0;
       ctx.save();
       ctx.translate(x + w / 2, 62);
       ctx.rotate(wob);
-      text(ctx, str, 0, str === "0" ? 6 : 0, { size: sz, font: str === "0" ? F.marker : F.cn, fill: col, stroke: C.ink, lw: 14 });
+      text(ctx, str, 0, str === "0" ? 6 : 0, { size: sz, font: fam, fill: col, stroke: C.ink, lw: 14 });
       ctx.restore();
       x += w;
     }
@@ -278,26 +189,26 @@ function hook(ctx: Ctx, abs: number) {
   }
   if (shrink > 0) {
     const a = shrink * (1 - phase(abs, end, end + 0.4));
-    const label = `17岁生日 · ${count} 条新消息`;
+    const pre = "17th birthday · ",
+      post = " new messages";
     ctx.save();
     ctx.globalAlpha = a;
-    const w = measure(ctx, label, 38, F.cn) + 56;
+    const pw = measure(ctx, pre, 40, F.cn);
+    const cw = measure(ctx, count, 44, F.marker);
+    const sw = measure(ctx, post, 40, F.cn);
+    const w = pw + cw + sw + 60;
     const bump = flip > 0 && flip < 1 ? Math.sin(flip * Math.PI) * 0.25 : 0;
     ctx.translate(W / 2, 214);
     ctx.scale(1 + bump, 1 + bump);
     ctx.fillStyle = "rgba(12,12,18,0.62)";
     rr(ctx, -w / 2, -36, w, 72, 36);
     ctx.fill();
-    const pre = "17岁生日 · ";
-    const pw = measure(ctx, pre, 38, F.cn);
-    const cw = measure(ctx, count, 44, F.marker);
-    const sw = measure(ctx, " 条新消息", 38, F.cn);
     let x = -(pw + cw + sw) / 2;
-    text(ctx, pre, x + pw / 2, 2, { size: 38, font: F.cn, fill: "#fff" });
+    text(ctx, pre, x + pw / 2, 2, { size: 40, font: F.cn, fill: "#fff" });
     x += pw;
     text(ctx, count, x + cw / 2, 4, { size: 44, font: F.marker, fill: count === "0" ? "#ff6b6b" : "#ffd84a" });
     x += cw;
-    text(ctx, " 条新消息", x + sw / 2, 2, { size: 38, font: F.cn, fill: "#fff" });
+    text(ctx, post, x + sw / 2, 2, { size: 40, font: F.cn, fill: "#fff" });
     ctx.restore();
   }
 }
@@ -313,9 +224,8 @@ const LINES_A = [0, 1, 2, 3, 4];
 const LINES_B = [13, 14, 15, 16, 17, 18, 19];
 
 /** The end card, over the epilogue to the last frame. Like: a double tap in the middle of the screen (two ripples,
- *  a big heart thrown up, beating with the music) and a line tied to the story; comment: a question answered with one
- *  number, which also sends people back to the opening (「回看：第几秒就能看出他开着飞行模式？」— the ✈ in the
- *  status bar from 0:02). Song time. */
+ *  a big heart thrown up, beating with the music) and a line tied to the story; comment: a question answered with a
+ *  timestamp, which also sends people back to the opening (the ✈ in the status bar from 0:02). Song time. */
 const PROMPTS = beatAt(166); // song 86.87 = work 53.48
 const SONG_END = beatAt(172); // song 90.00 = work 56.61
 function endPrompts(ctx: Ctx, abs: number) {
@@ -356,26 +266,29 @@ function endPrompts(ctx: Ctx, abs: number) {
     ctx.save();
     ctx.globalAlpha *= lk;
     ctx.translate(0, 24 * (1 - lk));
-    text(ctx, "点赞的人，生日那天消息 99+", W / 2, 565, { size: 58, font: F.cn, fill: "#fff", stroke: C.ink, lw: 12 });
+    text(ctx, "like = 99+ texts on your birthday", W / 2, 565, { size: 62, font: F.cn, fill: "#fff", stroke: C.ink, lw: 12 });
     ctx.restore();
   }
   const ck = smooth(phase(abs, t0 + 0.5, t0 + 0.8));
   if (ck > 0) {
-    const l1 = "回看：第几秒就能看出他开着飞行模式？",
-      l2 = "答案打在评论区";
-    const w = Math.max(measure(ctx, l1, 40, F.cn), measure(ctx, l2, 46, F.cn) + 60) + 64;
+    const l1 = "rewatch: when can you first tell",
+      l2 = "he's on airplane mode?",
+      l3 = "comment the timestamp";
+    const w = Math.max(measure(ctx, l1, 46, F.cn), measure(ctx, l2, 46, F.cn), measure(ctx, l3, 50, F.cn) + 60) + 72;
+    const y0 = 1356;
     ctx.save();
     ctx.globalAlpha *= ck;
     ctx.translate(0, 30 * (1 - ck));
     ctx.fillStyle = "rgba(12,12,18,0.78)";
-    rr(ctx, W / 2 - w / 2, 1392, w, 160, 36);
+    rr(ctx, W / 2 - w / 2, y0, w, 214, 36);
     ctx.fill();
-    text(ctx, l1, W / 2, 1442, { size: 40, font: F.cn, fill: "#fff" });
-    const w2 = measure(ctx, l2, 46, F.cn);
-    text(ctx, l2, W / 2 - 22, 1508, { size: 46, font: F.cn, fill: "#ffd166" });
+    text(ctx, l1, W / 2, y0 + 50, { size: 46, font: F.cn, fill: "#fff" });
+    text(ctx, l2, W / 2, y0 + 102, { size: 46, font: F.cn, fill: "#fff" });
+    const w3 = measure(ctx, l3, 50, F.cn);
+    text(ctx, l3, W / 2 - 22, y0 + 164, { size: 50, font: F.cn, fill: "#ffd166" });
     // a little arrow down to the comments, nudging on the beat (drawn: the font subsets have no arrow)
-    const ax = W / 2 - 22 + w2 / 2 + 34,
-      ay = 1504 + 6 * Math.exp(-7 * sinceBeat(abs));
+    const ax = W / 2 - 22 + w3 / 2 + 34,
+      ay = y0 + 160 + 6 * Math.exp(-7 * sinceBeat(abs));
     ctx.strokeStyle = "#ffd166";
     ctx.lineWidth = 6;
     ctx.lineCap = "round";

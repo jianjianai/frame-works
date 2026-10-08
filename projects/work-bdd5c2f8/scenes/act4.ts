@@ -3,7 +3,7 @@ import { clamp, phase, smooth } from "../../../src/engine/math";
 import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blit, blob, bloom, buffer, camera, card, designScene, devScale, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, ik2, inkLine, measure, oval, paint, poly, rr, shaded, shake, text, tubePts, vgrad, writeOn } from "./lib/draw";
 import { KidPose, drawHand, drawKid } from "./lib/kid";
 import { CAST } from "./lib/people";
-import { Msg, SH, SW, chatScreen, phone, phoneBack } from "./lib/phone";
+import { Msg, SH, SW, chatScreen, phone, phoneBack, wrap } from "./lib/phone";
 import { bigCake, bokeh, cupcake, screenSpill, street, streetBokeh } from "./lib/sets";
 import { birthdayDesk } from "./lib/shared";
 
@@ -33,7 +33,7 @@ const N4 = beatAt(120); // 62.87 (29.48) the wish
 const BLOW = 65.25; // (31.86)
 const OUT = 65.6; // (32.21)
 const GREY = 0.38;
-const MSG = "其实…今天是我生日";
+const MSG = "actually… today's my birthday";
 
 // ---------------------------------------------------------------- 17.08 – 19.05 the cake shop window
 // him outside the window: to the right of the cake, his face level with its top (and clear of the lyrics)
@@ -137,7 +137,7 @@ function shotBakery(ctx: Ctx, abs: number) {
     g.fillRect(-80, COUNTER + 70, W + 160, H);
     g.restore();
   });
-  card(ctx, "21:52 · 回家的路上", 70, 330, smooth(phase(abs, T0 + 0.15, T0 + 0.45)) * (1 - phase(abs, WALK - 0.4, WALK - 0.1)));
+  card(ctx, "9:52 PM · walking home", 70, 330, smooth(phase(abs, T0 + 0.15, T0 + 0.45)) * (1 - phase(abs, WALK - 0.4, WALK - 0.1)));
   flash(ctx, 1 - phase(abs, T0, T0 + 0.4), "#0b0d1c");
 }
 
@@ -383,13 +383,16 @@ function shotWalk(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 21.13 – 26.87 the class group: sent, failed, deleted
-/** Where chatScreen draws the red "!" of my (last, one-line) message, in phone screen units. */
+/** Where chatScreen draws the red "!" of my (last) message, in phone screen units (iMessage: right of the bubble). */
 function failMark(ctx: Ctx, keyboard: boolean): Pt {
-  const bw = measure(ctx, MSG, 30, F.ui) + 44;
+  ctx.save();
+  ctx.font = `400 30px ${F.ui}`;
+  const n = wrap(ctx, MSG, 360).length;
+  ctx.restore();
   const inputY = SH - 120 - (keyboard ? 420 : 0);
-  const bh = 42 + 36;
+  const bh = n * 42 + 36;
   const y = inputY - 40 - bh;
-  return [SW - 106 - bw - 34, y + bh / 2];
+  return [SW - 50, y + bh / 2];
 }
 
 function chat(abs: number) {
@@ -397,8 +400,8 @@ function chat(abs: number) {
   const sent = abs >= SEND;
   const deleting = phase(abs, 59.55, 59.95);
   const msgs: Msg[] = [
-    { from: "班长", text: "明天记得交数学作业", avatar: CAST.monitor, time: "10:12" },
-    { from: "大刘", text: "收到", avatar: CAST.a },
+    { from: "Emma", text: "reminder: math homework is due tomorrow", avatar: CAST.monitor, time: "Today 10:12 AM" },
+    { from: "Mike", text: "got it", avatar: CAST.a },
   ];
   if (sent && deleting < 1)
     msgs.push({
@@ -410,23 +413,23 @@ function chat(abs: number) {
   const input = sent ? "" : writeOn(MSG, typing);
   const caret = !sent && Math.floor(abs * 3) % 2 === 0;
   return (c: Ctx) => {
-    chatScreen(c, { time: "21:53", airplane: true }, "高二(3)班 (46)", msgs, input, caret, { keyboard: abs < 59.0 });
-    // long-press menu → 删除
+    chatScreen(c, { time: "9:53", airplane: true }, "Class 11B", msgs, input, caret, { keyboard: abs < 59.0 });
+    // long-press menu → Delete
     const menu = phase(abs, 58.95, 59.15) * (1 - phase(abs, 59.5, 59.6));
     if (menu > 0) {
       c.save();
       c.globalAlpha = menu;
       c.fillStyle = "#4c4c4c";
-      rr(c, 150, 960, 400, 92, 16);
+      rr(c, 100, 884, 484, 92, 16); // above the (two-line) bubble
       c.fill();
-      ["复制", "转发", "撤回", "删除"].forEach((label, i) => {
-        const hot = label === "删除" && abs > 59.35;
+      ["Copy", "Forward", "Unsend", "Delete"].forEach((label, i) => {
+        const hot = label === "Delete" && abs > 59.35;
         if (hot) {
           c.fillStyle = "#6a6a6a";
-          rr(c, 160 + i * 96, 968, 92, 76, 10);
+          rr(c, 108 + i * 118, 892, 114, 76, 10);
           c.fill();
         }
-        text(c, label, 206 + i * 96, 1006, { size: 28, font: F.ui, fill: hot ? "#ff6b6b" : "#fff" });
+        text(c, label, 165 + i * 118, 930, { size: 26, font: F.ui, fill: hot ? "#ff6b6b" : "#fff" });
       });
       c.restore();
     }
@@ -479,7 +482,7 @@ function shotChat(ctx: Ctx, abs: number) {
     ctx.translate(760, 470);
     ctx.rotate(0.1);
     ctx.scale(k, k);
-    text(ctx, "发送失败", 0, 0, { size: 86, font: F.cn, fill: "#ff4d4d", stroke: "#fff", lw: 14 });
+    text(ctx, "Not Delivered", 0, 0, { size: 80, font: F.cn, fill: "#ff4d4d", stroke: "#fff", lw: 14 });
     ctx.restore();
   }
 }
@@ -539,7 +542,7 @@ function shotDesk(ctx: Ctx, abs: number) {
     glow(ctx, 392, 958, 260, "rgba(255,200,120,0.9)", Math.sin(Math.PI * f));
     ctx.restore();
   }
-  card(ctx, "23:58", 70, 330, smooth(phase(abs, N3b + 0.2, N3b + 0.5)));
+  card(ctx, "11:58 PM", 70, 330, smooth(phase(abs, N3b + 0.2, N3b + 0.5)));
 }
 
 // ---------------------------------------------------------------- 29.48 – 33.66 the wish, blown out
@@ -566,17 +569,17 @@ function shotWish(ctx: Ctx, abs: number) {
   shot(ctx, "flame");
   if (!out) {
     const a = smooth(phase(abs, N4 + 0.3, N4 + 0.6));
-    text(ctx, "许个愿吧", 540, 380, { size: 64, font: F.cn, fill: "#ffe7b0", alpha: a * (1 - phase(abs, 63.7, 63.9)), stroke: C.ink, lw: 10 });
+    text(ctx, "make a wish", 540, 380, { size: 68, font: F.cn, fill: "#ffe7b0", alpha: a * (1 - phase(abs, 63.7, 63.9)), stroke: C.ink, lw: 10 });
     if (wishWrite > 0) {
       ctx.save();
       ctx.translate(540, 390);
       ctx.rotate(-0.03);
-      text(ctx, writeOn("希望…有人记得我", wishWrite), 0, 0, { size: 84, font: F.pen, fill: "#fff3d6", stroke: C.ink, lw: 12 });
+      text(ctx, writeOn("hope someone remembers me…", wishWrite), 0, 0, { size: 76, font: F.pen, fill: "#fff3d6", stroke: C.ink, lw: 12 });
       ctx.restore();
     }
   } else {
     // in the dark, the wish lingers and fades
-    text(ctx, "希望…有人记得我", 540, 390, { size: 84, font: F.pen, fill: "#fff3d6", alpha: 0.6 * (1 - phase(abs, OUT, 66.8)) });
+    text(ctx, "hope someone remembers me…", 540, 390, { size: 76, font: F.pen, fill: "#fff3d6", alpha: 0.6 * (1 - phase(abs, OUT, 66.8)) });
   }
 }
 

@@ -320,7 +320,7 @@ export function wallpaper(ctx: Ctx) {
 export function lockScreen(ctx: Ctx, st: Status, opts: { date?: string; note?: string; noteAlpha?: number } = {}) {
   wallpaper(ctx);
   statusBar(ctx, st);
-  text(ctx, opts.date ?? "10月5日 星期一", SW / 2, 170, { size: 34, font: F.ui, weight: 700, fill: "rgba(255,255,255,0.85)" });
+  text(ctx, opts.date ?? "Monday, October 5", SW / 2, 170, { size: 34, font: F.ui, weight: 700, fill: "rgba(255,255,255,0.85)" });
   text(ctx, st.time, SW / 2, 290, { size: 170, font: F.ui, weight: 700, fill: "rgba(255,255,255,0.95)" });
   if (opts.note) {
     ctx.save();
@@ -353,12 +353,15 @@ export interface Msg {
   avatar?: Person;
   /** a grey time label above this message, e.g. "10:12" */
   time?: string;
-  /** a grey system line instead of a bubble, e.g. "阿杰 撤回了一条消息" */
+  /** a grey system line instead of a bubble, e.g. "Jay unsent a message" */
   system?: boolean;
+  /** my message went through: a small grey "Delivered" under it (iMessage) */
+  delivered?: boolean;
 }
 function avatar(ctx: Ctx, x: number, y: number, p: Person | undefined, me: boolean) {
   ctx.save();
-  rr(ctx, x - 34, y - 34, 68, 68, 12);
+  ctx.beginPath();
+  ctx.arc(x, y, 34, 0, Math.PI * 2);
   ctx.fillStyle = me ? "#9ec3dc" : "#d7d2c8";
   ctx.fill();
   ctx.clip();
@@ -381,16 +384,27 @@ function avatar(ctx: Ctx, x: number, y: number, p: Person | undefined, me: boole
   }
   ctx.restore();
 }
+/** YouTube 版: the group chat is iMessage, not WeChat — white screen, my messages in blue bubbles on the right (no
+ *  avatar of my own), theirs grey with a round avatar and their name above; a failed message slides left for a red
+ *  "!" and says "Not Delivered" under it; a sent one says "Delivered". */
+const IM_BLUE = "#0a84ff";
+const FAIL_SHIFT = 60;
 export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], input: string, caret: boolean, opts: { keyboard?: boolean; scroll?: number } = {}) {
-  ctx.fillStyle = "#ededed";
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, SW, SH);
   statusBar(ctx, { ...st, dark: true });
-  ctx.fillStyle = "#ededed";
+  ctx.fillStyle = "#f6f6f8";
   ctx.fillRect(0, 80, SW, 80);
-  text(ctx, "‹", 40, 120, { size: 60, font: F.ui, fill: "#111" });
+  text(ctx, "‹", 40, 118, { size: 64, font: F.ui, fill: IM_BLUE });
   text(ctx, title, SW / 2, 120, { size: 32, font: F.ui, weight: 700, fill: "#111" });
-  text(ctx, "···", SW - 50, 116, { size: 40, font: F.ui, weight: 700, fill: "#111" });
-  ctx.fillStyle = "#d6d6d6";
+  // the info button
+  ctx.strokeStyle = IM_BLUE;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(SW - 52, 120, 17, 0, Math.PI * 2);
+  ctx.stroke();
+  text(ctx, "i", SW - 52, 121, { size: 24, font: F.ui, weight: 700, fill: IM_BLUE });
+  ctx.fillStyle = "#d9d9de";
   ctx.fillRect(0, 160, SW, 2);
   const top = 162;
   const kb = opts.keyboard ? 420 : 0;
@@ -405,11 +419,7 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
     const m = msgs[i];
     if (m.system) {
       y -= 52;
-      const w = measure(ctx, m.text, 24, F.ui) + 36;
-      ctx.fillStyle = "#dadada";
-      rr(ctx, SW / 2 - w / 2, y, w, 44, 8);
-      ctx.fill();
-      text(ctx, m.text, SW / 2, y + 23, { size: 24, font: F.ui, fill: "#777" });
+      text(ctx, m.text, SW / 2, y + 23, { size: 24, font: F.ui, fill: "#8e8e93" });
       y -= 30;
       if (m.time) {
         text(ctx, m.time, SW / 2, y + 10, { size: 22, font: F.ui, fill: "#9a9a9a" });
@@ -418,20 +428,22 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
       continue;
     }
     ctx.font = `400 30px ${F.ui}`;
-    const lines = wrap(ctx, m.text, 330);
+    const lines = wrap(ctx, m.text, 360);
     const bh = lines.length * 42 + 36;
-    const bw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 44;
+    const bw = Math.max(...lines.map((l) => ctx.measureText(l).width)) + 48;
     y -= bh;
-    const ax = m.me ? SW - 56 : 56;
-    avatar(ctx, ax, y + 34, m.avatar, !!m.me);
-    const bx = m.me ? SW - 106 - bw : 106;
+    const fk = m.me && m.failed ? clamp(m.failed) : 0;
+    if (!m.me) avatar(ctx, 56, y + bh - 34, m.avatar, false);
+    const bx = m.me ? SW - 28 - bw - FAIL_SHIFT * fk : 106;
     if (!m.me && m.from) {
-      text(ctx, m.from, bx + 6, y - 14, { size: 22, font: F.ui, fill: "#888", align: "left" });
+      text(ctx, m.from, bx + 18, y - 16, { size: 22, font: F.ui, fill: "#8e8e93", align: "left" });
     }
-    ctx.fillStyle = m.me ? "#95ec69" : "#fff";
-    rr(ctx, bx, y, bw, bh, 12);
+    ctx.fillStyle = m.me ? IM_BLUE : "#e9e9eb";
+    rr(ctx, bx, y, bw, bh, 30);
     ctx.fill();
-    lines.forEach((l, k) => text(ctx, l, bx + 22, y + 38 + k * 42, { size: 30, font: F.ui, fill: "#111", align: "left" }));
+    lines.forEach((l, k) => text(ctx, l, bx + 24, y + 38 + k * 42, { size: 30, font: F.ui, fill: m.me ? "#fff" : "#111", align: "left" }));
+    if (m.me && m.delivered) text(ctx, "Delivered", SW - 34, y + bh + 22, { size: 21, font: F.ui, weight: 700, fill: "#8e8e93", align: "right" });
+    if (fk > 0) text(ctx, "Not Delivered", SW - 34, y + bh + 22, { size: 21, font: F.ui, weight: 700, fill: "#f04343", align: "right", alpha: fk });
     if (m.me && m.sending) {
       ctx.save();
       ctx.translate(bx - 34, y + bh / 2);
@@ -446,7 +458,7 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
     if (m.me && m.failed) {
       const k = clamp(m.failed);
       ctx.save();
-      ctx.translate(bx - 34, y + bh / 2);
+      ctx.translate(SW - 50, y + bh / 2);
       ctx.scale(0.4 + 0.6 * k, 0.4 + 0.6 * k);
       ctx.globalAlpha = k;
       ctx.fillStyle = "#f04343";
@@ -463,39 +475,49 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
     }
   }
   ctx.restore();
-  // input bar
-  ctx.fillStyle = "#f7f7f7";
+  // input bar: (+) on the left, the rounded "iMessage" field, the blue send arrow (where the thumb taps: SW - 58)
+  ctx.fillStyle = "#f6f6f8";
   ctx.fillRect(0, inputY, SW, 120 + kb);
   ctx.fillStyle = "#fff";
-  rr(ctx, 90, inputY + 22, SW - 200, 72, 10);
+  rr(ctx, 90, inputY + 22, SW - 196, 72, 36);
   ctx.fill();
+  ctx.strokeStyle = "#d1d1d6";
+  ctx.lineWidth = 2;
+  ctx.stroke();
   ctx.save();
   ctx.beginPath();
-  ctx.rect(90, inputY + 22, SW - 200, 72);
+  ctx.rect(96, inputY + 22, SW - 208, 72);
   ctx.clip();
   const tw = measure(ctx, input, 30, F.ui);
-  const tx = Math.min(110, SW - 130 - tw);
-  text(ctx, input, tx, inputY + 59, { size: 30, font: F.ui, fill: "#111", align: "left" });
+  const tx = Math.min(116, SW - 136 - tw);
+  if (input) text(ctx, input, tx, inputY + 59, { size: 30, font: F.ui, fill: "#111", align: "left" });
+  else if (!caret) text(ctx, "iMessage", 116, inputY + 59, { size: 30, font: F.ui, fill: "#b4b4ba", align: "left" });
   if (caret) {
-    ctx.fillStyle = "#07c160";
+    ctx.fillStyle = IM_BLUE;
     ctx.fillRect(tx + tw + 4, inputY + 38, 3, 42);
   }
   ctx.restore();
-  ctx.strokeStyle = "#333";
-  ctx.lineWidth = 3;
+  ctx.fillStyle = "#e5e5ea";
   ctx.beginPath();
-  ctx.arc(48, inputY + 58, 22, 0, Math.PI * 2);
-  ctx.stroke();
+  ctx.arc(48, inputY + 58, 26, 0, Math.PI * 2);
+  ctx.fill();
+  text(ctx, "+", 48, inputY + 56, { size: 40, font: F.ui, fill: "#8e8e93" });
   if (input) {
-    ctx.fillStyle = "#07c160";
-    rr(ctx, SW - 100, inputY + 30, 84, 58, 10);
-    ctx.fill();
-    text(ctx, "发送", SW - 58, inputY + 59, { size: 28, font: F.ui, weight: 700, fill: "#fff" });
-  } else {
+    ctx.fillStyle = IM_BLUE;
     ctx.beginPath();
-    ctx.arc(SW - 50, inputY + 58, 22, 0, Math.PI * 2);
+    ctx.arc(SW - 58, inputY + 58, 27, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(SW - 58, inputY + 72);
+    ctx.lineTo(SW - 58, inputY + 44);
+    ctx.moveTo(SW - 70, inputY + 56);
+    ctx.lineTo(SW - 58, inputY + 44);
+    ctx.lineTo(SW - 46, inputY + 56);
     ctx.stroke();
-    text(ctx, "+", SW - 50, inputY + 57, { size: 36, font: F.ui, fill: "#333" });
   }
   if (kb) {
     ctx.fillStyle = "#d1d3d9";
@@ -515,16 +537,31 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
     });
   }
 }
+/** Wrap at spaces (English); a word longer than the line is broken by characters. */
 export function wrap(ctx: Ctx, s: string, maxW: number): string[] {
   const out: string[] = [];
   let cur = "";
-  for (const ch of Array.from(s)) {
-    if (ctx.measureText(cur + ch).width > maxW && cur) {
-      out.push(cur);
-      cur = ch;
-    } else cur += ch;
+  const push = () => {
+    if (cur.trim()) out.push(cur.trim());
+    cur = "";
+  };
+  for (const tok of s.split(/(\s+)/)) {
+    if (!tok) continue;
+    if (/^\s+$/.test(tok)) {
+      if (cur) cur += " ";
+      continue;
+    }
+    if (ctx.measureText(cur + tok).width <= maxW) {
+      cur += tok;
+      continue;
+    }
+    push();
+    for (const ch of Array.from(tok)) {
+      if (cur && ctx.measureText(cur + ch).width > maxW) push();
+      cur += ch;
+    }
   }
-  if (cur) out.push(cur);
+  push();
   return out.length ? out : [""];
 }
 
@@ -571,7 +608,7 @@ export function feedScreen(ctx: Ctx, st: Status, posts: Post[], scroll: number) 
   ctx.fillStyle = "rgba(255,255,255,0.96)";
   ctx.fillRect(0, 0, SW, 110);
   statusBar(ctx, { ...st, dark: true });
-  text(ctx, "朋友动态", SW / 2, 92, { size: 28, font: F.ui, weight: 700, fill: "#111" });
+  text(ctx, "Feed", SW / 2, 92, { size: 28, font: F.ui, weight: 700, fill: "#111" });
 }
 
 // ---------------------------------------------------------------- control centre
@@ -694,7 +731,7 @@ export function notification(ctx: Ctx, x: number, y: number, w: number, n: Note,
   ctx.fillStyle = "rgba(245,245,247,0.94)";
   rr(ctx, x, y, w, h, 32);
   ctx.fill();
-  const ic = n.kind === "call" ? "#34c759" : "#07c160";
+  const ic = "#34c759"; // Messages / Phone green
   ctx.fillStyle = ic;
   rr(ctx, x + 22, y + 30, 68, 68, 16);
   ctx.fill();
@@ -706,7 +743,7 @@ export function notification(ctx: Ctx, x: number, y: number, w: number, n: Note,
     ctx.fill();
   }
   text(ctx, n.title, x + 110, y + 44, { size: 28, font: F.ui, weight: 700, fill: "#111", align: "left" });
-  text(ctx, n.time ?? "现在", x + w - 26, y + 44, { size: 22, font: F.ui, fill: "#888", align: "right" });
+  text(ctx, n.time ?? "now", x + w - 26, y + 44, { size: 22, font: F.ui, fill: "#888", align: "right" });
   ctx.save();
   ctx.font = `400 27px ${F.ui}`;
   wrap(ctx, n.body, w - 140)

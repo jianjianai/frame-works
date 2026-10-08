@@ -110,11 +110,11 @@ function discoverScene(c: Ctx, abs: number, tapped: boolean, alive = 0) {
   const py = 900 + (1 - rise) * 900;
   phoneButtons(c, 540, py, 0.78, 0);
   phone(c, 540, py, 0.78, 0, (p) => {
-    lockScreen(p, { time: "23:59", airplane: !tapped });
+    lockScreen(p, { time: "11:59", airplane: !tapped });
     if (cc > 0) {
       p.save();
       p.translate(0, -(1 - cc) * SH);
-      controlCenter(p, { time: "23:59", airplane: !tapped }, !tapped, tapped ? Math.max(0, 1 - (abs - TAP) * 6) : 0, tapped ? 0 : highlight, torch);
+      controlCenter(p, { time: "11:59", airplane: !tapped }, !tapped, tapped ? Math.max(0, 1 - (abs - TAP) * 6) : 0, tapped ? 0 : highlight, torch);
       p.restore();
     }
     if (tapped && abs < TAP + 0.5) {
@@ -221,7 +221,7 @@ function shotDiscover(ctx: Ctx, abs: number) {
       ctx.globalAlpha = smooth(phase(abs, SNAP + 0.38, SNAP + 0.62));
       ctx.translate(600, 800);
       ctx.rotate(-0.06);
-      text(ctx, "飞行模式……？", 0, 0, { size: 84, font: F.pen, fill: "#fff", stroke: C.ink, lw: 12 });
+      text(ctx, "airplane mode…?", 0, 0, { size: 84, font: F.pen, fill: "#fff", stroke: C.ink, lw: 12 });
       ctx.restore();
     }
     return;
@@ -286,13 +286,13 @@ function shotDiscover(ctx: Ctx, abs: number) {
 
 // ---------------------------------------------------------------- 37.83 – 42.00 99+, and the same day from their side
 const NOTES: Note[] = [
-  { title: "高二(3)班", body: "阿杰：生日快乐！！！！！", count: "99+", kind: "group" },
-  { title: "阿杰", body: "寿星？？？人呢？？？" },
-  { title: "未接来电 (23)", body: "阿杰、班长、小雨、妈妈…", kind: "call" },
-  { title: "小雨", body: "上课大家是在笑阿杰差点说漏嘴…不是笑你啦" },
-  { title: "班长", body: "横幅藏了一整天 差点被你看见哈哈" },
-  { title: "妈妈", body: "同学们在楼下等你两个小时了" },
-  { title: "阿杰", body: "快下楼！！！蛋糕要化了！！！" },
+  { title: "Class 11B", body: "Jay: HAPPY BIRTHDAY!!!!!", count: "99+", kind: "group" },
+  { title: "Jay", body: "birthday boy??? where r u???" },
+  { title: "Missed Calls (23)", body: "Jay, Emma, Lily, Mom…", kind: "call" },
+  { title: "Lily", body: "we were laughing at Jay almost spoiling it, NOT at you!!" },
+  { title: "Emma", body: "hid the banner ALL day lol you almost saw it" },
+  { title: "Mom", body: "Your friends have been waiting downstairs for 2 hours" },
+  { title: "Jay", body: "GET DOWN HERE!!! the cake is melting!!!" },
 ];
 const NOTE_AT = (i: number) => T2 + 0.06 + i * 0.12; // the flood: seven in under a second (audio.ts flood matches)
 // 用户: 「99+消息片段全部都很烂」 → redesigned. Two beats each, no more one-beat flash inserts:
@@ -351,8 +351,8 @@ function shotFlood(ctx: Ctx, abs: number) {
   phoneButtons(ctx, 540, PY, PS, 0);
   phone(ctx, 540, PY, PS, 0, (c) => {
     wallpaper(c);
-    statusBar(c, { time: "23:59", airplane: false, battery: 0.08 });
-    text(c, "23:59", SW / 2, 170, { size: 92, font: F.ui, weight: 700, fill: "rgba(255,255,255,0.95)" });
+    statusBar(c, { time: "11:59", airplane: false, battery: 0.08 });
+    text(c, "11:59", SW / 2, 170, { size: 92, font: F.ui, weight: 700, fill: "rgba(255,255,255,0.95)" });
     // newest on top
     let yy = 250;
     for (let k = 0; k < shown; k++) {
@@ -577,7 +577,7 @@ function lookingDown(c: Ctx, abs: number) {
   const open = easeOut(phase(abs, WIN_B + 0.05, WIN_B + 0.6));
   pavementBelow(c, abs);
   BELOW.forEach((q, i) => {
-    if (i === 2) banner(c, 540, 440, 610, open, "生日快乐", 720, F.cn);
+    if (i === 2) banner(c, 540, 440, 610, open, "HAPPY BIRTHDAY", 720, F.marker);
     const t = X_OFF(q.k);
     const off = smooth(phase(abs, t, t + 0.18));
     const hop = -Math.abs(Math.sin(abs * 7 + i * 1.3)) * 12 * (0.4 + 0.6 * off);
@@ -775,7 +775,7 @@ export function shotWindowOld(ctx: Ctx, abs: number) {
       glow(ctx, q.x + 150 * q.s, q.y - 110 * q.s, 90, "rgba(255,255,230,0.9)", 0.6 + 0.4 * Math.sin(abs * 6 + q.x));
     }
   }
-  banner(ctx, 540, 770, 560, bOpen, "生日快乐", 720, F.cn);
+  banner(ctx, 540, 770, 560, bOpen, "HAPPY BIRTHDAY", 720, F.marker);
   // the big cake from the bakery window, on a folding table, a gold 17 on top (彩蛋)
   rr(ctx, 520, 1292, 190, 20, 6);
   ctx.fillStyle = "#d8d2c6";
@@ -1062,7 +1062,7 @@ function shotCelebrate(ctx: Ctx, abs: number) {
   ctx.save();
   camera(ctx, 540, 820, 1.02 + 0.03 * p + 0.06 * easeInOut(phase(abs, HIT_END, END)), hr, hx, hy);
   filtered(ctx, "blur(2px)", (b) => buildingEntrance(b, abs), "bg");
-  banner(ctx, 540, 330, 820, 1, "生日快乐", 740, F.cn);
+  banner(ctx, 540, 330, 820, 1, "HAPPY BIRTHDAY", 740, F.marker);
   const ring: [Person, number, number, number, Person["arms"]][] = [
     [CAST.monitor, 270, 560, 0.6, "laugh"],
     [CAST.a, 810, 560, 0.6, "up"],
@@ -1181,7 +1181,7 @@ export function shotPartyOld(ctx: Ctx, abs: number) {
     camera(c, 540, 820, 1 + 0.03 * p + 0.1 * easeInOut(phase(abs, 82.4, END)) + 0.5 * (1 - easeOut(burst)), hr, sx + hx, sy + hy);
     // downstairs at the door of his block: the lobby light behind him, fairy lights — a touch out of focus
     filtered(c, "blur(2px)", (b) => buildingEntrance(b, abs), "bg");
-    banner(c, 540, 360, 820, 1, "生日快乐", 740, F.cn);
+    banner(c, 540, 360, 820, 1, "HAPPY BIRTHDAY", 740, F.marker);
     const ring: [Person, number, number, number][] = [
       [CAST.monitor, 290, 600, 0.6],
       [CAST.a, 800, 600, 0.6],

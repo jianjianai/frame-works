@@ -59,14 +59,14 @@ function shotThanks(ctx: Ctx, abs: number) {
   const typed = phase(abs, T0 + 0.25, SENT - 0.2);
   const sent = abs >= SENT;
   const msgs: Msg[] = [
-    { from: "阿杰", text: "寿星人呢？？？", avatar: JIE },
-    { from: "班长", text: "全班都在你家楼下", avatar: MONITOR },
+    { from: "Jay", text: "where's the birthday boy???", avatar: JIE },
+    { from: "Emma", text: "the whole class is outside your building", avatar: MONITOR },
   ];
-  if (sent) msgs.push({ me: true, text: "谢谢你们。" });
+  if (sent) msgs.push({ me: true, text: "thank you guys.", delivered: true });
   const replies: Msg[] = [
-    { from: "阿杰", text: "生日快乐！！！", avatar: JIE },
-    { from: "班长", text: "下次再开飞行模式试试？", avatar: MONITOR },
-    { from: "小雨", text: "横幅上的字是我写的！", avatar: YU },
+    { from: "Jay", text: "HAPPY BIRTHDAY!!!", avatar: JIE },
+    { from: "Emma", text: "airplane mode again next year and you're dead", avatar: MONITOR },
+    { from: "Lily", text: "I made the banner!!", avatar: YU },
   ];
   REPLIES.forEach((t, i) => {
     if (abs >= t) msgs.push(replies[i]);
@@ -113,7 +113,7 @@ function shotThanks(ctx: Ctx, abs: number) {
   camera(ctx, 540, cy + (799 - 640) * s, 1 + 0.12 * typing);
   phoneButtons(ctx, cx, cy, s, rot);
   phone(ctx, cx, cy, s, rot, (c) => {
-    chatScreen(c, { time: "00:01", airplane: false }, "高二(3)班 (46)", msgs, sent ? "" : writeOn("谢谢你们。", typed), !sent && Math.floor(abs * 3) % 2 === 0, { keyboard: !sent });
+    chatScreen(c, { time: "12:01", airplane: false }, "Class 11B", msgs, sent ? "" : writeOn("thank you guys.", typed), !sent && Math.floor(abs * 3) % 2 === 0, { keyboard: !sent });
     // a smear of cream on the glass — the cake in his face
     c.save();
     c.globalAlpha = 0.6;
@@ -139,7 +139,7 @@ function shotThanks(ctx: Ctx, abs: number) {
     ctx.rotate(0.1);
     ctx.scale(k, k);
     glow(ctx, 0, 0, 160, "rgba(126,224,129,0.35)");
-    text(ctx, "发送成功 ✓", 0, 0, { size: 60, font: F.cn, fill: "#7ee081", stroke: C.ink, lw: 12 });
+    text(ctx, "Delivered ✓", 0, 0, { size: 64, font: F.cn, fill: "#7ee081", stroke: C.ink, lw: 12 });
     ctx.restore();
   }
   // in from the party's light; to black over the last beat

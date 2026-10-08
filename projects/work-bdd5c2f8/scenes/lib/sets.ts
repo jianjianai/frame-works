@@ -540,7 +540,7 @@ export function corridor(ctx: Ctx, abs = 0) {
   ctx.strokeStyle = C.ink;
   ctx.lineWidth = 4;
   ctx.stroke();
-  text(ctx, "高二(3)班", 520, 324, { size: 28, font: F.ui, weight: 700, fill: "#fff" });
+  text(ctx, "CLASS 11B", 520, 324, { size: 28, font: F.ui, weight: 700, fill: "#fff" });
   // green dado
   shaded(ctx, () => poly(ctx, [[-40, 900], [W + 40, 896], [W + 40, 1120], [-40, 1124]], 71, 1.5), "#7e9f88", () => {
     inkLine(ctx, [[-40, 910], [W + 40, 906]], 72, 4, "rgba(255,255,255,0.35)");

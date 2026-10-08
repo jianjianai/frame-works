@@ -292,17 +292,18 @@ function phoneScreen(p: Ctx, abs: number) {
     const pull = 110 * smooth(phase(abs, PULL - 0.1, PULL + 0.38)) * (1 - smooth(phase(abs, PULL + 0.44, PULL + 0.8)));
     const spinning = abs > PULL + 0.05 && abs < PULL + 0.85;
     const tick = phase(abs, TICK, TICK + 0.3);
-    const note = { note: "0 条新消息", noteAlpha: smooth(phase(abs, WAKE + 0.3, WAKE + 0.55)) };
+    const note = { note: "0 new messages", noteAlpha: smooth(phase(abs, WAKE + 0.3, WAKE + 0.55)) };
     p.save();
     p.translate(0, pull);
     lockScreen(p, { time: "", airplane: true, battery: 0.21 }, note);
     // the time, drawn here so a minute can go by: the last digit rolls over, 58 → 59, and still nothing (the twist
     // opens on this lock screen at 23:59)
-    text(p, tick > 0.5 ? "23:59" : "23:58", 96, 46, { size: 30, font: F.ui, weight: 700, fill: "#fff" });
+    text(p, tick > 0.5 ? "11:59" : "11:58", 96, 46, { size: 30, font: F.ui, weight: 700, fill: "#fff" });
     const big = { size: 170, font: F.ui, weight: 700, fill: "rgba(255,255,255,0.95)", align: "left" as CanvasTextAlign };
-    const x0 = SW / 2 - measure(p, "23:58", 170, F.ui, 700) / 2,
-      xd = x0 + measure(p, "23:5", 170, F.ui, 700);
-    text(p, "23:5", x0, 290, big);
+    // (US clock: 11:58 PM, no "AM/PM" on the lock screen)
+    const x0 = SW / 2 - measure(p, "11:58", 170, F.ui, 700) / 2,
+      xd = x0 + measure(p, "11:5", 170, F.ui, 700);
+    text(p, "11:5", x0, 290, big);
     const e = easeInOut(tick);
     p.save();
     p.beginPath();

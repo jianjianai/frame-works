@@ -368,7 +368,7 @@ function corridorScene(c: Ctx, abs: number) {
 
 function shotCorridor(ctx: Ctx, abs: number) {
   oldFilm(ctx, abs, (c) => corridorScene(c, abs));
-  card(ctx, "今天上午 10:12", 70, 330, smooth(phase(abs, MEM + 0.1, MEM + 0.4)) * (1 - phase(abs, 10.5, HOOD)));
+  card(ctx, "this morning", 70, 330, smooth(phase(abs, MEM + 0.1, MEM + 0.4)) * (1 - phase(abs, 10.5, HOOD)));
 }
 
 // ---------------------------------------------------------------- 10.70 – 12.79 hide away: the hood, then he walks off
@@ -664,13 +664,13 @@ function plannerPhone(c: Ctx) {
   c.fillRect(0, 0, SW, SH);
   c.fillStyle = "#e2e2e2";
   c.fillRect(0, 0, SW, 190);
-  text(c, "惊喜策划群", SW / 2, 96, { size: 56, font: F.ui, weight: 700, fill: "#111" });
-  text(c, "（不含寿星）", SW / 2, 156, { size: 40, font: F.ui, weight: 700, fill: C.red });
-  ["横幅藏好了吗", "他来了 快藏!!", "千万别笑场"].forEach((m, i) => {
-    c.fillStyle = "#fff";
-    rr(c, 40, 260 + i * 150, 460, 110, 16);
+  text(c, "Surprise Party", SW / 2, 96, { size: 54, font: F.ui, weight: 700, fill: "#111" });
+  text(c, "(NO birthday boy)", SW / 2, 156, { size: 40, font: F.ui, weight: 700, fill: C.red });
+  ["banner hidden??", "he's here!! HIDE IT", "nobody laugh ok"].forEach((m, i) => {
+    c.fillStyle = "#e9e9eb";
+    rr(c, 40, 260 + i * 150, 480, 110, 40);
     c.fill();
-    text(c, m, 70, 315 + i * 150, { size: 46, font: F.ui, fill: "#111", align: "left" });
+    text(c, m, 70, 315 + i * 150, { size: 42, font: F.ui, fill: "#111", align: "left" });
   });
 }
 
@@ -927,7 +927,7 @@ function shotLaugh(ctx: Ctx, abs: number) {
     return;
   }
   fillBg(ctx, "#000");
-  if (abs > 16.62) text(ctx, "哈", 540, 820, { size: 420 + (abs - 16.62) * 600, font: F.cn, fill: "#fff", alpha: 0.9 - Math.min(1, (abs - 16.62) * 2) * 0.6 });
+  if (abs > 16.62) text(ctx, "HA", 540, 820, { size: 380 + (abs - 16.62) * 560, font: F.marker, fill: "#fff", alpha: 0.9 - Math.min(1, (abs - 16.62) * 2) * 0.6 });
 }
 
 export function createScene(options: SceneOptions) {

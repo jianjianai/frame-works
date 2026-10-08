@@ -436,7 +436,7 @@ export function drawPerson(ctx: Ctx, x: number, y: number, s: number, p: Person)
   ctx.restore();
 }
 
-/** Pink rolled/unrolled banner "生日快乐". `open` 0 = rolled, 1 = fully open. */
+/** Pink rolled/unrolled banner ("HAPPY BIRTHDAY"). `open` 0 = rolled, 1 = fully open. The label shrinks to fit. */
 export function banner(ctx: Ctx, x: number, y: number, w: number, open: number, label: string, seed: number, fontFamily: string) {
   const h = 150;
   const ww = Math.max(40, w * open);
@@ -446,6 +446,8 @@ export function banner(ctx: Ctx, x: number, y: number, w: number, open: number, 
   if (open > 0.6) {
     ctx.globalAlpha *= (open - 0.6) / 0.4;
     ctx.font = `400 96px ${fontFamily}`;
+    const fit = Math.min(96, (96 * (ww - 70)) / Math.max(1, ctx.measureText(label).width));
+    ctx.font = `400 ${fit.toFixed(1)}px ${fontFamily}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.lineWidth = 10;
@@ -461,7 +463,7 @@ export function banner(ctx: Ctx, x: number, y: number, w: number, open: number, 
   }
 }
 
-/** Little "哈哈哈" laugh scribbles around a point. */
+/** Little "HAHA" laugh scribbles around a point. */
 export function hahas(ctx: Ctx, cx: number, cy: number, r: number, t: number, seed: number, fontFamily: string, count = 6) {
   ctx.save();
   ctx.textAlign = "center";
@@ -480,9 +482,9 @@ export function hahas(ctx: Ctx, cx: number, cy: number, r: number, t: number, se
     ctx.font = `400 ${sz}px ${fontFamily}`;
     ctx.lineWidth = 8;
     ctx.strokeStyle = C.ink;
-    ctx.strokeText("哈哈哈", 0, 0);
+    ctx.strokeText("HAHA", 0, 0);
     ctx.fillStyle = i % 2 ? "#ffe45c" : "#fff";
-    ctx.fillText("哈哈哈", 0, 0);
+    ctx.fillText("HAHA", 0, 0);
     ctx.restore();
   }
   ctx.restore();

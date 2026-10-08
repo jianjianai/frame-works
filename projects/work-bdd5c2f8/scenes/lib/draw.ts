@@ -287,8 +287,10 @@ export function hatch(ctx: Ctx, x: number, y: number, w: number, h: number, gap:
 export const F = {
   en: "'Gochi Hand', 'Comic Sans MS', cursive",
   marker: "'Permanent Marker', 'Gochi Hand', cursive",
-  cn: "'ZCOOL KuaiLe', 'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', sans-serif",
-  pen: "'Long Cang', 'ZCOOL KuaiLe', 'Noto Sans CJK SC', cursive",
+  // YouTube 版: everything on screen is English — the caption face is the hand-drawn Latin one (the Chinese faces stay
+  // behind it only as a fallback for symbols like · ✓)
+  cn: "'Gochi Hand', 'ZCOOL KuaiLe', 'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', sans-serif",
+  pen: "'Gochi Hand', 'Long Cang', 'ZCOOL KuaiLe', cursive",
   ui: "'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
 };
 export interface TextStyle {

@@ -2,9 +2,9 @@ import type { AnimationProject } from "../../src/engine/types";
 
 const project: AnimationProject = {
   id: "work-bdd5c2f8",
-  title: "i have no friends（重置版）",
-  subtitle: "17岁生日，0条新消息",
-  description: "《i have no friends》按首发复盘重置的 56.6 秒版：第一遍副歌讲清处境（钩子、0 条消息、闪回里同学藏横幅、他唱到 hide away 时拉起帽子），接第三遍副歌（发送失败 ❗、自己点蜡烛许愿、吹灭），33.7 秒反转（控制中心里飞行模式是橙色的 → 99+ 消息 → 楼下的同学 → 蛋糕糊脸），最后 6 秒「谢谢你们。」发送成功 + 点赞和评论引导。",
+  title: "i have no friends（youtube版）",
+  subtitle: "His 17th birthday. 0 new messages.",
+  description: "《i have no friends》重置版的 YouTube Shorts 英文本地化版（56.6 秒竖屏）：画面文字全部英文，去掉中文歌词翻译，聊天改成 iMessage 样式，12 小时制，人名和班级本地化（Jay、Lily、Emma、Mom、Class 11B），红笔批注和结尾引导改成英文。剧情、镜头、音乐与重置版相同。",
   renderer: "composition",
   engineProtocol: 1,
   composition: {"width":1080,"height":1920},
