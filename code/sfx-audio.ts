@@ -9,7 +9,9 @@ import { seeded } from "../../src/engine/math";
  *  whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps（小狗版）
  *  《unhappy》聊天版：um/note/typing2/typingLong/del/send2/lamp/powerOff/rustle/whoosh2/rewind2/heartFast/bell/steps/shutter/
  *  birds/boot/run/store/pay/door/milk/sparkle/stickerPop
- *  《i have no friends》重置版：bellElectric（电铃上课铃）/horn（派对喇叭，放「不压歌曲」的音效轨）/floodFast（七条通知间隔 0.12 秒） */
+ *  《i have no friends》重置版：bellElectric（电铃上课铃）/horn（派对喇叭，放「不压歌曲」的音效轨）/floodFast（七条通知间隔 0.12 秒）
+ *  《mirrors》（瑕疵：0）：paperSlap/tape/scribble/ring/hangup/slider/zero/dive/ticks/alarm/peel/metalDoor/slip/freeze/
+ *  flip/sheet/whip/rip/doubleTap（音效轨增益 1.3、送混响 0.2，音乐按音效闪避 0.35；用法见 reference/mirrors/audio.json） */
 const SR = 48000;
 const TAU = Math.PI * 2;
 
@@ -73,6 +75,19 @@ function noiseVoice(seed: number) {
 
 function tone(pcm: StereoPcm, at: number, f: number, dur: number, gain: number, pan = 0, decay = 6) {
   add(pcm, at, dur, (t) => attack(t, 0.003) * (Math.sin(TAU * f * t) * 0.7 + Math.sin(TAU * f * 2 * t) * 0.2) * Math.exp(-t * decay), gain, pan);
+}
+/** a soft swish of air (a page, a pair of sunglasses coming off, a whip-pan): filtered noise that brightens */
+function swish(pcm: StereoPcm, at: number, dur: number, seed: number, gain: number, bright = 0.3) {
+  const r = seeded(seed);
+  let a = 0,
+    b = 0;
+  add(pcm, at, dur, (t) => {
+    const u = t / dur;
+    const k = 0.02 + bright * u;
+    a += k * (r() * 2 - 1 - a);
+    b += k * (a - b);
+    return b * 3 * Math.sin(Math.PI * u);
+  }, gain);
 }
 /** keyboard taps: n per second for `dur` seconds */
 function taps(dur: number, rate: number, seed: number, pitch = 1, gain = 0.16) {
@@ -569,6 +584,163 @@ const sounds: Record<string, () => StereoPcm> = {
       buzz(pcm, i * 0.12, 0.1, 0.16);
     }
     buzz(pcm, 0.84, 0.4, 0.18);
+    return pcm;
+  },
+  // ---------------- 《mirrors》（瑕疵：0）
+  // a sheet of newspaper slid across the mirror and slapped flat (the slap 0.89 s in — start the clip 0.89 s early)
+  paperSlap: () => {
+    const pcm = buffer(1.25);
+    const nz = lowpass(211, 0.5);
+    add(pcm, 0, 0.86, (t) => nz() * (0.3 + 0.7 * (t / 0.86)) * (1 + 0.5 * Math.sin(t * 90)) * 1.4, 0.16);
+    const nz2 = lowpass(212, 0.7);
+    add(pcm, 0.89, 0.14, (t) => nz2() * Math.exp(-t * 38) * 3, 0.5);
+    thud(pcm, 0.89, 120, 0.32, 0.22, 213);
+    return pcm;
+  },
+  // masking tape torn off the roll and pressed down
+  tape: () => {
+    const pcm = buffer(0.25);
+    const nz = lowpass(221, 0.8);
+    add(pcm, 0, 0.14, (t) => nz() * (0.6 + 0.4 * Math.sign(Math.sin(t * 900))) * Math.sin((Math.PI * t) / 0.14) * 2, 0.26);
+    return pcm;
+  },
+  // a felt pen scratching: four strokes (a ring, a strike-out)
+  scribble: () => {
+    const pcm = buffer(0.55);
+    for (let k = 0; k < 4; k++) {
+      const nz = lowpass(230 + k, 0.6);
+      add(pcm, k * 0.1, 0.1, (t) => nz() * Math.sin((Math.PI * t) / 0.1) * 1.6, 0.18);
+    }
+    return pcm;
+  },
+  // an incoming video call: a marimba figure with the phone buzzing on every beat (8 notes 0.254 s apart — retime to
+  // the song's half-beats)
+  ring: () => {
+    const pcm = buffer(2.1);
+    const notes = [1047, 1319, 1568, 1319];
+    for (let k = 0; k < 8; k++) tone(pcm, k * 0.254, notes[k % 4], 0.3, 0.15, 0, 14);
+    for (let k = 0; k < 4; k++) buzz(pcm, k * 0.508, 0.22, 0.15);
+    return pcm;
+  },
+  // declining a call: du-du
+  hangup: () => {
+    const pcm = buffer(0.3);
+    tone(pcm, 0, 520, 0.09, 0.22, 0, 20);
+    tone(pcm, 0.1, 440, 0.12, 0.22, 0, 16);
+    return pcm;
+  },
+  // dragging a slider all the way (a rising whistle on a swish)
+  slider: () => {
+    const pcm = buffer(0.5);
+    swish(pcm, 0, 0.42, 241, 0.2, 0.5);
+    let ph = 0;
+    add(pcm, 0, 0.42, (t) => {
+      ph += (TAU * (600 + 1600 * (t / 0.42))) / SR;
+      return Math.sin(ph) * Math.sin((Math.PI * t) / 0.42);
+    }, 0.05);
+    return pcm;
+  },
+  // a number flipping to its final value: a bright ding and a sprinkle (「瑕疵：0」)
+  zero: () => {
+    const pcm = buffer(1.1);
+    ding(pcm, 0, 0.3, 1.0);
+    ding(pcm, 0.08, 0.24, 1.5);
+    const r = seeded(251);
+    for (let k = 0; k < 8; k++) tone(pcm, 0.05 + k * 0.05, 2400 + r() * 2400, 0.25, 0.05, r() * 1.4 - 0.7, 16);
+    return pcm;
+  },
+  // diving onto the couch under a blanket
+  dive: () => {
+    const pcm = buffer(0.8);
+    thud(pcm, 0, 80, 0.4, 0.3, 271);
+    const nz = lowpass(272, 0.35);
+    add(pcm, 0.02, 0.6, (t) => nz() * Math.sin((Math.PI * t) / 0.6) * 1.6, 0.22);
+    return pcm;
+  },
+  // a clock ticking fast (the night going by)
+  ticks: () => {
+    const pcm = buffer(0.55);
+    for (let k = 0; k < 10; k++) add(pcm, k * 0.05, 0.02, (t) => Math.sin(TAU * 3200 * t) * Math.exp(-t * 400), 0.12, (k % 2) * 0.3 - 0.15);
+    return pcm;
+  },
+  // an alarm clock's twin bells
+  alarm: () => {
+    const pcm = buffer(0.8);
+    for (let k = 0; k < 15; k++) add(pcm, k * 0.045, 0.06, (t) => attack(t, 0.001) * (Math.sin(TAU * 2350 * t) * 0.6 + Math.sin(TAU * 3720 * t) * 0.3) * Math.exp(-t * 30), 0.16, (k % 2) * 0.3 - 0.15);
+    return pcm;
+  },
+  // paper peeled off glass
+  peel: () => {
+    const pcm = buffer(0.25);
+    const r = seeded(281);
+    const nz = lowpass(282, 0.7);
+    add(pcm, 0, 0.18, (t) => nz() * (r() > 0.55 ? 1.2 : 0.5) * Math.sin((Math.PI * t) / 0.18) * 2, 0.24);
+    return pcm;
+  },
+  // a metal door onto the roof (a thud with a little ring)
+  metalDoor: () => {
+    const pcm = buffer(0.7);
+    thud(pcm, 0, 90, 0.32, 0.35, 291);
+    tone(pcm, 0.01, 330, 0.5, 0.06, 0, 7);
+    tone(pcm, 0.01, 497, 0.4, 0.04, 0, 9);
+    return pcm;
+  },
+  // sunglasses sliding down a nose (a falling whistle)
+  slip: () => {
+    const pcm = buffer(0.4);
+    let ph = 0;
+    add(pcm, 0, 0.3, (t) => {
+      ph += (TAU * (1400 - 1000 * (t / 0.3))) / SR;
+      return Math.sin(ph) * Math.sin((Math.PI * t) / 0.3);
+    }, 0.12);
+    return pcm;
+  },
+  // stopping dead (「黑猫！」): a scuff, a thud, a tink
+  freeze: () => {
+    const pcm = buffer(0.6);
+    const nz = lowpass(311, 0.5);
+    add(pcm, 0, 0.16, (t) => nz() * Math.sin((Math.PI * t) / 0.16) * 2.4, 0.28);
+    thud(pcm, 0.02, 90, 0.4, 0.3, 312);
+    tink(pcm, 0.02, 1760, 0.1);
+    return pcm;
+  },
+  // a page turning over (one; `flips` is fourteen)
+  flip: () => {
+    const pcm = buffer(0.2);
+    swish(pcm, 0, 0.14, 321, 0.22, 0.6);
+    return pcm;
+  },
+  // a bedsheet thrown over a mirror: it flaps open in the air, then settles (the fwump 0.5 s in)
+  sheet: () => {
+    const pcm = buffer(0.9);
+    const nz = lowpass(361, 0.25);
+    add(pcm, 0, 0.5, (t) => nz() * Math.sin((Math.PI * t) / 0.5) * (0.7 + 0.3 * Math.sin(TAU * 13 * t)) * 2.2, 0.3);
+    swish(pcm, 0.02, 0.36, 362, 0.22, 0.45);
+    const nz2 = lowpass(363, 0.12);
+    add(pcm, 0.5, 0.3, (t) => nz2() * Math.exp(-t * 12) * 3, 0.32);
+    thud(pcm, 0.5, 70, 0.12, 0.2, 364);
+    return pcm;
+  },
+  // a short whip of air for a whip-pan or a rush into a close-up (start it ~0.15 s before the cut)
+  whip: () => {
+    const pcm = buffer(0.35);
+    swish(pcm, 0, 0.28, 331, 0.2, 0.35);
+    return pcm;
+  },
+  // all the paper torn off a mirror at once
+  rip: () => {
+    const pcm = buffer(0.7);
+    const r = seeded(351);
+    const nz = lowpass(352, 0.75);
+    add(pcm, 0, 0.55, (t) => nz() * (r() > 0.6 ? 1 : 0.4) * Math.exp(-t * 4) * 2.4, 0.38);
+    thud(pcm, 0, 100, 0.22, 0.2, 353);
+    return pcm;
+  },
+  // the end-card double tap: two taps and a little pop
+  doubleTap: () => {
+    const pcm = buffer(0.7);
+    for (const at of [0, 0.14]) add(pcm, at, 0.1, (t) => Math.sin(TAU * 1800 * t) * Math.exp(-t * 90), 0.22);
+    add(pcm, 0.16, 0.18, (t) => Math.sin(TAU * (500 + 1200 * t * 5) * t) * Math.exp(-t * 18), 0.22);
     return pcm;
   },
 };
