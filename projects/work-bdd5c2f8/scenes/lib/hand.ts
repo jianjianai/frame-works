@@ -27,6 +27,24 @@ export function fingerAt(abs: number, keys: FingerKey[]): FingerPos | null {
   return { x: z[1], y: z[2], touch: z[3] };
 }
 
+/** No hands (用户: the hands looked odd): where his thumb touches the glass, a soft white dot like the phone's
+ *  "show touches" — drawn inside phone()'s screen callback, in screen coordinates. Hovering (touch < 0.35) shows
+ *  nothing. */
+export function touchDot(p: Ctx, f: FingerPos | null) {
+  if (!f || f.touch < 0.35) return;
+  const a = Math.min(1, (f.touch - 0.35) / 0.5);
+  p.save();
+  p.globalAlpha = a;
+  p.fillStyle = "rgba(255,255,255,0.4)";
+  p.beginPath();
+  p.arc(f.x, f.y, 40, 0, Math.PI * 2);
+  p.fill();
+  p.strokeStyle = "rgba(255,255,255,0.75)";
+  p.lineWidth = 3;
+  p.stroke();
+  p.restore();
+}
+
 /** Map phone-screen coordinates to design coordinates for a phone drawn at (cx, cy) with scale s. */
 export const onScreen = (cx: number, cy: number, s: number, sx: number, sy: number): [number, number] => [cx + (sx - 300) * s, cy + (sy - 640) * s];
 

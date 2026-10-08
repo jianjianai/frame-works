@@ -1,5 +1,5 @@
 import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, blob, measure, paint, rr, rrectPts, text } from "./draw";
+import { C, Ctx, F, blob, measure, paint, poly, rr, rrectPts, text } from "./draw";
 import { drawPerson, Person, xMark } from "./people";
 
 /** Phone screen design size. */
@@ -25,6 +25,82 @@ export function phone(ctx: Ctx, cx: number, cy: number, s: number, rot: number, 
   rr(ctx, SW / 2 - 90, 18, 180, 50, 25);
   ctx.fill();
   ctx.restore();
+}
+
+/** A phone seen from behind, in someone's hand (we see its back while they read it): dark case, the camera bump top
+ *  left, the screen's light spilling out round the top edge; `torch` 0..1 lights the flashlight LED, blazing at us.
+ *  (cx, cy) = its centre; draw it in the hand's `grip`/`holding` so the fingers go over it. */
+export function phoneBack(ctx: Ctx, cx: number, cy: number, w: number, h: number, rot = 0, torch = 0) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  const spill = ctx.createRadialGradient(0, -h / 2, 0, 0, -h / 2, w * 1.3);
+  spill.addColorStop(0, "rgba(180,210,255,0.35)");
+  spill.addColorStop(1, "rgba(180,210,255,0)");
+  ctx.fillStyle = spill;
+  ctx.fillRect(-w * 1.3, -h / 2 - w * 1.3, w * 2.6, w * 1.6);
+  ctx.fillStyle = "#1b1b20";
+  rr(ctx, -w / 2, -h / 2, w, h, w * 0.18);
+  ctx.fill();
+  ctx.strokeStyle = C.ink;
+  ctx.lineWidth = Math.max(2.5, w * 0.06);
+  ctx.stroke();
+  const b = w * 0.42,
+    bx = -w / 2 + w * 0.1,
+    by = -h / 2 + w * 0.1;
+  ctx.fillStyle = "#2e2e36";
+  rr(ctx, bx, by, b, b, b * 0.28);
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.5, w * 0.035);
+  ctx.stroke();
+  ctx.fillStyle = "#0c0c10";
+  for (const [u, v] of [[0.3, 0.3], [0.3, 0.72]]) {
+    ctx.beginPath();
+    ctx.arc(bx + b * u, by + b * v, b * 0.17, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const lx = bx + b * 0.74,
+    ly = by + b * 0.3;
+  ctx.fillStyle = torch > 0.5 ? "#fffdf2" : "#cfcfc6";
+  ctx.beginPath();
+  ctx.arc(lx, ly, b * 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  if (torch > 0) {
+    const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, w * 1.6);
+    g.addColorStop(0, `rgba(255,255,250,${(0.95 * torch).toFixed(3)})`);
+    g.addColorStop(0.15, `rgba(240,245,255,${(0.5 * torch).toFixed(3)})`);
+    g.addColorStop(1, "rgba(220,230,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(lx - w * 1.6, ly - w * 1.6, w * 3.2, w * 3.2);
+  }
+  ctx.restore();
+}
+
+/** No hands on the phone (用户): its side buttons, drawn before phone() at the same (cx, cy, s, rot) so only their
+ *  edges stick out of the frame; `press` pushes the power key in. */
+export function phoneButtons(ctx: Ctx, cx: number, cy: number, s: number, rot: number, press = 0) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  ctx.translate(-SW / 2, -SH / 2);
+  const px = SW + 22 - 9 * press;
+  poly(ctx, [[px, 300], [px + 14, 306], [px + 14, 456], [px, 462]], 1501, 0.6);
+  paint(ctx, "#2a2a2e", C.ink, 4);
+  for (const [y0, y1] of [[250, 330], [356, 436]]) {
+    poly(ctx, [[-22, y0], [-36, y0 + 6], [-36, y1 - 6], [-22, y1]], 1502 + y0, 0.6);
+    paint(ctx, "#2a2a2e", C.ink, 4);
+  }
+  ctx.restore();
+}
+/** A faint diagonal glare across the glass (inside phone()'s screen callback), sliding a little with his hand. */
+export function glassGlare(p: Ctx, shift: number, a = 1) {
+  const g = p.createLinearGradient(-200 + shift * 6, 0, SW + 200 + shift * 6, SH);
+  g.addColorStop(0.2, "rgba(255,255,255,0)");
+  g.addColorStop(0.3, `rgba(255,255,255,${(0.06 * a).toFixed(3)})`);
+  g.addColorStop(0.4, "rgba(255,255,255,0)");
+  p.fillStyle = g;
+  p.fillRect(0, 0, SW, SH);
 }
 
 export function airplaneIcon(ctx: Ctx, x: number, y: number, size: number, color: string) {
@@ -392,7 +468,8 @@ export function feedScreen(ctx: Ctx, st: Status, posts: Post[], scroll: number) 
 }
 
 // ---------------------------------------------------------------- control centre
-export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: number, highlight: number) {
+/** `torch` 0..1: the flashlight tile lights up white (the torch is on). */
+export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: number, highlight: number, torch = 0) {
   ctx.fillStyle = "rgba(20,22,32,0.92)";
   ctx.fillRect(0, 0, SW, SH);
   statusBar(ctx, st);
@@ -463,12 +540,14 @@ export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: 
   ctx.fillStyle = "rgba(255,255,255,0.12)";
   rr(ctx, x0 + 280, y0 + 300, 220, 116, 36);
   ctx.fill();
+  const lit = torch > 0.5;
+  ctx.fillStyle = lit ? "#f4f4f6" : "rgba(255,255,255,0.12)";
   rr(ctx, x0 + 280, y0 + 444, 220, 116, 36);
   ctx.fill();
   // flashlight
   const fx = x0 + 390,
     fy = y0 + 502;
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = lit ? "#1c1c1e" : "#fff";
   ctx.beginPath();
   ctx.moveTo(fx - 20, fy - 30);
   ctx.lineTo(fx + 20, fy - 30);
@@ -478,7 +557,7 @@ export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: 
   ctx.fill();
   rr(ctx, fx - 12, fy - 6, 24, 40, 6);
   ctx.fill();
-  ctx.fillStyle = "rgba(20,22,32,0.9)";
+  ctx.fillStyle = lit ? "#f4f4f6" : "rgba(20,22,32,0.9)";
   ctx.beginPath();
   ctx.arc(fx, fy + 10, 4, 0, Math.PI * 2);
   ctx.fill();

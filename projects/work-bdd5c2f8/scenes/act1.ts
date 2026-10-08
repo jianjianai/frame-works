@@ -3,17 +3,18 @@ import { phase, smooth } from "../../../src/engine/math";
 import { C, Ctx, F, H, Pt, W, beatAt, blinkEyes, blob, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shaded, shake, text } from "./lib/draw";
 import { drawHand, drawKid } from "./lib/kid";
 import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
-import { Msg, SH, SW, chatScreen, lockScreen, phone } from "./lib/phone";
+import { Msg, SH, SW, chatScreen, glassGlare, lockScreen, phone, phoneButtons } from "./lib/phone";
 import { bokeh, classroom, corridor, schoolDesk } from "./lib/sets";
 import { birthdayDesk } from "./lib/shared";
-import { FingerKey, FingerPos, fingerAt, heldHands, onScreen, tapRipple } from "./lib/hand";
+import { FingerKey, FingerPos, fingerAt, onScreen, tapRipple, touchDot } from "./lib/hand";
 
 /** ACT 1 · 第一遍副歌「他眼里的今天」(0 – 16.96) · 重新设计版.
  *  His world at night is grey (`grade`); only the candle stays warm. The morning is a memory: its own colours, seen
  *  through a film camera (`oldFilm`: grain, a slight weave, dust, random old-screen vertical lines, a mild vignette); everyone else
  *  wears the cover's X face.
- *  0     the flame alone in the dark → pull back: him in a party hat, the room. Outside the window, far below: a few
- *        phone lights and a pink banner (彩蛋 — they are already waiting) → whip into his phone
+ *  0     the first frame is the premise: his face in a party hat and the one candle (under the hook text) → ease
+ *        back to the room; his eyes slide to the phone on the desk and back; a sigh. Outside the window, far below:
+ *        a few phone lights and a pink banner (彩蛋 — they are already waiting) → whip into his phone
  *  2.35  his phone: wake (2.61), pull to refresh (3.14) — still 0 条新消息, ✈ top right
  *  4.44  the class group: last message 10:12; he scrolls, nothing
  *  6.79  side button: the screen goes black → push toward his reflection
@@ -54,17 +55,26 @@ const GREY = 0.38;
 
 // ---------------------------------------------------------------- 0 – 2.35 the candle
 function shotCandle(ctx: Ctx, abs: number) {
-  // the flame centred and huge → pull back (fast, then settling) to the cold-open framing; then the whip into the phone
-  const k = easeOut(phase(abs, 0, 1.75));
+  // The first frame is the whole premise in one picture: his face (party hat, big, under the hook text) and the one
+  // candle lit in front of him. (It used to open on the flame alone, huge, with half his face cut off at the edge.)
+  // Then the camera eases back to the room — the phone face-up on the desk, the window (彩蛋: lights and a pink banner
+  // far below) — while his eyes slide from the candle to the phone and back: nothing. A sigh, and the whip into it.
+  const k = easeInOut(phase(abs, 0.3, 1.7));
   const whip = easeIn(phase(abs, LOCK - 0.3, LOCK));
-  const zoom = 4.2 + (1.04 - 4.2) * k + whip * 1.6;
-  const cx = 390 + 150 * k + whip * 300,
-    cy = 935 - 35 * k + whip * 300;
-  const [hx, hy, hr] = handheld(abs, 5 * k * (1 - whip), 1);
-  const kid = { eyes: blinkEyes(abs, 3, "sleepy"), look: [-0.55, 0.7] as [number, number], headY: Math.sin(abs * 1.6) * 3 };
+  const zoom = 1.6 + (1.04 - 1.6) * k + whip * 1.6;
+  const cx = 495 + 45 * k + whip * 300,
+    cy = 792 + 108 * k + whip * 300;
+  const [hx, hy, hr] = handheld(abs, 4 + 1 * k * (1 - whip), 1);
+  const glance = smooth(phase(abs, 0.8, 0.95)) * (1 - smooth(phase(abs, 1.5, 1.65))); // over to the phone
+  const sigh = smooth(phase(abs, 1.65, 1.95));
+  const kid = {
+    eyes: (abs > 1.72 && abs < 1.84 ? "shut" : "sleepy") as "shut" | "sleepy",
+    look: lerp2([-0.55, 0.7], [0.8, 0.75], glance),
+    headY: Math.sin(abs * 1.6) * 3 + 8 * sigh,
+  };
   const shot = (c: Ctx, layer: "scene" | "flame") => {
     c.save();
-    camera(c, cx, cy, zoom, hr, hx + 150 * (1 - k), hy + 25 * (1 - k));
+    camera(c, cx, cy, zoom, hr, hx, hy);
     birthdayDesk(c, abs, { lit: 1, kid, layer, clue: 1 });
     c.restore();
   };
@@ -96,21 +106,37 @@ const LOCK_FINGER: FingerKey[] = [
   [CHAT, 300, 700, 1],
 ];
 
+// 用户: the hands holding the phone looked odd → just the phone, drifting a little in his hold, the side buttons on
+// its frame, and a "show touches" dot where his thumb is (fingerAt keys, screen coordinates).
+const PS = 0.88, // phone scale: chat text ≈ 33px
+  PY = 860; // phone centre: the status bar (✈) clears the title pill; the 10:12 message stays above the lyrics
+
+// (phoneButtons / glassGlare live in lib/phone.ts — act5 and act6 use them too)
+
 function shotLock(ctx: Ctx, abs: number) {
+  // the whip lands: the phone comes in from the lower right (the way the whip was going), its blur clearing
+  const land = easeOut(phase(abs, LOCK, LOCK + 0.32));
   const wake = smooth(phase(abs, WAKE, WAKE + 0.22));
   const pull = 110 * smooth(phase(abs, PULL - 0.1, PULL + 0.38)) * (1 - smooth(phase(abs, PULL + 0.44, PULL + 0.8)));
   const spinning = abs > PULL + 0.05 && abs < PULL + 0.85;
-  const nudge = abs > NUDGE ? Math.sin((abs - NUDGE) * 40) * 10 * Math.exp(-(abs - NUDGE) * 6) : 0;
+  const nudge = abs > NUDGE ? Math.sin((abs - NUDGE) * 40) * 14 * Math.exp(-(abs - NUDGE) * 6) : 0;
   const unlock = easeIn(phase(abs, CHAT - 0.16, CHAT));
+  // after the refresh the camera leans in on "0 条新消息", then lets go as he shakes the phone
+  const zero = easeInOut(phase(abs, PULL + 0.45, NUDGE)) * (1 - easeInOut(phase(abs, NUDGE + 0.1, CHAT)));
   const [hx, hy, hr] = handheld(abs, 4, 2);
-  const s = 0.76 + 0.03 * easeInOut(phase(abs, LOCK, CHAT));
-  const cx = 540 + nudge + hx,
-    cy = 800 + hy,
-    rot = -0.02 + hr;
-  grade(ctx, GREY, (c) => {
+  const s = PS;
+  const cx = 540 + 170 * (1 - land) + nudge + hx,
+    cy = PY + 170 * (1 - land) + hy,
+    rot = -0.02 - 0.06 * (1 - land) + hr + nudge * 0.002;
+  const tap = fingerAt(abs, LOCK_FINGER);
+  const draw = (ctx: Ctx) => grade(ctx, GREY, (c) => {
     fillBg(c, "#20160f");
     glow(c, 120, 1100, 900, "rgba(255,160,70,0.3)");
     bokeh(c, abs, 12, 101, 0.55, ["255,190,110", "255,160,90", "200,170,255"]);
+    c.save();
+    // (and sinks a little as it leans in, so the status bar never goes up under the title pill)
+    camera(c, 540, PY + (568 - SH / 2) * s, 1 + 0.12 * zero, 0, 0, 70 * zero);
+    phoneButtons(c, cx, cy, s, rot);
     phone(c, cx, cy, s, rot, (p) => {
       p.save();
       p.translate(0, pull - unlock * SH);
@@ -136,11 +162,16 @@ function shotLock(ctx: Ctx, abs: number) {
       }
       p.fillStyle = `rgba(0,0,0,${0.82 * (1 - wake)})`;
       p.fillRect(0, 0, SW, SH);
+      glassGlare(p, hx);
+      touchDot(p, tap);
     });
     const [rx, ry] = onScreen(cx, cy, s, 390, 780);
     tapRipple(c, rx, ry, phase(abs, WAKE, WAKE + 0.45), 1.2);
-    heldHands(c, cx, cy, s, rot, fingerAt(abs, LOCK_FINGER)!);
+    c.restore();
   });
+  const blurPx = 12 * (1 - land);
+  if (blurPx > 0.6) filtered(ctx, `blur(${blurPx.toFixed(1)}px)`, draw, "whipIn");
+  else draw(ctx);
 }
 
 // ---------------------------------------------------------------- 4.44 – 8.61 the class group → screen off → the reflection
@@ -220,41 +251,65 @@ function chatThumb(abs: number): FingerPos {
   ])!;
 }
 
+/** The phone in the chat shot (and the dive into his reflection): steady while we read, the power key pressed at
+ *  6.79 (the phone gives a little under it), then the dive toward his reflected eye in the black glass. */
+function chatPose(abs: number) {
+  // the push into his reflection starts as soon as the screen goes black (it used to hold still for half a second)
+  const dive = 0.45 * easeInOut(phase(abs, OFF + 0.08, REW));
+  const press = Math.sin(Math.PI * phase(abs, OFF - 0.06, OFF + 0.14));
+  const [hx, hy, hr] = handheld(abs, 2.5 * (1 - dive / 0.45), 2);
+  const s = PS,
+    cx = 540 + hx - 6 * press,
+    cy = PY + hy,
+    rot = -0.02 + hr - 0.012 * press;
+  // his reflected eye in the black glass (reflection drawn at screen 300, 560 × 1.05)
+  const ex = cx + (250 - SW / 2) * s,
+    ey = cy + (598 - SH / 2) * s;
+  return { dive, press, hx, s, cx, cy, rot, ex, ey };
+}
+
 function shotChat(ctx: Ctx, abs: number) {
   // drag down to look at older messages (yesterday's), flick back: nothing new since 10:12
   const scroll = chatScroll(abs);
   const off = abs >= OFF;
-  const dive = 0.45 * easeIn(phase(abs, OFF + 0.2, REW));
-  const [hx, hy, hr] = handheld(abs, 4 * (1 - dive), 2);
-  const s = 0.79,
-    cx = 540 + hx,
-    cy = 800 + hy,
-    rot = -0.02 + hr;
-  // his reflected eye in the black glass (reflection drawn at screen 300, 560 × 1.05)
-  const ex = cx + (250 - SW / 2) * s,
-    ey = cy + (598 - SH / 2) * s;
+  const { dive, press, hx, s, cx, cy, rot, ex, ey } = chatPose(abs);
   grade(ctx, GREY, (c) => {
     fillBg(c, "#20160f");
     glow(c, 120, 1100, 900, "rgba(255,160,70,0.3)");
     bokeh(c, abs, 12, 101, 0.55, ["255,190,110", "255,160,90", "200,170,255"]);
     c.save();
     camera(c, ex, ey, 1 + 3.6 * dive, 0, (540 - ex) * dive, (960 - ey) * dive);
+    phoneButtons(c, cx, cy, s, rot, press);
     phone(c, cx, cy, s, rot, (p) => {
       if (!off) {
         chatScreen(p, { time: "23:58", airplane: true }, "高二(3)班 (46)", CHAT_MSGS, "", false, { scroll });
+        glassGlare(p, hx);
+        // his thumb on the glass (not once it heads for the power key on the side)
+        if (abs < OFF - 0.4) touchDot(p, chatThumb(abs));
         return;
       }
       p.fillStyle = "#060608";
       p.fillRect(0, 0, SW, SH);
       // his face in the black glass, mirrored: a dim reflection — drawn solid, then darkened (not see-through, which
-      // read as a ghost)
-      p.save();
-      p.translate(SW, 0);
-      p.scale(-1, 1);
-      drawKid(p, SW - 300, 560, 1.05, { body: "bust", hat: true, eyes: blinkEyes(abs, 3, "sleepy"), look: [0, 0.3], arms: "phone" });
-      p.restore();
-      p.fillStyle = `rgba(4,4,6,${(0.97 - 0.25 * smooth(phase(abs, OFF, OFF + 0.3))).toFixed(3)})`;
+      // read as a ghost). Soft (the glass is not a mirror), and it fades out below his chest: his arms go forward to
+      // the phone we are looking through, so no hands in it (they were clasped on nothing before)
+      filtered(
+        p,
+        "blur(1.6px)",
+        (r) => {
+          r.translate(SW, 0);
+          r.scale(-1, 1);
+          drawKid(r, SW - 300, 560, 1.05, { body: "bust", hat: true, eyes: blinkEyes(abs, 3, "sleepy"), look: [0, 0.3], arms: "down" });
+        },
+        "reflection",
+      );
+      p.fillStyle = `rgba(4,4,6,${(0.97 - 0.27 * smooth(phase(abs, OFF, OFF + 0.3))).toFixed(3)})`;
       p.fillRect(0, 0, SW, SH);
+      const fade = p.createLinearGradient(0, 760, 0, 1060);
+      fade.addColorStop(0, "rgba(6,6,8,0)");
+      fade.addColorStop(1, "rgba(6,6,8,1)");
+      p.fillStyle = fade;
+      p.fillRect(0, 760, SW, SH - 760);
       const g = p.createLinearGradient(0, 0, SW, SH);
       g.addColorStop(0.18, "rgba(255,255,255,0)");
       g.addColorStop(0.3, "rgba(255,255,255,0.07)");
@@ -262,7 +317,6 @@ function shotChat(ctx: Ctx, abs: number) {
       p.fillStyle = g;
       p.fillRect(0, 0, SW, SH);
     });
-    heldHands(c, cx, cy, s, rot, chatThumb(abs));
     c.restore();
   });
 }
@@ -272,14 +326,7 @@ const CUT = REW + 0.26; // 8.35 his reflection dissolves into his face this morn
 /** Where his reflected face sits on screen in shotChat: [x, y, scale, rotation] (same maths as shotChat's camera,
  *  phone and mirrored drawKid at screen (300, 560) × 1.05), so the memory can start on exactly the same face. */
 function reflectionAt(abs: number): [number, number, number, number] {
-  const dive = 0.45 * easeIn(phase(abs, OFF + 0.2, REW));
-  const [hx, hy, hr] = handheld(abs, 4 * (1 - dive), 2);
-  const s = 0.79,
-    cx = 540 + hx,
-    cy = 800 + hy,
-    rot = -0.02 + hr;
-  const ex = cx + (250 - SW / 2) * s,
-    ey = cy + (598 - SH / 2) * s;
+  const { dive, s, cx, cy, rot, ex, ey } = chatPose(abs);
   const z = 1 + 3.6 * dive;
   const lx = (300 - SW / 2) * s,
     ly = (560 - SH / 2) * s;
@@ -410,6 +457,27 @@ const MON = 600,
 const BACK_L: Pt = [-112, 352],
   BACK_R: Pt = [112, 352];
 
+/** The twist replays these memories from their side (act5, 99+): the same frames, but the X faces come off and they
+ *  are grinning. 0 = the X faces of his memory, 1 = their real faces. Set only by replayCorridor / replaySlip. */
+let UNMASK = 0;
+const unmasked = (laugh = true): Partial<Person> => (UNMASK > 0 ? { x: 1 - UNMASK, face: laugh ? "laugh" : "smile" } : {});
+/** a burst of light where an X face comes off */
+function unmaskBurst(c: Ctx, x: number, y: number, s: number) {
+  if (UNMASK <= 0 || UNMASK >= 1) return;
+  glow(c, x, y, 220 * s, "rgba(255,240,200,0.85)", Math.sin(Math.PI * UNMASK));
+}
+/** act5: his memories again, from their side — `memAbs` is the moment of the memory to draw (act1 time). */
+export function replayCorridor(c: Ctx, memAbs: number, unmask: number) {
+  UNMASK = unmask;
+  corridorScene(c, memAbs);
+  UNMASK = 0;
+}
+export function replaySlip(c: Ctx, memAbs: number, unmask: number) {
+  UNMASK = unmask;
+  slipScene(c, memAbs);
+  UNMASK = 0;
+}
+
 function huddle(c: Ctx, abs: number) {
   const hide = easeInOut(phase(abs, NOTICE + 0.06, NOTICE + 0.32)); // everything goes behind their backs
   const snap = (t: number) => smooth(phase(abs, t, t + 0.1)); // heads snap round to him
@@ -439,6 +507,7 @@ function huddle(c: Ctx, abs: number) {
   const wave = smooth(phase(abs, 9.48, 9.62)) * (1 - smooth(phase(abs, 10.3, 10.5)));
   drawPerson(c, MON, HY + hop(NOTICE + 0.08) + busy(0), HS, {
     ...CAST.monitor,
+    ...unmasked(),
     body: "full",
     turn: 0.4 + (-0.6 - 0.4) * snap(NOTICE + 0.08),
     tilt: 0.1 * (1 - hide),
@@ -451,6 +520,7 @@ function huddle(c: Ctx, abs: number) {
   // A-Jie: the right end of the banner → the first to look up → sweating
   drawPerson(c, JIE, HY + hop(NOTICE) + busy(1), HS, {
     ...CAST.jie,
+    ...unmasked(),
     body: "full",
     turn: -0.35 + (-0.75 + 0.35) * snap(NOTICE),
     tilt: -0.1 * (1 - hide),
@@ -462,6 +532,7 @@ function huddle(c: Ctx, abs: number) {
   // the third: holds the gift at her chest → behind her back
   drawPerson(c, DD, HY + hop(NOTICE + 0.14) + busy(2), HS, {
     ...CAST.d,
+    ...unmasked(),
     body: "full",
     turn: -0.3 + (-0.55 + 0.3) * snap(NOTICE + 0.14),
     handL: lerp2([-64, 252], BACK_L, hide),
@@ -508,6 +579,7 @@ function huddle(c: Ctx, abs: number) {
   });
   const drip = phase(abs, 9.45, 10.4);
   sweatDrop(c, JIE + 78, HY - 40 + 26 * drip, smooth(phase(abs, 9.45, 9.55)) * (1 - smooth(phase(abs, 10.25, 10.45))));
+  for (const x of [MON, JIE, DD]) unmaskBurst(c, x, HY, HS);
 }
 
 function kidNow(c: Ctx, abs: number) {
@@ -927,6 +999,7 @@ function slipScene(c: Ctx, abs: number) {
   SEATED.forEach((q, i) => {
     drawPerson(c, q.x, 730 + bounce(i), 0.55, {
       ...q.p,
+      ...unmasked(),
       body: "full",
       legs: "sit",
       turn: laughing ? 0.6 : 0.2,
@@ -942,6 +1015,7 @@ function slipScene(c: Ctx, abs: number) {
   const jieTilt = laughing ? 0.1 + Math.sin(abs * 17) * 0.05 : 0;
   drawPerson(c, JX, jy, 0.78, {
     ...CAST.jie,
+    ...unmasked(),
     body: "full",
     turn: -0.3,
     tilt: jieTilt,
@@ -995,9 +1069,10 @@ function slipScene(c: Ctx, abs: number) {
   filtered(
     c,
     "blur(4px)",
-    (b) => drawPerson(b, 50, 1110 + bounce(9, 12), 1.05, { ...CAST.c, body: "bust", turn: 0.7, tilt: laughing ? -0.12 + Math.sin(abs * 21) * 0.06 : 0, arms: laughing ? "laugh" : "down" }),
+    (b) => drawPerson(b, 50, 1110 + bounce(9, 12), 1.05, { ...CAST.c, ...unmasked(), body: "bust", turn: 0.7, tilt: laughing ? -0.12 + Math.sin(abs * 21) * 0.06 : 0, arms: laughing ? "laugh" : "down" }),
     "fg",
   );
+  for (const [x, y, s] of [[110, 730, 0.55], [285, 730, 0.55], [JX, jy, 0.78]] as [number, number, number][]) unmaskBurst(c, x, y, s);
   const ht = phase(abs, BURST, BURST + 1.0) * 1.2;
   hahas(c, 260, 600, 230, ht, 77, F.cn, 5);
   hahas(c, 880, 470, 200, ht - 0.1, 91, F.cn, 4);

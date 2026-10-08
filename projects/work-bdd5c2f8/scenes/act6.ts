@@ -1,13 +1,14 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, backOut, beatAt, camera, designScene, fillBg, filtered, flash, glow, handheld, text, writeOn } from "./lib/draw";
+import { C, Ctx, F, H, W, backOut, beatAt, camera, designScene, easeInOut, fillBg, filtered, flash, glow, handheld, text, writeOn } from "./lib/draw";
 import { CAST, Person, drawPerson } from "./lib/people";
-import { Msg, SW, chatScreen, phone } from "./lib/phone";
-import { FingerKey, fingerAt, heldHands } from "./lib/hand";
+import { Msg, SW, chatScreen, glassGlare, phone, phoneButtons } from "./lib/phone";
+import { FingerKey, fingerAt, touchDot } from "./lib/hand";
 import { bokeh, buildingEntrance } from "./lib/sets";
 
 /** EPILOGUE (song 83.74 – 90.00 = work 50.35 – 56.61; draws in song time) · 重新设计版.
- *  His phone in his hands, the party still going on behind him (far out of focus, warm). In the same class group —
+ *  His phone (no hands, 用户: his taps are dots on the glass), the party still going on behind him (far out of focus,
+ *  warm); the camera leans in on the input box while he types and eases back as it sends. In the same class group —
  *  no ✈ now — he types 「谢谢你们。」 with one thumb and sends it: 发送成功 ✓, in colour (the answer
  *  to the grey red "!" at 0:24). A smear of cream on the glass. Replies land on the beat. From PROMPTS the phone steps
  *  back for the like / comment prompts (lyrics.ts); the last beat goes to black. */
@@ -36,11 +37,6 @@ const THUMB: FingerKey[] = [
   [SENT + 0.12, 542, 799, 1],
   [SENT + 0.34, 470, 1236, 0.2],
   [END, 470, 1236, 0.2],
-];
-// the left thumb stays low at the edge, so the replies stay readable
-const LEFT: FingerKey[] = [
-  [T0, 130, 1236, 0.2],
-  [END, 130, 1236, 0.2],
 ];
 
 /** the party behind him, drawn for a heavy blur: the lobby light, fairy lights, his friends jumping about */
@@ -77,10 +73,14 @@ function shotThanks(ctx: Ctx, abs: number) {
   });
   // the phone steps back and down for the prompts: like at the top, the comment card under it
   const room = smooth(phase(abs, PROMPTS - 0.25, PROMPTS + 0.15));
+  // no hands: the phone a size up; the camera leans in on the input box while he types, eases back as it sends;
+  // each reply lands with a little bump
+  const typing = easeInOut(phase(abs, T0, SENT - 0.15)) * (1 - easeInOut(phase(abs, SENT, SENT + 0.45)));
+  const bump = REPLIES.reduce((sum, t) => sum + (abs > t ? Math.exp(-(abs - t) * 10) * Math.sin((abs - t) * 30) * 5 : 0), 0);
   const [hx, hy, hr] = handheld(abs, 4, 16);
-  const s = 0.66 - 0.14 * room,
+  const s = 0.8 - 0.28 * room,
     cx = 540 + hx,
-    cy = 760 + 200 * room + hy,
+    cy = 760 + 200 * room + hy + bump,
     rot = -0.02 + hr;
   fillBg(ctx, "#141a3a");
   filtered(
@@ -98,6 +98,10 @@ function shotThanks(ctx: Ctx, abs: number) {
   ctx.fillRect(-60, -60, W + 120, H + 120);
   bokeh(ctx, abs, 16, 601, 0.9);
   glow(ctx, cx, cy, 700, "rgba(255,220,150,0.18)");
+  ctx.save();
+  // (the input box, keyboard up, is at screen y 799 of the phone)
+  camera(ctx, 540, cy + (799 - 640) * s, 1 + 0.12 * typing);
+  phoneButtons(ctx, cx, cy, s, rot);
   phone(ctx, cx, cy, s, rot, (c) => {
     chatScreen(c, { time: "00:01", airplane: false }, "高二(3)班 (46)", msgs, sent ? "" : writeOn("谢谢你们。", typed), !sent && Math.floor(abs * 3) % 2 === 0, { keyboard: !sent });
     // a smear of cream on the glass — the cake in his face
@@ -112,8 +116,10 @@ function shotThanks(ctx: Ctx, abs: number) {
     c.ellipse(SW - 116, 312, 22, 9, -0.6, 0, Math.PI * 2);
     c.fill();
     c.restore();
+    glassGlare(c, hx);
+    touchDot(c, fingerAt(abs, THUMB));
   });
-  heldHands(ctx, cx, cy, s, rot, fingerAt(abs, THUMB)!, fingerAt(abs, LEFT)!);
+  ctx.restore();
   // 发送成功 ✓ — the answer to the red "!"
   if (sent && room < 1) {
     const k = backOut(phase(abs, SENT, SENT + 0.25));

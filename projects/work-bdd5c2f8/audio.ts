@@ -108,11 +108,12 @@ const sounds: Record<string, () => StereoPcm> = {
   flood: () => {
     const pcm = buffer(2.6);
     const pitches = [1, 1.122, 1, 0.891, 1.189, 1, 1.26];
+    // (every 0.12 s, like the notifications in act5's flood)
     for (let i = 0; i < 7; i++) {
-      ding(pcm, i * 0.2, 0.42, pitches[i], (i % 2 ? 0.3 : -0.3));
-      buzz(pcm, i * 0.2, 0.17, 0.16);
+      ding(pcm, i * 0.12, 0.42, pitches[i], (i % 2 ? 0.3 : -0.3));
+      buzz(pcm, i * 0.12, 0.1, 0.16);
     }
-    buzz(pcm, 1.4, 0.5, 0.18);
+    buzz(pcm, 0.84, 0.4, 0.18);
     return pcm;
   },
   // cake in the face

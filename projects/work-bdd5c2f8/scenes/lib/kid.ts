@@ -565,6 +565,7 @@ function headBack(ctx: Ctx, p: KidPose, seed: number) {
     }
   }, C.ink, 5.5);
   if (p.helmet) helmet(ctx, seed + 100);
+  if (p.hat) partyHat(ctx, seed + 120);
   ctx.restore();
 }
 

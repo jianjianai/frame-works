@@ -241,7 +241,9 @@ function hook(ctx: Ctx, abs: number) {
   // Big hook text on the first frames, then a small persistent title pill.
   const end = 83.5;
   if (abs > end + 0.4) return;
-  const shrink = easeOut(phase(abs, 4.15, 4.6));
+  // shrinks into the title pill as the whip lands on his phone (2.35), so the lock screen's status bar (✈, the clue
+  // the comment prompt asks about) is never under it
+  const shrink = easeOut(phase(abs, 2.05, 2.45));
   const flip = phase(abs, 71.25, 71.55);
   const count = flip >= 0.5 ? "99+" : "0";
   if (shrink < 1) {
