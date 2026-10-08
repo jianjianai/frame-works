@@ -149,3 +149,4 @@
 - `reference/mirrors/act5.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
 - `reference/mirrors/lyrics.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
 - `reference/mirrors/timeline.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
+- `reference/mirrors/visual.json`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
