@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "background": "#0b0e1f",
+  "clips": [
+    {
+      "id": "act1",
+      "name": "第一幕 · 一个人的生日（0–17.08，歌曲时间 = 作品时间）",
+      "source": { "kind": "scene", "module": "act1", "engine": "canvas" },
+      "start": 0,
+      "duration": 17.084,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act4",
+      "name": "第四幕 · 发送失败（歌曲 50.48 起）",
+      "source": { "kind": "scene", "module": "act4", "engine": "canvas" },
+      "start": 17.0837,
+      "duration": 16.5726,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act5",
+      "name": "第五幕 · 飞行模式（反转，歌曲 67.05 起）",
+      "source": { "kind": "scene", "module": "act5", "engine": "canvas" },
+      "start": 33.6563,
+      "duration": 16.6957,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act6",
+      "name": "尾声 · 发送成功（歌曲 83.74 起）",
+      "source": { "kind": "scene", "module": "act6", "engine": "canvas" },
+      "start": 50.352,
+      "duration": 6.2608,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "lyrics",
+      "name": "中英歌词 + 钩子 + 结尾引导",
+      "source": { "kind": "scene", "module": "lyrics", "engine": "canvas" },
+      "start": 0,
+      "duration": 56.6128,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "grain",
+      "name": "胶片颗粒",
+      "source": { "kind": "scene", "module": "grain", "engine": "canvas" },
+      "start": 0,
+      "duration": 56.6128,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "transform": { "opacity": 0.5 },
+      "fit": "contain",
+      "blend": "overlay"
+    }
+  ]
+}
