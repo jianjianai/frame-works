@@ -29,6 +29,13 @@ export interface Person {
   seed?: number;
   /** drawn between arms and hands */
   holding?: (ctx: Ctx) => void;
+  /** override a preset arm: wrist target (head units), hand shape and elbow direction */
+  handL?: Pt;
+  handR?: Pt;
+  shapeL?: HandShape;
+  shapeR?: HandShape;
+  bendL?: number;
+  bendR?: number;
 }
 
 export const CAST: Record<string, Person> = {
@@ -323,6 +330,8 @@ function armTargets(p: Person): [ArmT | null, ArmT | null] {
       break;
     }
   }
+  if (p.handL) L = { wrist: p.handL, bend: p.bendL ?? -1, shape: p.shapeL ?? "relax" };
+  if (p.handR) R = { wrist: p.handR, bend: p.bendR ?? 1, shape: p.shapeR ?? "relax" };
   return [L, R];
 }
 

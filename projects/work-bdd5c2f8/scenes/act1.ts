@@ -1,6 +1,6 @@
 import type { SceneOptions } from "../../../src/engine/types";
 import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, beatAt, blinkEyes, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, linesOutsideCentre, oldFilm, rr, shake, text } from "./lib/draw";
+import { C, Ctx, F, H, Pt, W, beatAt, blinkEyes, camera, card, designScene, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shake, text } from "./lib/draw";
 import { drawKid } from "./lib/kid";
 import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
 import { Msg, SH, SW, chatScreen, lockScreen, phone } from "./lib/phone";
@@ -17,9 +17,15 @@ import { FingerKey, FingerPos, fingerAt, heldHands, onScreen, tapRipple } from "
  *  2.35  his phone: wake (2.61), pull to refresh (3.14) — still 0 条新消息, ✈ top right
  *  4.44  the class group: last message 10:12; he scrolls, nothing
  *  6.79  side button: the screen goes black → push toward his reflection
- *  8.09  the cut into the memory, like an old screen: the picture breaks into flickering vertical lines and a jitter,
- *        jumps to this morning underneath them, and the lines thin out
- *  8.61  今天上午 10:12, the corridor: they see him (9.14) and hide everything; a gold "17" balloon floats above them
+ *  8.09  the cut into the memory, like an old screen: the picture breaks into flickering vertical lines and a jitter;
+ *        under them (8.35) his grey reflection dissolves into the same face, same size, same place — this morning,
+ *        in colour (a match cut: it is his memory) — and the lines thin out
+ *  8.35  今天上午 10:12, the corridor, one shot: pull back from his face to two planes — him in the foreground on
+ *        the left, the three of them in the middle distance on the right, holding up a pink banner (its back to us,
+ *        the letters bleeding through) and a gift with the gold "17" balloon. Focus racks to them (8.85); A-Jie looks
+ *        up (9.14) — "!" — and in half a beat the banner is rolled up and everything is behind their backs; they
+ *        stand in a stiff line, the monitor waves, A-Jie sweats (Everyone is so fake), the balloon bobs back up behind
+ *        them. Focus racks back to him (9.85): he drops his eyes, the camera drifts in for the hood
  *  10.70 the hood goes up on "hide away" (hands up, snap, a shadow over his eyes), then a slow push in. No airplane
  *        mode in the memory: if he remembered switching it on, he couldn't have forgotten it (用户). The only clue is
  *        the ✈ in his status bar.
@@ -258,16 +264,38 @@ function shotChat(ctx: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- 8.09 – 8.61 the old-screen cut into the memory
+const CUT = REW + 0.26; // 8.35 his reflection dissolves into his face this morning
+/** Where his reflected face sits on screen in shotChat: [x, y, scale, rotation] (same maths as shotChat's camera,
+ *  phone and mirrored drawKid at screen (300, 560) × 1.05), so the memory can start on exactly the same face. */
+function reflectionAt(abs: number): [number, number, number, number] {
+  const dive = 0.45 * easeIn(phase(abs, OFF + 0.2, REW));
+  const [hx, hy, hr] = handheld(abs, 4 * (1 - dive), 2);
+  const s = 0.79,
+    cx = 540 + hx,
+    cy = 800 + hy,
+    rot = -0.02 + hr;
+  const ex = cx + (250 - SW / 2) * s,
+    ey = cy + (598 - SH / 2) * s;
+  const z = 1 + 3.6 * dive;
+  const lx = (300 - SW / 2) * s,
+    ly = (560 - SH / 2) * s;
+  const px = cx + lx * Math.cos(rot) - ly * Math.sin(rot),
+    py = cy + lx * Math.sin(rot) + ly * Math.cos(rot);
+  return [ex + (540 - ex) * dive + z * (px - ex), ey + (960 - ey) * dive + z * (py - ey), z * s * 1.05, rot];
+}
+
 /** An old screen's vertical lines: the present (his reflection) breaks up into flickering vertical scratches and a
- *  jitter, the picture jumps to this morning underneath them, and they thin out as the memory settles. */
+ *  jitter; underneath them the grey reflection dissolves into the same face this morning, and the lines thin out
+ *  as the memory settles. */
 function shotOldScreen(ctx: Ctx, abs: number) {
   const p = phase(abs, REW, MEM);
   const dens = Math.sin(Math.PI * Math.min(1, p * 1.15));
   const f = Math.floor(abs * 24);
+  const mix = smooth(phase(abs, CUT - 0.06, CUT + 0.08));
   ctx.save();
   ctx.translate((hash(f * 1.9) - 0.5) * 7 * dens, (hash(f * 2.7) - 0.5) * 3 * dens);
-  if (p < 0.5) shotChat(ctx, abs);
-  else oldFilm(ctx, abs, (c) => corridorScene(c, abs));
+  if (mix < 1) shotChat(ctx, abs);
+  if (mix > 0) filtered(ctx, "none", (c) => oldFilm(c, abs, (cc) => corridorScene(cc, abs)), "xfade", mix);
   ctx.restore();
   // the vertical lines: dark and light, mostly thin, a few thick, jumping every frame — faint inside a circle in the
   // middle of the screen, stronger the further out they run
@@ -316,60 +344,222 @@ function balloon17(c: Ctx, x: number, y: number, s: number, abs: number, tie: Pt
   c.restore();
 }
 
-const HUDDLE: { p: Person; x: number; turn0: number; turn1: number; arms0: Person["arms"] }[] = [
-  { p: CAST.monitor, x: 640, turn0: 0.55, turn1: -0.1, arms0: "hold" },
-  { p: CAST.jie, x: 810, turn0: -0.45, turn1: 0.15, arms0: "hold" },
-  { p: CAST.d, x: 985, turn0: -0.55, turn1: -0.25, arms0: "handL" },
-];
+/** A small gift box (sky blue, pink ribbon and bow), top centre at (x, y). */
+function giftBox(c: Ctx, x: number, y: number, w: number, h: number) {
+  poly(c, [[x - w / 2, y], [x + w / 2, y], [x + w / 2, y + h], [x - w / 2, y + h]], 941, 1.2);
+  paint(c, "#7fc8e8", C.ink, 5);
+  poly(c, [[x - 10, y], [x + 10, y], [x + 10, y + h], [x - 10, y + h]], 942, 0.6);
+  paint(c, "#ff7fb0", C.ink, 3);
+  poly(c, [[x - w / 2, y + h * 0.42], [x + w / 2, y + h * 0.42], [x + w / 2, y + h * 0.42 + 18], [x - w / 2, y + h * 0.42 + 18]], 943, 0.6);
+  paint(c, "#ff7fb0", C.ink, 3);
+  for (const side of [-1, 1]) {
+    oval(c, x + side * 20, y - 12, 20, 12, 944 + side, 0.6);
+    paint(c, "#ff9cc3", C.ink, 4);
+  }
+}
 
-function corridorScene(c: Ctx, abs: number) {
-  const noticed = abs >= NOTICE;
-  const spin = smooth(phase(abs, NOTICE, NOTICE + 0.25));
-  const track = easeInOut(phase(abs, MEM, 10.0));
-  const [hx, hy, hr] = handheld(abs, 5, 3);
+/** A comic "!" popping over a head. */
+function bang(c: Ctx, x: number, y: number, k: number, rot: number) {
+  if (k <= 0.01) return;
   c.save();
-  camera(c, 540, 900, 1.04 + 0.05 * easeInOut(phase(abs, MEM, HOOD)), hr, hx + 30 - 60 * track, hy);
-  filtered(c, "blur(1.6px)", (b) => corridor(b, abs), "bg");
-  // 彩蛋: the "17" balloon — held up while they work, pulled down behind a back when he comes, floating up anyway
-  balloon17(c, noticed ? 930 : 950, (noticed ? 450 : 380) + Math.sin(abs * 1.7) * 6, 0.62, abs, noticed ? [985, 905] : [965, 770]);
-  if (!noticed) {
-    // the banner they are working on, open between them (no text yet)
-    banner(c, 728, 830, 300, 0.72, "", 512, F.cn);
-  } else {
-    // rolled up behind A-Jie's back, one end sticking out
+  c.translate(x, y);
+  c.rotate(rot);
+  c.scale(k, k);
+  poly(c, [[-13, -66], [13, -66], [6, 4], [-6, 4]], 931, 1);
+  paint(c, "#ffe45c", C.ink, 5);
+  oval(c, 0, 26, 10, 10, 932, 0.5);
+  paint(c, "#ffe45c", C.ink, 5);
+  c.restore();
+}
+
+/** A sweat drop. */
+function sweatDrop(c: Ctx, x: number, y: number, a: number) {
+  if (a <= 0.01) return;
+  c.save();
+  c.globalAlpha *= a;
+  c.beginPath();
+  c.moveTo(x, y - 26);
+  c.quadraticCurveTo(x + 13, y - 4, x + 13, y + 6);
+  c.arc(x, y + 6, 13, 0, Math.PI);
+  c.quadraticCurveTo(x - 13, y - 4, x, y - 26);
+  c.closePath();
+  c.fillStyle = "#bfe6ff";
+  c.fill();
+  c.strokeStyle = C.ink;
+  c.lineWidth = 4;
+  c.stroke();
+  c.restore();
+}
+
+// him in the corridor (head centre, scale): big, in the foreground on the left; his feet are below the frame
+const KX = 300,
+  KY = 860,
+  KS = 1.45;
+// the three of them in the middle distance on the right (head centres, scale): feet on the floor line (y≈1130)
+const MON = 600,
+  JIE = 790,
+  DD = 960,
+  HY = 700,
+  HS = 0.6;
+// after hiding everything: arms straight down, standing stiffly to attention ("nothing to see here") — hands
+// behind the back read as hands on hips from the front
+const BACK_L: Pt = [-112, 352],
+  BACK_R: Pt = [112, 352];
+
+function huddle(c: Ctx, abs: number) {
+  const hide = easeInOut(phase(abs, NOTICE + 0.06, NOTICE + 0.32)); // everything goes behind their backs
+  const snap = (t: number) => smooth(phase(abs, t, t + 0.1)); // heads snap round to him
+  const hop = (t: number) => -16 * Math.sin(Math.PI * phase(abs, t, t + 0.22)); // a startled little jump
+  const busy = (i: number) => (abs < NOTICE ? Math.sin(abs * 7 + i * 2) * 3 : 0);
+  const at = (x: number, local: Pt): Pt => [x + local[0] * HS, HY + local[1] * HS];
+  // 彩蛋: the gold "17" balloon, tied to the gift — yanked down with it, and bobbing straight back up behind them
+  const yank = Math.sin(Math.PI * phase(abs, NOTICE + 0.1, NOTICE + 0.75));
+  const tie = lerp2(at(DD, [0, 222]), at(DD, [150, 300]), hide);
+  balloon17(c, 985 + 10 * hide, 470 + 190 * yank + Math.sin(abs * 1.7) * 6, 0.6, abs, tie);
+  // the gift and the rolled-up banner, once hidden, peek out from behind their backs
+  if (hide >= 0.55) {
     c.save();
-    c.translate(868, 922);
-    c.rotate(-0.7);
+    c.translate(...at(DD, [140, 250]));
+    c.rotate(0.25);
+    c.scale(HS, HS);
+    giftBox(c, 0, 0, 140, 110);
+    c.restore();
+    c.save();
+    c.translate(...at(JIE, [110, 120]));
+    c.rotate(-0.75);
+    c.scale(HS, HS);
     banner(c, 0, 0, 160, 0, "", 510, F.cn);
     c.restore();
   }
-  for (const h of HUDDLE)
-    drawPerson(c, h.x, 660 + (noticed ? 0 : Math.sin(abs * 6 + h.x) * 4), 0.7, {
-      ...h.p,
-      turn: h.turn0 + (h.turn1 - h.turn0) * spin,
-      arms: noticed ? "behind" : h.arms0,
-      body: "full",
-    });
-  // He walks in along the corridor toward us. The kid's walk cycle is a front view, so he comes toward the camera
-  // (back-left → front, growing) instead of sliding sideways with his feet marching in place. Three steps, the cycle
-  // tied to the distance covered (no skating, it slows as he slows), both feet down when he stops (phase π/2 + 3π);
-  // the body rises over each passing foot and the arms swing a little against the legs.
-  const ph = Math.PI / 2 + 3 * Math.PI * track;
-  const moving = track > 0.001 && track < 0.999;
-  const sw = moving ? Math.sin(ph) : 0;
-  // (from the foot of the far wall, feet at y≈1180, to the foreground in front of them, feet at y≈1330, growing)
-  drawKid(c, 250 + 80 * track, 790 - 22 * track - (moving ? 7 * Math.abs(Math.cos(ph)) : 0), 0.5 + 0.22 * track, {
+  // the monitor: holds the left end of the banner, looking down at it → hands behind her back → a stiff little wave
+  const wave = smooth(phase(abs, 9.48, 9.62)) * (1 - smooth(phase(abs, 10.3, 10.5)));
+  drawPerson(c, MON, HY + hop(NOTICE + 0.08) + busy(0), HS, {
+    ...CAST.monitor,
     body: "full",
-    legs: "walk",
-    walk: ph,
-    arms: "custom",
-    handL: [-106 + 6 * sw, 462 + 10 * sw],
-    handR: [106 + 6 * sw, 462 - 10 * sw],
-    shapeL: "relax",
-    shapeR: "relax",
-    look: [noticed ? 1 : 0.2, noticed ? 0.1 : 0.3],
-    eyes: abs > 10.15 ? "sad" : blinkEyes(abs, 3, "sleepy"),
+    turn: 0.4 + (-0.6 - 0.4) * snap(NOTICE + 0.08),
+    tilt: 0.1 * (1 - hide),
+    handL: wave > 0 ? lerp2([-120, 320], [-150 + Math.sin(abs * 16) * 22, -40], wave) : lerp2([-125, 290], BACK_L, hide),
+    shapeL: wave > 0.3 ? "open" : hide > 0.6 ? "relax" : "hold",
+    bendL: wave > 0.3 ? 1 : -1,
+    handR: lerp2([60, 278], BACK_R, hide),
+    shapeR: hide > 0.6 ? "relax" : "hold",
   });
+  // A-Jie: the right end of the banner → the first to look up → sweating
+  drawPerson(c, JIE, HY + hop(NOTICE) + busy(1), HS, {
+    ...CAST.jie,
+    body: "full",
+    turn: -0.35 + (-0.75 + 0.35) * snap(NOTICE),
+    tilt: -0.1 * (1 - hide),
+    handL: lerp2([-60, 278], BACK_L, hide),
+    shapeL: hide > 0.6 ? "relax" : "hold",
+    handR: lerp2([125, 290], BACK_R, hide),
+    shapeR: hide > 0.6 ? "relax" : "hold",
+  });
+  // the third: holds the gift at her chest → behind her back
+  drawPerson(c, DD, HY + hop(NOTICE + 0.14) + busy(2), HS, {
+    ...CAST.d,
+    body: "full",
+    turn: -0.3 + (-0.55 + 0.3) * snap(NOTICE + 0.14),
+    handL: lerp2([-64, 252], BACK_L, hide),
+    shapeL: hide > 0.6 ? "relax" : "hold",
+    handR: lerp2([64, 252], BACK_R, hide),
+    shapeR: hide > 0.6 ? "relax" : "hold",
+    holding: hide < 0.55 ? (h) => giftBox(h, 0, 222 + 60 * hide, 140, 110) : undefined,
+  });
+  // the banner, held up in front of them with its back to us (the letters bleed through, mirrored) — rolled up and
+  // whisked behind A-Jie when he comes
+  if (hide < 0.55) {
+    const open = 1 - hide / 0.55;
+    const bx = 695 + (JIE + 70 - 695) * (1 - open),
+      by = 905;
+    c.save();
+    c.translate(bx, by);
+    c.scale(HS, HS);
+    banner(c, 0, 0, 567 * open, 1, "", 512, F.cn);
+    if (open > 0.4)
+      for (let i = 0; i < 4; i++) {
+        const lx = (-1.5 + i) * 120 * open;
+        inkLine(c, [[lx - 34, -26], [lx + 6, -10], [lx - 20, 14], [lx + 30, 30]], 950 + i, 12, `rgba(196,64,124,${(0.4 * (open - 0.4)).toFixed(2)})`);
+      }
+    c.restore();
+  }
+  // speed lines as it goes
+  const whoosh = Math.sin(Math.PI * hide);
+  if (whoosh > 0.05) {
+    c.save();
+    c.globalAlpha = whoosh;
+    for (let i = 0; i < 4; i++) {
+      const y = 860 + i * 26,
+        x = 600 + 200 * hide - i * 18;
+      inkLine(c, [[x - 110, y], [x - 50, y + 1], [x, y]], 960 + i, 4);
+    }
+    c.restore();
+  }
+  // "!" over each head as they notice him, then A-Jie's sweat drop
+  const out = 1 - smooth(phase(abs, 9.58, 9.74));
+  [JIE, MON, DD].forEach((x, i) => {
+    const t = NOTICE + i * 0.07;
+    const k = abs < t ? 0 : easeOut(phase(abs, t, t + 0.1)) * (1 + 0.25 * Math.sin(Math.PI * phase(abs, t, t + 0.2))) * out;
+    bang(c, x + 30, HY - 175, k, (i - 1) * 0.15);
+  });
+  const drip = phase(abs, 9.45, 10.4);
+  sweatDrop(c, JIE + 78, HY - 40 + 26 * drip, smooth(phase(abs, 9.45, 9.55)) * (1 - smooth(phase(abs, 10.25, 10.45))));
+}
+
+function kidNow(c: Ctx, abs: number) {
+  const seen = smooth(phase(abs, 8.72, 8.95)); // he looks over at them
+  const down = smooth(phase(abs, 9.85, 10.15)); // …and drops his eyes
+  const hid = abs >= NOTICE + 0.12;
+  drawKid(c, KX, KY, KS, {
+    body: "full",
+    legs: "stand",
+    arms: "pockets",
+    turn: 0.35 * seen * (1 - down) + 0.08 * down,
+    look: [0.85 * seen * (1 - down) + 0.15 * down, 0.3 - 0.2 * seen + 0.55 * down],
+    // one blink, placed after they have hidden everything (a random one landed right as he looked over)
+    eyes: down > 0.5 ? "sad" : abs > 9.44 && abs < 9.56 ? "shut" : hid ? "open" : "sleepy",
+    brows: down > 0.5 ? "sad" : hid ? "worried" : undefined,
+    mouth: hid ? "frown" : "flat",
+    headY: Math.sin(abs * 1.7) * 3 + 10 * down,
+  });
+}
+
+/** depth of field: blur a plane by `px` (skipped when sharp) */
+function focus(c: Ctx, px: number, draw: (c: Ctx) => void, key: string) {
+  if (px > 0.3) filtered(c, `blur(${px.toFixed(1)}px)`, draw, key);
+  else draw(c);
+}
+
+function corridorScene(c: Ctx, abs: number) {
+  // one shot: starts on exactly the face that was in the black glass, pulls back to the two planes, and at the end
+  // drifts in on him for the hood
+  const pull = easeInOut(phase(abs, CUT, 9.05));
+  const drift = easeInOut(phase(abs, 9.9, HOOD));
+  const [x0, y0, s0, r0] = reflectionAt(CUT);
+  const z = (s0 / KS + (1 - s0 / KS) * pull) * (1 + 0.06 * drift);
+  const [hx, hy, hr] = handheld(abs, 4 * pull, 3);
+  // (ends with him centred and his face the size it is in the hood shot, so the cut on "hide away" is seamless)
+  const pan = 240 * drift;
+  const ax = x0 + (KX - x0) * pull + pan + hx,
+    ay = y0 + (KY - y0) * pull - 10 * drift + hy;
+  // focus: on him; racked to them as they come into view; back to him when he looks down
+  const onThem = smooth(phase(abs, 8.85, 9.05)) * (1 - smooth(phase(abs, 9.85, 10.1)));
+  c.save();
+  c.translate(ax, ay);
+  c.rotate(r0 * (1 - pull) + hr);
+  c.scale(z, z);
+  c.translate(-KX, -KY);
+  // parallax on the final pan: the wall moves a quarter as much as he does, they a little more (and the wall's left
+  // edge never comes into frame)
+  const par = (k: number, draw: (b: Ctx) => void) => (b: Ctx) => {
+    b.save();
+    b.translate((-pan * k) / z, 0);
+    draw(b);
+    b.restore();
+  };
+  filtered(c, "blur(1.8px)", par(0.75, (b) => corridor(b, abs)), "bg");
+  focus(c, 3 * (1 - onThem), par(0.4, (b) => huddle(b, abs)), "huddle");
+  focus(c, 4.5 * onThem, (b) => kidNow(b, abs), "kidFocus");
   c.restore();
 }
 
@@ -388,7 +578,8 @@ function hoodScene(c: Ctx, abs: number) {
   const [hx, hy, hr] = handheld(abs, 5, 4);
   c.save();
   // the hood goes up on "hide away", then a slow push in as he sinks into it
-  camera(c, 540, 820, 1.0 + 0.08 * easeInOut(phase(abs, HOOD, 11.6)) + 0.14 * easeInOut(phase(abs, 11.6, LAUGH)), hr, hx, hy);
+  // (starts at the size the corridor shot ends on)
+  camera(c, 540, 820, 1.2 + 0.04 * easeInOut(phase(abs, HOOD, 11.6)) + 0.08 * easeInOut(phase(abs, 11.6, LAUGH)), hr, hx, hy);
   // the corridor behind him, far out of focus
   filtered(
     c,
