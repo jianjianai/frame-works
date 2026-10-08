@@ -128,3 +128,4 @@
 - `code/shared.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/shared.ts
 - `reference/no-friends-remake/act1.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/act1.ts
 - `reference/no-friends-remake/act4.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/act4.ts
+- `reference/no-friends-remake/act5.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/act5.ts
