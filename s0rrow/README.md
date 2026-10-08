@@ -123,3 +123,4 @@
 - `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（twist 提前到 28.70，hisLightOff）
 - `code/draw.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/draw.ts
 - `code/people.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/people.ts
+- `code/phone.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/phone.ts

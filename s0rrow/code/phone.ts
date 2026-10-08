@@ -1,5 +1,5 @@
 import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, blob, measure, paint, rr, rrectPts, text } from "./draw";
+import { C, Ctx, F, blob, measure, paint, poly, rr, rrectPts, text } from "./draw";
 import { drawPerson, Person, xMark } from "./people";
 
 /** Phone screen design size. */
@@ -15,6 +15,17 @@ export function phone(ctx: Ctx, cx: number, cy: number, s: number, rot: number, 
   ctx.translate(-SW / 2, -SH / 2);
   blob(ctx, rrectPts(-26, -26, SW + 52, SH + 52, 92), seed, 1.6);
   paint(ctx, "#121214", C.ink, 7);
+  // 光影: the metal frame catches the light — warm down the left side, cold down the right — so the phone reads
+  // against a dark room
+  const rim = ctx.createLinearGradient(-26, 0, SW + 26, 0);
+  rim.addColorStop(0, "rgba(255,196,140,0.5)");
+  rim.addColorStop(0.16, "rgba(255,196,140,0)");
+  rim.addColorStop(0.84, "rgba(185,200,255,0)");
+  rim.addColorStop(1, "rgba(185,200,255,0.4)");
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 6;
+  rr(ctx, -14, -14, SW + 28, SH + 28, 84);
+  ctx.stroke();
   ctx.save();
   rr(ctx, 0, 0, SW, SH, 70);
   ctx.clip();
@@ -25,6 +36,82 @@ export function phone(ctx: Ctx, cx: number, cy: number, s: number, rot: number, 
   rr(ctx, SW / 2 - 90, 18, 180, 50, 25);
   ctx.fill();
   ctx.restore();
+}
+
+/** A phone seen from behind, in someone's hand (we see its back while they read it): dark case, the camera bump top
+ *  left, the screen's light spilling out round the top edge; `torch` 0..1 lights the flashlight LED, blazing at us.
+ *  (cx, cy) = its centre; draw it in the hand's `grip`/`holding` so the fingers go over it. */
+export function phoneBack(ctx: Ctx, cx: number, cy: number, w: number, h: number, rot = 0, torch = 0) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  const spill = ctx.createRadialGradient(0, -h / 2, 0, 0, -h / 2, w * 1.3);
+  spill.addColorStop(0, "rgba(180,210,255,0.35)");
+  spill.addColorStop(1, "rgba(180,210,255,0)");
+  ctx.fillStyle = spill;
+  ctx.fillRect(-w * 1.3, -h / 2 - w * 1.3, w * 2.6, w * 1.6);
+  ctx.fillStyle = "#1b1b20";
+  rr(ctx, -w / 2, -h / 2, w, h, w * 0.18);
+  ctx.fill();
+  ctx.strokeStyle = C.ink;
+  ctx.lineWidth = Math.max(2.5, w * 0.06);
+  ctx.stroke();
+  const b = w * 0.42,
+    bx = -w / 2 + w * 0.1,
+    by = -h / 2 + w * 0.1;
+  ctx.fillStyle = "#2e2e36";
+  rr(ctx, bx, by, b, b, b * 0.28);
+  ctx.fill();
+  ctx.lineWidth = Math.max(1.5, w * 0.035);
+  ctx.stroke();
+  ctx.fillStyle = "#0c0c10";
+  for (const [u, v] of [[0.3, 0.3], [0.3, 0.72]]) {
+    ctx.beginPath();
+    ctx.arc(bx + b * u, by + b * v, b * 0.17, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const lx = bx + b * 0.74,
+    ly = by + b * 0.3;
+  ctx.fillStyle = torch > 0.5 ? "#fffdf2" : "#cfcfc6";
+  ctx.beginPath();
+  ctx.arc(lx, ly, b * 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  if (torch > 0) {
+    const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, w * 1.6);
+    g.addColorStop(0, `rgba(255,255,250,${(0.95 * torch).toFixed(3)})`);
+    g.addColorStop(0.15, `rgba(240,245,255,${(0.5 * torch).toFixed(3)})`);
+    g.addColorStop(1, "rgba(220,230,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(lx - w * 1.6, ly - w * 1.6, w * 3.2, w * 3.2);
+  }
+  ctx.restore();
+}
+
+/** No hands on the phone (用户): its side buttons, drawn before phone() at the same (cx, cy, s, rot) so only their
+ *  edges stick out of the frame; `press` pushes the power key in. */
+export function phoneButtons(ctx: Ctx, cx: number, cy: number, s: number, rot: number, press = 0) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  ctx.translate(-SW / 2, -SH / 2);
+  const px = SW + 22 - 9 * press;
+  poly(ctx, [[px, 300], [px + 14, 306], [px + 14, 456], [px, 462]], 1501, 0.6);
+  paint(ctx, "#2a2a2e", C.ink, 4);
+  for (const [y0, y1] of [[250, 330], [356, 436]]) {
+    poly(ctx, [[-22, y0], [-36, y0 + 6], [-36, y1 - 6], [-22, y1]], 1502 + y0, 0.6);
+    paint(ctx, "#2a2a2e", C.ink, 4);
+  }
+  ctx.restore();
+}
+/** A faint diagonal glare across the glass (inside phone()'s screen callback), sliding a little with his hand. */
+export function glassGlare(p: Ctx, shift: number, a = 1) {
+  const g = p.createLinearGradient(-200 + shift * 6, 0, SW + 200 + shift * 6, SH);
+  g.addColorStop(0.2, "rgba(255,255,255,0)");
+  g.addColorStop(0.3, `rgba(255,255,255,${(0.06 * a).toFixed(3)})`);
+  g.addColorStop(0.4, "rgba(255,255,255,0)");
+  p.fillStyle = g;
+  p.fillRect(0, 0, SW, SH);
 }
 
 export function airplaneIcon(ctx: Ctx, x: number, y: number, size: number, color: string) {
@@ -118,34 +205,114 @@ export function statusBar(ctx: Ctx, st: Status) {
   ctx.restore();
 }
 
+/** His lock-screen wallpaper (美感): a dusk sky going from deep blue to a rose glow on the horizon, stars, a thin
+ *  moon, and an empty swing on a hill in silhouette, its seat still swaying a little. */
 export function wallpaper(ctx: Ctx) {
   const g = ctx.createLinearGradient(0, 0, 0, SH);
-  g.addColorStop(0, "#1c2550");
-  g.addColorStop(0.6, "#3a2c5c");
-  g.addColorStop(1, "#11152b");
+  g.addColorStop(0, "#121843");
+  g.addColorStop(0.42, "#262a66");
+  g.addColorStop(0.68, "#4d3a7a");
+  g.addColorStop(0.82, "#9a5f86");
+  g.addColorStop(0.9, "#c98a8e");
+  g.addColorStop(1, "#c98a8e");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, SW, SH);
-  // a doodle swing set on the wallpaper
+  // stars (fixed), a few of them with a little cross of light
+  let s = 77;
+  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 46; i++) {
+    const x = rnd() * SW,
+      y = 60 + rnd() * 820,
+      big = rnd() > 0.86;
+    ctx.fillStyle = `rgba(235,238,255,${(0.35 + 0.5 * rnd()) * (1 - y / 1100)})`;
+    ctx.beginPath();
+    ctx.arc(x, y, big ? 3 : 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    if (big) {
+      ctx.fillRect(x - 9, y - 0.8, 18, 1.6);
+      ctx.fillRect(x - 0.8, y - 9, 1.6, 18);
+    }
+  }
+  // a thin crescent moon with its halo
+  const mg = ctx.createRadialGradient(470, 448, 0, 470, 448, 130);
+  mg.addColorStop(0, "rgba(255,240,215,0.35)");
+  mg.addColorStop(1, "rgba(255,240,215,0)");
+  ctx.fillStyle = mg;
+  ctx.fillRect(340, 318, 260, 260);
   ctx.save();
-  ctx.globalAlpha = 0.28;
-  ctx.strokeStyle = "#cfd6ff";
-  ctx.lineWidth = 8;
-  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(110, 1180);
-  ctx.lineTo(170, 760);
-  ctx.lineTo(230, 1180);
-  ctx.moveTo(370, 1180);
-  ctx.lineTo(430, 760);
-  ctx.lineTo(490, 1180);
-  ctx.moveTo(150, 770);
-  ctx.lineTo(450, 770);
-  ctx.moveTo(260, 775);
-  ctx.lineTo(260, 1010);
-  ctx.moveTo(340, 775);
-  ctx.lineTo(340, 1010);
-  ctx.moveTo(240, 1012);
-  ctx.lineTo(360, 1012);
+  ctx.arc(470, 448, 32, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = "#fff1d6";
+  ctx.fillRect(430, 410, 80, 80);
+  ctx.fillStyle = "#2c2d6b";
+  ctx.beginPath();
+  ctx.arc(484, 438, 30, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // the glow behind the hill
+  const hg = ctx.createRadialGradient(300, 1080, 0, 300, 1080, 460);
+  hg.addColorStop(0, "rgba(255,190,170,0.35)");
+  hg.addColorStop(1, "rgba(255,190,170,0)");
+  ctx.fillStyle = hg;
+  ctx.fillRect(-160, 620, 920, 920);
+  // the hill, its crest catching the last light
+  const hill = () => {
+    ctx.beginPath();
+    ctx.moveTo(-10, 1110);
+    ctx.bezierCurveTo(140, 1010, 420, 990, 610, 1090);
+    ctx.lineTo(610, SH + 10);
+    ctx.lineTo(-10, SH + 10);
+    ctx.closePath();
+  };
+  hill();
+  ctx.fillStyle = "#14143a";
+  ctx.fill();
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(-10, 1110);
+  ctx.bezierCurveTo(140, 1010, 420, 990, 610, 1090);
+  ctx.strokeStyle = "rgba(255,200,190,0.45)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+  // the swing set on top of it, in silhouette, the seat hanging a little off true (someone just left it)
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  const frame = () => {
+    ctx.beginPath();
+    ctx.moveTo(196, 1022);
+    ctx.lineTo(240, 820);
+    ctx.lineTo(268, 1018);
+    ctx.moveTo(392, 1020);
+    ctx.lineTo(420, 820);
+    ctx.lineTo(452, 1030);
+    ctx.moveTo(226, 822);
+    ctx.lineTo(436, 822);
+  };
+  frame();
+  ctx.strokeStyle = "rgba(255,200,190,0.3)";
+  ctx.lineWidth = 13;
+  ctx.stroke();
+  frame();
+  ctx.strokeStyle = "#14143a";
+  ctx.lineWidth = 8;
+  ctx.stroke();
+  ctx.translate(330, 824);
+  ctx.rotate(0.07);
+  ctx.strokeStyle = "#14143a";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(-34, 0);
+  ctx.lineTo(-34, 140);
+  ctx.moveTo(34, 0);
+  ctx.lineTo(34, 140);
+  ctx.stroke();
+  ctx.lineWidth = 9;
+  ctx.beginPath();
+  ctx.moveTo(-46, 142);
+  ctx.lineTo(46, 142);
   ctx.stroke();
   ctx.restore();
 }
@@ -184,6 +351,10 @@ export interface Msg {
   failed?: number; // 0..1 red mark appear
   sending?: number; // spinner
   avatar?: Person;
+  /** a grey time label above this message, e.g. "10:12" */
+  time?: string;
+  /** a grey system line instead of a bubble, e.g. "阿杰 撤回了一条消息" */
+  system?: boolean;
 }
 function avatar(ctx: Ctx, x: number, y: number, p: Person | undefined, me: boolean) {
   ctx.save();
@@ -221,16 +392,31 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
   text(ctx, "···", SW - 50, 116, { size: 40, font: F.ui, weight: 700, fill: "#111" });
   ctx.fillStyle = "#d6d6d6";
   ctx.fillRect(0, 160, SW, 2);
+  const top = 162;
   const kb = opts.keyboard ? 420 : 0;
   const inputY = SH - 120 - kb;
   // messages from the bottom up
   let y = inputY - 40 + (opts.scroll ?? 0);
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0, 162, SW, inputY - 162);
+  ctx.rect(0, top, SW, inputY - top);
   ctx.clip();
   for (let i = msgs.length - 1; i >= 0; i--) {
     const m = msgs[i];
+    if (m.system) {
+      y -= 52;
+      const w = measure(ctx, m.text, 24, F.ui) + 36;
+      ctx.fillStyle = "#dadada";
+      rr(ctx, SW / 2 - w / 2, y, w, 44, 8);
+      ctx.fill();
+      text(ctx, m.text, SW / 2, y + 23, { size: 24, font: F.ui, fill: "#777" });
+      y -= 30;
+      if (m.time) {
+        text(ctx, m.time, SW / 2, y + 10, { size: 22, font: F.ui, fill: "#9a9a9a" });
+        y -= 48;
+      }
+      continue;
+    }
     ctx.font = `400 30px ${F.ui}`;
     const lines = wrap(ctx, m.text, 330);
     const bh = lines.length * 42 + 36;
@@ -271,6 +457,10 @@ export function chatScreen(ctx: Ctx, st: Status, title: string, msgs: Msg[], inp
       ctx.restore();
     }
     y -= m.from && !m.me ? 70 : 40;
+    if (m.time) {
+      text(ctx, m.time, SW / 2, y + 10, { size: 22, font: F.ui, fill: "#9a9a9a" });
+      y -= 48;
+    }
   }
   ctx.restore();
   // input bar
@@ -385,7 +575,8 @@ export function feedScreen(ctx: Ctx, st: Status, posts: Post[], scroll: number) 
 }
 
 // ---------------------------------------------------------------- control centre
-export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: number, highlight: number) {
+/** `torch` 0..1: the flashlight tile lights up white (the torch is on). */
+export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: number, highlight: number, torch = 0) {
   ctx.fillStyle = "rgba(20,22,32,0.92)";
   ctx.fillRect(0, 0, SW, SH);
   statusBar(ctx, st);
@@ -399,8 +590,9 @@ export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: 
   const toggles: [string, boolean, string][] = [
     ["air", airplaneOn, C.orange],
     ["cell", !airplaneOn, "#34c759"],
-    ["wifi", false, "#0a84ff"],
-    ["bt", false, "#0a84ff"],
+    // (switching airplane mode off brings Wi-Fi and Bluetooth back on too — more colour comes back with the wave)
+    ["wifi", !airplaneOn, "#0a84ff"],
+    ["bt", !airplaneOn, "#0a84ff"],
   ];
   toggles.forEach(([id, on, color], i) => {
     const cx = x0 + gap + cell / 2 + (i % 2) * (cell + gap);
@@ -456,12 +648,14 @@ export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: 
   ctx.fillStyle = "rgba(255,255,255,0.12)";
   rr(ctx, x0 + 280, y0 + 300, 220, 116, 36);
   ctx.fill();
+  const lit = torch > 0.5;
+  ctx.fillStyle = lit ? "#f4f4f6" : "rgba(255,255,255,0.12)";
   rr(ctx, x0 + 280, y0 + 444, 220, 116, 36);
   ctx.fill();
   // flashlight
   const fx = x0 + 390,
     fy = y0 + 502;
-  ctx.fillStyle = "#fff";
+  ctx.fillStyle = lit ? "#1c1c1e" : "#fff";
   ctx.beginPath();
   ctx.moveTo(fx - 20, fy - 30);
   ctx.lineTo(fx + 20, fy - 30);
@@ -471,7 +665,7 @@ export function controlCenter(ctx: Ctx, st: Status, airplaneOn: boolean, press: 
   ctx.fill();
   rr(ctx, fx - 12, fy - 6, 24, 40, 6);
   ctx.fill();
-  ctx.fillStyle = "rgba(20,22,32,0.9)";
+  ctx.fillStyle = lit ? "#f4f4f6" : "rgba(20,22,32,0.9)";
   ctx.beginPath();
   ctx.arc(fx, fy + 10, 4, 0, Math.PI * 2);
   ctx.fill();
