@@ -20,5 +20,6 @@ const project: AnimationProject = {
   loadVisual: () => import("./visual.json"),
   loadAudioDocument: () => import("./mix.json"),
   loadAudio: () => import("./audio"),
+  publishedAt: "2026-10-09T16:18:07.188Z",
 };
 export default project;
