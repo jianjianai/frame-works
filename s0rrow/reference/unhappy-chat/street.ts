@@ -1,6 +1,6 @@
-import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, fillBg, glow, hash, oval, paint, poly, rr, vgrad } from "./draw";
-import { mix } from "./places";
+import { clamp } from "@frame/engine/math";
+import { C, Ctx, fillBg, glow, hash, oval, paint, poly, rr, vgrad } from "@materials/s0rrow/code/draw";
+import { mix } from "@materials/s0rrow/code/places";
 
 /** The street between his block and hers, in world units (= design units at zoom 1): his block on the left, hers
  *  across the street. Every window sits on its block's grid; his and hers are 72×128 (the frame's shape) so the

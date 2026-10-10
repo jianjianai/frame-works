@@ -1,11 +1,11 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, backOut, beatAt, camera, card, designScene, easeIn, easeOut, fillBg, flash, glow, rr, shake, text, writeOn } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { CAST } from "./lib/people";
-import { Msg, chatScreen, phone } from "./lib/phone";
-import { street } from "./lib/sets";
-import { birthdayDesk } from "./lib/shared";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, backOut, beatAt, camera, card, designScene, easeIn, easeOut, fillBg, flash, glow, rr, shake, text, writeOn } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { CAST } from "@materials/s0rrow/code/people";
+import { Msg, chatScreen, phone } from "@materials/s0rrow/code/phone";
+import { street } from "@materials/s0rrow/code/sets";
+import { birthdayDesk } from "@materials/s0rrow/code/shared";
 
 /** ACT 4 (50.48 – 67.05s): walking home; "其实…今天是我生日" fails to send (red !);
  *  back at the desk he makes a wish and blows the candle out — the loop closes on the cold open. */

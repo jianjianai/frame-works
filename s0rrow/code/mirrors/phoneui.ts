@@ -1,6 +1,13 @@
-import { clamp, smooth } from "../../../../src/engine/math";
-import { C, Ctx, F, Pt, backOut, blob, devScale, glow, inkLine, measure, oval, paint, poly, rr, rrectPts, text, vgrad } from "./draw";
-import { KidPose, drawKid } from "./kid";
+/**
+ * 《mirrors》他的手机（600×1280 屏幕坐标，由库里的 phone.ts / chat.ts 改来）：机身（侧键、轮廓光、反光）、深色的微信风格聊天
+ * （猫头像：她是笑着的白猫，他是背对的黑猫）、通话记录和照片气泡、视频来电（前置摄像头里是他自己的脸——他盖不住的那面镜子）、
+ * 美颜 App（祛斑滑条、「瑕疵：1 → 0」）、「发送给」对话框、自拍。不画手：拇指按下的地方画白色触点 touchDot / tapRing。
+ */
+import { z } from "zod";
+import { clamp, smooth } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, F, Pt, backOut, beginFrame, blob, devScale, glow, inkLine, loadFonts, measure, oval, paint, poly, rr, rrectPts, text, vgrad } from "../draw";
+import { KidPose, drawKid } from "../kid";
 import { MARK_AT, birthmark, newspaper, tape } from "./story";
 
 /** 《瑕疵：0》 his phone, in 600×1280 screen units (adapted from the s0rrow library's phone.ts / chat.ts):
@@ -843,3 +850,129 @@ export function sendDialog(ctx: Ctx, k: number, press: number, photo: (c: Ctx, w
   text(ctx, "发送", SEND_AT[0], SEND_AT[1], { size: 32, font: F.ui, weight: 700, fill: press > 0.5 ? "#05a150" : "#07c160" });
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+/** Previews of whole screens: the 600×1280 screen units. */
+const SCREEN = { width: 600, height: 1280, duration: 2, prepare: loadFonts };
+const FACE: KidPose = { eyes: "wide", mouth: "o", look: [0, 0.1] };
+const DEMO: ChatItem[] = [
+  { t: "time", text: "23:41" },
+  { t: "call" },
+  { t: "msg", text: "你睡了吗" },
+  { t: "msg", me: true, text: "还没" },
+  { t: "sticker" },
+  { t: "photo", me: true, draw: (c, w, h) => selfie(c, w, h, 1, 0.8) },
+];
+
+export const resources = defineResources({
+  darkPhone: resource({
+    kind: "prop",
+    title: "手机（深色界面）",
+    description: "《mirrors》他的手机：侧键、金属边的轮廓光、玻璃反光；screen 在 600×1280 的屏幕坐标里画。aimPhone 求出让屏幕上某点落在画面某点的手机中心（镜头对准一句话）；phoneBack 是他拿着看时的背面（屏幕冷光从上沿漏出来）。",
+    tags: ["手机", "深色", "夜间"],
+    usage: "phone(ctx, cx, cy, s, rot, (c) => chatScreen(c, abs, view))",
+    preview: {
+      width: 760,
+      height: 1440,
+      duration: 2,
+      prepare: loadFonts,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        phone(ctx, 380, 720, 1, 0, (c) => chatScreen(c, t, { title: "白猫", time: "23:48", items: DEMO }));
+      },
+    },
+  }),
+  darkChat: resource({
+    kind: "ui",
+    title: "深色聊天（猫头像）",
+    description: "深色的微信风格聊天：她的气泡在左（白猫头像），他的在右（背对的黑猫）；items 有 time、msg、sticker（白猫贴纸）、call（「已拒绝」通话记录）、photo（照片气泡，draw 画内容）；typing 标题「对方正在输入...」，keyboard 键盘，scroll 往下移。",
+    tags: ["聊天", "微信", "深色", "夜间", "手机", "猫"],
+    usage: "chatScreen(c, abs, { title, time, items, typing, keyboard, scroll })",
+    params: z.object({ typing: z.boolean().default(false).describe("对方正在输入"), keyboard: z.boolean().default(false).describe("键盘") }),
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        chatScreen(ctx, t, { title: "白猫", time: "23:48", items: DEMO, ...p });
+      },
+    },
+  }),
+  callScreen: resource({
+    kind: "ui",
+    title: "视频来电（前置摄像头）",
+    description: "微信视频来电：她的名字压在他自己前置摄像头的画面上（他盖不住的那面“镜子”）；face 是他的表情（KidPose），ringK 0..1 让接听按钮的波纹循环，labels 文字的不透明度。前置画面单独用 frontCamera。",
+    tags: ["视频通话", "来电", "前置摄像头", "手机"],
+    usage: "callScreen(c, face, time, ringK, labels)",
+    preview: {
+      ...SCREEN,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        callScreen(ctx, FACE, "23:48", t % 1);
+      },
+    },
+  }),
+  beautyScreen: resource({
+    kind: "ui",
+    title: "美颜 App（祛斑）",
+    description: "美颜 App：他的自拍，胎记被框出来标着「瑕疵」，祛斑滑条 slider 0..1 把它抹掉，zero 0..1 让计数翻到 0。",
+    tags: ["美颜", "自拍", "祛斑", "胎记", "手机"],
+    usage: "beautyScreen(c, { slider, zero })",
+    params: z.object({ slider: z.number().min(0).max(1).default(0.4).describe("祛斑滑条"), zero: z.number().min(0).max(1).default(0).describe("计数翻到 0") }),
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        beautyScreen(ctx, p);
+      },
+    },
+  }),
+  sendDialog: resource({
+    kind: "ui",
+    title: "发送给…（分享对话框）",
+    description: "聊天上的分享对话框：「发送给：白猫」、照片、取消 / 发送；k 0..1 弹出，press 让发送变暗（按下）；photo 画照片。",
+    tags: ["发送", "分享", "对话框", "手机"],
+    usage: "sendDialog(c, k, press, (p, w, h) => selfie(p, w, h, 0, 1))",
+    params: z.object({ press: z.number().min(0).max(1).default(0).describe("按下发送") }),
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        chatScreen(ctx, t, { title: "白猫", time: "23:50", items: DEMO.slice(0, 4) });
+        sendDialog(ctx, 1, p.press, (c, w, h) => selfie(c, w, h, 0, 1));
+      },
+    },
+  }),
+  selfie: resource({
+    kind: "prop",
+    title: "自拍（胎记）",
+    description: "前置摄像头拍的自拍（600×860，缩放画进 w × h，镜像的）：mark 1 是他本来的样子，0 是美颜抹平后的；bright 亮度。",
+    tags: ["自拍", "照片", "胎记", "美颜"],
+    usage: "selfie(ctx, w, h, mark, bright)  // 画在原点",
+    params: z.object({ mark: z.number().min(0).max(1).default(1).describe("胎记"), bright: z.number().min(0).max(1).default(0.6).describe("亮度") }),
+    preview: {
+      width: 600,
+      height: 860,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        selfie(ctx, 600, 860, p.mark, p.bright);
+      },
+    },
+  }),
+  catAvatar: resource({
+    kind: "ui",
+    title: "猫头像（白猫 / 黑猫）",
+    description: "聊天头像：white 她（笑着的白猫），black 他（背对的黑猫）。whiteCatFace 是白猫的脸（挂件和贴纸用同一张），whiteCatSticker 是挥爪的白猫贴纸。",
+    tags: ["头像", "猫", "白猫", "黑猫", "贴纸"],
+    usage: "catAvatar(ctx, x, y, who, size) / whiteCatFace(ctx, x, y, s) / whiteCatSticker(ctx, x, y, s)",
+    params: z.object({ who: z.enum(["white", "black", "sticker"]).default("white").describe("哪一个") }),
+    preview: {
+      width: 300,
+      height: 300,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        if (p.who === "sticker") whiteCatSticker(ctx, 150, 150, 2);
+        else catAvatar(ctx, 150, 150, p.who, 220);
+      },
+    },
+  }),
+});

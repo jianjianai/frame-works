@@ -1,15 +1,15 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, blob, camera, card, designScene, fillBg, filtered, glow, inkLine, oval, paint, poly, rr, shaded, text, tubePts, writeOn } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { CAST, drawPerson } from "./lib/people";
-import { bedBlanket, bedroom, bookFingers, classroomBoard, classroomFront, deskFront, strawberryMilk, textbook } from "./lib/places";
-import { lightPool } from "./lib/sets";
-import { BACKSPACE_AT, chatScreen2, momentsScreen, sendButtonAt } from "./lib/chat";
-import { FingerPos } from "./lib/hand";
-import { SH, SW } from "./lib/phone";
-import { GIVE_UP, HIS_DRAFT, PHONE_CY, REST_L, REST_R, deleted, hisClassFace, hisNightChat, inWin, oldFilm, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
-import { BAR, EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, backOut, blob, camera, card, designScene, fillBg, filtered, glow, inkLine, oval, paint, poly, rr, shaded, text, tubePts, writeOn } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { CAST, drawPerson } from "@materials/s0rrow/code/people";
+import { bedBlanket, bedroom, bookFingers, classroomBoard, classroomFront, deskFront, strawberryMilk, textbook } from "@materials/s0rrow/code/places";
+import { lightPool } from "@materials/s0rrow/code/sets";
+import { BACKSPACE_AT, chatScreen2, momentsScreen, sendButtonAt } from "@materials/s0rrow/code/chat";
+import { FingerPos } from "@materials/s0rrow/code/hand";
+import { SH, SW } from "@materials/s0rrow/code/phone";
+import { GIVE_UP, HIS_DRAFT, PHONE_CY, REST_L, REST_R, deleted, hisClassFace, hisNightChat, inWin, oldFilm, phoneCloseup, pop, typed, typingThumbs } from "./story";
+import { BAR, EV } from "./timeline";
 
 /** ACT 1 (0 – 16.43s) · 他的视角
  *  1A hook: he sent a long message; 「对方正在输入...」 flickers twice; she replies 「嗯」 (her 37th)

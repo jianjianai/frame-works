@@ -1,12 +1,12 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { BEAT, C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, bokehDisc, camera, designScene, figureMask, hash, lightShaft, rimLight, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, inkLine, lerp2, oldFilm, paint, poly, oval, pulse, rbox, rr, shaded, shake, text, vgrad } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { BEAT, C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, bokehDisc, camera, designScene, figureMask, hash, lightShaft, rimLight, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, inkLine, lerp2, oldFilm, paint, poly, oval, pulse, rbox, rr, shaded, shake, text, vgrad } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { CAST, Person, banner, drawPerson, hahas } from "@materials/s0rrow/code/people";
 import { replayCorridor, replaySlip } from "./act1";
-import { Note, SH, SW, airplaneIcon, controlCenter, glassGlare, lockScreen, notification, notificationHeight, phone, phoneBack, phoneButtons, statusBar, wallpaper } from "./lib/phone";
-import { FingerKey, fingerAt, touchDot } from "./lib/hand";
-import { bedroom, bigCake, bokeh, buildingEntrance, classroom, confetti, corridor, cupcake, desk, lampPost, lightPool, street, streetBelow } from "./lib/sets";
+import { Note, SH, SW, airplaneIcon, controlCenter, glassGlare, lockScreen, notification, notificationHeight, phone, phoneBack, phoneButtons, statusBar, wallpaper } from "@materials/s0rrow/code/phone";
+import { FingerKey, fingerAt, touchDot } from "@materials/s0rrow/code/hand";
+import { bedroom, bigCake, bokeh, buildingEntrance, classroom, confetti, corridor, cupcake, desk, lampPost, lightPool, street, streetBelow } from "@materials/s0rrow/code/sets";
 
 /** ACT 5 · 第四遍副歌「其实的今天」(song 67.05 – 83.74 = work 33.66 – 50.35; draws in song time) · 重新设计版 — THE TWIST.
  *  33.66 in the dark he grabs the phone for the flashlight → the control centre (no hands, 用户: touches are dots):

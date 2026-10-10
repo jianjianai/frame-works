@@ -1,33 +1,40 @@
-import { C, Ctx, Pt, blob, curve, hash, ik2, inkLine, lerp2, oval, paint, poly, rotPt, shaded, tubePts } from "./draw";
+/**
+ * 小狗豆豆：被收养的老串串狗，奶油色毛、焦糖色背和耳朵、一只眼睛上的深色斑、灰白的嘴、红项圈和骨头吊牌、屁股上一个心形斑、一只耳朵缺了口。
+ * drawDog(ctx, x, y, s, pose)：侧面 (x, y) = 身体中心（爪子在 y + 160·s），朝右，镜像用 scale(-1, 1)；正面 (x, y) = 头中心。
+ * 另有宠物店的漂亮小狗 fluffPuppy、兔子玩偶 bunnyToy、网球 ballToy、心脏 X 光片 xray。
+ */
+import { z } from "zod";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, Pt, beginFrame, blob, curve, hash, inkLine, lerp2, oval, paint, rotPt, shaded, tubePts } from "./draw";
 
+const point = z.tuple([z.number(), z.number()]);
 /** 豆豆: an old, scruffy rescued mutt — cream fur, caramel saddle and ears, a dark patch over one eye,
  *  grey muzzle, red collar with a bone tag, a little heart-shaped spot on the hip, one torn ear.
  *  Side view faces right (mirror with a negative scale); front view looks at the camera. */
-export interface DogPose {
-  view?: "side" | "front";
-  /** side: stand / walk / sit / lie (sphinx) / flop (lying on its side) / curl (asleep, curled up)
-   *  front: lie (chin on paws or head up) / sit / head */
-  pose?: "stand" | "walk" | "sit" | "lie" | "flop" | "curl" | "head";
-  walk?: number; // gait phase (rad)
-  eyes?: "open" | "sad" | "wide" | "shut" | "happy" | "half";
-  look?: Pt; // -1..1
-  brows?: "flat" | "sad" | "up";
-  mouth?: "closed" | "open" | "pant" | "toy" | "leash" | "lick" | "whine";
-  ears?: number; // 0 = droopy … 1 = perked
-  headUp?: number; // front lie: 0 = chin on paws, 1 = head raised; side: head raise
-  headTurn?: number; // front: -1..1
-  headTilt?: number; // rad
-  tail?: number; // -1 tucked … 0 down … 1 up
-  wag?: number; // wag phase (rad); amplitude from wagAmt
-  wagAmt?: number;
-  breathe?: number; // 0..1 breathing phase
-  wet?: number;
-  young?: number; // 0 = old dog, 1 = puppy
-  cone?: boolean; // post-surgery e-collar
-  shaved?: boolean; // shaved chest with stitches
-  collar?: boolean;
-  seed?: number;
-}
+export const dogPose = z.object({
+  view: z.enum(["side", "front"]).default("side").describe("侧面（朝右）/ 正面"),
+  pose: z.enum(["stand", "walk", "sit", "lie", "flop", "curl", "head"]).optional().describe("侧面：stand 站、walk 走、sit 坐、lie 趴、flop 侧躺（昏倒或睡）、curl 蜷睡（默认 stand）；正面：lie 趴（默认）、sit 坐、head 只有头"),
+  walk: z.number().min(0).max(6.3).optional().describe("步态相位（弧度）"),
+  eyes: z.enum(["open", "sad", "wide", "shut", "happy", "half"]).default("open").describe("眼睛"),
+  look: point.optional().describe("看向 [x, y]，各 -1..1"),
+  brows: z.enum(["flat", "sad", "up"]).optional().describe("眉毛；不写时跟着眼睛"),
+  mouth: z.enum(["closed", "open", "pant", "toy", "leash", "lick", "whine"]).optional().describe("嘴：toy 叼着兔子、leash 叼着牵引绳、lick 舔、whine 呜咽"),
+  ears: z.number().min(0).max(1).optional().describe("耳朵：0 耷拉 … 1 竖起（默认侧面 0.4、正面 0.35）"),
+  headUp: z.number().min(0).max(1).optional().describe("抬头：正面趴着时 0 下巴搁在爪子上、1 抬起头"),
+  headTurn: z.number().min(-1).max(1).optional().describe("正面：转头"),
+  headTilt: z.number().min(-0.6).max(0.6).optional().describe("歪头（弧度）"),
+  tail: z.number().min(-1).max(1).optional().describe("尾巴：-1 夹着、0 垂下、1 翘起（默认 0.2）"),
+  wag: z.number().min(0).max(6.3).optional().describe("摇尾巴的相位（弧度），随时间增加"),
+  wagAmt: z.number().min(0).max(1).optional().describe("摇尾巴的幅度"),
+  breathe: z.number().min(0).max(1).optional().describe("呼吸相位"),
+  wet: z.number().min(0).max(1).default(0).describe("淋湿：毛变深、贴在身上"),
+  young: z.number().min(0).max(1).default(0).describe("0 老狗，1 幼犬"),
+  cone: z.boolean().default(false).describe("术后的伊丽莎白圈"),
+  shaved: z.boolean().default(false).describe("胸口剃毛和缝线"),
+  collar: z.boolean().default(true).describe("红项圈和骨头吊牌"),
+  seed: z.number().int().default(1700).describe("抖动线条的种子"),
+});
+export type DogPose = z.input<typeof dogPose>;
 
 export const DOG = {
   fur: "#f1dfba",
@@ -905,3 +912,111 @@ export function xray(ctx: Ctx, x: number, y: number, w: number, h: number, abs: 
 }
 
 export { rotPt };
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+export const resources = defineResources({
+  dog: resource({
+    kind: "character",
+    title: "小狗豆豆",
+    description:
+      "被收养的老串串狗：侧面站、走、坐、趴、侧躺（昏倒或睡）、蜷睡，正面趴、坐、只有头。表情、耳朵、摇尾巴、淋湿、幼犬、伊丽莎白圈、剃毛缝线都是参数。侧面朝右，要朝左时在外面 scale(-1, 1)。",
+    tags: ["狗", "小狗", "宠物", "豆豆", "动物"],
+    usage: "drawDog(ctx, x, y, s, { view, pose, eyes, mouth, ears, tail, wag, … })  // 侧面 (x, y) 身体中心，爪子在 y + 160·s；正面 (x, y) 头中心",
+    params: dogPose,
+    presets: {
+      走路: { pose: "walk" },
+      坐: { pose: "sit", ears: 0.7, tail: 0.6 },
+      趴: { pose: "lie" },
+      蜷睡: { pose: "curl", eyes: "shut" },
+      昏倒: { pose: "flop", eyes: "shut" },
+      开心摇尾巴: { pose: "stand", eyes: "happy", mouth: "pant", ears: 0.8, tail: 1, wagAmt: 1 },
+      叼着兔子: { pose: "stand", mouth: "toy" },
+      淋湿: { pose: "stand", wet: 1, eyes: "sad", ears: 0, tail: -0.6 },
+      幼犬: { pose: "sit", young: 1, eyes: "wide" },
+      术后: { pose: "lie", cone: true, shaved: true, eyes: "half" },
+      正面趴: { view: "front", pose: "lie", headUp: 0 },
+      正面坐: { view: "front", pose: "sit", eyes: "happy", mouth: "pant" },
+      正面头像: { view: "front", pose: "head", ears: 0.6 },
+    },
+    preview: {
+      width: 900,
+      height: 700,
+      duration: 2,
+      time: 0,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        const front = p.view === "front";
+        drawDog(ctx, 450, front ? 320 : 360, 1.5, {
+          ...p,
+          walk: (p.walk ?? 0) + (p.pose === "walk" ? t * 7 : 0),
+          wag: (p.wag ?? 0) + t * 12,
+          breathe: (p.breathe ?? 0) + ((t * 0.5) % 1),
+        });
+      },
+    },
+  }),
+  fluffPuppy: resource({
+    kind: "character",
+    title: "宠物店的漂亮小狗",
+    description: "宠物店橱窗里蓬松漂亮的小狗（背景角色），三款。abs 用作品时间（会动）。",
+    tags: ["狗", "宠物店", "背景"],
+    usage: "fluffPuppy(ctx, x, y, s, kind, abs, seed)",
+    params: z.object({ kind: z.number().int().min(0).max(2).default(0).describe("款式 0 / 1 / 2") }),
+    preview: {
+      width: 500,
+      height: 400,
+      duration: 2,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        fluffPuppy(ctx, 250, 240, 1.4, p.kind as 0 | 1 | 2, t, 5);
+      },
+    },
+  }),
+  bunnyToy: resource({
+    kind: "prop",
+    title: "兔子玩偶",
+    description: "豆豆的兔子玩偶（drawDog 的 mouth: \"toy\" 叼着它）。",
+    tags: ["玩具", "兔子", "玩偶"],
+    usage: "bunnyToy(ctx, x, y, s, rot)",
+    preview: {
+      width: 400,
+      height: 400,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        bunnyToy(ctx, 200, 200, 2, 0);
+      },
+    },
+  }),
+  ballToy: resource({
+    kind: "prop",
+    title: "网球",
+    description: "网球（狗玩具）。",
+    tags: ["玩具", "球", "网球"],
+    usage: "ballToy(ctx, x, y, r)",
+    preview: {
+      width: 300,
+      height: 300,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        ballToy(ctx, 150, 150, 90);
+      },
+    },
+  }),
+  xray: resource({
+    kind: "prop",
+    title: "心脏 X 光片",
+    description: "胸腔 X 光片，心脏高亮（兽医的看片灯箱）。画在 w×h 的框里，abs 让高亮呼吸。",
+    tags: ["X光", "医院", "心脏", "兽医"],
+    usage: "xray(ctx, x, y, w, h, abs, glow)",
+    params: z.object({ glow: z.number().min(0).max(1).default(1).describe("心脏高亮") }),
+    preview: {
+      width: 600,
+      height: 500,
+      duration: 2,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        xray(ctx, 60, 50, 480, 400, t, p.glow);
+      },
+    },
+  }),
+});

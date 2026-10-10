@@ -1,4 +1,10 @@
-import { C, Ctx, Pt, W, blob, glow, inkLine, oval, paint, poly, rbox, shaded, vgrad } from "./draw";
+/**
+ * 《mirrors》放学后的天台，黄昏（第三、四幕）：rooftop 栏杆、小城、夕阳、楼梯间的门（人都是逆光）；roofLight 黄金时刻的暖光；
+ * 反打 roofReverse（楼梯间的墙在低角度的阳光里）；backpack 挂白猫挂件的书包。
+ */
+import { z } from "zod";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, Pt, W, beginFrame, blob, glow, inkLine, oval, paint, poly, rbox, shaded, vgrad } from "../draw";
 import { whiteCatFace } from "./phoneui";
 
 /** 《瑕疵：0》 the school roof after class (act 3–4), golden hour. Drawn once at its wide framing in design units,
@@ -191,3 +197,57 @@ export function roofReverse(ctx: Ctx) {
   rbox(ctx, 312, 740, 456, 1240, 4, 9032, 0.8);
   paint(ctx, null, "#7a6a5c", 10);
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+export const resources = defineResources({
+  rooftop: resource({
+    kind: "set",
+    title: "天台（黄昏）",
+    description: "放学后的学校天台，从楼梯间的门朝栏杆看：栏杆外的小城和低低的夕阳（人都是逆光）、地上栏杆的长影子、左边靠近镜头的楼梯间和门（door 0..1 门开着多少）。之后画 roofLight 黄金时刻的暖光。",
+    tags: ["天台", "黄昏", "夕阳", "学校", "逆光"],
+    usage: "rooftop(ctx, abs, { door }); /* 人 */; roofLight(ctx)",
+    params: z.object({ door: z.number().min(0).max(1).default(1).describe("楼梯间的门开着多少") }),
+    preview: {
+      width: 1080,
+      height: 1920,
+      duration: 3,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        rooftop(ctx, t, p);
+        roofLight(ctx);
+      },
+    },
+  }),
+  roofReverse: resource({
+    kind: "set",
+    title: "天台反打（楼梯间）",
+    description: "从她那边看他身后：楼梯间的墙在低角度的阳光里、门、一条蓝色的傍晚天空。近景和特写的背景。",
+    tags: ["天台", "反打", "黄昏", "楼梯间"],
+    usage: "roofReverse(ctx)",
+    preview: {
+      width: 1080,
+      height: 1920,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        roofReverse(ctx);
+      },
+    },
+  }),
+  backpack: resource({
+    kind: "prop",
+    title: "书包（白猫挂件）",
+    description: "靠在矮墙边的书包，挂着她的白猫挂件（swing 是挂件的摆角）。画在天台的设计坐标里（固定位置）。",
+    tags: ["书包", "挂件", "白猫"],
+    usage: "backpack(ctx, swing)",
+    preview: {
+      width: 1080,
+      height: 1920,
+      duration: 2,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        rooftop(ctx, t);
+        backpack(ctx, Math.sin(t * 3) * 0.3);
+      },
+    },
+  }),
+});

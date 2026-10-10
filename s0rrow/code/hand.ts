@@ -1,6 +1,12 @@
-import { clamp, smooth } from "../../../../src/engine/math";
-import { C, Ctx, Pt, blob, glow, hash, inkLine, paint, poly, tubePts } from "./draw";
-import { SH, SW } from "./phone";
+/**
+ * 握手机的双手（第一人称）：heldHands 的右拇指点击、滑动，一切都在手机屏幕坐标（600×1280）里，所以手跟着手机移动和缩放。
+ * 拇指关键帧 fingerAt(abs, [[时间, x, y, 按下 0..1], …])；不画手时用 touchDot（屏幕上的半透明触点）；点击涟漪 tapRipple。
+ */
+import { z } from "zod";
+import { clamp, smooth } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, Pt, beginFrame, blob, glow, hash, inkLine, loadFonts, paint, poly, tubePts } from "./draw";
+import { SH, SW, lockScreen, phone } from "./phone";
 
 /** His two hands holding the phone (POV). The right thumb taps/swipes; everything is in
  *  phone-screen coordinates (0..SW × 0..SH), so the hands move and zoom with the phone. */
@@ -229,3 +235,84 @@ export function tapRipple(ctx: Ctx, x: number, y: number, p: number, scale = 1) 
   ctx.fill();
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+/** The thumb taps twice and swipes up (preview). */
+const DEMO_KEYS: FingerKey[] = [
+  [0, 420, 1090, 0.1],
+  [0.4, 300, 700, 0.1],
+  [0.55, 300, 700, 1],
+  [0.75, 300, 700, 0.1],
+  [1.2, 430, 980, 0.1],
+  [1.35, 430, 980, 1],
+  [1.6, 430, 560, 1],
+  [1.8, 420, 1090, 0.1],
+];
+
+export const resources = defineResources({
+  heldHands: resource({
+    kind: "character",
+    title: "握手机的双手（第一人称）",
+    description:
+      "两只手握着手机，手掌裁到机身后面，粗直的拇指指尖到 right/left 给的屏幕坐标，拇指根沿侧边滑动。cx、cy、s、rot 要和 phone() 的一致；先画 phone 再画手。look 换袖子、袖口、肤色（女主的睡衣）。重置版用户觉得手奇怪，改成不画手、只画 touchDot。",
+    tags: ["手", "手机", "第一人称", "拇指", "打字"],
+    usage: "phone(ctx, cx, cy, s, rot, screen); heldHands(ctx, cx, cy, s, rot, fingerAt(abs, keys) ?? THUMB_REST)",
+    params: z.object({
+      sleeve: z.string().default("#2e6f96").describe("袖子颜色"),
+      skin: z.string().default("#f3dcae").describe("肤色"),
+    }),
+    preview: {
+      width: 900,
+      height: 1500,
+      duration: 1.8,
+      time: 0.55,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        const thumb = fingerAt(t, DEMO_KEYS) ?? THUMB_REST;
+        phone(ctx, 450, 640, 0.95, 0, (c) => {
+          lockScreen(c, { time: "23:58", airplane: false });
+          tapRipple(c, thumb.x, thumb.y, thumb.touch > 0.6 ? (t * 3) % 1 : 0);
+        });
+        heldHands(ctx, 450, 640, 0.95, 0, thumb, LEFT_REST, 1300, { sleeve: p.sleeve, skin: p.skin });
+      },
+    },
+  }),
+  touchDot: resource({
+    kind: "ui",
+    title: "触点（不画手时）",
+    description: "拇指碰到屏幕的位置画一个半透明白点，像手机的“显示触摸操作”。在 phone() 的 screen 回调里画，悬空（touch < 0.35）时不显示。",
+    tags: ["触点", "点击", "手机"],
+    usage: "phone(ctx, cx, cy, s, rot, (c) => { screen(c); touchDot(c, fingerAt(abs, keys)); })",
+    preview: {
+      width: 700,
+      height: 1400,
+      duration: 1.8,
+      time: 0.55,
+      prepare: loadFonts,
+      draw(ctx, t) {
+        phone(ctx, 350, 700, 1, 0, (c) => {
+          lockScreen(c, { time: "23:58", airplane: false });
+          touchDot(c, fingerAt(t, DEMO_KEYS));
+        });
+      },
+    },
+  }),
+  tapRipple: resource({
+    kind: "effect",
+    title: "点击涟漪",
+    description: "手指点过的地方扩散开一圈白色的环，p 从 0 到 1。",
+    tags: ["点击", "涟漪", "手机"],
+    usage: "tapRipple(ctx, x, y, p, scale)",
+    preview: {
+      width: 400,
+      height: 400,
+      duration: 1,
+      time: 0.3,
+      background: "#2b3442",
+      draw(ctx, t) {
+        tapRipple(ctx, 200, 200, t, 2);
+      },
+    },
+  }),
+});

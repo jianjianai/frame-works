@@ -1,12 +1,12 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, beatAt, blob, bloom, bokehDisc, camera, designScene, devScale, easeIn, easeInOut, easeOut, figureMask, filtered, flash, glow, handheld, hash, ik2, inkLine, motes, onFigure, oval, paint, poly, rbox, rimLight, shaded, text, tubePts, writeOn } from "./lib/draw";
-import { KidPose, drawKid } from "./lib/kid";
-import { SELFIE_MARK, phone, phoneBack, selfie } from "./lib/phoneui";
-import { roofLight, roofReverse, rooftop } from "./lib/roof";
-import { Disguise, MARK_AT, birthmark, disguise, mapleLeaf, penHeart, penRing, px, redArrow, redNote, tape } from "./lib/story";
-import { BOOK_W, SKETCH_W, TOP_HIDE, bookHands, holdPose, sketchCover, sketchEdges, sketchSpiral } from "./lib/sketchbook";
-import { EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blob, bloom, bokehDisc, camera, designScene, devScale, easeIn, easeInOut, easeOut, figureMask, filtered, flash, glow, handheld, hash, ik2, inkLine, motes, onFigure, oval, paint, poly, rbox, rimLight, shaded, text, tubePts, writeOn } from "@materials/s0rrow/code/draw";
+import { KidPose, drawKid } from "@materials/s0rrow/code/kid";
+import { SELFIE_MARK, phone, phoneBack, selfie } from "@materials/s0rrow/code/mirrors/phoneui";
+import { roofLight, roofReverse, rooftop } from "@materials/s0rrow/code/mirrors/roof";
+import { Disguise, MARK_AT, birthmark, disguise, mapleLeaf, penHeart, penRing, px, redArrow, redNote, tape } from "@materials/s0rrow/code/mirrors/story";
+import { BOOK_W, SKETCH_W, TOP_HIDE, bookHands, holdPose, sketchCover, sketchEdges, sketchSpiral } from "@materials/s0rrow/code/mirrors/sketchbook";
+import { EV } from "./timeline";
 
 /** 第四幕（32.544 – 52.863，桥段：反转和兑现）
  *  32.544 「I have a question」她翻开速写本：一页一页都是他——3 月靠窗发呆、4 月趴桌睡觉、5 月喂一只黑猫、6 月雨里、

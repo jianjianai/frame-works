@@ -1,11 +1,11 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, beatAt, blob, bloom, bokehDisc, camera, card, designScene, devScale, easeIn, easeInOut, easeOut, figureMask, filtered, flash, glow, groundShadow, handheld, hash, inkLine, motes, onFigure, oval, paint, rbox, rimLight, shaded, text } from "./lib/draw";
-import { KidPose, drawKid } from "./lib/kid";
-import { ROOF, backpack, roofLight, roofReverse, rooftop } from "./lib/roof";
-import { Disguise, disguise } from "./lib/story";
-import { BOOK_H, BOOK_W, SKETCH_W, TOP_HIDE, bookHands, heldBook, holdPose, holdTop } from "./lib/sketchbook";
-import { EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blob, bloom, bokehDisc, camera, card, designScene, devScale, easeIn, easeInOut, easeOut, figureMask, filtered, flash, glow, groundShadow, handheld, hash, inkLine, motes, onFigure, oval, paint, rbox, rimLight, shaded, text } from "@materials/s0rrow/code/draw";
+import { KidPose, drawKid } from "@materials/s0rrow/code/kid";
+import { ROOF, backpack, roofLight, roofReverse, rooftop } from "@materials/s0rrow/code/mirrors/roof";
+import { Disguise, disguise } from "@materials/s0rrow/code/mirrors/story";
+import { BOOK_H, BOOK_W, SKETCH_W, TOP_HIDE, bookHands, heldBook, holdPose, holdTop } from "@materials/s0rrow/code/mirrors/sketchbook";
+import { EV } from "./timeline";
 
 /** 第三幕（24.417 – 32.544，C 段 "I know what you want from me … wedding ring"）
  *  24.417 「第二天 放学后」天台，黄昏逆光：她背对着我们站在栏杆边看夕阳；他全副武装（帽子、口罩、墨镜）从楼梯门走出来。

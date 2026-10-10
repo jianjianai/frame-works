@@ -1,14 +1,14 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, Pt, W, H, backOut, camera, card, designScene, easeIn, easeOut, fillBg, flash, glow, inkLine, oval, paint, shake, text } from "./lib/draw";
-import { drawKid, helmetProp } from "./lib/kid";
-import { ballToy, bunnyToy, drawDog } from "./lib/dog";
-import { bedBlanket, bedroom, entrance, hallway } from "./lib/places";
-import { SH, SW, phone } from "./lib/phone";
-import { FingerKey, fingerAt, heldHands } from "./lib/hand";
-import { photoScreen } from "./lib/screens";
-import { lightPool } from "./lib/sets";
-import { BAR, EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, Pt, W, H, backOut, camera, card, designScene, easeIn, easeOut, fillBg, flash, glow, inkLine, oval, paint, shake, text } from "@materials/s0rrow/code/draw";
+import { drawKid, helmetProp } from "@materials/s0rrow/code/kid";
+import { ballToy, bunnyToy, drawDog } from "@materials/s0rrow/code/dog";
+import { bedBlanket, bedroom, entrance, hallway } from "@materials/s0rrow/code/places";
+import { SH, SW, phone } from "@materials/s0rrow/code/phone";
+import { FingerKey, fingerAt, heldHands } from "@materials/s0rrow/code/hand";
+import { photoScreen } from "@materials/s0rrow/code/screens";
+import { lightPool } from "@materials/s0rrow/code/sets";
+import { BAR, EV } from "./timeline";
 
 /** ACT 1 (0 – 16.43s) · 小狗视角
  *  1A the hook: he comes home at 23:47 and walks straight past 豆豆 (holding a yellow helmet — rewatch clue)

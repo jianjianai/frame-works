@@ -1,12 +1,12 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, blob, camera, card, curve, designScene, easeIn, easeOut, fillBg, filtered, flash, glow, inkLine, oval, paint, poly, rbox, rr, shake, text } from "./lib/draw";
-import { drawHand, drawKid } from "./lib/kid";
-import { bunnyToy, drawDog, xray } from "./lib/dog";
-import { CAST, drawPerson } from "./lib/people";
-import { busStop, clinicCounter, clinicFront, coinJar, petShopWindow, puddle, rain, rainStreet, splashes } from "./lib/places";
-import { phone, SH, SW, statusBar } from "./lib/phone";
-import { BAR, EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, backOut, blob, camera, card, curve, designScene, easeIn, easeOut, fillBg, filtered, flash, glow, inkLine, oval, paint, poly, rbox, rr, shake, text } from "@materials/s0rrow/code/draw";
+import { drawHand, drawKid } from "@materials/s0rrow/code/kid";
+import { bunnyToy, drawDog, xray } from "@materials/s0rrow/code/dog";
+import { CAST, drawPerson } from "@materials/s0rrow/code/people";
+import { busStop, clinicCounter, clinicFront, coinJar, petShopWindow, puddle, rain, rainStreet, splashes } from "@materials/s0rrow/code/places";
+import { phone, SH, SW, statusBar } from "@materials/s0rrow/code/phone";
+import { BAR, EV } from "./timeline";
 
 /** ACT 2 (16.43 – 32.79s) · the rainy night
  *  2A the pet-shop window full of pretty puppies — and its own wet, scruffy reflection

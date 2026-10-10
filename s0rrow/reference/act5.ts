@@ -1,11 +1,11 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, backOut, beatAt, blob, camera, designScene, easeIn, easeOut, fillBg, flash, glow, paint, pulse, rbox, shake, text } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { CAST, Person, banner, drawPerson } from "./lib/people";
-import { Note, SH, SW, controlCenter, lockScreen, notification, notificationHeight, phone, wallpaper, statusBar } from "./lib/phone";
-import { FingerKey, fingerAt, heldHands } from "./lib/hand";
-import { confetti, cupcake, lampPost, lightPool } from "./lib/sets";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, W, backOut, beatAt, blob, camera, designScene, easeIn, easeOut, fillBg, flash, glow, paint, pulse, rbox, shake, text } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { CAST, Person, banner, drawPerson } from "@materials/s0rrow/code/people";
+import { Note, SH, SW, controlCenter, lockScreen, notification, notificationHeight, phone, wallpaper, statusBar } from "@materials/s0rrow/code/phone";
+import { FingerKey, fingerAt, heldHands } from "@materials/s0rrow/code/hand";
+import { confetti, cupcake, lampPost, lightPool } from "@materials/s0rrow/code/sets";
 
 /** ACT 5 (67.05 – 83.74s): THE TWIST.
  *  In the dark he grabs the phone for the flashlight → the airplane toggle is orange.

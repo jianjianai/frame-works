@@ -1,153 +1,49 @@
 # s0rrow
 
-素材库「s0rrow」。引用了它的作品可以直接使用其中的文件：`materials/s0rrow/<文件>`。
+用 s0rrow 的歌做手绘涂鸦风剧情 MV 的可复用素材：角色、场景、道具、手机界面、效果和转场、中英歌词层、颗粒层、合成音效和字体。
+
+## 怎么用
+
+- **直接导入，不要拷进作品**：`import { drawKid } from "@materials/s0rrow/code/kid"`。保存版本时作品锁定用到的版本，之后素材库再改也不影响它；要用新版本时 `materials_use` 加 `update: true`。
+- **找东西用工具**：`resources_search`（例如「下雨 街道」「手机 聊天」「回忆」「甩镜」「门」）列出资源和函数，`resource_view` 看用法、参数、预设和预览图（按作品的节拍渲染）。工作台「素材 → 资源」里可以预览、调参数，音效可以试听并拖到音轨。
+- **节拍跟作品走**：project.ts 写 `tempo`（BPM、第一小节第一拍的秒数），代码用 `beatAt` / `barAt` / `pulse` / `sinceBeat` / `beatLength`（draw.ts 从 `@frame/engine/tempo` 重新导出）。素材库里没有要按歌改的常量。
+- **字体是完整的**（fonts/），`designScene` 和 `loadFonts` 自动加载，任何文案都不缺字，不用再取子集或补字。
+- **每一幕**：`designScene(options, t0, (ctx, abs) => …)`，在 1080×1920 的设计坐标里按绝对时间画；镜头写法看 reference/。新作品从 templates/ 开始（scene.ts、visual.json、timeline.ts、歌词层 lyrics.ts）。
+- **音效**：`audio_place` 的 `sound: "s0rrow/code/sfx.ts#slam"`，或从资源里拖到音轨；不用写进作品的 audio.ts。
+- **某支片子要不一样的效果**：给素材库里的函数加参数（带默认值，已有的调用不受影响），用 `material_write` 改，然后用 `resource_view` 看一眼；不要把文件拷进作品再改（拷贝的副本不会再得到改进）。新画的、以后还会用到的角色、场景、道具放进对应的文件，并在文件末尾的 `resources` 里声明（写法见 frame_guide resources）。
+
+## 目录
+
+| 文件 | 内容 |
+|---|---|
+| `code/draw.ts` | 基础库：抖动线条、形状、上色、文字和字体、节拍、镜头、离屏、光影、回忆效果、`designScene` |
+| `code/kid.ts` | 主角和女主（表情、服装、手臂 IK、腿、背影），单只手、头盔、发卡 |
+| `code/people.ts` | 其他人（`CAST`）、X 脸、生日横幅、笑声涂鸦 |
+| `code/dog.ts` | 小狗豆豆、宠物店小狗、兔子玩偶、网球、X 光片 |
+| `code/hand.ts` | 握手机的双手、触点、点击涟漪 |
+| `code/phone.ts` | 手机、锁屏（黄昏秋千壁纸）、群聊、动态、控制中心、通知、角标、手机背面 |
+| `code/chat.ts` | 微信风格聊天、朋友圈、资料页、主页、App 窗口、关机、开机、头像、贴纸、合照 |
+| `code/screens.ts` | 《unhappy》的相册、存钱、外卖接单、便利贴、小狗照片 |
+| `code/sets.ts`、`code/shared.ts` | 《i have no friends》的场景和道具，生日书桌镜头 |
+| `code/places.ts` | 《unhappy》的场景（家、雨夜、宠物医院、学校、便利店）、雨、道具 |
+| `code/mirrors/` | 《mirrors》的场景（浴室、夜走廊和落地镜、教室、天台、客厅）、深色手机界面、速写本、胎记、伪装、红笔批注 |
+| `code/effects.ts` | 效果和转场的预览（函数在 draw.ts）：回忆、进回忆转场、甩镜、冲镜、白场黑场、高光溢出、灰色世界、光柱、景深、手持镜头、轮廓光、影子、时间卡 |
+| `code/lyrics.ts` | 中英卡拉 OK 歌词层（作品给歌词数据、段落样式和钩子）、两行大字幕 |
+| `code/grain.ts` | 胶片颗粒和暗角（visual.json 里 overlay 叠在最上面） |
+| `code/sfx.ts` | 78 个合成音效（中文名、时长、重音时刻） |
+| `fonts/` | 6 款完整字体 |
+| `templates/` | 新作品的 scene.ts、visual.json、timeline.ts、scenes/lyrics.ts |
+| `tools/fetch-krc.mjs` | 酷狗 KRC 逐词歌词时间 → 作品的 scenes/krc.ts |
+| `reference/` | 几支片子的分镜代码：镜头写法参考，只看不拷（见 reference/README.md） |
+
+不放歌曲、歌词和作品自己的混音。
 
 ## 来源与许可
-- `i-have-no-friends/i-have-no-friends.flac`：来源 用户提供：s0rrow - i have no friends（99.1 秒）；许可 用户提供，版权归原作者；仅用于该用户自己的作品
-- `i-have-no-friends/cover.jpg`：来源 用户提供：s0rrow - i have no friends 封面（3000×3000）；许可 用户提供，版权归原作者
-- `i-have-no-friends/i-have-no-friends.lrc`：来源 用户提供的 LRC（逐行时间）；许可 用户提供，歌词版权归原作者
-- `i-have-no-friends/lyrics-data.ts`：来源 work-bdd5c2f8：酷狗 KRC 逐字时间 + 自译中文（词数与英文一一对应）；许可 歌词版权归原作者；中文翻译为本作品自译
-- `i-have-no-friends/audio-template.json`：来源 work-bdd5c2f8 的混音：歌曲三段 + 65.59–67.07s 低通闷音轨 + 音乐对音效闪避；许可 自制
-- `fonts/gochi-hand.woff2`：来源 Google Fonts Gochi Hand（按作品用字子集化）；许可 SIL OFL 1.1
-- `fonts/long-cang.woff2`：来源 Google Fonts Long Cang 龙藏体（按作品用字子集化）；许可 SIL OFL 1.1
-- `fonts/noto-sans-sc-400.woff2`：来源 Google Fonts Noto Sans SC 400（按作品用字子集化）；许可 SIL OFL 1.1
-- `fonts/noto-sans-sc-700.woff2`：来源 Google Fonts Noto Sans SC 700（按作品用字子集化）；许可 SIL OFL 1.1
-- `fonts/permanent-marker.woff2`：来源 Google Fonts Permanent Marker（按作品用字子集化）；许可 SIL OFL 1.1
-- `fonts/zcool-kuaile.woff2`：来源 Google Fonts ZCOOL KuaiLe 站酷快乐体（按作品用字子集化）；许可 SIL OFL 1.1
-- `code/draw.ts`：来源 work-bdd5c2f8：手绘笔刷、字体、节拍；许可 自制
-- `code/hand.ts`：来源 work-bdd5c2f8：握手机的手和拇指；许可 自制
-- `code/kid.ts`：来源 work-bdd5c2f8：主角；许可 自制
-- `code/people.ts`：来源 work-bdd5c2f8：同学、X 脸；许可 自制
-- `code/phone.ts`：来源 work-bdd5c2f8：手机界面；许可 自制
-- `code/sets.ts`：来源 work-bdd5c2f8：场景；许可 自制
-- `code/shared.ts`：来源 work-bdd5c2f8：生日书桌；许可 自制
-- `code/grain.ts`：来源 work-bdd5c2f8：胶片颗粒图层；许可 自制
-- `code/fetch-fonts.mjs`：来源 work-bdd5c2f8：按用到的字符向 Google Fonts 取字体子集；许可 自制
-- `code/sfx-audio.ts`：来源 work-bdd5c2f8：代码合成音效（打字、发送、失败、火柴、吹蜡烛、点击、消息轰炸、蛋糕、礼花、回复）；许可 自制
-- `code/lyrics.ts`：来源 work-bdd5c2f8：中英卡拉 OK 歌词图层 + 钩子标题 + 标题胶囊 + 红笔改写（钩子文字和时间是该作品专属，复用时改 hook()）；许可 自制
-- `templates/scene.ts`：来源 work-bdd5c2f8：六幕 + lyrics + grain 的合成入口；许可 自制
-- `templates/visual.json`：来源 work-bdd5c2f8：图层时间轴模板（幕首尾相接 + lyrics + grain overlay 0.5）；许可 自制
-- `reference/act1.ts`：来源 work-bdd5c2f8 第一幕：冷开场、生日书桌、闪回（镜头写法参考）；许可 自制
-- `reference/act2.ts`：来源 work-bdd5c2f8 第二幕：砸字、查手机、朋友动态、被子盖脸（镜头写法参考）；许可 自制
-- `reference/act3.ts`：来源 work-bdd5c2f8 第三幕：公园秋千、情侣、牵手倒V（镜头写法参考）；许可 自制
-- `reference/act4.ts`：来源 work-bdd5c2f8 第四幕：群聊发送失败、点蜡烛许愿（镜头写法参考）；许可 自制
-- `reference/act5.ts`：来源 work-bdd5c2f8 第五幕：飞行模式反转、消息洪水、X脸消失（镜头写法参考）；许可 自制
-- `reference/act6.ts`：来源 work-bdd5c2f8 尾声：分耳机、发送成功、P.S.（镜头写法参考）；许可 自制
-- `templates/lyrics-data.template.ts`：来源 work-bdd5c2f8 的 lyrics-data.ts 去掉歌词后的模板；许可 自制
-- `tools/fetch-krc.mjs`：来源 按酷狗 KRC 协议自写（见经验库）；许可 自制；未经测试的模板，使用前先对一首歌跑通
-- `code/draw.ts`：来源 work-bdd5c2f8：手绘笔刷、字体、节拍（顶部 FONT_DIR、BPM、BEAT0 每支视频要改）；许可 自制
-- `code/lyrics.ts`：来源 work-bdd5c2f8：中英卡拉 OK 歌词图层 + 钩子标题 + 标题胶囊 + 红笔改写（顶部 LYRICS_END、lineStyle 和 hook() 每支视频要改）；许可 自制
-- `tools/fetch-fonts.mjs`：来源 work-bdd5c2f8：按 scenes/ 里用到的字符向 Google Fonts 取字体子集；许可 自制
-- `tools/fetch-krc.mjs`：来源 work-bdd5c2f8：酷狗 KRC 逐词时间 → scenes/lib/krc.ts（已验证，输出与原作品 krc.ts 一致）；许可 自制
-- `templates/visual.json`：来源 图层时间轴模板：55 秒四幕（钩子/铺垫/反转/尾声，起点按歌曲段落起拍处调整）+ lyrics + grain overlay 0.5；许可 自制
-- `templates/scene.ts`：来源 合成入口模板：四幕 + lyrics + grain；许可 自制
-- `code/kid.ts`：来源 work-d1187f37《unhappy》精细化重画：分层蓬发+点状纹理、虹膜/高光/眼皮折痕、眉毛、明暗、帽衫口袋抽绳罗纹、关节手臂腿（IK）、真实手型、骑手服/头盔、背面视角；保留派对帽/兜帽/耳机/奶油
-- `code/people.ts`：来源 work-d1187f37 精细化：脸部明暗、带虹膜高光的眼睛、眉毛、发型发丝线、关节袖子+真实手、白大褂/口罩/竖拇指；保留 X 脸与旧接口
-- `code/dog.ts`：来源 work-d1187f37 新增：小狗豆豆（侧面站/走/坐/趴/侧躺/蜷睡，正面趴/坐/头像；表情、耳朵、摇尾、淋湿、幼犬、伊丽莎白圈、剃毛缝线）+ 宠物店小狗 + 兔子玩偶/网球 + X 光片
-- `code/places.ts`：来源 work-d1187f37 新增场景：玄关（门可开、存钱罐、传单、头盔、日历）、卧室+被子、房门走廊、雨夜街道+宠物店橱窗、公交站、宠物医院门口/前台/手术室走廊/住院笼、封面的树；雨、水花、水洼
-- `code/screens.ts`：来源 work-d1187f37 新增手机界面：相册看图（可显示日期说明）、存钱目标、外卖接单；便利贴
-- `code/draw.ts`：来源 work-d1187f37：新增 tubePts（锥形管：四肢/尾巴/发绺）、ik2（两段关节）、shaded（填色+裁剪内上明暗+描边）、lerp2/rotPt、filtered（离屏 CSS 滤镜，如回忆的 sepia）；顶部常量是《unhappy》的值，每支要改
-- `code/lyrics.ts`：来源 work-d1187f37：中英逐词歌词 + 钩子大字→标题胶囊（计数变化弹一下、视角翻转）+ 红笔划掉钩子里的说法并改写 + 反转字幕（带暗底条）；钩子文案和时间点每支要改
-- `tools/fetch-fonts.mjs`：来源 work-d1187f37：符号表加 ✓ ¥
-- `code/sfx-audio.ts`：来源 合并两支作品的合成音效：第一支 typing/send/fail/match/blow/flood/splat/pop/reply + 《unhappy》keys/doorOpen/doorClose/roomDoor/ball/slam/cough/squeak/rain/heartbeat/click/splash/whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps
-- `reference/unhappy/act1.ts`：来源 《unhappy》第一幕参考（小狗视角：钩子、手机照片、门关上+延时、离家出走），只看不拷
-- `reference/unhappy/act2.ts`：来源 《unhappy》第二幕参考（雨夜橱窗倒影、sepia 回忆、心跳暗角、手电筒、抱狗、X 光、拍钱），只看不拷
-- `reference/unhappy/act3.ts`：来源 《unhappy》第三幕参考（倒带切主人视角、便利贴、睡着后摸头、手机三连屏、手术中延时、住院日历翻页、醒来舔手），只看不拷
-- `reference/unhappy/act4.ts`：来源 《unhappy》尾声参考（封面的树下、落叶、回扣钩子的金句、回看彩蛋），只看不拷
-- `reference/unhappy/timeline.ts`：来源 《unhappy》的小节和事件时间表（画面和音效共用一份时间），新作品照这个写法
-- `code/kid.ts`：来源 work-d1187f37 聊天版：新增女主 who:"girl"（波波头+刘海+侧发+向日葵发卡、大眼睛+睫毛、雀斑腮红、睡衣/开衫百褶裙、背面），手的肤色跟随角色
-- `code/chat.ts`：来源 work-d1187f37 新增：微信风格聊天（深色/浅色、时间分隔、语音、表情贴纸、「对方正在输入...」、多行草稿可打字/删除、键盘、近景大字号）+ 朋友圈帖子与合照 + 资料卡 + 关机滑块 + 开机画面
-- `code/places.ts`：来源 work-d1187f37 聊天版新增：女生房间（和男生房间镜像、串灯、拍立得）+ 粉被子、教室正面视角 + 正面课桌、学校走廊、清晨街道 + 24 小时便利店、店内冰柜收银、草莓牛奶（可贴便利贴）
-- `code/people.ts`：来源 work-d1187f37：CAST 加女主的两个朋友 mei（马尾）、qi（丸子头眼镜）和同学 stu1–4
-- `code/hand.ts`：来源 work-d1187f37：heldHands 加 look 参数（袖子/袖口/肤色/划痕），女生睡衣袖子可用
-- `code/lyrics.ts`：来源 work-d1187f37 聊天版：钩子两行（关键字放大变色）→ 标题胶囊三段翻转；caption() 通用两行大字幕（暗底条）；回看彩蛋卡片
-- `code/sfx-audio.ts`：来源 三套合成音效合并：第一支、小狗版、聊天版（um/note/typing2/typingLong/del/send2/lamp/powerOff/rustle/rewind2/heartFast/bell/steps/shutter/birds/boot/run/store/pay/door/milk/sparkle/stickerPop）
-- `reference/unhappy-chat/act1.ts`：来源 《unhappy》聊天版第一幕参考（钩子手机近景、聊天记录滚动、朋友圈、教室对视躲书后、下课送牛奶、打字删除发送、关灯），只看不拷
-- `reference/unhappy-chat/act2.ts`：来源 《unhappy》聊天版第二幕参考（头像铺满、黑屏倒影、推近「对方正在输入」、关机滑块、被子、反转：她哭着删字），只看不拷
-- `reference/unhappy-chat/act3.ts`：来源 《unhappy》聊天版第三幕参考（倒带切视角、朋友消息横幅、书后脸红扑通、朋友合照定格成朋友圈照片、发出整段），只看不拷
-- `reference/unhappy-chat/act4.ts`：来源 《unhappy》聊天版第四幕参考（镜子、开机锁屏通知、高亮最后一句、清晨奔跑、便利店、桌上牛奶「我也是」、对视），只看不拷
-- `reference/unhappy-chat/act5.ts`：来源 《unhappy》聊天版尾奏参考（捂脸再笑、再问一次、「嗯！！」+贴纸、上下分屏两人都笑），只看不拷
-- `reference/unhappy-chat/story.ts`：来源 《unhappy》聊天版的剧情文字与工具（聊天记录、打字/删除进度、双拇指打字、手机近景、泪滴）
-- `reference/unhappy-chat/timeline.ts`：来源 《unhappy》聊天版的小节与事件时间表（整首歌、尾奏缩成一遍后 73.3 秒）
-- `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：主歌2 她的视角 → 第二天他开机
-- `reference/unhappy-chat/act4.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：尾奏 我也是 → 嗯！！ → 上下分屏
-- `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：剧情文字和共用镜头（phoneCloseup、typingThumbs、hisFaceReading）
-- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：小节和事件表（主歌2 接尾奏最后一遍）
-- `code/places.ts`：来源 work-d1187f37《unhappy》：新增 classroomBoard（后排看黑板）、textbook（物理课本）
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版：重拍的教室（越肩→对视→课本→他的脸→放学递牛奶→空桌牛奶）
-- `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑：主歌2 她的视角（教室回忆用他的笑脸）
-- `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：剧情文字和共用镜头（phoneCloseup、typingThumbs、hisFaceReading、hisClassFace）
-- `code/hand.ts`：来源 work-d1187f37《unhappy》：双手握手机重画（手掌在机身后、粗直拇指斜搭键盘、袖子出画），按用户给的卡通参考图定动作
-- `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：剧情文字和共用镜头（phoneCloseup 0.95 倍 + 手持晃动、typingThumbs 平滑打字、hisFaceReading、hisClassFace）
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（手机近景改用 PHONE_CY / REST_R）
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（手机近景改用 PHONE_CY / PHONE_S）
-- `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 act3
-- `reference/unhappy-chat/act4.ts`：来源 work-d1187f37《unhappy》聊天版 act4
-- `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：phoneCloseup 改为只画手机 + 触点（用户决定不画手）
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1：教室里主角的手改成简单的圆（roundHand）
-- `code/kid.ts`：来源 work-d1187f37《unhappy》：新增 bendL/bendR（肘部弯向，递东西的 V 字臂）
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：递牛奶用 V 字臂
-- `code/places.ts`：来源 work-d1187f37《unhappy》：新增 bookFingers（举书的指尖）、huggedPillow（抱枕头：胳膊交叉在前、圆手）
-- `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 act3：抱枕头和书后偷看重画
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）
-- `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 act3：发出的「嗯」停留 + 推近 + 脉冲 + 红笔「删掉了 37 个字」
-- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版 57 秒剪辑的事件表（她发「嗯」提前到 35.55，停到 36.45）
-- `code/chat.ts`：来源 work-d1187f37《unhappy》：朋友圈时间戳放大到 28px、夜间模式提亮
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：朋友圈镜头上移并推近「5分钟前」
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：开场镜头语言（屏息推近、急推震动、惊讶→失落、回忆暖/现在冷+内心独白）
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：聊天记录平稳下翻 → 点头像 → 朋友圈翻页滑入
-- `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：phoneCloseup 新增 steady 选项
-- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（scrollDown / tapAvatar / pagePush）
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：聊天记录去掉暖色滤镜
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：pretty/ugly 的自卑镜头语言
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：倒影低头向下看
-- `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：phoneCloseup 新增 backdrop、新增 phoneBody（边框高光+侧键）
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：黑屏倒影加机身、玻璃反光和虚化背景
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：往上翻→停住→快速划到底→点头像
-- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（scrollUp / scrollDown / tapAvatar / pagePush）
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：切点对齐乐句结尾的拍点
-- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（uglyEnd / typingA / typingB / lieDown 按乐句对齐）
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：头像留到 pretty 唱完再熄屏
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：被子里 → 黑房间 → 推出窗外只有她的窗亮着
-- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（新增 curledUp）
-- `reference/unhappy-chat/story.ts`：来源 work-d1187f37《unhappy》聊天版：新增 editing() 与改稿步骤，表白加长
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：反转改为打好了却犹豫不发
-- `reference/unhappy-chat/act3.ts`：来源 work-d1187f37《unhappy》聊天版 act3：00:52 改稿后发出
-- `reference/unhappy-chat/act1.ts`：来源 work-d1187f37《unhappy》聊天版 act1（作品里文件名为 act1-shots.ts）：推进合照 → 暖白 → 回忆色调的教室
-- `code/chat.ts`：来源 work-d1187f37《unhappy》：「对方正在输入...」字号与名字一致（32px）
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：盯着嗯、错过对方正在输入的镜头语言
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：聚光逐渐加深到只剩「嗯」，删掉躺床镜头
-- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（去掉 lieDown）
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：两扇窗一暗一亮的过渡镜头
-- `reference/unhappy-chat/act2.ts`：来源 work-d1187f37《unhappy》聊天版 act2（作品里文件名为 act2-shots.ts）：他的灯灭 → 她的房间 → 犹豫直接进回忆
-- `reference/unhappy-chat/timeline.ts`：来源 work-d1187f37《unhappy》聊天版事件表（twist 提前到 28.70，hisLightOff）
-- `code/draw.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/draw.ts
-- `code/people.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/people.ts
-- `code/phone.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/phone.ts
-- `code/sets.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/sets.ts
-- `code/shared.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/shared.ts
-- `reference/no-friends-remake/act1.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/act1.ts
-- `reference/no-friends-remake/act4.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/act4.ts
-- `reference/no-friends-remake/act5.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/act5.ts
-- `reference/no-friends-remake/act6.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/act6.ts
-- `reference/no-friends-remake/opening.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lib/opening.ts
-- `reference/no-friends-remake/lyrics.ts`：来源 work-afa1129b（i have no friends 重置版）scenes/lyrics.ts
-- `reference/no-friends-remake/visual.json`：来源 work-afa1129b（i have no friends 重置版）visual.json
-- `docs/README.md`：来源 整理自 work-bdd5c2f8、work-d1187f37、work-afa1129b
-- `code/mirrors/sets.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `code/mirrors/roof.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `code/mirrors/living.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `code/mirrors/sketchbook.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `code/mirrors/phoneui.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `code/mirrors/story.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `code/mirrors/README.md`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/act1.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/night.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/act2.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/act3.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/act4.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/act5.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/lyrics.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/timeline.ts`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/visual.json`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
-- `reference/mirrors/audio.json`：来源 《mirrors》瑕疵：0（frame-works/9586fbc4）
+
+- `code/`、`templates/`、`tools/`、`reference/`：为《i have no friends》（work-bdd5c2f8，重置版 work-afa1129b）、《unhappy》（work-d1187f37）、《mirrors》（frame-works/9586fbc4）编写；音效全部代码合成。许可：自制。
+- `reference/cover.jpg`：《i have no friends》的歌曲封面，用户提供，只作画风参考，不放进成片；版权归原作者。
+- `fonts/gochi-hand.ttf`：Google Fonts，Gochi Hand；SIL Open Font License 1.1。
+- `fonts/permanent-marker.ttf`：Google Fonts，Permanent Marker（Font Diner）；Apache License 2.0。
+- `fonts/zcool-kuaile.ttf`：Google Fonts，ZCOOL KuaiLe 站酷快乐体；SIL Open Font License 1.1。
+- `fonts/long-cang.ttf`：Google Fonts，Long Cang 龙藏体；SIL Open Font License 1.1。
+- `fonts/noto-sans-sc-400.ttf`、`fonts/noto-sans-sc-700.ttf`：Google Fonts，Noto Sans SC（400、700）；SIL Open Font License 1.1。

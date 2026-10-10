@@ -1,4 +1,10 @@
-import { Ctx, H, Pt, W, blit, buffer, castShadow, devScale, figureMask, filtered, flicker, glow, lightShaft, motes, onFigure, rimLight, vgrad } from "./draw";
+/**
+ * 生日书桌镜头 birthdayDesk（《i have no friends》第一幕冷开场和第四幕故事绕回来时同一个构图）：烛光是主光，照亮他的脸和书桌、
+ * 在墙上投出比他大的颤动的影子，身后的月光勾出头发和肩膀的轮廓并投下有浮尘的光柱。layer 把火苗和其余分开画（其余走 grade，火苗保持彩色）。
+ */
+import { z } from "zod";
+import { defineResources, resource } from "@frame/engine/resources";
+import { Ctx, H, Pt, W, beginFrame, blit, buffer, castShadow, devScale, figureMask, filtered, flicker, glow, lightShaft, loadFonts, motes, onFigure, rimLight, vgrad } from "./draw";
 import { KidPose, drawKid } from "./kid";
 import { lockScreen, phone } from "./phone";
 import { bedroom, cupcake, desk, fairyGlow, partyHorn } from "./sets";
@@ -320,3 +326,34 @@ function smokeWisp(ctx: Ctx, x: number, y: number, t: number, abs: number) {
   }
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+export const resources = defineResources({
+  birthdayDesk: resource({
+    kind: "set",
+    title: "生日书桌（烛光镜头）",
+    description:
+      "书桌前过生日的整个镜头：lit 烛光（0 吹灭）、smoke 吹灭后的余烬和烟、kid 覆盖他的姿势（默认戴派对帽、手放桌上、低头看蛋糕）、phoneOn 手机屏幕亮度、dark 光以外的暗、bgBlur 背景景深、horn 派对喇叭、light 一瞬间的另一盏暖光（划亮的火柴）、clue 窗外楼下的线索。layer: scene 走 grade，flame 在外面画彩色。FLAME 是火苗的位置。",
+    tags: ["生日", "书桌", "蜡烛", "烛光", "光影", "冷开场"],
+    usage: "birthdayDesk(ctx, abs, { lit, smoke, kid, phoneOn, dark, layer, bgBlur, horn, light, clue })",
+    params: z.object({
+      lit: z.number().min(0).max(1).default(1).describe("烛光"),
+      smoke: z.number().min(0).max(1).default(0).describe("吹灭后的烟"),
+      phoneOn: z.number().min(0).max(1).default(1).describe("手机屏幕亮度"),
+      dark: z.number().min(0).max(1).optional().describe("光以外的暗（默认约 0.9）"),
+      bgBlur: z.number().min(0).max(8).default(0).describe("背景景深（px）"),
+      clue: z.number().min(0).max(1).default(0).describe("窗外的线索"),
+    }),
+    presets: { 吹灭: { lit: 0, smoke: 0.7 }, 手机黑屏: { phoneOn: 0 } },
+    preview: {
+      width: 1080,
+      height: 1920,
+      duration: 3,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        birthdayDesk(ctx, t, { ...p, phoneTime: "23:58" });
+      },
+    },
+  }),
+});

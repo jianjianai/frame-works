@@ -1,4 +1,14 @@
-import { C, Ctx, F, H, Pt, W, blob, devScale, filtered, glow, hash, inkLine, lightShaft, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
+/**
+ * 《mirrors》（瑕疵：0）的场景，设计坐标 1080×1920，每个场景按最宽的构图画一次，镜头在上面移动：
+ * 浴室夜景（BATH：bathroom、冷色壁灯 bathLight、门缝暖光 bathDoorLight；镜子里的内容由镜头自己画）、
+ * 夜走廊落地镜（HALL：hallRoom、镜面裁剪 hallGlass、hallMirrorFrame、hallMirrorShadow、hallLight 灯光和月光光柱、前景绿植 hallPlant）、
+ * 飞起来的床单 clothSheet（盖好的样子 SHEET_ON_MIRROR，飞行关键帧见 reference/mirrors/act1.ts）、盖好后的墙 hallwayNight、
+ * 从前往后拍的教室（CLASS：classroomBack 黑板报彩旗钟储物格、classroomSun、deskAt；坐着的人头心 y = 520 + 264·s、桌前沿 = 头 + 300·s）。
+ */
+import { z } from "zod";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, F, H, Pt, W, beginFrame, blob, devScale, filtered, glow, hash, inkLine, lightShaft, loadFonts, oval, paint, poly, rbox, shaded, text, vgrad } from "../draw";
+import { drawKid } from "../kid";
 import { newspaper, tape } from "./story";
 
 /** 《瑕疵：0》 sets, drawn once at their final framing in design units (1080×1920); the shots move a camera over them. */
@@ -818,3 +828,107 @@ export function deskAt(ctx: Ctx, x: number, y: number, s: number, seed: number, 
   }, C.ink, 5);
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+/** Previews of whole sets: the 1080×1920 design frame. */
+const FRAME = { width: 1080, height: 1920, duration: 3, prepare: loadFonts };
+
+export const resources = defineResources({
+  bathroom: resource({
+    kind: "set",
+    title: "浴室（夜）",
+    description: "一点透视的浴室，后墙是洗手台上方的镜子（BATH.glass 是镜面，镜子里的内容由镜头自己画）；光只有镜子两侧的冷色壁灯 bathLight 和门缝漏进来的暖光 bathDoorLight（人之前画）。",
+    tags: ["浴室", "镜子", "夜晚", "冷光"],
+    usage: "bathroom(ctx, abs); /* 镜面内容 */; bathDoorLight(ctx); /* 人 */; bathLight(ctx, abs)",
+    preview: {
+      ...FRAME,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        bathroom(ctx, t);
+        bathDoorLight(ctx);
+        bathLight(ctx, t);
+      },
+    },
+  }),
+  hallMirror: resource({
+    kind: "set",
+    title: "夜走廊和落地镜",
+    description:
+      "夜里的走廊：墙纸、护墙板、地板、窗外的月亮和小城灯火、纱帘、壁灯（hallRoom），落地镜（hallGlass 是镜面路径，裁剪后画倒影；hallMirrorFrame 木框；hallMirrorShadow 墙上的影子），hallLight 灯光和月光光柱，hallPlant 前景虚化的绿植。sheet 时用 clothSheet 把床单盖在镜子上（SHEET_ON_MIRROR）。",
+    tags: ["走廊", "镜子", "落地镜", "夜晚", "月光", "床单"],
+    usage: "hallRoom(ctx, abs); hallMirrorShadow(ctx); ctx.save(); hallGlass(ctx); ctx.clip(); /* 倒影 */ ctx.restore(); hallMirrorFrame(ctx); hallLight(ctx, abs); hallPlant(ctx, abs)",
+    params: z.object({ sheet: z.boolean().default(false).describe("床单盖在镜子上") }),
+    presets: { 盖上床单: { sheet: true } },
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        hallRoom(ctx, t);
+        hallMirrorShadow(ctx);
+        ctx.save();
+        hallGlass(ctx);
+        ctx.fillStyle = "#1b2233";
+        ctx.fill();
+        ctx.restore();
+        hallMirrorFrame(ctx);
+        if (p.sheet) clothSheet(ctx, SHEET_ON_MIRROR, t);
+        hallLight(ctx, t);
+        hallPlant(ctx, t);
+      },
+    },
+  }),
+  clothSheet: resource({
+    kind: "prop",
+    title: "飞起来的床单",
+    description:
+      "被扔起来的床单：q = [左上 x, 左上 y, 右上 x, 右上 y, 右下 x, 右下 y, 左下 x, 左下 y, 顶边拱度（负 = 向上）, 拱形 sq（0 拱形 … 0.33 平缓）, 侧边鼓出, 下摆飘动]。左边灯光暖、透光，右边冷，有柔软的褶皱。飞行用关键帧插值（reference/mirrors/act1.ts 的 SHEET_KEYS / sheetAt），SHEET_ON_MIRROR 是盖在镜子上的样子。",
+    tags: ["床单", "布", "飞", "扔"],
+    usage: "clothSheet(ctx, q, abs, seed)",
+    params: z.object({ flutter: z.number().min(0).max(30).default(10).describe("下摆飘动") }),
+    preview: {
+      ...FRAME,
+      background: "#26293a",
+      draw(ctx, t, p) {
+        const q = [...SHEET_ON_MIRROR];
+        q[11] = p.flutter * (1 + 0.3 * Math.sin(t * 3));
+        clothSheet(ctx, q, t);
+      },
+    },
+  }),
+  hallwayNight: resource({
+    kind: "set",
+    title: "走廊（盖好床单后，虚化背景）",
+    description: "床单盖上镜子之后的同一面墙，当虚化背景画（filtered 加 blur）。",
+    tags: ["走廊", "夜晚", "背景", "虚化"],
+    usage: "filtered(ctx, \"blur(6px)\", (c) => hallwayNight(c, abs), \"bg\")",
+    preview: {
+      ...FRAME,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        hallwayNight(ctx, t);
+      },
+    },
+  }),
+  classroomBack: resource({
+    kind: "set",
+    title: "教室（从前往后拍，黑板报）",
+    description: "从讲台往后拍的教室：黑板报、彩旗、钟、储物格、窗（CLASS 是透视参数）。classroomSun 是午后的阳光（在后排之后画，最亮的是她靠窗的课桌）。坐着的人头心 y = 520 + 264·s，桌子 deskAt 的前沿 = 头 + 300·s；先画人再画课桌。",
+    tags: ["教室", "学校", "黑板报", "后墙", "阳光"],
+    usage: "classroomBack(ctx, abs); drawKid(…); deskAt(ctx, x, y, s, seed, items); classroomSun(ctx, abs)",
+    params: z.object({ student: z.boolean().default(true).describe("预览里放一个学生") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        classroomBack(ctx, t);
+        if (p.student) {
+          const s = 0.7;
+          const y = 520 + 264 * s;
+          drawKid(ctx, 540, y, s, { arms: "table" });
+          deskAt(ctx, 540, y + 300 * s, s, 31);
+        }
+        classroomSun(ctx, t);
+      },
+    },
+  }),
+});

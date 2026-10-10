@@ -1,12 +1,12 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, blob, bloom, camera, designScene, easeIn, easeInOut, easeOut, figureMask, glow, handheld, inkLine, motes, onFigure, oval, paint, poly, rimLight, shaded, shake, text, vgrad } from "./lib/draw";
-import { KidPose, drawKid } from "./lib/kid";
-import { coffeeTable, livingBokeh, livingLight, livingRoom } from "./lib/living";
-import { aimPhone, chatScreen, phoneBack } from "./lib/phoneui";
-import { BATH, bathDoorLight, bathLight, bathroom } from "./lib/sets";
-import { Disguise, birthmark, disguise, newspaper, sleeveHand, tape } from "./lib/story";
-import { EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, backOut, blob, bloom, camera, designScene, easeIn, easeInOut, easeOut, figureMask, glow, handheld, inkLine, motes, onFigure, oval, paint, poly, rimLight, shaded, shake, text, vgrad } from "@materials/s0rrow/code/draw";
+import { KidPose, drawKid } from "@materials/s0rrow/code/kid";
+import { coffeeTable, livingBokeh, livingLight, livingRoom } from "@materials/s0rrow/code/mirrors/living";
+import { aimPhone, chatScreen, phoneBack } from "@materials/s0rrow/code/mirrors/phoneui";
+import { BATH, bathDoorLight, bathLight, bathroom } from "@materials/s0rrow/code/mirrors/sets";
+import { Disguise, birthmark, disguise, newspaper, sleeveHand, tape } from "@materials/s0rrow/code/mirrors/story";
+import { EV } from "./timeline";
 import { hisChatView, phoneAt } from "./night";
 
 /** 第二幕（16.29 – 24.417，B 段 "Ooh I like the feeling of my doubts / … couch / oh well ×3"）

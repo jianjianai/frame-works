@@ -1,5 +1,13 @@
-import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, Pt, blob, inkLine, measure, oval, paint, poly, rr, text } from "./draw";
+/**
+ * 微信风格的聊天（《unhappy》聊天版，600×1280 屏幕坐标）：两侧气泡、时间分隔、语音、表情贴纸、「对方正在输入...」、
+ * 可以打字和删字的多行草稿、键盘、夜间模式、给某句话划荧光笔（markAt / bubbleAt 给出它在屏幕上的框，镜头对准它推近，
+ * 不要自己猜坐标）。另有朋友圈 momentsScreen、资料页 profileScreen（可左右划的相册）、关机滑块 powerOffScreen、
+ * 开机 bootScreen、主页 homeScreen（微信图标在 WECHAT_AT）、App 窗口缩放 appWindow、头像 avatar、贴纸 sticker、合照 selfiePhoto。
+ */
+import { z } from "zod";
+import { clamp } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, F, Pt, beginFrame, blob, inkLine, loadFonts, measure, oval, paint, poly, rr, text } from "./draw";
 import { drawHand, drawKid } from "./kid";
 import { CAST, drawPerson } from "./people";
 import { SH, SW, statusBar } from "./phone";
@@ -840,3 +848,181 @@ export function appWindow(ctx: Ctx, k: number, at: Pt, drawApp: (c: Ctx) => void
   ctx.fillRect(0, 0, SW, SH);
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+const SCREEN = { width: 600, height: 1280, duration: 2, prepare: loadFonts };
+const DEMO_CHAT: ChatItem[] = [
+  { t: "time", text: "昨天 22:10" },
+  { t: "msg", text: "今天的物理作业你写完了吗" },
+  { t: "msg", me: true, text: "写完了，第三题好难", mark: "第三题好难", markK: 1 },
+  { t: "voice", secs: 6 },
+  { t: "sticker", me: true, kind: "bunny" },
+  { t: "time", text: "23:41" },
+  { t: "msg", text: "那我明天早点到教室，你教我？" },
+];
+
+export const resources = defineResources({
+  chat: resource({
+    kind: "ui",
+    title: "微信风格聊天",
+    description:
+      "微信风格的聊天界面：items 是 { t: \"time\" } / { t: \"msg\", me, text, pop, mark, markK } / { t: \"voice\", secs } / { t: \"sticker\", kind }；typing 标题变「对方正在输入...」，draft 多行草稿（配合打字/删字）、caret、keyboard、sendHot（按住发送）、dark 夜间、scroll 翻旧消息，big 默认开（近景大字号）。给一句话划荧光笔：msg 设 mark（那句话）和 markK（0..1），markAt / bubbleAt 返回屏幕上的框给镜头对准。",
+    tags: ["微信", "聊天", "消息", "手机", "打字", "夜间"],
+    usage: "phone(ctx, cx, cy, s, rot, (c) => chatScreen2(c, abs, { title, time, me: \"boy\", them: \"girl\", items, typing, draft, keyboard, dark }))",
+    params: z.object({
+      dark: z.boolean().default(false).describe("夜间模式"),
+      typing: z.boolean().default(false).describe("对方正在输入"),
+      keyboard: z.boolean().default(false).describe("键盘"),
+      draft: z.string().default("").describe("输入框里的草稿"),
+      big: z.boolean().default(true).describe("近景大字号"),
+    }),
+    presets: { 夜间: { dark: true }, 正在输入: { typing: true }, 打字: { keyboard: true, draft: "其实我" } },
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        chatScreen2(ctx, t, { title: "她", time: "23:48", me: "boy", them: "girl", items: DEMO_CHAT, typing: p.typing, draft: p.draft, caret: p.keyboard, keyboard: p.keyboard, dark: p.dark, big: p.big });
+      },
+    },
+  }),
+  moments: resource({
+    kind: "ui",
+    title: "朋友圈",
+    description: "朋友圈的一条：她和朋友的三人合照（selfiePhoto），mark 0..1 划出重点，dark 夜间。",
+    tags: ["朋友圈", "动态", "合照", "手机"],
+    usage: "momentsScreen(c, abs, { dark, mark })",
+    params: z.object({ dark: z.boolean().default(false).describe("夜间模式"), mark: z.number().min(0).max(1).default(0).describe("划重点") }),
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        momentsScreen(ctx, t, p);
+      },
+    },
+  }),
+  profile: resource({
+    kind: "ui",
+    title: "资料页（相册）",
+    description: "她的资料页：顶部可以左右划的相册（photos 每张画进 600×860，at 是当前张数，可带小数），后面是向日葵头像。",
+    tags: ["资料", "相册", "头像", "手机"],
+    usage: "profileScreen(c, abs, { photos: [(c) => …], at })",
+    preview: {
+      ...SCREEN,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        profileScreen(ctx, t, {});
+      },
+    },
+  }),
+  powerOff: resource({
+    kind: "ui",
+    title: "滑动来关机",
+    description: "「滑动来关机」的滑块盖在变暗的屏幕上，slide 0..1；under 画下面的界面。",
+    tags: ["关机", "手机"],
+    usage: "powerOffScreen(c, abs, slide, under)",
+    params: z.object({ slide: z.number().min(0).max(1).default(0.4).describe("滑块位置") }),
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        powerOffScreen(ctx, t, p.slide, (c) => homeScreen(c, t, { time: "23:59" }));
+      },
+    },
+  }),
+  boot: resource({
+    kind: "ui",
+    title: "开机画面",
+    description: "手机开机：黑底上的简单标志，k 0..1。",
+    tags: ["开机", "手机"],
+    usage: "bootScreen(c, k)",
+    preview: {
+      ...SCREEN,
+      duration: 1,
+      time: 0.6,
+      draw(ctx, t) {
+        bootScreen(ctx, t);
+      },
+    },
+  }),
+  home: resource({
+    kind: "ui",
+    title: "手机主页",
+    description: "三排图标加 Dock 的主页，微信在 WECHAT_AT；press 让微信图标按下变暗，zoom > 1 是 App 缩回时主页的放大，art 画在壁纸上（图标下面）。和 appWindow 一起做打开 / 关闭 App。",
+    tags: ["主页", "桌面", "图标", "手机"],
+    usage: "homeScreen(c, abs, { time, press, zoom, art })",
+    params: z.object({ press: z.number().min(0).max(1).default(0).describe("按下微信") }),
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        homeScreen(ctx, t, { time: "07:12", press: p.press });
+      },
+    },
+  }),
+  appWindow: resource({
+    kind: "transition",
+    title: "App 窗口展开 / 缩回",
+    description: "App 的窗口从主页图标里展开（k 0 → 1）或缩回图标（1 → 0），同时主页 zoom 1.08 → 1。预览里从主页打开微信。",
+    tags: ["App", "打开", "关闭", "主页", "转场"],
+    usage: "homeScreen(c, abs, { time, zoom: 1 + 0.08 * k }); appWindow(c, k, WECHAT_AT, (a) => chatScreen2(a, abs, view))",
+    preview: {
+      ...SCREEN,
+      duration: 1,
+      time: 0.5,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        homeScreen(ctx, t, { time: "07:12", zoom: 1 + 0.08 * t });
+        appWindow(ctx, t, WECHAT_AT, (c) => chatScreen2(c, t, { title: "她", time: "07:12", me: "boy", them: "girl", items: DEMO_CHAT.slice(0, 3) }));
+      },
+    },
+  }),
+  avatar: resource({
+    kind: "ui",
+    title: "聊天头像",
+    description: "圆角方块里的小头像：boy 男主、girl 女主（向日葵）、mei 她的朋友小美。",
+    tags: ["头像", "聊天"],
+    usage: "avatar(ctx, x, y, who, size)",
+    params: z.object({ who: z.enum(["boy", "girl", "mei"]).default("girl").describe("谁") }),
+    preview: {
+      width: 300,
+      height: 300,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        avatar(ctx, 150, 150, p.who, 220);
+      },
+    },
+  }),
+  sticker: resource({
+    kind: "ui",
+    title: "表情贴纸",
+    description: "聊天里的表情贴纸：爱心、兔子、猫。",
+    tags: ["贴纸", "表情", "聊天"],
+    usage: "sticker(ctx, x, y, kind, s)",
+    params: z.object({ kind: z.enum(["heart", "bunny", "cat"]).default("bunny").describe("哪一个") }),
+    preview: {
+      width: 300,
+      height: 300,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        sticker(ctx, 150, 150, p.kind, 2);
+      },
+    },
+  }),
+  selfiePhoto: resource({
+    kind: "prop",
+    title: "三人合照",
+    description: "她的朋友拍的合照：三张脸、比 V。朋友圈和她的回忆里用同一张。mood: flustered 她害羞慌张的版本。",
+    tags: ["合照", "照片", "自拍", "朋友"],
+    usage: "selfiePhoto(ctx, x, y, w, h, abs, mood)",
+    params: z.object({ mood: z.enum(["happy", "flustered"]).default("happy").describe("她的表情") }),
+    preview: {
+      width: 640,
+      height: 520,
+      duration: 2,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        selfiePhoto(ctx, 20, 20, 600, 480, t, p.mood);
+      },
+    },
+  }),
+});

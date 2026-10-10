@@ -1,11 +1,11 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { Ctx, designScene, flash, glow, pulse } from "./lib/draw";
-import { heart } from "./lib/sets";
-import { ChatItem, bubbleAt, chatScreen2, sendButtonAt } from "./lib/chat";
-import { ASK_AGAIN, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HISTORY, afterNight, herRoomAt, hisFaceReading, hisRoomMorning, inWin, phoneCloseup, pop, typed, typingThumbs } from "./lib/story";
-import { HER_WIN, HIS_WIN, street, winC } from "./lib/street";
-import { BAR, END, EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { Ctx, designScene, flash, glow, pulse } from "@materials/s0rrow/code/draw";
+import { heart } from "@materials/s0rrow/code/sets";
+import { ChatItem, bubbleAt, chatScreen2, sendButtonAt } from "@materials/s0rrow/code/chat";
+import { ASK_AGAIN, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HISTORY, afterNight, herRoomAt, hisFaceReading, hisRoomMorning, inWin, phoneCloseup, pop, typed, typingThumbs } from "./story";
+import { HER_WIN, HIS_WIN, street, winC } from "./street";
+import { BAR, END, EV } from "./timeline";
 
 /** ACT 4 (49.14 – 57.0s) · the last loop of the outro
  *  4A his face: it sinks in — then on the downbeat he beams (story.hisFaceReading, from act 3)

@@ -1,15 +1,15 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, H, W, beatAt, blob, camera, card, Ctx, designScene, fillBg, filtered, glow, hash, inkLine, oval, paint, poly, pulse, rr, shake, sinceBeat, vgrad } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { bedroom, herBlanket, herRoom } from "./lib/places";
-import { lightPool } from "./lib/sets";
-import { BACKSPACE_AT, WECHAT_AT, appWindow, chatScreen2, powerOffScreen, profileScreen, sendButtonAt } from "./lib/chat";
-import { FingerPos } from "./lib/hand";
-import { SH, SW } from "./lib/phone";
-import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops, phoneBody, herHome, HER_PHOTOS } from "./lib/story";
-import { BAR, EV } from "./lib/timeline";
-import { HER_F0, HER_M0, HER_WIN, HIS_WIN, Z_IN, street, winC } from "./lib/street";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, H, W, beatAt, blob, camera, card, Ctx, designScene, fillBg, filtered, glow, hash, inkLine, oval, paint, poly, pulse, rr, shake, sinceBeat, vgrad } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { bedroom, herBlanket, herRoom } from "@materials/s0rrow/code/places";
+import { lightPool } from "@materials/s0rrow/code/sets";
+import { BACKSPACE_AT, WECHAT_AT, appWindow, chatScreen2, powerOffScreen, profileScreen, sendButtonAt } from "@materials/s0rrow/code/chat";
+import { FingerPos } from "@materials/s0rrow/code/hand";
+import { SH, SW } from "@materials/s0rrow/code/phone";
+import { GIVE_UP, HER_NIGHT_DRAFT, HIM, PHONE_CY, PHONE_S, REST_R, HISTORY, deleted, fromHer, hisNightChat, inWin, phoneCloseup, tearDrops, phoneBody, herHome, HER_PHOTOS } from "./story";
+import { BAR, EV } from "./timeline";
+import { HER_F0, HER_M0, HER_WIN, HIS_WIN, Z_IN, street, winC } from "./street";
 
 /** ACT 2 (16.43 – 32.79s) · chorus 1
  *  2A he flicks through her photos and stops on her sunflower portrait (so pretty) → the screen times out → his own face in the black glass (so ugly)

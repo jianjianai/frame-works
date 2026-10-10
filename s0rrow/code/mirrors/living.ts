@@ -1,5 +1,12 @@
-import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, Pt, W, blob, bokehDisc, glow, inkLine, lightShaft, oval, paint, poly, rbox, shaded, vgrad } from "./draw";
+/**
+ * 《mirrors》夜里的客厅（第一幕的手机镜头、第二幕的沙发）：沙发、糊着报纸的圆镜子、落地灯（暖色主光）、窗和月亮、边几上的闹钟。
+ * livingRoom(ctx, abs, { clock, day, ring })、光照 livingLight / livingNight、闹钟 alarmClock、茶几 coffeeTable（画在沙发上的人之后）、
+ * 手机特写的虚化背景 livingBokeh。
+ */
+import { z } from "zod";
+import { clamp } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, Pt, W, beginFrame, blob, bokehDisc, glow, inkLine, lightShaft, loadFonts, oval, paint, poly, rbox, shaded, vgrad } from "../draw";
 import { newspaper, tape } from "./story";
 
 /** 《瑕疵：0》 his living room at night (act 1's phone scenes, act 2's couch), drawn once at its wide framing in design
@@ -311,3 +318,64 @@ export function livingBokeh(ctx: Ctx, dx = 0, dy = 0) {
   bokehDisc(ctx, 1030, 880, 56, "150,180,255", 0.11);
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+export const resources = defineResources({
+  livingRoom: resource({
+    kind: "set",
+    title: "夜里的客厅",
+    description:
+      "朝着沙发的客厅：沙发上方糊着报纸的圆镜子、左边的落地灯（暖色主光）、右边的窗（月光和小城）、边几上的闹钟。clock 是闹钟的时间（小时，23.8 = 23:48），day 0 夜 … 1 天亮（窗外），ring 0..1 闹钟响（抖动）。之后画 livingLight（day 同样传）；坐在沙发上的人之后画 coffeeTable。",
+    tags: ["客厅", "沙发", "夜晚", "台灯", "闹钟", "镜子"],
+    usage: "livingRoom(ctx, abs, { clock, day, ring }); /* 沙发上的人 */; coffeeTable(ctx); livingLight(ctx, abs, day)",
+    params: z.object({
+      clock: z.number().min(0).max(24).default(23.8).describe("闹钟时间（小时）"),
+      day: z.number().min(0).max(1).default(0).describe("0 夜 … 1 天亮"),
+      ring: z.number().min(0).max(1).default(0).describe("闹钟响"),
+    }),
+    presets: { 天亮闹钟响: { clock: 7, day: 1, ring: 1 } },
+    preview: {
+      width: 1080,
+      height: 1920,
+      duration: 3,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        livingRoom(ctx, t, p);
+        coffeeTable(ctx);
+        livingLight(ctx, t, p.day);
+      },
+    },
+  }),
+  alarmClock: resource({
+    kind: "prop",
+    title: "闹钟",
+    description: "边几上的闹钟，hours 设定指针（23.8 = 23:48）。",
+    tags: ["闹钟", "时钟", "时间"],
+    usage: "alarmClock(ctx, x, y, s, hours)",
+    params: z.object({ hours: z.number().min(0).max(24).default(23.8).describe("时间（小时）") }),
+    preview: {
+      width: 400,
+      height: 400,
+      duration: 3,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        alarmClock(ctx, 200, 220, 2.2, p.hours + t * 0.2);
+      },
+    },
+  }),
+  livingBokeh: resource({
+    kind: "effect",
+    title: "客厅的虚化背景（手机特写用）",
+    description: "手机特写的背景：同一个客厅完全虚化，左边台灯的暖色光晕和大光斑，右边窗户的冷光。dx、dy 跟着手持镜头小幅移动。",
+    tags: ["虚化", "光斑", "背景", "客厅", "夜晚"],
+    usage: "livingBokeh(ctx, dx, dy)",
+    preview: {
+      width: 1080,
+      height: 1920,
+      draw(ctx) {
+        livingBokeh(ctx);
+      },
+    },
+  }),
+});

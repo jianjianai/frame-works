@@ -1,6 +1,15 @@
-import type { Scene, SceneOptions } from "../../../../src/engine/types";
-import { assetUrl } from "../../../../src/engine/types";
-import { clamp } from "../../../../src/engine/math";
+/**
+ * s0rrow 手绘涂鸦风的基础库：设计坐标 1080×1920（竖屏），所有图形都带“抖动线条”（每秒换 8 次，designScene 自动 setBoil）。
+ * 形状 blob/curve/poly/oval/rbox、上色 paint/shaded/hatch、文字 text/measure/writeOn（字体 F，loadFonts 从素材库加载完整字体）、
+ * 节拍 beatAt/barAt/pulse/sinceBeat（作品 project.ts 的 tempo）、镜头 camera/handheld/shake/smear/zoomBlur、
+ * 离屏 buffer/blit/filtered、光影 figureMask/onFigure/rimLight/rimFigure/castShadow/groundShadow/lightShaft/motes/bloom/grade、
+ * 回忆 oldFilm/oldScreenCut。每一幕用 designScene(options, t0, draw) 创建，draw 拿到绝对时间 abs。
+ * 预览和用法：resources_search / resource_view（效果和转场的资源在 effects.ts）。
+ */
+import type { Scene, SceneOptions } from "@frame/engine/types";
+import { assetUrl } from "@frame/engine/types";
+import { clamp } from "@frame/engine/math";
+import { beatAt, beatLength, barAt, beatIndex, pulse, sinceBeat, tempo } from "@frame/engine/tempo";
 
 /** Design space: everything is drawn in 1080×1920 units and scaled to the real canvas. */
 export const W = 1080;
@@ -8,23 +17,10 @@ export const H = 1920;
 export type Ctx = CanvasRenderingContext2D;
 export type Pt = [number, number];
 
-// ---------------------------------------------------------------- 每支视频要改的
-/** 字体目录：fetch-fonts.mjs 写到作品的 public/fonts/，这里写 films/<作品名>/fonts/。 */
-export const FONT_DIR = "films/work-xxxxxxxx/fonts/"; // ← 改成本作品的内部名称（work-…）
-
 // ---------------------------------------------------------------- music grid
-/** 换歌要改：BPM 和第一拍的时间（秒）。现在是《i have no friends》的（115 BPM，第一拍 0.265）。 */
-export const BPM = 115;
-export const BEAT = 60 / BPM;
-export const BEAT0 = 0.265;
-export const beatAt = (k: number) => BEAT0 + k * BEAT;
-/** Seconds since the most recent beat. */
-export const sinceBeat = (abs: number) => {
-  const k = Math.floor((abs - BEAT0) / BEAT);
-  return abs - beatAt(k);
-};
-/** 1 on every beat, decaying quickly. */
-export const pulse = (abs: number, decay = 7) => Math.exp(-decay * sinceBeat(abs));
+/** 节拍来自作品 project.ts 的 tempo（每支视频在那里写 BPM 和第一拍，不用改这里）：beatAt(k) 第 k 拍、barAt(n) 第 n 小节第一拍、
+ *  pulse(abs) 每拍跳一下、sinceBeat(abs)、beatLength() 一拍几秒。画的时候调用，不要在模块加载时存成常量。 */
+export { beatAt, beatLength, barAt, beatIndex, pulse, sinceBeat, tempo };
 
 // ---------------------------------------------------------------- easing
 export const easeOut = (t: number) => 1 - Math.pow(1 - clamp(t), 3);
@@ -114,7 +110,8 @@ export function curve(ctx: Ctx, pts: Pt[], seed: number, amp = 1.4) {
   ctx.beginPath();
   spline(ctx, jitter(pts, seed, amp), false);
 }
-/** Polygon with straight (wobbly) edges — good for spiky hair and sharp things. */
+/** Polygon with straight (wobbly) edges — good for spiky hair and sharp things. Straight-edged shapes (triangles,
+ *  arrow heads) are poly + paint: inkLine through more than two points is a smooth curve and rounds them off. */
 export function poly(ctx: Ctx, pts: Pt[], seed: number, amp = 1.4, closed = true) {
   const p = jitter(pts, seed, amp);
   ctx.beginPath();
@@ -183,6 +180,7 @@ export function paint(ctx: Ctx, fill?: string | CanvasGradient | null, stroke: s
     ctx.stroke();
   }
 }
+/** A hand-drawn ink stroke through `pts` (a smooth curve when there are more than two; use poly for straight edges). */
 export function inkLine(ctx: Ctx, pts: Pt[], seed: number, lw = 4, color = C.ink, amp = 1.3) {
   curve(ctx, pts, seed, amp);
   paint(ctx, null, color, lw);
@@ -343,23 +341,21 @@ export function writeOn(s: string, p: number) {
 
 // ---------------------------------------------------------------- fonts
 let fontsReady: Promise<void> | null = null;
-/** [family, file, weight, unicode-range?]. 主子集由 fetch-fonts.mjs 生成。不能跑脚本时补字：用 asset_import 下载
- *  fonts.googleapis.com/css2?family=…&text=…（只含新字的小子集），存成 public/fonts/<名字>-extra.ttf，在下面加一行并写上这些字的
- *  unicode-range（这些字从 extra 文件取，其余从主子集取）。extra 放在列表最后。 */
-const FONT_FILES: [string, string, string, string?][] = [
-  ["Gochi Hand", "gochi-hand.woff2", "400"],
-  ["Permanent Marker", "permanent-marker.woff2", "400"],
-  ["ZCOOL KuaiLe", "zcool-kuaile.woff2", "400"],
-  ["Long Cang", "long-cang.woff2", "400"],
-  ["Noto Sans SC", "noto-sans-sc-400.woff2", "400"],
-  ["Noto Sans SC", "noto-sans-sc-700.woff2", "700"],
-  // 例（重置版结尾引导新增的字）：["ZCOOL KuaiLe", "zcool-kuaile-extra.ttf", "400", "U+70B9,U+8D5E,U+7684"],
+/** [family, 素材库里的字体文件, weight]：完整字体（Google Fonts，SIL OFL 1.1），任何文案都不缺字，不用再取子集。 */
+const FONT_FILES: [string, string, string][] = [
+  ["Gochi Hand", "materials/s0rrow/fonts/gochi-hand.ttf", "400"],
+  ["Permanent Marker", "materials/s0rrow/fonts/permanent-marker.ttf", "400"],
+  ["ZCOOL KuaiLe", "materials/s0rrow/fonts/zcool-kuaile.ttf", "400"],
+  ["Long Cang", "materials/s0rrow/fonts/long-cang.ttf", "400"],
+  ["Noto Sans SC", "materials/s0rrow/fonts/noto-sans-sc-400.ttf", "400"],
+  ["Noto Sans SC", "materials/s0rrow/fonts/noto-sans-sc-700.ttf", "700"],
 ];
+/** Load the fonts of F (designScene does it before the first frame; previews call it in prepare). */
 export function loadFonts(): Promise<void> {
   fontsReady ??= Promise.all(
-    FONT_FILES.map(async ([family, file, weight, unicodeRange]): Promise<FontFace | null> => {
-      const url = assetUrl(FONT_DIR + file);
-      const desc: FontFaceDescriptors = unicodeRange ? { weight, unicodeRange } : { weight };
+    FONT_FILES.map(async ([family, file, weight]): Promise<FontFace | null> => {
+      const url = assetUrl(file);
+      const desc: FontFaceDescriptors = { weight };
       // Load the bytes ourselves first (works where CSS url() font loading is restricted),
       // then fall back to a quoted URL source.
       try {
@@ -376,7 +372,6 @@ export function loadFonts(): Promise<void> {
       }
     }),
   ).then((faces) => {
-    // added in list order, so the small "-extra" subsets (last) are tried first for their characters
     for (const f of faces) if (f) document.fonts.add(f);
   });
   return fontsReady;
@@ -388,6 +383,12 @@ let ROOT = 1;
 /** Device pixels per design unit at the scene's root (designScene sets a pure scale there). For overlays drawn in
  *  screen space whatever the camera (red-pen notes, line widths in design px: mirrors 的 story.ts `px`/`toDesign`). */
 export const rootScale = () => ROOT;
+/** What designScene does before each frame, for drawing outside it (resource previews): the line boil follows `abs`
+ *  and rootScale() is the current transform's scale (the root of this drawing). */
+export function beginFrame(ctx: Ctx, abs: number) {
+  ROOT = ctx.getTransform().a;
+  setBoil(abs);
+}
 /**
  * Standard canvas scene in 1080×1920 design units.
  * `t0` is the absolute song time at which this layer starts, so drawing code can
@@ -435,7 +436,8 @@ export function handheld(abs: number, amp = 5, seed = 0): [number, number, numbe
   const rot = (Math.sin(t * 0.59 + 0.9) * 0.7 + Math.sin(t * 1.37) * 0.3) * amp * 0.0007;
   return [dx, dy, rot];
 }
-/** Zoom/rotate the whole frame around (cx, cy). */
+/** Zoom/rotate the whole frame around (cx, cy); (dx, dy) shift it (dy < 0 lifts the picture to make room for the
+ *  lyrics). Feed it handheld() for drift and easeInOut for pushes; before a reveal, tilt down from above (dy +260 → 0). */
 export function camera(ctx: Ctx, cx: number, cy: number, zoom: number, rot = 0, dx = 0, dy = 0) {
   ctx.translate(cx + dx, cy + dy);
   ctx.rotate(rot);

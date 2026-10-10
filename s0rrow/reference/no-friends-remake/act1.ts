@@ -1,13 +1,13 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, camera, card, designScene, figureMask, lightShaft, onFigure, rimLight, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shaded, shake, text } from "./lib/draw";
-import { drawHand, drawKid } from "./lib/kid";
-import { CAST, Person, banner, drawPerson, hahas } from "./lib/people";
-import { Msg, Note, SH, SW, chatScreen, glassGlare, lockScreen, notification, notificationHeight, phone, phoneButtons, statusBar, wallpaper } from "./lib/phone";
-import { bokeh, classroom, corridor, roomBokeh, schoolDesk, screenSpill } from "./lib/sets";
-import { birthdayDesk } from "./lib/shared";
-import { TILT, phoneReflectionAt, shotBirthday, shotDeskPhone } from "./lib/opening";
-import { FingerKey, FingerPos, fingerAt, onScreen, tapRipple, touchDot } from "./lib/hand";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blob, bloom, camera, card, designScene, figureMask, lightShaft, onFigure, rimLight, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, inkLine, lerp2, linesOutsideCentre, oldFilm, oval, paint, poly, rr, shaded, shake, text } from "@materials/s0rrow/code/draw";
+import { drawHand, drawKid } from "@materials/s0rrow/code/kid";
+import { CAST, Person, banner, drawPerson, hahas } from "@materials/s0rrow/code/people";
+import { Msg, Note, SH, SW, chatScreen, glassGlare, lockScreen, notification, notificationHeight, phone, phoneButtons, statusBar, wallpaper } from "@materials/s0rrow/code/phone";
+import { bokeh, classroom, corridor, roomBokeh, schoolDesk, screenSpill } from "@materials/s0rrow/code/sets";
+import { birthdayDesk } from "@materials/s0rrow/code/shared";
+import { TILT, phoneReflectionAt, shotBirthday, shotDeskPhone } from "./opening";
+import { FingerKey, FingerPos, fingerAt, onScreen, tapRipple, touchDot } from "@materials/s0rrow/code/hand";
 
 /** ACT 1 · 第一遍副歌「他眼里的今天」(0 – 16.96) · 重新设计版.
  *  His world at night is grey (`grade`); only the candle stays warm. The morning is a memory: its own colours, seen

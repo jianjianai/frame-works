@@ -1,9 +1,9 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, sampleKeys, smooth } from "../../../src/engine/math";
-import { C, Ctx, H, Pt, W, blob, camera, card, designScene, easeOut, flash, inkLine, paint, text, F } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { CAST, drawPerson } from "./lib/people";
-import { heart, heartsRise, hedge, lampPost, parkSky, swingSet } from "./lib/sets";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, sampleKeys, smooth } from "@frame/engine/math";
+import { C, Ctx, H, Pt, W, blob, camera, card, designScene, easeOut, flash, inkLine, paint, text, F } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { CAST, drawPerson } from "@materials/s0rrow/code/people";
+import { heart, heartsRise, hedge, lampPost, parkSky, swingSet } from "@materials/s0rrow/code/sets";
 
 /** ACT 3 (33.39 – 50.48s): the bridge. The swing set from the cover, couples walking past —
  *  and 小雨 on the other swing, trying to get his attention while he has his earbuds in. */

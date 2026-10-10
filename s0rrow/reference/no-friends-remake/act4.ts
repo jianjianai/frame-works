@@ -1,11 +1,11 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blit, blob, bloom, buffer, camera, card, designScene, devScale, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, ik2, inkLine, measure, oval, paint, poly, rr, shaded, shake, text, tubePts, vgrad, writeOn } from "./lib/draw";
-import { KidPose, drawHand, drawKid } from "./lib/kid";
-import { CAST } from "./lib/people";
-import { Msg, SH, SW, chatScreen, phone, phoneBack } from "./lib/phone";
-import { bigCake, bokeh, cupcake, screenSpill, street, streetBokeh } from "./lib/sets";
-import { birthdayDesk } from "./lib/shared";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, backOut, beatAt, blinkEyes, blit, blob, bloom, buffer, camera, card, designScene, devScale, easeIn, easeInOut, easeOut, fillBg, filtered, flash, glow, grade, handheld, hash, ik2, inkLine, measure, oval, paint, poly, rr, shaded, shake, text, tubePts, vgrad, writeOn } from "@materials/s0rrow/code/draw";
+import { KidPose, drawHand, drawKid } from "@materials/s0rrow/code/kid";
+import { CAST } from "@materials/s0rrow/code/people";
+import { Msg, SH, SW, chatScreen, phone, phoneBack } from "@materials/s0rrow/code/phone";
+import { bigCake, bokeh, cupcake, screenSpill, street, streetBokeh } from "@materials/s0rrow/code/sets";
+import { birthdayDesk } from "@materials/s0rrow/code/shared";
 
 /** ACT 4 · 第三遍副歌「他试着开口」(song 50.48 – 67.05 = work 17.08 – 33.66; this act draws in song time, its layer
  *  sits 33.39 s earlier) · 重新设计版. Still his grey world: only the candle, the match and the red "!" are in colour.

@@ -1,7 +1,14 @@
-import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, blob, curve, fillBg, glow, hash, inkLine, oval, paint, poly, rbox, rr, shaded, text, tubePts, vgrad } from "./draw";
-import { ballToy, fluffPuppy } from "./dog";
-import { helmetProp } from "./kid";
+/**
+ * 《unhappy》的场景（设计坐标 1080×1920 整幅）：玄关、他的卧室和被子、房门走廊、雨夜街道和宠物店橱窗、公交站、宠物医院（门口、前台、
+ * 手术室走廊、住院笼）、封面的树；聊天版加了女生房间、从黑板拍的教室和课桌、从后排拍的黑板、学校走廊、清晨街道和便利店。
+ * 天气：雨 rain、水花 splashes、水洼 puddle；道具：存钱罐、心脏病传单、草莓牛奶、课本、抱枕。
+ */
+import { z } from "zod";
+import { clamp } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, F, H, Pt, W, beginFrame, blob, curve, fillBg, glow, hash, inkLine, loadFonts, oval, paint, poly, rbox, rr, shaded, text, tubePts, vgrad } from "./draw";
+import { ballToy, drawDog, fluffPuppy } from "./dog";
+import { drawKid, helmetProp } from "./kid";
 
 /** Environments for 「unhappy」: the flat's entrance, his bedroom, the rainy street with the pet shop,
  *  the bus stop, the pet hospital (counter, surgery hallway, recovery room) and the tree from the cover.
@@ -1351,3 +1358,425 @@ export function storeInside(ctx: Ctx, abs: number) {
   poly(ctx, [[-60, 1300], [1140, 1290], [1140, 2000], [-60, 2000]], 3843, 1.5);
   paint(ctx, "#d9dcd6", C.ink, 6);
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+/** Previews of whole sets: the 1080×1920 design frame. */
+const FRAME = { width: 1080, height: 1920, duration: 3, prepare: loadFonts };
+const unit = z.number().min(0).max(1);
+
+export const resources = defineResources({
+  entrance: resource({
+    kind: "set",
+    title: "玄关",
+    description: "家门口的玄关：light 0 夜里开灯、1 清晨发蓝；door 0..1 门打开、走廊的光漏进来；挂钩上的头盔和黄色骑手服、存钱罐 jar、心脏病传单、日历、狗碗；pan 横向视差。",
+    tags: ["玄关", "门", "家", "夜晚", "清晨"],
+    usage: "entrance(ctx, abs, { light, door, helmet, jacket, jar, bowl, pan })",
+    params: z.object({
+      light: unit.default(0).describe("0 夜 … 1 清晨"),
+      door: unit.default(0).describe("门打开"),
+      helmet: z.boolean().default(false).describe("鞋柜上的头盔"),
+      jacket: z.boolean().default(false).describe("挂钩上的黄色骑手服"),
+      jar: unit.default(0.7).describe("存钱罐里的硬币"),
+      bowl: z.boolean().default(false).describe("狗碗"),
+    }),
+    presets: { 家里的东西: { helmet: true, jacket: true, bowl: true }, 清晨: { light: 1, helmet: true, jacket: true, bowl: true }, 开门: { door: 1 } },
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        entrance(ctx, t, p);
+      },
+    },
+  }),
+  bedroom: resource({
+    kind: "set",
+    title: "他的卧室和床（《unhappy》）",
+    description: "房间和床（床垫上沿约 y 960，前沿约 y 1150）：rain 窗外下雨，dawn 天亮。先画坐在床上的人，再画 bedBlanket() 盖住腿。",
+    tags: ["卧室", "床", "被子", "房间", "雨"],
+    usage: "bedroom(ctx, abs, { rain, dawn }); drawKid(…); bedBlanket(ctx)",
+    params: z.object({ rain: unit.default(0).describe("窗外下雨"), dawn: unit.default(0).describe("天亮"), sitting: z.boolean().default(true).describe("预览里让他坐在床上") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        bedroom(ctx, t, p);
+        if (p.sitting) {
+          drawKid(ctx, 540, 640, 0.95, { arms: "phone", eyes: "tired" });
+          bedBlanket(ctx);
+        }
+      },
+    },
+  }),
+  hallway: resource({
+    kind: "set",
+    title: "房门外的走廊",
+    description: "他房门外的走廊：门缝漏光和移动的影子 shadow，挂着的骑手服 jacket。",
+    tags: ["走廊", "门", "家", "影子"],
+    usage: "hallway(ctx, abs, { shadow, jacket })",
+    params: z.object({ shadow: unit.default(0).describe("门缝里移动的影子"), jacket: z.boolean().default(true).describe("骑手服") }),
+    presets: { 门后有人: { shadow: 0.8 } },
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        hallway(ctx, t, p);
+      },
+    },
+  }),
+  rainStreet: resource({
+    kind: "set",
+    title: "雨夜街道（宠物店）",
+    description: "雨夜的街：shop 带宠物店橱窗（petShopWindow：暖光里的漂亮小狗，豆豆在外面看），pan 横向视差。加 rain() 和 splashes() 下雨。",
+    tags: ["街道", "雨夜", "宠物店", "橱窗", "下雨"],
+    usage: "rainStreet(ctx, abs, { shop, pan }); rain(ctx, abs, k); splashes(ctx, abs, y0, y1)",
+    params: z.object({ shop: z.boolean().default(true).describe("宠物店"), pan: z.number().min(-300).max(300).default(0).describe("横向视差") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        rainStreet(ctx, t, p);
+        rain(ctx, t, 1);
+        splashes(ctx, t, 1500, 1900);
+      },
+    },
+  }),
+  busStop: resource({
+    kind: "set",
+    title: "公交站（雨夜）",
+    description: "雨夜的公交站。",
+    tags: ["公交站", "车站", "雨夜", "街道"],
+    usage: "busStop(ctx, abs)",
+    preview: {
+      ...FRAME,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        busStop(ctx, t);
+        rain(ctx, t, 0.8);
+      },
+    },
+  }),
+  clinicFront: resource({
+    kind: "set",
+    title: "宠物医院门口",
+    description: "夜里的宠物医院门口，doorsOpen 0..1 自动门打开。",
+    tags: ["医院", "宠物医院", "门口", "夜晚"],
+    usage: "clinicFront(ctx, abs, doorsOpen)",
+    params: z.object({ doorsOpen: unit.default(0).describe("自动门打开") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        clinicFront(ctx, t, p.doorsOpen);
+      },
+    },
+  }),
+  clinicCounter: resource({
+    kind: "set",
+    title: "宠物医院前台（X 光灯箱）",
+    description: "宠物医院里面：前台和看 X 光片的灯箱（xray 画在灯箱里）。",
+    tags: ["医院", "前台", "X光", "兽医"],
+    usage: "clinicCounter(ctx, abs)",
+    preview: {
+      ...FRAME,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        clinicCounter(ctx, t);
+      },
+    },
+  }),
+  surgeryHall: resource({
+    kind: "set",
+    title: "手术室走廊",
+    description: "手术室外的走廊：门上红色的「手术中」灯 lightOn、长椅、挂钟 clock（时针位置）、百叶窗 blinds、dawn 天亮、doorOpen 门打开。手术中的延时镜头用它。",
+    tags: ["医院", "手术", "走廊", "等待", "挂钟"],
+    usage: "surgeryHall(ctx, abs, { lightOn, clock, dawn, blinds, doorOpen })",
+    params: z.object({
+      lightOn: unit.default(1).describe("「手术中」灯"),
+      clock: z.number().min(0).max(12).default(10).describe("挂钟时间（小时）"),
+      dawn: unit.default(0).describe("天亮"),
+      blinds: unit.default(1).describe("百叶窗放下多少"),
+      doorOpen: unit.default(0).describe("门打开"),
+    }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        surgeryHall(ctx, t, { ...p, clock: p.clock + t * 0.5 });
+      },
+    },
+  }),
+  recoveryRoom: resource({
+    kind: "set",
+    title: "住院笼（恢复室）",
+    description: "恢复室：笼子里的软垫床、输液架、墙上的日历显示第 day 天，night 夜里。狗画在里面以后用 kennelBars 画笼子的栏杆。",
+    tags: ["医院", "住院", "笼子", "恢复", "日历"],
+    usage: "recoveryRoom(ctx, abs, { day, night }); drawDog(…); kennelBars(ctx, x0, x1, y0, y1, open)",
+    params: z.object({ day: z.number().int().min(1).max(31).default(3).describe("日历上的日期"), night: unit.default(0).describe("夜里") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        recoveryRoom(ctx, t, p);
+      },
+    },
+  }),
+  coverTree: resource({
+    kind: "set",
+    title: "封面的树",
+    description: "《unhappy》封面：房子的墙、草坪、一棵树；warm 0..1 暖色（结尾）。配落叶。",
+    tags: ["封面", "树", "草坪", "结尾"],
+    usage: "coverTree(ctx, abs, { warm })",
+    params: z.object({ warm: unit.default(0).describe("暖色") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        coverTree(ctx, t, p);
+      },
+    },
+  }),
+  herRoom: resource({
+    kind: "set",
+    title: "女生房间（夜）",
+    description: "她的房间：和男生房间镜像（床在左、窗在右），串灯 lights、拍立得，dawn 天亮。先画床上的她，再画 herBlanket() 粉色被子。",
+    tags: ["卧室", "女生", "房间", "串灯", "夜晚"],
+    usage: "herRoom(ctx, abs, { dawn, lights }); drawKid(…, { who: \"girl\" }); herBlanket(ctx)",
+    params: z.object({ dawn: unit.default(0).describe("天亮"), lights: unit.default(1).describe("串灯"), sitting: z.boolean().default(true).describe("预览里让她坐在床上") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        herRoom(ctx, t, p);
+        if (p.sitting) {
+          drawKid(ctx, 540, 640, 0.95, { who: "girl", arms: "phone", eyes: "open", outfit: "pajamas" });
+          herBlanket(ctx);
+        }
+      },
+    },
+  }),
+  classroomFront: resource({
+    kind: "set",
+    title: "教室（从黑板往后拍）",
+    description: "从黑板往后拍的教室：后墙的公告栏和钟、右侧窗户的阳光 sun。学生和课桌由镜头自己画：先画人，再画 deskFront 课桌。",
+    tags: ["教室", "学校", "后墙", "阳光"],
+    usage: "classroomFront(ctx, abs, { sun }); drawKid(…); deskFront(ctx, x, y, s, seed, items)",
+    params: z.object({ sun: unit.default(1).describe("阳光"), student: z.boolean().default(true).describe("预览里放一个学生") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        classroomFront(ctx, t, p);
+        if (p.student) {
+          drawKid(ctx, 540, 1000, 0.8, { arms: "table" });
+          deskFront(ctx, 540, 1330, 1);
+        }
+      },
+    },
+  }),
+  classroomBoard: resource({
+    kind: "set",
+    title: "教室黑板（从后排往前拍）",
+    description: "从后排座位往前拍：黑板上的斜面受力题和 F = ma（他熬夜做的那道物理题）、左侧阳光窗户 sun、前排同学的背影。越肩镜头用。",
+    tags: ["教室", "黑板", "物理", "越肩", "学校"],
+    usage: "classroomBoard(ctx, abs, { sun })",
+    params: z.object({ sun: unit.default(1).describe("阳光") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        classroomBoard(ctx, t, p);
+      },
+    },
+  }),
+  schoolHall: resource({
+    kind: "set",
+    title: "学校走廊（明亮）",
+    description: "明亮的学校走廊：左边窗户、右边教室门。",
+    tags: ["学校", "走廊", "白天"],
+    usage: "schoolHall(ctx, abs)",
+    preview: {
+      ...FRAME,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        schoolHall(ctx, t);
+      },
+    },
+  }),
+  morningStreet: resource({
+    kind: "set",
+    title: "清晨街道（24 小时便利店）",
+    description: "清晨的街和一家 24 小时便利店，pan 横向移动街道。",
+    tags: ["街道", "清晨", "便利店", "早上"],
+    usage: "morningStreet(ctx, abs, pan)",
+    params: z.object({ speed: z.number().min(0).max(300).default(60).describe("预览里每秒平移多少") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        morningStreet(ctx, t, t * p.speed);
+      },
+    },
+  }),
+  storeInside: resource({
+    kind: "set",
+    title: "便利店里面",
+    description: "便利店里：饮料冰柜（中间一层有草莓牛奶）、收银台和付款码立牌。",
+    tags: ["便利店", "冰柜", "收银台", "商店"],
+    usage: "storeInside(ctx, abs)",
+    preview: {
+      ...FRAME,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        storeInside(ctx, t);
+      },
+    },
+  }),
+  rain: resource({
+    kind: "effect",
+    title: "雨和水花",
+    description: "rain：整个画面的雨丝，k 强度 0..1，wind 倾斜；splashes：在 y0–y1 的地面带上溅起的水花；puddle：一个水洼（会泛涟漪）。",
+    tags: ["雨", "下雨", "天气", "水花", "水洼"],
+    usage: "rain(ctx, abs, k, wind); splashes(ctx, abs, y0, y1, k); puddle(ctx, x, y, rx, ry, abs)",
+    params: z.object({ k: unit.default(1).describe("雨的强度"), wind: z.number().min(-0.6).max(0.6).default(0.18).describe("风（倾斜）") }),
+    preview: {
+      ...FRAME,
+      background: "#1a2035",
+      draw(ctx, t, p) {
+        puddle(ctx, 540, 1650, 260, 60, t);
+        rain(ctx, t, p.k, p.wind);
+        splashes(ctx, t, 1500, 1900, p.k);
+      },
+    },
+  }),
+  petShopWindow: resource({
+    kind: "prop",
+    title: "宠物店橱窗",
+    description: "暖光的宠物店橱窗，里面有漂亮的小狗（pup），glowK 光的强度。rainStreet 的 shop 自带一个。",
+    tags: ["宠物店", "橱窗", "小狗"],
+    usage: "petShopWindow(ctx, abs, x, y, w, h, glowK, pup)",
+    params: z.object({ glowK: unit.default(1).describe("暖光"), pup: unit.default(1).describe("小狗") }),
+    preview: {
+      width: 800,
+      height: 700,
+      duration: 2,
+      background: "#141a2e",
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        petShopWindow(ctx, t, 80, 80, 640, 540, p.glowK, p.pup);
+      },
+    },
+  }),
+  kennelBars: resource({
+    kind: "prop",
+    title: "笼子栏杆",
+    description: "住院笼的栏杆，画在狗的上面（先画狗）；open 0..1 打开。",
+    tags: ["笼子", "栏杆", "医院"],
+    usage: "kennelBars(ctx, x0, x1, y0, y1, open)",
+    params: z.object({ open: unit.default(0).describe("打开") }),
+    preview: {
+      width: 800,
+      height: 600,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        drawDog(ctx, 400, 330, 1, { pose: "lie", cone: true });
+        kennelBars(ctx, 120, 680, 80, 540, p.open);
+      },
+    },
+  }),
+  coinJar: resource({
+    kind: "prop",
+    title: "存钱罐",
+    description: "玻璃存钱罐，fill 0..1 硬币满到多少（攒手术费）。",
+    tags: ["存钱罐", "硬币", "攒钱"],
+    usage: "coinJar(ctx, x, y, s, fill)",
+    params: z.object({ fill: unit.default(0.5).describe("满到多少") }),
+    preview: {
+      width: 400,
+      height: 500,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        coinJar(ctx, 200, 300, 1.6, p.fill);
+      },
+    },
+  }),
+  vetFlyer: resource({
+    kind: "prop",
+    title: "心脏病传单",
+    description: "兽医关于狗狗心脏病的传单（门口桌上的线索）。",
+    tags: ["传单", "线索", "医院", "心脏病"],
+    usage: "vetFlyer(ctx, x, y, s, rot)",
+    preview: {
+      width: 500,
+      height: 600,
+      prepare: loadFonts,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        vetFlyer(ctx, 250, 300, 1.6, -0.06);
+      },
+    },
+  }),
+  strawberryMilk: resource({
+    kind: "prop",
+    title: "草莓牛奶",
+    description: "粉色草莓牛奶盒（他们的梗），可以在正面贴便利贴 note（noteK 0..1 出现）。",
+    tags: ["草莓牛奶", "饮料", "便利贴"],
+    usage: "strawberryMilk(ctx, x, y, s, rot, seed, note, noteK)",
+    params: z.object({ note: z.string().default("早安").describe("便利贴上的字（空 = 不贴）") }),
+    preview: {
+      width: 500,
+      height: 700,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        strawberryMilk(ctx, 250, 380, 1.6, 0, 3300, p.note || undefined);
+      },
+    },
+  }),
+  textbook: resource({
+    kind: "prop",
+    title: "举起的课本（物理）",
+    description: "举起来、封面朝镜头的课本（物理），(x, y) 是封面中心；bookFingers 画两边扣着的手指（同样的 x, y, s, rot）。",
+    tags: ["课本", "书", "物理", "学校"],
+    usage: "textbook(ctx, x, y, s, rot); bookFingers(ctx, x, y, s, rot, skin)",
+    preview: {
+      width: 600,
+      height: 700,
+      prepare: loadFonts,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        textbook(ctx, 300, 350, 1.4, -0.05);
+        bookFingers(ctx, 300, 350, 1.4, -0.05);
+      },
+    },
+  }),
+  huggedPillow: resource({
+    kind: "prop",
+    title: "抱着的枕头",
+    description: "抱在胸前的枕头：上臂沿枕头两侧下来，前臂在前面交叉，末端是简单的圆手。袖子、袖口、肤色传进来（男主帽衫 / 女主睡衣）。",
+    tags: ["枕头", "抱", "开心"],
+    usage: "huggedPillow(ctx, x, y, s, sleeve, cuff, skin)",
+    preview: {
+      width: 600,
+      height: 600,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        huggedPillow(ctx, 300, 300, 1.2, "#f3a9c0", "#e18aa8", "#f6e1c3");
+      },
+    },
+  }),
+  deskFront: resource({
+    kind: "prop",
+    title: "正面课桌",
+    description: "正对镜头的课桌（画在坐着的学生前面），(x, y) 是桌面中心；items 在桌上画东西。",
+    tags: ["课桌", "学校", "桌子"],
+    usage: "deskFront(ctx, x, y, s, seed, (c) => …)",
+    preview: {
+      width: 700,
+      height: 500,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        deskFront(ctx, 350, 200, 1);
+      },
+    },
+  }),
+});

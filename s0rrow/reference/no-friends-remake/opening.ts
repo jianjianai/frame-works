@@ -1,10 +1,10 @@
-import { phase, smooth } from "../../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, beatAt, blinkEyes, blob, camera, castShadow, devScale, easeIn, easeInOut, easeOut, filtered, flicker, glow, grade, handheld, hash, inkLine, jit, lerp2, measure, motes, oval, paint, poly, rbox, rr, shaded, smearV, text } from "./draw";
-import { FingerKey, fingerAt, tapRipple, touchDot } from "./hand";
-import { drawKid } from "./kid";
-import { SH, SW, glassGlare, lockScreen, phone, phoneButtons } from "./phone";
-import { screenSpill } from "./sets";
-import { birthdayDesk } from "./shared";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, beatAt, blinkEyes, blob, camera, castShadow, devScale, easeIn, easeInOut, easeOut, filtered, flicker, glow, grade, handheld, hash, inkLine, jit, lerp2, measure, motes, oval, paint, poly, rbox, rr, shaded, smearV, text } from "@materials/s0rrow/code/draw";
+import { FingerKey, fingerAt, tapRipple, touchDot } from "@materials/s0rrow/code/hand";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { SH, SW, glassGlare, lockScreen, phone, phoneButtons } from "@materials/s0rrow/code/phone";
+import { screenSpill } from "@materials/s0rrow/code/sets";
+import { birthdayDesk } from "@materials/s0rrow/code/shared";
 
 /** 开头三个镜头（用户定的结构：主角自己在家过生日 → 另一个镜头 → 手机 0 条消息 → 回忆。这三个镜头决定 5 秒留存：
  *  场景要有美感、光影要舒服、过渡要丝滑。第二个镜头用户选的是「俯拍桌面」，班群那段去掉了。）

@@ -1,11 +1,11 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, blinkEyes, blob, bloom, bokehDisc, camera, designScene, devScale, easeInOut, easeOut, figureMask, filtered, flash, glow, grade, handheld, hash, ik2, inkLine, motes, onFigure, oval, paint, poly, rbox, rimLight, shaded, shake, smear, text, tubePts, vgrad, zoomBlur } from "./lib/draw";
-import { KidPose, drawKid } from "./lib/kid";
-import { Person, drawPerson } from "./lib/people";
-import { BATH, Cloth, HALL, SHEET_ON_MIRROR, bathLight, bathroom, classroomBack, classroomSun, clothSheet, deskAt, hallGlass, hallLight, hallMirrorFrame, hallMirrorShadow, hallPlant, hallRoom, hallwayNight } from "./lib/sets";
-import { MARK_AT, birthmark, newspaper, penHeart, penRing, px, redArrow, redNote, sleeveHand, tape, toDesign } from "./lib/story";
-import { EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, backOut, blinkEyes, blob, bloom, bokehDisc, camera, designScene, devScale, easeInOut, easeOut, figureMask, filtered, flash, glow, grade, handheld, hash, ik2, inkLine, motes, onFigure, oval, paint, poly, rbox, rimLight, shaded, shake, smear, text, tubePts, vgrad, zoomBlur } from "@materials/s0rrow/code/draw";
+import { KidPose, drawKid } from "@materials/s0rrow/code/kid";
+import { Person, drawPerson } from "@materials/s0rrow/code/people";
+import { BATH, Cloth, HALL, SHEET_ON_MIRROR, bathLight, bathroom, classroomBack, classroomSun, clothSheet, deskAt, hallGlass, hallLight, hallMirrorFrame, hallMirrorShadow, hallPlant, hallRoom, hallwayNight } from "@materials/s0rrow/code/mirrors/sets";
+import { MARK_AT, birthmark, newspaper, penHeart, penRing, px, redArrow, redNote, sleeveHand, tape, toDesign } from "@materials/s0rrow/code/mirrors/story";
+import { EV } from "./timeline";
 import { nightShots } from "./night";
 
 /** 第一幕（0 – 16.29，A 段）：他把家里的镜子都蒙上了；「她说，想看看我的脸」。

@@ -1,62 +1,62 @@
-import { C, Ctx, Pt, addBlob, blob, curve, hash, ik2, inkLine, lerp2, oval, paint, poly, shaded, tubePts } from "./draw";
+/**
+ * 主角（封面的男孩：棕色蓬乱头发、困倦的厚眼皮、蓝帽衫）和女主（波波头+刘海、向日葵发卡、雀斑），正面或背影，关节手臂和腿（IK）。
+ * drawKid(ctx, x, y, s, pose)：(x, y) = 头中心，s = 1 时脸宽约 236。姿势字段见 kidPose（全部可省略）。
+ * 另有单只手特写 drawHand、手提头盔 helmetProp、向日葵发卡 sunflowerClip、跟拍子点头 bob。
+ */
+import { z } from "zod";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, Pt, addBlob, beginFrame, blob, curve, hash, ik2, inkLine, lerp2, oval, paint, poly, shaded, tubePts } from "./draw";
+
+const point = z.tuple([z.number(), z.number()]);
+export const handShape = z.enum(["relax", "fist", "open", "hold", "flat", "hidden"]);
+export type HandShape = z.infer<typeof handShape>;
 
 /** The protagonist, after the cover art: big messy brown mop, sleepy heavy-lidded eyes, blue hoodie.
  *  Drawn front-on (or from behind) with jointed arms/legs. (x, y) = head centre; s = 1 → face ≈ 236px wide. */
-export type HandShape = "relax" | "fist" | "open" | "hold" | "flat" | "hidden";
-export interface KidPose {
-  eyes?: "sleepy" | "open" | "wide" | "sad" | "tired" | "teary" | "shut" | "happy" | "angry";
-  look?: Pt; // pupils, -1..1
-  brows?: "flat" | "sad" | "worried" | "angry" | "up";
-  mouth?: "frown" | "flat" | "smile" | "grin" | "laugh" | "o" | "open" | "wobble" | "shout" | "bite" | "blow";
-  tilt?: number; // head rotation (rad)
-  headY?: number;
-  headX?: number;
-  turn?: number; // -1..1, head turned toward screen left/right
-  blush?: number;
-  tears?: number; // 0..1 streams down the cheeks
-  wet?: number; // 0..1 soaked by rain
-  /** which character: the boy from the cover (default) or the girl */
-  who?: "boy" | "girl";
-  outfit?: "hoodie" | "rider" | "pajamas" | "cardigan";
-  /** girl: sunflower hair clip (default on) */
-  clip?: boolean;
-  /** girl: freckles (default on) */
-  freckles?: boolean;
-  helmet?: boolean;
-  bandaids?: boolean;
-  /** party hat (birthday) */
-  hat?: boolean;
-  /** hood pulled up over the head */
-  hood?: boolean;
-  /** white earbuds with wires down to the chest */
-  earbuds?: boolean;
-  /** 0..1 cream smeared on the face (cake fight) */
-  cake?: number;
-  view?: "front" | "back";
-  body?: "head" | "bust" | "full";
-  arms?: "down" | "phone" | "pockets" | "carry" | "reach" | "face" | "table" | "swing" | "up" | "custom";
-  /** wrist targets (head units) for arms: "custom" — or to override a preset */
-  handL?: Pt;
-  handR?: Pt;
-  shapeL?: HandShape;
-  shapeR?: HandShape;
-  /** which way the elbow bends: by default the left elbow goes out to the left/up, the right to the right.
-   *  Flip it (e.g. bendL: 1) for an elbow that hangs down — a "V" arm holding something out. */
-  bendL?: number;
-  bendR?: number;
-  /** explicit elbows (head units): skips the IK, so an arm pointing at / away from the camera can look foreshortened
-   *  (running arms with the elbows by the body, a hand brought up to the face with the elbow kept low — with the IK a
-   *  wrist target close to the shoulder pushes the elbow out like a chicken wing; 《mirrors》 act3/act4) */
-  elbowL?: Pt;
-  elbowR?: Pt;
-  legs?: "stand" | "walk" | "run" | "sit" | "sitFloor" | "kneel";
-  walk?: number; // gait phase (rad)
+export const kidPose = z.object({
+  who: z.enum(["boy", "girl"]).default("boy").describe("哪个角色：封面的男主，或女主"),
+  view: z.enum(["front", "back"]).default("front").describe("正面 / 背影"),
+  body: z.enum(["head", "bust", "full"]).default("bust").describe("只画头 / 半身（到腰）/ 全身"),
+  eyes: z.enum(["sleepy", "open", "wide", "sad", "tired", "teary", "shut", "happy", "angry"]).default("sleepy").describe("眼睛"),
+  look: point.optional().describe("瞳孔看向 [x, y]，各 -1..1"),
+  brows: z.enum(["flat", "sad", "worried", "angry", "up"]).optional().describe("眉毛；不写时跟着眼睛（sad/teary→sad，wide→up，angry→angry）"),
+  mouth: z.enum(["frown", "flat", "smile", "grin", "laugh", "o", "open", "wobble", "shout", "bite", "blow"]).default("frown").describe("嘴（blow 吹蜡烛）"),
+  tilt: z.number().min(-0.6).max(0.6).default(0).describe("歪头（弧度）"),
+  turn: z.number().min(-1).max(1).default(0).describe("转头：-1 朝画面左，1 朝画面右"),
+  headX: z.number().min(-80).max(80).default(0).describe("头相对身体左右移（头部单位）"),
+  headY: z.number().min(-80).max(80).default(0).describe("头相对身体上下移（头部单位）"),
+  blush: z.number().min(0).max(1).default(0).describe("脸红；女主自带 0.35，超过 0.85 头上冒烟"),
+  tears: z.number().min(0).max(1).default(0).describe("眼泪流下来的长度"),
+  wet: z.number().min(0).max(1).default(0).describe("淋湿：头发塌下、滴水"),
+  cake: z.number().min(0).max(1).default(0).describe("脸上抹的奶油（蛋糕大战）"),
+  outfit: z.enum(["hoodie", "rider", "pajamas", "cardigan"]).optional().describe("衣服：男主默认 hoodie 帽衫，rider 黄色外卖服；女主默认 pajamas 粉睡衣，cardigan 开衫+百褶裙"),
+  clip: z.boolean().default(true).describe("女主：向日葵发卡"),
+  freckles: z.boolean().default(true).describe("女主：雀斑"),
+  helmet: z.boolean().default(false).describe("外卖头盔"),
+  bandaids: z.boolean().default(false).describe("创可贴"),
+  hat: z.boolean().default(false).describe("生日派对帽"),
+  hood: z.boolean().default(false).describe("帽衫的帽子戴起来"),
+  earbuds: z.boolean().default(false).describe("白色有线耳机（线垂到胸前）"),
+  arms: z.enum(["down", "phone", "pockets", "carry", "reach", "face", "table", "swing", "up", "custom"]).default("down").describe("手臂预设；custom 时用 handL/handR"),
+  handL: point.optional().describe("左手腕目标点（头部单位），IK 自动算手肘；也可覆盖预设"),
+  handR: point.optional().describe("右手腕目标点（头部单位）"),
+  shapeL: handShape.optional().describe("左手形状"),
+  shapeR: handShape.optional().describe("右手形状"),
+  bendL: z.number().min(-1).max(1).optional().describe("左肘弯向：默认 -1（向外上）；1 让手肘朝下（V 字臂）"),
+  bendR: z.number().min(-1).max(1).optional().describe("右肘弯向：默认 1；-1 让手肘朝下"),
+  elbowL: point.optional().describe("直接给左手肘（头部单位），跳过 IK：跑步时手肘贴身、手举到脸边时手肘放低"),
+  elbowR: point.optional().describe("直接给右手肘（头部单位）"),
+  legs: z.enum(["stand", "walk", "run", "sit", "sitFloor", "kneel"]).default("stand").describe("腿（body: full 时）"),
+  walk: z.number().min(0).max(6.3).default(0).describe("步态相位（弧度），走路/跑步时随时间增加"),
+  seed: z.number().int().default(11).describe("抖动线条的种子；同一画面里两个人用不同的种子"),
+});
+/** drawKid's pose. Shoulders at (±100, 192) head units (girl ±92); upper/forearm 142/134 (girl 134/128). */
+export type KidPose = z.input<typeof kidPose> & {
   /** drawn after the torso, before the arms (things held against the body) */
   holding?: (ctx: Ctx) => void;
   /** drawn after the arms but before the hands (things gripped by the hands) */
   grip?: (ctx: Ctx) => void;
-  seed?: number;
-}
+};
 
 // ---------------------------------------------------------------- palette
 const K = {
@@ -1288,3 +1288,95 @@ export function drawKid(ctx: Ctx, x: number, y: number, s: number, p: KidPose = 
 
 /** Small helper so acts can bob the head on the beat. */
 export const bob = (abs: number, amp = 4, speed = 2) => Math.sin(abs * Math.PI * speed) * amp;
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+export const resources = defineResources({
+  kid: resource({
+    kind: "character",
+    title: "主角 / 女主",
+    description:
+      "封面的男主（棕色蓬乱头发、困倦眼皮、蓝帽衫）和女主（who: girl：波波头、向日葵发卡、雀斑、睡衣或开衫）。表情、服装配件、手臂（IK 或直接给手肘）、腿和背影都由参数决定。手要盖在脸上时（握脸颊、指尖点脸），把那只手 shapeX: \"hidden\"，在 drawKid 之后自己重画前臂和手。",
+    tags: ["主角", "男主", "女主", "人物", "帽衫", "外卖", "睡衣"],
+    usage: "drawKid(ctx, x, y, s, { eyes, mouth, arms, legs, body, who, … })  // (x, y) 头中心，s = 1 脸宽约 236",
+    params: kidPose,
+    presets: {
+      全身: { body: "full" },
+      看手机: { arms: "phone", eyes: "open", look: [0, 0.6] },
+      哭: { eyes: "teary", mouth: "wobble", tears: 0.8 },
+      开心: { eyes: "happy", mouth: "grin", blush: 0.4 },
+      生日帽: { hat: true, eyes: "open", mouth: "smile" },
+      走路: { body: "full", legs: "walk", arms: "pockets" },
+      外卖骑手: { body: "full", outfit: "rider", helmet: true, eyes: "open" },
+      背影: { body: "full", view: "back" },
+      淋雨: { wet: 1, eyes: "sad" },
+      戴耳机: { earbuds: true, arms: "phone" },
+      女主睡衣: { who: "girl", body: "full", outfit: "pajamas" },
+      女主开衫: { who: "girl", body: "full", outfit: "cardigan", eyes: "open", mouth: "smile" },
+      女主害羞: { who: "girl", blush: 0.9, eyes: "happy", mouth: "smile" },
+    },
+    preview: {
+      width: 700,
+      height: 1200,
+      duration: 2,
+      time: 0,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        const moving = p.legs === "walk" || p.legs === "run";
+        drawKid(ctx, 350, 230, 1, { ...p, walk: p.walk + (moving ? t * 7 : 0) });
+      },
+    },
+  }),
+  hand: resource({
+    kind: "character",
+    title: "单只手（特写）",
+    description: "特写镜头里的一只手：手腕在 (x, y)，沿 ang 方向伸出。mirror 换成左手（拇指在另一侧）。",
+    tags: ["手", "特写"],
+    usage: "drawHand(ctx, x, y, s, ang, shape, mirror, bandaid, seed, girl)",
+    params: z.object({
+      shape: handShape.default("relax").describe("手形"),
+      ang: z.number().min(-3.14).max(3.14).default(-1.57).describe("指向（弧度，-1.57 朝上）"),
+      mirror: z.boolean().default(false).describe("左手"),
+      bandaid: z.boolean().default(false).describe("创可贴"),
+      girl: z.boolean().default(false).describe("女主的肤色"),
+    }),
+    preview: {
+      width: 400,
+      height: 400,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        drawHand(ctx, 200, 330, 1.4, p.ang, p.shape, p.mirror, p.bandaid, 1900, p.girl);
+      },
+    },
+  }),
+  helmet: resource({
+    kind: "prop",
+    title: "外卖头盔（手提）",
+    description: "黄色半盔，拎着带子：在 (x, y) 拿着，s 缩放，rot 旋转。戴在头上用 drawKid 的 helmet: true。",
+    tags: ["头盔", "外卖", "骑手"],
+    usage: "helmetProp(ctx, x, y, s, rot)",
+    params: z.object({ rot: z.number().min(-1.5).max(1.5).default(0).describe("旋转（弧度）") }),
+    preview: {
+      width: 500,
+      height: 460,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        helmetProp(ctx, 250, 30, 0.85, p.rot);
+      },
+    },
+  }),
+  sunflowerClip: resource({
+    kind: "prop",
+    title: "向日葵发卡",
+    description: "女主头上的向日葵发卡（drawKid 的 who: girl 默认戴着），也可以单独画。",
+    tags: ["发卡", "向日葵", "女主"],
+    usage: "sunflowerClip(ctx, x, y, s, seed)",
+    preview: {
+      width: 240,
+      height: 240,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        sunflowerClip(ctx, 120, 120, 2.2, 40);
+      },
+    },
+  }),
+});

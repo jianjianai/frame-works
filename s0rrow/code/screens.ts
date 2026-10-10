@@ -1,5 +1,11 @@
-import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, Pt, blob, inkLine, measure, paint, poly, rr, text } from "./draw";
+/**
+ * 《unhappy》的手机界面（600×1280 屏幕坐标，在 phone() 的 screen 回调里画）：相册看小狗照片 photoScreen（可显示日期说明）、
+ * 存钱目标 savingsScreen、外卖接单 orderScreen；另有便利贴 stickyNote、小狗照片 puppyPhoto。
+ */
+import { z } from "zod";
+import { clamp } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, F, Pt, beginFrame, blob, inkLine, loadFonts, measure, paint, poly, rr, text } from "./draw";
 import { bunnyToy, drawDog } from "./dog";
 import { SH, SW, statusBar } from "./phone";
 
@@ -173,3 +179,103 @@ export function stickyNote(ctx: Ctx, x: number, y: number, s: number, rot: numbe
   }
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+/** Previews of whole screens: the 600×1280 screen units. */
+const SCREEN = { width: 600, height: 1280, duration: 2, prepare: loadFonts };
+
+export const resources = defineResources({
+  photoScreen: resource({
+    kind: "ui",
+    title: "相册看图（小狗照片）",
+    description: "手机相册里的一张照片：豆豆小时候在纸箱里（捡到它的那天）。caption 0..1 显示底部的日期说明（小狗视角里先隐藏，后面揭示），zoom 放大，heart 点赞的心。",
+    tags: ["相册", "照片", "小狗", "手机"],
+    usage: "phone(ctx, cx, cy, s, rot, (c) => photoScreen(c, abs, { caption, zoom, heart }))",
+    params: z.object({
+      caption: z.number().min(0).max(1).default(1).describe("日期说明"),
+      zoom: z.number().min(1).max(2).default(1).describe("放大"),
+      heart: z.number().min(0).max(1).default(0).describe("点赞的心"),
+    }),
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        photoScreen(ctx, t, p);
+      },
+    },
+  }),
+  savingsScreen: resource({
+    kind: "ui",
+    title: "存钱目标（手术费）",
+    description: "记账 App 的存钱目标：豆豆的手术费，进度条到 target；done 1 时显示完成。",
+    tags: ["存钱", "记账", "手机", "进度"],
+    usage: "savingsScreen(c, abs, amount, target, done)",
+    params: z.object({
+      amount: z.number().min(0).max(8600).default(5230).describe("已存"),
+      target: z.number().min(1000).max(20000).default(8600).describe("目标"),
+      done: z.number().min(0).max(1).default(0).describe("完成"),
+    }),
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        savingsScreen(ctx, t, p.amount, p.target, p.done);
+      },
+    },
+  }),
+  orderScreen: resource({
+    kind: "ui",
+    title: "外卖接单",
+    description: "外卖骑手 App：涂鸦地图上一张新订单卡片和“接单”按钮；press 按下，accepted 接单后的样子。",
+    tags: ["外卖", "接单", "骑手", "手机"],
+    usage: "orderScreen(c, abs, press, accepted)",
+    params: z.object({
+      press: z.number().min(0).max(1).default(0).describe("按下"),
+      accepted: z.number().min(0).max(1).default(0).describe("已接单"),
+    }),
+    preview: {
+      ...SCREEN,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        orderScreen(ctx, t, p.press, p.accepted);
+      },
+    },
+  }),
+  stickyNote: resource({
+    kind: "prop",
+    title: "便利贴",
+    description: "一张黄色便利贴（兽医写在墙上的注意事项、贴在牛奶上的留言），lines 每行一句；mark 0..1 在最后一行下面画红线。",
+    tags: ["便利贴", "留言", "纸条"],
+    usage: "stickyNote(ctx, x, y, s, rot, [\"一天两次\", \"别让它舔伤口\"], seed, mark)",
+    params: z.object({
+      line1: z.string().default("一天两次").describe("第一行"),
+      line2: z.string().default("别让它舔伤口").describe("第二行"),
+      mark: z.number().min(0).max(1).default(0).describe("最后一行下的红线"),
+    }),
+    preview: {
+      width: 600,
+      height: 600,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        stickyNote(ctx, 300, 300, 1.4, -0.05, [p.line1, p.line2], 2400, p.mark);
+      },
+    },
+  }),
+  puppyPhoto: resource({
+    kind: "prop",
+    title: "小狗照片（纸箱里）",
+    description: "豆豆小时候在纸箱里的照片，画进 (x, y, w, h) 的圆角框（相册、回忆、相框里用同一张）。",
+    tags: ["照片", "小狗", "回忆"],
+    usage: "puppyPhoto(ctx, x, y, w, h, abs)",
+    preview: {
+      width: 600,
+      height: 600,
+      duration: 2,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        puppyPhoto(ctx, 50, 50, 500, 500, t);
+      },
+    },
+  }),
+});

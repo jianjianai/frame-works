@@ -1,5 +1,13 @@
-import { C, Ctx, Pt, inkLine, oval, paint, rbox, shaded } from "./draw";
-import type { KidPose } from "./kid";
+/**
+ * 《mirrors》她的速写本（牛皮纸封面：白猫贴纸、角上的小枫叶；页边 sketchEdges；线圈 sketchSpiral），和举着本子的姿势：
+ * holdPose(raise, hide) 从胸前举到鼻子、再举过脸挡住（害羞地笑、脸红、偷看他，挡住后闭眼），heldBook 本子、bookHands 两只手、
+ * bookFrame 页面坐标（在本子上画东西）。
+ */
+import { z } from "zod";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, Pt, beginFrame, inkLine, oval, paint, rbox, shaded } from "../draw";
+import { drawKid } from "../kid";
+import type { KidPose } from "../kid";
 import { whiteCatFace } from "./phoneui";
 import { mapleLeaf } from "./story";
 
@@ -128,3 +136,55 @@ export function bookFrame(c: Ctx, x: number, y: number, s: number, top: number) 
   c.translate(x - (BOOK_W / 2) * s, y + top * s);
   c.scale((BOOK_W / SKETCH_W) * s, (BOOK_H / SKETCH_H) * s);
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+export const resources = defineResources({
+  sketchbook: resource({
+    kind: "prop",
+    title: "速写本（封面）",
+    description: "她的速写本：牛皮纸封面上圆形标签里的白猫贴纸、角上的小红枫叶（sketchCover），下面几页的页边（sketchEdges），顶上的线圈（sketchSpiral）。画在 SKETCH_W × SKETCH_H（600×800）的本子坐标里。",
+    tags: ["速写本", "本子", "封面", "白猫", "枫叶"],
+    usage: "ctx.translate(x, y); ctx.scale(s, s); sketchEdges(ctx); sketchCover(ctx); sketchSpiral(ctx)",
+    preview: {
+      width: 760,
+      height: 960,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        ctx.translate(80, 100);
+        sketchEdges(ctx);
+        sketchCover(ctx);
+        sketchSpiral(ctx);
+      },
+    },
+  }),
+  holdBook: resource({
+    kind: "character",
+    title: "女主举着速写本",
+    description:
+      "她举着本子的姿势：raise 0 → 1 从胸前举到鼻子（害羞地笑、脸红、从本子上面偷看他），hide 0 → 1 再举过脸挡住（挡住后闭眼）；sway 左右轻晃。画法：drawKid(holdPose(raise, hide, sway))，在她的头部坐标里 heldBook(c, holdTop(raise, hide))，再 bookHands(c, x, y, s, top) 画盖在本子上的两只手；bookFrame 给出页面坐标（在本子上画东西）。",
+    tags: ["女主", "速写本", "害羞", "偷看", "举着"],
+    usage: "const top = holdTop(raise, hide); drawKid(c, x, y, s, holdPose(raise, hide, sway)); c.save(); c.translate(x, y); c.scale(s, s); heldBook(c, top); c.restore(); bookHands(c, x, y, s, top)",
+    params: z.object({
+      raise: z.number().min(0).max(1).default(0.7).describe("从胸前举到鼻子"),
+      hide: z.number().min(0).max(1).default(0).describe("举过脸挡住"),
+    }),
+    presets: { 胸前: { raise: 0 }, 挡住脸: { raise: 1, hide: 1 } },
+    preview: {
+      width: 700,
+      height: 1000,
+      duration: 2,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        const [x, y, s] = [350, 300, 1];
+        const top = holdTop(p.raise, p.hide);
+        drawKid(ctx, x, y, s, holdPose(p.raise, p.hide, Math.sin(t * 6.5) * 0.03 * p.raise * (1 - p.hide)));
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(s, s);
+        heldBook(ctx, top);
+        ctx.restore();
+        bookHands(ctx, x, y, s, top);
+      },
+    },
+  }),
+});

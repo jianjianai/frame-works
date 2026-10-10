@@ -1,4 +1,4 @@
-import { beatAt } from "./draw";
+import { beatAt } from "@materials/s0rrow/code/draw";
 
 /** Bar n starts at beat 4n. The cut is the song from 0:00 (work time = song time): A 段 bars 0–7, B 8–11, C 12–15,
  *  桥段 16–25 (the twist on its downbeat, 32.54), A 段 again 26–27; the drums come back on bar 28 (56.93) and the
