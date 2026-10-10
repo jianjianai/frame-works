@@ -231,6 +231,228 @@
       "values": [0, 0, 0, 1, 0, 2, 1, 0, 4, 1, 7, 6, 4, 13, 12, 13, 13, 51, 13, 8, 1, 2, 6, 4, 2, 3, 4, 2, 4, 6, 8, 24, 22, 21, 27, 198, 1350, 2677, 1809, 2239, 1445]
     }
   ],
-  "moments": [],
-  "segments": []
+  "moments": [
+    {
+      "at": 32.5,
+      "label": "反转"
+    }
+  ],
+  "segments": [
+    {
+      "kind": "复盘分段",
+      "start": 0,
+      "end": 5,
+      "label": "开场四镜：报纸糊上浴室镜子 → 甩镜到夜里走廊 → 床单盖住落地镜 → 他的脸（唱 nose / eyes 时冒小爱心…"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 1,
+      "end": 2,
+      "label": "其中甩镜那一秒"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 3,
+      "end": 4,
+      "label": "其中他的脸 + 小爱心（照着歌词演）"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 5,
+      "end": 7,
+      "label": "教室：同学戳胎记、全班笑，他捂着干笑，焦点转到她"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 7,
+      "end": 17,
+      "label": "夜里手机：白猫的消息 → 视频来电挂断 ×4 → 美颜 P 掉胎记「瑕疵：0」→ 发出"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 17,
+      "end": 24,
+      "label": "「明天放学，天台见？」→ 一夜没睡 → 掀开镜子试三种伪装"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 24,
+      "end": 32,
+      "label": "天台：认出她 → 墨镜滑下 → 逃跑 →「黑猫！」定格 → 她举起速写本"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 32,
+      "end": 38,
+      "label": "反转：速写本里画的都是他 → P 图那页「为什么要P掉它？」"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 38,
+      "end": 47,
+      "label": "含泪 → 摘伪装 → 她的锁屏是她画的他 → 她在自己脸上画枫叶 → 他笑出声"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 47,
+      "end": 52,
+      "label": "切回开头那样的胎记特写，她的指尖画光圈 → 拉开到双人 → 踮脚「这下一样了」"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 52,
+      "end": 57,
+      "label": "第五幕：回到浴室镜子、撕报纸、贴她画的猫、镜中爱心、结尾引导"
+    },
+    {
+      "kind": "歌词",
+      "start": 0.342,
+      "end": 2.421,
+      "label": "Put up all the mirrors in my house"
+    },
+    {
+      "kind": "歌词",
+      "start": 2.421,
+      "end": 4.485,
+      "label": "I love my nose eyes and my mouth"
+    },
+    {
+      "kind": "歌词",
+      "start": 4.485,
+      "end": 6.487,
+      "label": "I love the jokes I laugh about"
+    },
+    {
+      "kind": "歌词",
+      "start": 6.487,
+      "end": 8.146,
+      "label": "I love the girls I'm glad about"
+    },
+    {
+      "kind": "歌词",
+      "start": 8.146,
+      "end": 10.147,
+      "label": "She calls up my phone"
+    },
+    {
+      "kind": "歌词",
+      "start": 10.147,
+      "end": 12.245,
+      "label": "Ringing ringing ringing ringing baby don't leave me alone"
+    },
+    {
+      "kind": "歌词",
+      "start": 12.245,
+      "end": 14.254,
+      "label": "She saw zero flaws"
+    },
+    {
+      "kind": "歌词",
+      "start": 14.254,
+      "end": 16.514,
+      "label": "Baby can you tell me if I should start doing wrong"
+    },
+    {
+      "kind": "歌词",
+      "start": 16.514,
+      "end": 18.603,
+      "label": "Ooh I like the feeling of my doubts"
+    },
+    {
+      "kind": "歌词",
+      "start": 18.603,
+      "end": 21.159,
+      "label": "I want to live on top of my couch"
+    },
+    {
+      "kind": "歌词",
+      "start": 21.159,
+      "end": 24.959,
+      "label": "Oh well oh well oh well"
+    },
+    {
+      "kind": "歌词",
+      "start": 24.959,
+      "end": 26.304,
+      "label": "I know what you want from me"
+    },
+    {
+      "kind": "歌词",
+      "start": 26.304,
+      "end": 28.787,
+      "label": "I'm really really good at everything"
+    },
+    {
+      "kind": "歌词",
+      "start": 28.787,
+      "end": 30.299,
+      "label": "I know why you talk to me"
+    },
+    {
+      "kind": "歌词",
+      "start": 30.299,
+      "end": 32.555,
+      "label": "I'll probably even buy you a wedding ring"
+    },
+    {
+      "kind": "歌词",
+      "start": 32.555,
+      "end": 34.144,
+      "label": "Ooh I have a question"
+    },
+    {
+      "kind": "歌词",
+      "start": 34.144,
+      "end": 36.6,
+      "label": "I'm like \"Ooh I have a question\""
+    },
+    {
+      "kind": "歌词",
+      "start": 36.6,
+      "end": 38.128,
+      "label": "Ooh I have a question"
+    },
+    {
+      "kind": "歌词",
+      "start": 38.128,
+      "end": 40.855,
+      "label": "I'm like \"Ooh I have a question for you baby\""
+    },
+    {
+      "kind": "歌词",
+      "start": 40.855,
+      "end": 42.992,
+      "label": "I know I really really matter to you"
+    },
+    {
+      "kind": "歌词",
+      "start": 42.992,
+      "end": 44.892,
+      "label": "'Cause you never ever talk to other dudes"
+    },
+    {
+      "kind": "歌词",
+      "start": 44.892,
+      "end": 50.976,
+      "label": "Oh-oh-oh you make me like my face so much"
+    },
+    {
+      "kind": "歌词",
+      "start": 50.976,
+      "end": 53.247,
+      "label": "When will you be on my level?"
+    },
+    {
+      "kind": "歌词",
+      "start": 53.247,
+      "end": 55.18,
+      "label": "Put up all the mirrors in my house"
+    },
+    {
+      "kind": "歌词",
+      "start": 55.18,
+      "end": 57.512,
+      "label": "I love my nose eyes and my mouth"
+    }
+  ]
 }
