@@ -1,11 +1,11 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, backOut, blob, bloom, camera, designScene, easeIn, easeInOut, flash, glow, handheld, inkLine, motes, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./lib/draw";
-import { KidPose, drawKid } from "./lib/kid";
-import { whiteCatFace } from "./lib/phoneui";
-import { BATH, bathDoorLight, bathLight, bathroom } from "./lib/sets";
-import { MARK_AT, birthmark, newspaper, penHeart, sleeveHand, tape } from "./lib/story";
-import { END, EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, backOut, blob, bloom, camera, designScene, easeIn, easeInOut, flash, glow, handheld, inkLine, motes, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "@materials/s0rrow/code/draw";
+import { KidPose, drawKid } from "@materials/s0rrow/code/kid";
+import { whiteCatFace } from "@materials/s0rrow/code/mirrors/phoneui";
+import { BATH, bathDoorLight, bathLight, bathroom } from "@materials/s0rrow/code/mirrors/sets";
+import { MARK_AT, birthmark, newspaper, penHeart, sleeveHand, tape } from "@materials/s0rrow/code/mirrors/story";
+import { END, EV } from "./timeline";
 import { caption } from "./lyrics";
 
 /** 第五幕（52.863 – 57.5，A 段回来："Put up all the mirrors in my house / I love my nose, eyes and my mouth"）

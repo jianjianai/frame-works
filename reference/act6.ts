@@ -1,10 +1,10 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, W, backOut, camera, designScene, easeOut, fillBg, flash, glow, inkLine, measure, text, writeOn } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { CAST, drawPerson } from "./lib/people";
-import { Msg, airplaneIcon, chatScreen, phone } from "./lib/phone";
-import { hedge, lampPost, parkSky, swingSet } from "./lib/sets";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, W, backOut, camera, designScene, easeOut, fillBg, flash, glow, inkLine, measure, text, writeOn } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { CAST, drawPerson } from "@materials/s0rrow/code/people";
+import { Msg, airplaneIcon, chatScreen, phone } from "@materials/s0rrow/code/phone";
+import { hedge, lampPost, parkSky, swingSet } from "@materials/s0rrow/code/sets";
 
 /** OUTRO (83.74 – 99.1s): the same swing set, now sharing one earbud with 小雨.
  *  A message that finally sends, and a nudge to rewatch / comment. */

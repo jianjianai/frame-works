@@ -1,5 +1,5 @@
-// 用酷狗 KRC 取逐字歌词时间，输出 scenes/lib/krc.ts。
-// 用法：node production/fetch-krc.mjs "歌手 - 歌名" <音频毫秒数> > scenes/lib/krc.ts
+// 用酷狗 KRC 取逐字歌词时间，输出作品的 scenes/krc.ts（素材库 code/lyrics.ts 的 lyricLines 用它）。
+// 用法：把这个脚本拷到作品的 production/，node production/fetch-krc.mjs "歌手 - 歌名" <音频毫秒数> > scenes/krc.ts
 // 先核对 stderr 打印的 KRC 时长和本地音频一致，再抽查几个词的时间。
 import zlib from "node:zlib";
 

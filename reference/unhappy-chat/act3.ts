@@ -1,16 +1,16 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text, writeOn, pulse, filtered, rr } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook, classroomFront, strawberryMilk } from "./lib/places";
-import { heart } from "./lib/sets";
-import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, markAt, sendButtonAt } from "./lib/chat";
-import { MEI, MEI_FIRST } from "./lib/story";
-import { FingerPos } from "./lib/hand";
-import { SH, SW, lockScreen, notification } from "./lib/phone";
-import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT, herHome, oldFilm, afterNight, LATE1, LATE2, hisRoomMorning, herRoomAt } from "./lib/story";
-import { HIS_WIN, Z_IN, street, winC } from "./lib/street";
-import { BAR, EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, W, blob, camera, card, designScene, fillBg, glow, inkLine, paint, text, writeOn, pulse, filtered, rr } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { bedBlanket, bedroom, bookFingers, herBlanket, herRoom, huggedPillow, textbook, classroomFront, strawberryMilk } from "@materials/s0rrow/code/places";
+import { heart } from "@materials/s0rrow/code/sets";
+import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, markAt, sendButtonAt } from "@materials/s0rrow/code/chat";
+import { MEI, MEI_FIRST } from "./story";
+import { FingerPos } from "@materials/s0rrow/code/hand";
+import { SH, SW, lockScreen, notification } from "@materials/s0rrow/code/phone";
+import { FRIEND_ADVICE, GIVE_UP, HER, PHONE_CY, PHONE_S, REST_L, REST_R, HER_CONFESSION, HER_REPLY_DRAFT, HIM, HISTORY, deleted, fromHer, hisClassFace, hisFaceReading, inWin, phoneCloseup, pop, typed, typingThumbs, editing, CONFESSION_EDITS, HER_NIGHT_DRAFT, herHome, oldFilm, afterNight, LATE1, LATE2, hisRoomMorning, herRoomAt } from "./story";
+import { HIS_WIN, Z_IN, street, winC } from "./street";
+import { BAR, EV } from "./timeline";
 
 /** ACT 3 (32.79 – 49.14s) · verse 2 · 她的视角
  *  3A her memory (on old film, like his in act 1) — 23:12: his long message lands; she squeals, types a long happy reply…

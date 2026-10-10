@@ -1,15 +1,15 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, backOut, blob, camera, card, designScene, easeOut, fillBg, flash, glow, inkLine, oval, paint, rr, text, writeOn } from "./lib/draw";
-import { drawKid, helmetProp } from "./lib/kid";
-import { ballToy, bunnyToy, drawDog } from "./lib/dog";
-import { CAST, drawPerson } from "./lib/people";
-import { entrance, kennelBars, recoveryRoom, surgeryHall } from "./lib/places";
-import { phone, SH, SW } from "./lib/phone";
-import { FingerKey, fingerAt, heldHands } from "./lib/hand";
-import { orderScreen, photoScreen, savingsScreen, stickyNote } from "./lib/screens";
-import { lightPool, heart } from "./lib/sets";
-import { BAR, EV } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, W, backOut, blob, camera, card, designScene, easeOut, fillBg, flash, glow, inkLine, oval, paint, rr, text, writeOn } from "@materials/s0rrow/code/draw";
+import { drawKid, helmetProp } from "@materials/s0rrow/code/kid";
+import { ballToy, bunnyToy, drawDog } from "@materials/s0rrow/code/dog";
+import { CAST, drawPerson } from "@materials/s0rrow/code/people";
+import { entrance, kennelBars, recoveryRoom, surgeryHall } from "@materials/s0rrow/code/places";
+import { phone, SH, SW } from "@materials/s0rrow/code/phone";
+import { FingerKey, fingerAt, heldHands } from "@materials/s0rrow/code/hand";
+import { orderScreen, photoScreen, savingsScreen, stickyNote } from "@materials/s0rrow/code/screens";
+import { lightPool, heart } from "@materials/s0rrow/code/sets";
+import { BAR, EV } from "./timeline";
 
 /** ACT 3 (32.79 – 49.14s) · 他的视角
  *  3A the same night, from his side: 32 deliveries, band-aids, the vet's note "don't let it get excited";

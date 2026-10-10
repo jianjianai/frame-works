@@ -1,12 +1,12 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, beatAt, blob, camera, card, designScene, easeIn, easeOut, fillBg, flash, glow, paint, rr, shake, text } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { CAST, banner, drawPerson, hahas } from "./lib/people";
-import { SH, SW, lockScreen, phone } from "./lib/phone";
-import { classroom, corridor, lightPool, schoolDesk } from "./lib/sets";
-import { birthdayDesk } from "./lib/shared";
-import { FingerKey, fingerAt, heldHands, onScreen, tapRipple } from "./lib/hand";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, W, beatAt, blob, camera, card, designScene, easeIn, easeOut, fillBg, flash, glow, paint, rr, shake, text } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { CAST, banner, drawPerson, hahas } from "@materials/s0rrow/code/people";
+import { SH, SW, lockScreen, phone } from "@materials/s0rrow/code/phone";
+import { classroom, corridor, lightPool, schoolDesk } from "@materials/s0rrow/code/sets";
+import { birthdayDesk } from "@materials/s0rrow/code/shared";
+import { FingerKey, fingerAt, heldHands, onScreen, tapRipple } from "@materials/s0rrow/code/hand";
 
 /** ACT 1 (0 – 16.96s): alone with a birthday cupcake, a silent phone, and a flashback to "fake" classmates. */
 const T0 = 0;

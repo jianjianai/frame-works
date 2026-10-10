@@ -1,10 +1,10 @@
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { BEAT, C, Ctx, H, Pt, W, backOut, camera, devScale, easeIn, easeInOut, easeOut, figureMask, filtered, flash, glow, handheld, onFigure, oval, paint, rimLight, shaded, shake, sinceBeat } from "./lib/draw";
-import { KidPose, drawKid } from "./lib/kid";
-import { livingNight, livingBokeh, livingRoom } from "./lib/living";
-import { ChatItem, ChatView, FingerPos, HANG_UP, SELFIE_MARK, SEND_AT, SH, SLIDER, aimPhone, beautyScreen, callScreen, chatScreen, phone, phoneBack, selfie, sendDialog, tapRing, touchDot } from "./lib/phoneui";
-import { birthmark } from "./lib/story";
-import { EV } from "./lib/timeline";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { BEAT, C, Ctx, H, Pt, W, backOut, camera, devScale, easeIn, easeInOut, easeOut, figureMask, filtered, flash, glow, handheld, onFigure, oval, paint, rimLight, shaded, shake, sinceBeat } from "@materials/s0rrow/code/draw";
+import { KidPose, drawKid } from "@materials/s0rrow/code/kid";
+import { livingNight, livingBokeh, livingRoom } from "@materials/s0rrow/code/mirrors/living";
+import { ChatItem, ChatView, FingerPos, HANG_UP, SELFIE_MARK, SEND_AT, SH, SLIDER, aimPhone, beautyScreen, callScreen, chatScreen, phone, phoneBack, selfie, sendDialog, tapRing, touchDot } from "@materials/s0rrow/code/mirrors/phoneui";
+import { birthmark } from "@materials/s0rrow/code/mirrors/story";
+import { EV } from "./timeline";
 
 /** 第一幕后半（6.638 – 16.29）：夜里，他的手机。act1.ts 的镜头链在 EV.next 之后调用 nightShots。
  *  6.638  手机近景（背景是失焦的客厅：左边台灯的暖光、右边窗外的冷光）：和「白猫」的聊天——她的头像是白猫，他的是

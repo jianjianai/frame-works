@@ -1,6 +1,6 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { BEAT, C, Ctx, F, W, backOut, beatAt, curve, designScene, easeOut, font, jit, measure, paint, rr, sinceBeat, text, writeOn } from "./lib/draw";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { BEAT, C, Ctx, F, W, backOut, beatAt, curve, designScene, easeOut, font, jit, measure, paint, rr, sinceBeat, text, writeOn } from "@materials/s0rrow/code/draw";
 import { LINES, Line } from "./lib/lyrics-data";
 
 /** Lyrics (EN karaoke + CN translation), the hook title and the red-pen corrections. */

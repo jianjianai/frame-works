@@ -1,6 +1,14 @@
-import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, blob, measure, paint, poly, rr, rrectPts, text } from "./draw";
-import { drawPerson, Person, xMark } from "./people";
+/**
+ * 手机（第一支和重置版的界面）：phone(ctx, cx, cy, s, rot, screen) 画机身，screen 回调在 600×1280 的屏幕坐标里画内容。
+ * 屏幕：锁屏 lockScreen（黄昏秋千壁纸 wallpaper）、聊天 chatScreen、动态 feedScreen、控制中心 controlCenter（飞行模式/手电）、
+ * 横幅通知 notification、未读角标 badge、状态栏 statusBar；机身背面 phoneBack（可开手电）、侧键 phoneButtons、玻璃反光 glassGlare。
+ * 微信风格的聊天（第二版）在 chat.ts，《mirrors》的深色界面在 mirrors/phoneui.ts。
+ */
+import { z } from "zod";
+import { clamp } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, F, beginFrame, blob, loadFonts, measure, paint, poly, rr, rrectPts, text } from "./draw";
+import { CAST, drawPerson, Person, xMark } from "./people";
 
 /** Phone screen design size. */
 export const SW = 600;
@@ -741,3 +749,116 @@ export function badge(ctx: Ctx, x: number, y: number, label: string, scale = 1) 
 }
 
 export { xMark };
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+const SAMPLE_MSGS: Msg[] = [
+  { text: "生日快乐呀", from: "阿杰", avatar: CAST.jie, time: "22:10" },
+  { me: true, text: "谢谢！今晚出来吗" },
+  { me: true, text: "我请大家吃蛋糕", failed: 1 },
+  { system: true, text: "阿杰 撤回了一条消息" },
+];
+const SAMPLE_POSTS: Post[] = [{ name: "阿杰", text: "生日快乐派对！", people: [CAST.jie, CAST.yu, CAST.monitor], bg: "#f6d6a8", likes: "雨、班长 等 23 人", who: CAST.jie }];
+const screenOf = (kind: string, st: Status, abs: number) => (c: Ctx) => {
+  if (kind === "lock") lockScreen(c, st, { note: "0 条新消息" });
+  else if (kind === "chat") chatScreen(c, st, "高二(3)班", SAMPLE_MSGS, "大家都在吗", Math.floor(abs * 2) % 2 === 0, { keyboard: true });
+  else if (kind === "feed") feedScreen(c, st, SAMPLE_POSTS, 0);
+  else controlCenter(c, st, st.airplane, 0, 0, 0);
+};
+
+export const resources = defineResources({
+  phone: resource({
+    kind: "prop",
+    title: "手机（锁屏 / 聊天 / 动态 / 控制中心）",
+    description:
+      "手机机身（金属边框有冷暖高光）和 screen 回调里的界面。screen 在 600×1280 的屏幕坐标里画：lockScreen、chatScreen（群聊、发送失败、撤回）、feedScreen（朋友动态）、controlCenter（飞行模式、手电）。不画手时用 hand.ts 的 touchDot 表示触点。",
+    tags: ["手机", "锁屏", "聊天", "朋友圈", "控制中心", "飞行模式"],
+    usage: "phone(ctx, cx, cy, s, rot, (c) => lockScreen(c, { time: \"23:58\", airplane: false }))",
+    params: z.object({
+      screen: z.enum(["lock", "chat", "feed", "control"]).default("lock").describe("示例界面"),
+      time: z.string().default("23:58").describe("状态栏时间"),
+      airplane: z.boolean().default(false).describe("飞行模式"),
+      rot: z.number().min(-0.4).max(0.4).default(0).describe("旋转（弧度）"),
+    }),
+    presets: { 锁屏: { screen: "lock" }, 群聊: { screen: "chat" }, 朋友动态: { screen: "feed" }, 飞行模式: { screen: "control", airplane: true } },
+    preview: {
+      width: 760,
+      height: 1440,
+      duration: 2,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        phone(ctx, 380, 720, 1, p.rot, screenOf(p.screen, { time: p.time, airplane: p.airplane }, t));
+      },
+    },
+  }),
+  phoneBack: resource({
+    kind: "prop",
+    title: "手机背面（手电）",
+    description: "别人拿着看的手机，我们看到背面：深色机身、左上角摄像头、屏幕的光从边上漏出来；torch 打开手电。",
+    tags: ["手机", "背面", "手电"],
+    usage: "phoneBack(ctx, cx, cy, w, h, rot, torch)",
+    params: z.object({ torch: z.number().min(0).max(1).default(0).describe("手电亮度") }),
+    preview: {
+      width: 600,
+      height: 900,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        ctx.fillStyle = "#1c1f2b";
+        ctx.fillRect(0, 0, 600, 900);
+        phoneBack(ctx, 300, 450, 300, 600, 0.05, p.torch);
+      },
+    },
+  }),
+  notification: resource({
+    kind: "ui",
+    title: "横幅通知",
+    description: "屏幕顶部的横幅通知（消息 / 来电 / 群聊），正文超过一行自动换行；notificationHeight 给出高度，用来排好几条。",
+    tags: ["通知", "消息", "来电", "手机"],
+    usage: "notification(ctx, x, y, w, { title, body, kind, time, count }, alpha)",
+    params: z.object({
+      kind: z.enum(["msg", "call", "group"]).default("msg").describe("类型"),
+      title: z.string().default("阿杰").describe("标题"),
+      body: z.string().default("生日快乐！今晚一起吃饭吗").describe("正文"),
+    }),
+    preview: {
+      width: 700,
+      height: 260,
+      background: "#3b4a63",
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        notification(ctx, 40, 50, 620, { title: p.title, body: p.body, kind: p.kind, time: "现在" });
+      },
+    },
+  }),
+  badge: resource({
+    kind: "ui",
+    title: "未读角标",
+    description: "红色的未读数角标。",
+    tags: ["角标", "未读", "红点"],
+    usage: "badge(ctx, x, y, label, scale)",
+    params: z.object({ label: z.string().default("99+").describe("数字") }),
+    preview: {
+      width: 240,
+      height: 160,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        badge(ctx, 120, 80, p.label, 2);
+      },
+    },
+  }),
+  wallpaper: resource({
+    kind: "ui",
+    title: "锁屏壁纸（黄昏秋千）",
+    description: "他的锁屏壁纸：深蓝到玫瑰色的黄昏天空、星星、细月亮、山坡上一架空秋千。画满 600×1280 的屏幕。",
+    tags: ["壁纸", "锁屏", "黄昏", "秋千"],
+    usage: "wallpaper(ctx)  // 在 phone() 的 screen 回调里",
+    preview: {
+      width: 600,
+      height: 1280,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        wallpaper(ctx);
+      },
+    },
+  }),
+});

@@ -1,43 +1,52 @@
-import { C, Ctx, Pt, blob, curve, hash, ik2, inkLine, lerp2, oval, paint, poly, shaded, tubePts } from "./draw";
-import { HandShape, drawHand } from "./kid";
+/**
+ * 其他人（同学、大人、兽医、医生……），和主角同样的精细画风：脸部明暗、带虹膜高光的眼睛、眉毛、发型发丝线、关节袖子和真实的手。
+ * drawPerson(ctx, x, y, s, person)：(x, y) = 头中心。CAST 是常用的一组人（杰、雨、班长、a–e、兽医、小美、琪、学生 1–4）。
+ * x（0..1）叠上封面那种被划掉的“X 脸”（反转前用），默认 1：不想要就写 x: 0。另有 xMark、生日横幅 banner、笑声涂鸦 hahas。
+ */
+import { z } from "zod";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, F, Pt, beginFrame, blob, curve, hash, ik2, inkLine, lerp2, loadFonts, oval, paint, poly, shaded, tubePts } from "./draw";
+import { HandShape, drawHand, handShape } from "./kid";
+
+const point = z.tuple([z.number(), z.number()]);
+const color = (fallback: string, what: string) => z.string().default(fallback).describe(`${what}颜色（#rrggbb）`);
 
 /** Everyone else (adults/classmates), drawn in the same refined style as the protagonist:
  *  shaded face, eyes with iris + catchlights, brows, styled hair with lock lines, jointed sleeves and real hands.
  *  `x` (0..1) overlays the cover's crossed-out "X" face (used before a twist). (x, y) = head centre.
  *  重置版 added `handL/handR` (wrist target, head units) + `shapeL/shapeR` + `bendL/bendR`: they override one arm of any
  *  preset (e.g. one hand waving, the other holding a gift behind the back). */
-export interface Person {
-  hair?: "short" | "long" | "bob" | "pony" | "buzz" | "cap" | "bun" | "curly";
-  hairColor?: string;
-  top?: string;
-  bottom?: string;
-  shoes?: string;
-  skin?: string;
-  x?: number; // 0..1, how much of the X mark is visible
-  face?: "smile" | "laugh" | "neutral" | "o" | "sad";
-  arms?: "down" | "laugh" | "behind" | "up" | "phone" | "handL" | "handR" | "point" | "hold" | "waveL" | "thumb";
-  wave?: number; // 0..1 hand raised for "waveL"
-  legs?: "stand" | "walk" | "sit";
-  walk?: number;
-  body?: "bust" | "full";
-  turn?: number; // -1..1 head turn
-  tilt?: number;
-  glasses?: boolean;
-  /** white lab coat over the top */
-  coat?: boolean;
-  /** surgical mask: 1 = on, 0 = pulled down under the chin */
-  mask?: number;
-  seed?: number;
+export const personSchema = z.object({
+  hair: z.enum(["short", "long", "bob", "pony", "buzz", "cap", "bun", "curly"]).default("short").describe("发型"),
+  hairColor: color("#2a2220", "头发"),
+  top: color("#888888", "上衣"),
+  bottom: color("#334455", "裤子 / 裙子"),
+  shoes: color("#1d1b1c", "鞋"),
+  skin: color("#f3dcae", "皮肤"),
+  x: z.number().min(0).max(1).default(1).describe("被划掉的 X 脸显示多少：默认 1（显示），不要就写 0"),
+  face: z.enum(["smile", "laugh", "neutral", "o", "sad"]).default("smile").describe("表情"),
+  arms: z.enum(["down", "laugh", "behind", "up", "phone", "handL", "handR", "point", "hold", "waveL", "thumb"]).default("down").describe("手臂预设（waveL 招手，thumb 竖拇指）"),
+  wave: z.number().min(0).max(1).default(1).describe("waveL 时手举起多少"),
+  legs: z.enum(["stand", "walk", "sit"]).default("stand").describe("腿"),
+  walk: z.number().min(0).max(6.3).default(0).describe("步态相位（弧度）"),
+  body: z.enum(["bust", "full"]).default("full").describe("半身 / 全身"),
+  turn: z.number().min(-1).max(1).default(0).describe("转头 -1..1"),
+  tilt: z.number().min(-0.6).max(0.6).default(0).describe("歪头（弧度）"),
+  glasses: z.boolean().default(false).describe("眼镜"),
+  coat: z.boolean().default(false).describe("白大褂"),
+  mask: z.number().min(0).max(1).optional().describe("口罩：不写就没有；1 戴上，0 拉到下巴"),
+  handL: point.optional().describe("覆盖预设的左手腕目标点（头部单位）"),
+  handR: point.optional().describe("覆盖预设的右手腕目标点（头部单位）"),
+  shapeL: handShape.optional().describe("左手形状"),
+  shapeR: handShape.optional().describe("右手形状"),
+  bendL: z.number().min(-1).max(1).optional().describe("左肘弯向"),
+  bendR: z.number().min(-1).max(1).optional().describe("右肘弯向"),
+  seed: z.number().int().default(500).describe("抖动线条的种子"),
+});
+export type Person = z.input<typeof personSchema> & {
   /** drawn between arms and hands */
   holding?: (ctx: Ctx) => void;
-  /** override a preset arm: wrist target (head units), hand shape and elbow direction */
-  handL?: Pt;
-  handR?: Pt;
-  shapeL?: HandShape;
-  shapeR?: HandShape;
-  bendL?: number;
-  bendR?: number;
-}
+};
 
 export const CAST: Record<string, Person> = {
   jie: { hair: "short", hairColor: "#1f1a17", top: "#ef8a3a", bottom: "#3b4a63", shoes: "#f2f2f2", seed: 301 },
@@ -488,3 +497,101 @@ export function hahas(ctx: Ctx, cx: number, cy: number, r: number, t: number, se
   }
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+export const resources = defineResources({
+  person: resource({
+    kind: "character",
+    title: "其他人（同学、大人、兽医）",
+    description:
+      "主角以外的人物，和主角同样的画风。默认带封面那种被划掉的 X 脸（x: 1，反转前的“陌生人”），正常的人写 x: 0。预设是常用的一组人（CAST）：杰、雨、班长、a–e、兽医、小美、琪、学生 1–4。单独覆盖一只手臂用 handL/handR + shapeL/R + bendL/R（一只手招手，另一只把礼物藏在身后）。",
+    tags: ["人物", "同学", "路人", "兽医", "医生", "X脸"],
+    usage: "drawPerson(ctx, x, y, s, { ...CAST.jie, face: \"laugh\", x: 0 })  // (x, y) 头中心",
+    params: personSchema,
+    presets: {
+      杰: CAST.jie,
+      雨: CAST.yu,
+      班长: CAST.monitor,
+      a: CAST.a,
+      b: CAST.b,
+      c: CAST.c,
+      d: CAST.d,
+      e: CAST.e,
+      兽医: CAST.vet,
+      小美: CAST.mei,
+      琪: CAST.qi,
+      学生1: CAST.stu1,
+      学生2: CAST.stu2,
+      学生3: CAST.stu3,
+      学生4: CAST.stu4,
+      大笑: { ...CAST.jie, face: "laugh", arms: "laugh", x: 0 },
+      招手: { ...CAST.mei, arms: "waveL" },
+      竖拇指: { ...CAST.vet, arms: "thumb", mask: 0 },
+    },
+    preview: {
+      width: 600,
+      height: 1100,
+      duration: 2,
+      time: 0,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        drawPerson(ctx, 300, 230, 1, { ...p, walk: p.walk + (p.legs === "walk" ? t * 7 : 0) });
+      },
+    },
+  }),
+  xMark: resource({
+    kind: "effect",
+    title: "X 脸（被划掉的脸）",
+    description: "封面里画在人脸上的蓝白大叉。drawPerson 的 x 参数自带它；也可以单独画在任何东西上，alpha 做淡入淡出。",
+    tags: ["X", "划掉", "封面"],
+    usage: "xMark(ctx, cx, cy, r, seed, alpha)",
+    params: z.object({ alpha: z.number().min(0).max(1).default(1).describe("不透明度") }),
+    preview: {
+      width: 400,
+      height: 400,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        xMark(ctx, 200, 200, 130, 7, p.alpha);
+      },
+    },
+  }),
+  banner: resource({
+    kind: "prop",
+    title: "生日横幅",
+    description: "粉色横幅，open 0 卷着、1 完全展开，label 是上面的字。",
+    tags: ["生日", "横幅", "派对"],
+    usage: "banner(ctx, x, y, w, open, label, seed, F.cn)",
+    params: z.object({
+      open: z.number().min(0).max(1).default(1).describe("展开程度"),
+      label: z.string().default("生日快乐").describe("文字"),
+    }),
+    preview: {
+      width: 800,
+      height: 400,
+      duration: 1.5,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        banner(ctx, 400, 200, 620, p.open, p.label, 31, F.cn);
+      },
+    },
+  }),
+  hahas: resource({
+    kind: "effect",
+    title: "哈哈哈（笑声涂鸦）",
+    description: "一圈“哈哈哈”手写字绕着一个点跳动，用在被嘲笑、哄堂大笑的镜头。t 用作品时间。",
+    tags: ["笑", "嘲笑", "文字", "涂鸦"],
+    usage: "hahas(ctx, cx, cy, r, abs, seed, F.cn, count)",
+    params: z.object({ count: z.number().int().min(1).max(12).default(6).describe("几个“哈”") }),
+    preview: {
+      width: 600,
+      height: 600,
+      duration: 2,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        hahas(ctx, 300, 300, 200, t, 3, F.cn, p.count);
+      },
+    },
+  }),
+});

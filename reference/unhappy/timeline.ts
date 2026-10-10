@@ -1,4 +1,4 @@
-import { beatAt } from "./draw";
+import { beatAt } from "@materials/s0rrow/code/draw";
 
 /** Bar n starts at beat 4n (work time). Bar 8 = chorus, 16 = verse 2, 24 = outro. */
 export const BAR = (n: number) => beatAt(n * 4);

@@ -1,10 +1,10 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, backOut, beatAt, bloom, bokehDisc, camera, designScene, easeInOut, fillBg, filtered, flash, glow, handheld, text, writeOn } from "./lib/draw";
-import { CAST, Person, drawPerson } from "./lib/people";
-import { Msg, SW, chatScreen, glassGlare, phone, phoneButtons } from "./lib/phone";
-import { FingerKey, fingerAt, touchDot } from "./lib/hand";
-import { bokeh, buildingEntrance } from "./lib/sets";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, W, backOut, beatAt, bloom, bokehDisc, camera, designScene, easeInOut, fillBg, filtered, flash, glow, handheld, text, writeOn } from "@materials/s0rrow/code/draw";
+import { CAST, Person, drawPerson } from "@materials/s0rrow/code/people";
+import { Msg, SW, chatScreen, glassGlare, phone, phoneButtons } from "@materials/s0rrow/code/phone";
+import { FingerKey, fingerAt, touchDot } from "@materials/s0rrow/code/hand";
+import { bokeh, buildingEntrance } from "@materials/s0rrow/code/sets";
 
 /** EPILOGUE (song 83.74 – 90.00 = work 50.35 – 56.61; draws in song time) · 重新设计版.
  *  His phone (no hands, 用户: his taps are dots on the glass), the party still going on behind him (far out of focus,

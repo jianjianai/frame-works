@@ -1,11 +1,11 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, W, camera, card, designScene, easeOut, flash, oval, paint, text } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { drawDog } from "./lib/dog";
-import { coverTree } from "./lib/places";
-import { heart } from "./lib/sets";
-import { BAR, END } from "./lib/timeline";
+import type { SceneOptions } from "@frame/engine/types";
+import { phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, W, camera, card, designScene, easeOut, flash, oval, paint, text } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { drawDog } from "@materials/s0rrow/code/dog";
+import { coverTree } from "@materials/s0rrow/code/places";
+import { heart } from "@materials/s0rrow/code/sets";
+import { BAR, END } from "./timeline";
 
 /** ACT 4 (49.14 – 55.3s) · 尾声: the tree from the cover. He sits against the trunk, 豆豆 asleep at his side,
  *  his hand on its head. "其实他每天都摸了 / 在你睡着以后". Rewatch hint: the helmet at 0:02. */

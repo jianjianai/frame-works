@@ -1,9 +1,17 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { seeded } from "../../../src/engine/math";
-import { H, W, designScene } from "./lib/draw";
+/**
+ * 胶片颗粒和暗角：灰色（128 = 不变）的颗粒图块每秒换 24 次，叠加方式 overlay。作品在 visual.json 里放一个盖住全片的 scene 图层
+ * （module 注册为 grain: () => import("@materials/s0rrow/code/grain")，blend: "overlay"，opacity 0.5）。
+ */
+import { z } from "zod";
+import type { SceneOptions } from "@frame/engine/types";
+import { seeded } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { Ctx, H, W, beginFrame, blit, buffer, designScene } from "./draw";
+import { drawKid } from "./kid";
+import { classroom } from "./sets";
 
-/** Film grain + vignette, composited with "overlay" blend (grey = no change). */
-export function createScene(options: SceneOptions) {
+/** Film grain + vignette in design units, to be composited with "overlay" blend (grey = no change). */
+export function filmGrain(): (ctx: Ctx, abs: number) => void {
   const random = seeded(2024);
   const TILE = 240;
   const tiles: HTMLCanvasElement[] = [];
@@ -31,7 +39,7 @@ export function createScene(options: SceneOptions) {
     g.fillStyle = r;
     g.fillRect(0, 0, W / 4, H / 4);
   }
-  return designScene(options, 0, (ctx, abs) => {
+  return (ctx, abs) => {
     ctx.drawImage(vignette, 0, 0, W, H);
     const f = Math.floor(abs * 24);
     const tile = tiles[f % tiles.length];
@@ -45,5 +53,40 @@ export function createScene(options: SceneOptions) {
     ctx.fillStyle = pattern;
     ctx.fillRect(0, 0, W, H);
     ctx.restore();
-  });
+  };
 }
+
+/** The grain layer (a scene module for visual.json: blend "overlay", opacity about 0.5). */
+export function createScene(options: SceneOptions) {
+  const grain = filmGrain();
+  return designScene(options, 0, (ctx, abs) => grain(ctx, abs));
+}
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+let previewGrain: ((ctx: Ctx, abs: number) => void) | null = null;
+
+export const resources = defineResources({
+  grain: resource({
+    kind: "effect",
+    title: "胶片颗粒和暗角",
+    description:
+      "全片的胶片颗粒（每秒换 24 次）和暗角。作品用法：scene.ts 的 loaders 里注册 grain: () => import(\"@materials/s0rrow/code/grain\")，visual.json 加一个盖住全片的 scene 图层，blend \"overlay\"，transform.opacity 0.5。在自己的代码里用 filmGrain() 拿到画法，画进离屏后用 overlay 叠上。",
+    tags: ["颗粒", "胶片", "暗角", "质感", "图层"],
+    usage: "visual.json: { \"source\": { \"kind\": \"scene\", \"module\": \"grain\", \"engine\": \"canvas\" }, \"blend\": \"overlay\", \"transform\": { \"opacity\": 0.5 } }",
+    params: z.object({ opacity: z.number().min(0).max(1).default(0.5).describe("图层不透明度") }),
+    preview: {
+      width: W,
+      height: H,
+      duration: 1,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        classroom(ctx, t);
+        drawKid(ctx, 560, 820, 1.05, { arms: "table", eyes: "open" });
+        previewGrain ??= filmGrain();
+        const layer = buffer(ctx, "grainPreview");
+        previewGrain(layer, t);
+        blit(ctx, layer, "overlay", p.opacity);
+      },
+    },
+  }),
+});

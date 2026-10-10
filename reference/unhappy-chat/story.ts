@@ -1,11 +1,11 @@
-import { clamp, phase, smooth } from "../../../../src/engine/math";
-import { C, Ctx, H, Pt, W, backOut, camera, fillBg, filtered, glow, hash } from "./draw";
-import { drawKid } from "./kid";
-import { bedBlanket, bedroom, classroomFront, deskFront, herBlanket, herRoom, huggedPillow, strawberryMilk } from "./places";
-import { heart } from "./sets";
-import { ChatItem, ChatView, chatScreen2, homeScreen, selfiePhoto } from "./chat";
-import { FingerPos, HandsLook } from "./hand";
-import { SH, SW, phone } from "./phone";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, H, Pt, W, backOut, camera, fillBg, filtered, glow, hash } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { bedBlanket, bedroom, classroomFront, deskFront, herBlanket, herRoom, huggedPillow, strawberryMilk } from "@materials/s0rrow/code/places";
+import { heart } from "@materials/s0rrow/code/sets";
+import { ChatItem, ChatView, chatScreen2, homeScreen, selfiePhoto } from "@materials/s0rrow/code/chat";
+import { FingerPos, HandsLook } from "@materials/s0rrow/code/hand";
+import { SH, SW, phone } from "@materials/s0rrow/code/phone";
 import { EV } from "./timeline";
 
 /** 《unhappy》· 同一段聊天两个视角 — the words on both phones, and helpers shared by the acts. */

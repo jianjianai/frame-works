@@ -1,5 +1,13 @@
-import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, blob, bokehDisc, curve, devScale, fillBg, filtered, flicker, glow, hash, inkLine, jit, lightShaft, line, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
+/**
+ * 《i have no friends》的场景（重置版精细化，设计坐标 1080×1920 整幅）：卧室（串灯 + 拍立得、窗外月亮和云，clue 楼下的手电和横幅）、
+ * 书桌、教室和走廊（窗户阳光、窗格光 paneLight、压暗 shadeAround）、回家的街（四层视差）、窗外街景、楼门口、公园黄昏和秋千；
+ * 道具：小蛋糕（蜡烛和吹灭的烟）、派对喇叭、大蛋糕、课桌、路灯、彩带、爱心；光：光斑 bokeh/roomBokeh/streetBokeh、
+ * 屏幕光 screenSpill、串灯光晕 fairyGlow、光圈 lightPool。生日书桌镜头在 shared.ts。
+ */
+import { z } from "zod";
+import { clamp } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, F, H, Pt, W, beginFrame, blob, bokehDisc, curve, devScale, fillBg, filtered, flicker, glow, hash, inkLine, jit, lightShaft, line, loadFonts, oval, paint, poly, rbox, rr, shaded, text, vgrad } from "./draw";
 
 /** Shade a daylight set everywhere except round its light sources: a tinted veil with soft holes at `holes` [x, y,
  *  r] (windows, the patches of sun on the floor) — so the light has somewhere to come from and the room has depth. */
@@ -1266,3 +1274,312 @@ export function bigCake(ctx: Ctx, x: number, y: number, s: number, abs: number, 
   }
   ctx.restore();
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+/** Previews of whole sets: the 1080×1920 design frame. */
+const FRAME = { width: 1080, height: 1920, duration: 3, prepare: loadFonts };
+
+export const resources = defineResources({
+  bedroom: resource({
+    kind: "set",
+    title: "卧室（夜）",
+    description: "他的卧室：深蓝墙、串灯和拍立得（FAIRY_BULBS 是灯泡位置）、日历、书架、窗外月亮云和星星。moon 0..1 月光，clue 0..1 窗外楼下的手电和横幅（彩蛋）。房间压暗后用 fairyGlow 补上串灯的光。",
+    tags: ["卧室", "房间", "夜晚", "窗户", "月亮", "串灯"],
+    usage: "bedroom(ctx, abs, moon, clue)",
+    params: z.object({
+      moon: z.number().min(0).max(1).default(1).describe("月光"),
+      clue: z.number().min(0).max(1).default(0).describe("窗外楼下的手电和横幅"),
+    }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        bedroom(ctx, t, p.moon, p.clue);
+        fairyGlow(ctx, t);
+      },
+    },
+  }),
+  desk: resource({
+    kind: "set",
+    title: "书桌（桌面）",
+    description: "画面下半部分的木书桌桌面（木纹、前沿的暖色高光），y 是桌面上沿。和 bedroom、cupcake 一起组成生日书桌。",
+    tags: ["书桌", "桌子", "桌面"],
+    usage: "desk(ctx, y)",
+    params: z.object({ y: z.number().min(600).max(1800).default(1200).describe("桌面上沿") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        bedroom(ctx, t);
+        desk(ctx, p.y);
+      },
+    },
+  }),
+  cupcake: resource({
+    kind: "prop",
+    title: "小蛋糕（蜡烛）",
+    description: "插着蜡烛的纸杯蛋糕：lit 0 灭 1 燃，smoke 0..1 吹灭后的烟，candles 根数。part: body 只画蛋糕、flame 只画火苗和光（火苗画在压暗/去饱和外面保持彩色）。",
+    tags: ["蛋糕", "蜡烛", "生日", "火苗"],
+    usage: "cupcake(ctx, x, y, s, abs, lit, smoke, candles, part)",
+    params: z.object({
+      lit: z.number().min(0).max(1).default(1).describe("点燃"),
+      smoke: z.number().min(0).max(1).default(0).describe("吹灭后的烟"),
+      candles: z.number().int().min(1).max(3).default(1).describe("蜡烛数"),
+    }),
+    presets: { 吹灭: { lit: 0, smoke: 0.6 } },
+    preview: {
+      width: 600,
+      height: 700,
+      duration: 3,
+      background: "#141a33",
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        cupcake(ctx, 300, 560, 1.6, t, p.lit, p.smoke, p.candles);
+      },
+    },
+  }),
+  partyHorn: resource({
+    kind: "prop",
+    title: "派对喇叭（吹龙）",
+    description: "叼在嘴上的派对吹龙，(x, y) 是嘴：u 0 卷着、1 吹到最长；droop 0..1 泄气下垂（难过的时候）。",
+    tags: ["派对", "喇叭", "生日", "吹龙"],
+    usage: "partyHorn(ctx, x, y, u, droop, abs, dir)",
+    params: z.object({
+      u: z.number().min(0).max(1).default(1).describe("吹出来多少"),
+      droop: z.number().min(0).max(1).default(0).describe("泄气下垂"),
+    }),
+    preview: {
+      width: 700,
+      height: 400,
+      duration: 2,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        partyHorn(ctx, 120, 200, p.u, p.droop, t);
+      },
+    },
+  }),
+  corridor: resource({
+    kind: "set",
+    title: "学校走廊（白天）",
+    description: "奶油色的学校走廊：两根灯管、窗户的阳光和光柱、地上的窗格光、「高二(3)班」门牌（换故事要改）。",
+    tags: ["学校", "走廊", "白天", "阳光"],
+    usage: "corridor(ctx, abs)",
+    preview: {
+      ...FRAME,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        corridor(ctx, t);
+      },
+    },
+  }),
+  classroom: resource({
+    kind: "set",
+    title: "教室（白天）",
+    description: "教室：黑板上方的钟、窗户阳光、浮尘。backDesks: false 去掉后排的空课桌（镜头自己摆人和课桌时）。",
+    tags: ["学校", "教室", "黑板", "白天"],
+    usage: "classroom(ctx, abs, backDesks)",
+    params: z.object({ backDesks: z.boolean().default(true).describe("后排空课桌") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        classroom(ctx, t, p.backDesks);
+      },
+    },
+  }),
+  schoolDesk: resource({
+    kind: "prop",
+    title: "课桌",
+    description: "木课桌：(x, y) 桌面中点的上沿，w 宽度。先画坐着的人再画课桌。",
+    tags: ["课桌", "学校", "桌子"],
+    usage: "schoolDesk(ctx, x, y, w)",
+    preview: {
+      width: 700,
+      height: 400,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        schoolDesk(ctx, 350, 120, 520);
+      },
+    },
+  }),
+  park: resource({
+    kind: "set",
+    title: "公园（黄昏）和秋千",
+    description: "封面的公园：parkSky 天空（dusk 0 金色夕阳 → 1 夜晚）、hedge 树丛、swingSet A 字秋千架（返回挂人的位置，draw.left/right 在秋千上画人，angles 是两个秋千的摆角）。",
+    tags: ["公园", "黄昏", "夕阳", "秋千", "封面"],
+    usage: "parkSky(ctx, dusk); hedge(ctx, y, dusk); swingSet(ctx, x, y, s, dusk, { angles: [a, b], left: (c, sx, sy, ang) => … })",
+    params: z.object({ dusk: z.number().min(0).max(1).default(0.2).describe("0 夕阳 … 1 夜晚") }),
+    presets: { 夜晚: { dusk: 1 } },
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        parkSky(ctx, p.dusk);
+        hedge(ctx, 1300, p.dusk);
+        const swing = Math.sin(t * 2) * 0.25;
+        swingSet(ctx, 540, 1250, 1, p.dusk, { angles: [swing, -swing * 0.6] });
+      },
+    },
+  }),
+  street: resource({
+    kind: "set",
+    title: "回家的街（夜，视差）",
+    description: "走回家的街：四层按不同速度滑动（scroll = 走过的距离）：天空和月亮几乎不动、远处天际线 0.25、亮着窗的楼 0.6、路灯人行道和马路 1.0，路灯之间有电线。",
+    tags: ["街道", "夜晚", "视差", "回家", "路灯"],
+    usage: "street(ctx, abs, scroll)",
+    params: z.object({ speed: z.number().min(0).max(800).default(300).describe("预览里每秒走多远（scroll 随时间增加）") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        street(ctx, t, t * p.speed);
+      },
+    },
+  }),
+  streetBelow: resource({
+    kind: "set",
+    title: "窗外街景（俯视）",
+    description: "从他的窗户往下看：对面楼亮着的窗（邻居在看）、有条纹雨棚的小店、马路、门口暖光里等他的人。画在镜头里，往上延伸到画面外（从夜空摇下来的镜头）。",
+    tags: ["街景", "俯视", "窗外", "夜晚"],
+    usage: "streetBelow(ctx, abs)  // 在 camera 里，向上延伸到 y = -560",
+    preview: {
+      ...FRAME,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        ctx.translate(0, 700);
+        streetBelow(ctx, t);
+      },
+    },
+  }),
+  buildingEntrance: resource({
+    kind: "set",
+    title: "楼门口（夜，派对）",
+    description: "晚上楼下派对的地方：瓷砖墙面、身后暖光的大堂门（轮廓光）、壁灯和门铃面板、顶上垂着的串灯、楼上的窗、人行道。用 filtered(…, \"blur(2px)\") 画，让前面的人保持清晰。",
+    tags: ["楼门口", "夜晚", "派对", "大门"],
+    usage: "filtered(ctx, \"blur(2px)\", (c) => buildingEntrance(c, abs), \"bg\")",
+    preview: {
+      ...FRAME,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        buildingEntrance(ctx, t);
+      },
+    },
+  }),
+  bigCake: resource({
+    kind: "prop",
+    title: "双层生日蛋糕",
+    description: "面包店橱窗里的双层蛋糕（他看着买不起的那个），也是朋友们端下楼的那个（candle17 金色「17」蜡烛，lit 点燃）。(x, y) 是蛋糕架的底，s = 1 约 420 宽 480 高。",
+    tags: ["蛋糕", "生日", "蜡烛", "派对"],
+    usage: "bigCake(ctx, x, y, s, abs, { candle17, lit })",
+    params: z.object({ candle17: z.boolean().default(false).describe("金色「17」蜡烛"), lit: z.number().min(0).max(1).default(1).describe("蜡烛点燃") }),
+    presets: { 派对: { candle17: true } },
+    preview: {
+      width: 700,
+      height: 800,
+      duration: 3,
+      background: "#2a2440",
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        bigCake(ctx, 350, 700, 1.2, t, p);
+      },
+    },
+  }),
+  lampPost: resource({
+    kind: "prop",
+    title: "路灯（闪着亮起）",
+    description: "路灯在 on 秒时闪几下亮起，带一圈暖光。",
+    tags: ["路灯", "夜晚", "街道", "灯"],
+    usage: "lampPost(ctx, x, y, abs, on)",
+    preview: {
+      width: 700,
+      height: 1200,
+      duration: 2,
+      background: "#141a33",
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        lampPost(ctx, 250, 200, t, 0.6);
+      },
+    },
+  }),
+  confetti: resource({
+    kind: "effect",
+    title: "彩带礼花",
+    description: "t0 秒时从画面下方喷出的彩带（翻转闪光），之后落下。",
+    tags: ["彩带", "礼花", "派对", "庆祝"],
+    usage: "confetti(ctx, abs, t0, count, seed)",
+    params: z.object({ count: z.number().int().min(10).max(300).default(90).describe("数量") }),
+    preview: {
+      ...FRAME,
+      background: "#1a1d33",
+      draw(ctx, t, p) {
+        confetti(ctx, t, 0.2, p.count);
+      },
+    },
+  }),
+  heartsRise: resource({
+    kind: "effect",
+    title: "飘起的爱心",
+    description: "爱心往上飘（画面外的情侣）；crack 0..1 让爱心裂开。单个爱心用 heart(ctx, x, y, r, color, seed, crack)。",
+    tags: ["爱心", "恋爱", "情侣", "飘"],
+    usage: "heartsRise(ctx, abs, count, seed, alpha, crack)",
+    params: z.object({ crack: z.number().min(0).max(1).default(0).describe("裂开") }),
+    preview: {
+      ...FRAME,
+      background: "#f3c6cf",
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        heartsRise(ctx, t + 4, 14, 5, 1, p.crack);
+      },
+    },
+  }),
+  bokeh: resource({
+    kind: "effect",
+    title: "光斑（背景虚化）",
+    description: "特写后面很远的虚化光点：柔和的圆盘、边缘稍亮、慢慢漂。roomBokeh 是他书桌后的房间（蜡烛的大暖斑），streetBokeh 是回家路上的街（头顶的路灯）。画在 grade 外面、用低饱和的颜色（灰色光斑像灰尘球）。",
+    tags: ["光斑", "虚化", "景深", "背景"],
+    usage: "bokeh(ctx, abs, n, seed, alpha, colors) / roomBokeh(ctx, abs, candle, drift) / streetBokeh(ctx, abs, drift)",
+    params: z.object({ which: z.enum(["bokeh", "room", "street"]).default("room").describe("哪一种") }),
+    preview: {
+      ...FRAME,
+      background: "#0b0e1f",
+      draw(ctx, t, p) {
+        if (p.which === "room") roomBokeh(ctx, t, 1, t * 10);
+        else if (p.which === "street") streetBokeh(ctx, t, t * 10);
+        else bokeh(ctx, t, 24, 3);
+      },
+    },
+  }),
+  screenSpill: resource({
+    kind: "effect",
+    title: "屏幕光",
+    description: "亮着的手机屏幕照在周围空气里的冷光；在画手机之前调用，中心和手机相同。",
+    tags: ["屏幕光", "手机", "冷光", "夜晚"],
+    usage: "screenSpill(ctx, cx, cy, s, a)",
+    params: z.object({ a: z.number().min(0).max(1).default(1).describe("强度") }),
+    preview: {
+      width: 1080,
+      height: 1200,
+      background: "#0b0e1f",
+      draw(ctx, t, p) {
+        screenSpill(ctx, 540, 600, 0.8, p.a);
+      },
+    },
+  }),
+  lightPool: resource({
+    kind: "effect",
+    title: "光圈（四周压暗）",
+    description: "四周压暗，只留一圈暖光（台灯、蜡烛、路灯下）。",
+    tags: ["光圈", "压暗", "暖光", "聚光"],
+    usage: "lightPool(ctx, x, y, r, dark, warm)",
+    params: z.object({ dark: z.number().min(0).max(1).default(0.7).describe("四周多暗") }),
+    preview: {
+      ...FRAME,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        corridor(ctx, t);
+        lightPool(ctx, 540, 1100, 380, p.dark);
+      },
+    },
+  }),
+});

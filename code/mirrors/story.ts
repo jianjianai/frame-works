@@ -1,6 +1,14 @@
-import { clamp } from "../../../../src/engine/math";
-import { C, Ctx, F, Pt, backOut, blob, curve, devScale, hash, inkLine, oval, paint, poly, rootScale, rrectPts, shaded, text, tubePts, writeOn } from "./draw";
-import type { KidPose } from "./kid";
+/**
+ * 《mirrors》的道具和批注：主角的胎记 birthmark（MARK_AT；看起来的中心比 MARK_AT 偏左上约 (−12, −10)）、伪装 disguise（遮瑕、口罩、
+ * 墨镜、帽子，可以单独移开）、红笔批注 penRing（一圈多一点的笔圈）/ redNote（龙藏体写字动画）/ redArrow / penHeart / mapleLeaf、
+ * 糊镜子的报纸 newspaper 和胶带 tape、袖子加圆手 sleeveHand；toDesign / px 换算屏幕坐标和按设计像素的线宽。
+ */
+import { z } from "zod";
+import { clamp } from "@frame/engine/math";
+import { defineResources, resource } from "@frame/engine/resources";
+import { C, Ctx, F, Pt, backOut, beginFrame, blob, curve, devScale, hash, inkLine, loadFonts, oval, paint, poly, rootScale, rrectPts, shaded, text, tubePts, writeOn } from "../draw";
+import { drawKid } from "../kid";
+import type { KidPose } from "../kid";
 
 /** 《瑕疵：0》 story pieces shared by the acts: his birthmark, the pen annotations, the covered mirrors. */
 
@@ -385,3 +393,105 @@ export function sleeveHand(ctx: Ctx, from: Pt, at: Pt, r: number, seed: number, 
     paint(ctx, "rgba(196,150,96,0.38)", null);
   }, C.ink, 5);
 }
+
+// ---------------------------------------------------------------- resources (preview and catalog)
+const unit = z.number().min(0).max(1);
+
+export const resources = defineResources({
+  birthmark: resource({
+    kind: "character",
+    title: "胎记（主角脸上）",
+    description: "他左脸颊上的葡萄酒色胎记（他面对我们时在画面右边）：从眼睛下面盖过脸颊。用和 drawKid 一样的 (x, y, s, pose) 画在它上面，正片叠底，墨线保持黑色；alpha 淡入淡出。",
+    tags: ["胎记", "主角", "脸", "瑕疵"],
+    usage: "drawKid(ctx, x, y, s, pose); birthmark(ctx, x, y, s, pose, alpha)",
+    params: z.object({ alpha: unit.default(1).describe("不透明度") }),
+    preview: {
+      width: 600,
+      height: 700,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        const pose: KidPose = { eyes: "sad", mouth: "flat" };
+        drawKid(ctx, 300, 300, 1.4, pose);
+        birthmark(ctx, 300, 300, 1.4, pose, p.alpha);
+      },
+    },
+  }),
+  disguise: resource({
+    kind: "prop",
+    title: "伪装（遮瑕、口罩、墨镜、帽子）",
+    description: "画在 drawKid + birthmark 上面的伪装（同样的 x, y, s, pose）：concealer 一大块偏橙的遮瑕（酒红色透出来）、mask 白口罩（只到眼睛下面，胎记上沿还露着）、shades 大墨镜（shadesY 滑到鼻子上）、cap 黑色棒球帽；maskY/capY 拉下或摘掉，shadesX/shadesRot 等是手摘下时的位移和角度。戴了口罩和墨镜时，胎记的 alpha 传 0。",
+    tags: ["伪装", "口罩", "墨镜", "帽子", "遮瑕"],
+    usage: "drawKid(ctx, x, y, s, pose); birthmark(ctx, x, y, s, pose, alpha); disguise(ctx, x, y, s, pose, { concealer, mask, shades, cap })",
+    params: z.object({ concealer: unit.default(0).describe("遮瑕"), mask: unit.default(1).describe("口罩"), shades: unit.default(1).describe("墨镜"), cap: unit.default(1).describe("帽子") }),
+    presets: { 遮瑕: { concealer: 1, mask: 0, shades: 0, cap: 0 }, 口罩: { mask: 1, shades: 0, cap: 0 } },
+    preview: {
+      width: 600,
+      height: 700,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        const pose: KidPose = { eyes: "open", mouth: "flat" };
+        drawKid(ctx, 300, 300, 1.4, pose);
+        birthmark(ctx, 300, 300, 1.4, pose, p.mask > 0.5 && p.shades > 0.5 ? 0 : 1);
+        disguise(ctx, 300, 300, 1.4, pose, p);
+      },
+    },
+  }),
+  redPen: resource({
+    kind: "text",
+    title: "红笔批注（圈、字、箭头、心）",
+    description:
+      "画在最上面的红笔：penRing 一圈多一点的笔圈（像在纸上圈东西），redNote 龙藏体手写字（p 0..1 写出来），redArrow 带钩的箭头，penHeart 弹出的小心，mapleLeaf 小红枫叶。都按 p 0..1 画出来；线宽按设计像素（不随镜头缩放）。",
+    tags: ["红笔", "批注", "圈", "手写", "箭头", "心"],
+    usage: "penRing(ctx, cx, cy, rx, ry, p, seed, color, lw) / redNote(ctx, \"瑕疵\", x, y, p) / redArrow(ctx, a, b, p, seed) / penHeart(ctx, x, y, size, p, seed)",
+    params: z.object({ text: z.string().default("瑕疵").describe("红笔写的字") }),
+    preview: {
+      width: 800,
+      height: 600,
+      duration: 1.5,
+      time: 1.5,
+      prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        const k = Math.min(1, t / 1.2);
+        penRing(ctx, 230, 260, 150, 110, k, 7, "#ff3b3b", 8);
+        redNote(ctx, p.text, 560, 220, k);
+        redArrow(ctx, [520, 330], [360, 300], k, 9);
+        penHeart(ctx, 600, 430, 60, k, 11);
+        mapleLeaf(ctx, 160, 480, 40, -0.3, 12, k);
+      },
+    },
+  }),
+  newspaper: resource({
+    kind: "prop",
+    title: "报纸和胶带（糊镜子）",
+    description: "一张报纸（(x, y) 左上角，w × h，绕中心转 rot；一栏栏字、标题、图片块）和一条纸胶带（tape：中心、宽高、角度，半透明米色、撕开的两头）。他用它们把家里的镜子都糊上。",
+    tags: ["报纸", "胶带", "镜子", "糊"],
+    usage: "newspaper(ctx, x, y, w, h, rot, seed); tape(ctx, x, y, w, h, rot, seed)",
+    preview: {
+      width: 700,
+      height: 800,
+      background: "#c9c4b8",
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        newspaper(ctx, 120, 120, 460, 560, -0.05, 3);
+        tape(ctx, 350, 130, 180, 44, 0.08, 5);
+        tape(ctx, 350, 670, 180, 44, -0.06, 6);
+      },
+    },
+  }),
+  sleeveHand: resource({
+    kind: "character",
+    title: "袖子和圆手（特写）",
+    description: "特写里帽衫袖子末端的简单圆手（用户：特写里的手用简单的圆就行）：袖子从 from 到手中心 at，r 是手的半径；袖子、袖口、肤色可换。",
+    tags: ["手", "袖子", "特写"],
+    usage: "sleeveHand(ctx, from, at, r, seed, sleeve, cuff, skin)",
+    preview: {
+      width: 600,
+      height: 500,
+      draw(ctx, t) {
+        beginFrame(ctx, t);
+        sleeveHand(ctx, [80, 460], [380, 220], 60, 3);
+      },
+    },
+  }),
+});

@@ -1,18 +1,13 @@
-import { createAudioRack } from "../../src/engine/audio-adapters";
-import { createPcmAudio, StereoPcm } from "../../src/engine/procedural-audio";
-import { seeded } from "../../src/engine/math";
+/**
+ * s0rrow 几支片子的合成音效库（全部代码合成、固定种子、确定性）：每个音效有中文名、时长和重音时刻 hit。
+ * 作品直接用：resources_search 的 kind: "sound" 找，audio_place 的 sound: "s0rrow/code/sfx.ts#<名称>" 放到音轨（或从「素材 → 资源」拖），
+ * audio.json 里是生成音源 { module: "materials/s0rrow/code/sfx.ts", trackId: "<名称>" }，不用拷进作品的 audio.ts。
+ * 混音：音效轨增益 1.3–1.4、送混响 bus（1.4 s，0.2），音乐不要对音效做 duck（用户要求：音效响时不压低音乐）。
+ */
+import { defineSounds } from "@frame/engine/resources";
+import { seeded } from "@frame/engine/math";
+import type { StereoPcm } from "@frame/engine/procedural-audio";
 
-/** 合成音效库（全部确定性）。复制为作品根目录的 audio.ts；audio.json 里每个音效是一个 generated 源
- *  （module "sfx", trackId = 下面的名字），clip 的 start 对齐画面事件时间。不用的音效可以删掉。
- *  混音：音乐轨不要对音效做 duck（用户要求：音效响时不压低音乐；只有人声在明确要求时才压）。
- *  第一支《i have no friends》：typing/send/fail/match/blow/flood/splat/pop/reply
- *  第二支《unhappy》：keys/doorOpen/doorClose/roomDoor/ball/slam/cough/squeak/rain/heartbeat/click/splash/
- *  whoosh/xray/cash/rewind/pen/swipe/tap/chime/lightOff/flips/thumps（小狗版）
- *  《unhappy》聊天版：um/note/typing2/typingLong/del/send2/lamp/powerOff/rustle/whoosh2/rewind2/heartFast/bell/steps/shutter/
- *  birds/boot/run/store/pay/door/milk/sparkle/stickerPop
- *  《i have no friends》重置版：bellElectric（电铃上课铃）/horn（派对喇叭，放「不压歌曲」的音效轨）/floodFast（七条通知间隔 0.12 秒）
- *  《mirrors》（瑕疵：0）：paperSlap/tape/scribble/ring/hangup/slider/zero/dive/ticks/alarm/peel/metalDoor/slip/freeze/
- *  flip/sheet/whip/rip/doubleTap（音效轨增益 1.3、送混响 0.2、不压音乐；各音效的时间点见 reference/mirrors/timeline.ts 的 EV） */
 const SR = 48000;
 const TAU = Math.PI * 2;
 
@@ -102,7 +97,8 @@ function taps(dur: number, rate: number, seed: number, pitch = 1, gain = 0.16) {
   return pcm;
 }
 
-const sounds: Record<string, () => StereoPcm> = {
+/** The generators, by name. */
+const make: Record<string, () => StereoPcm> = {
   // ---------------- first video 《i have no friends》
   typing: () => {
     const pcm = buffer(1.8);
@@ -746,4 +742,89 @@ const sounds: Record<string, () => StereoPcm> = {
   },
 };
 
-export const { generators, createAudio } = createAudioRack({ sfx: createPcmAudio(sounds, SR) });
+/** Every sound: its title, length (the clip length when placed) and where its main hit lands. */
+export default defineSounds(SR, {
+  // ---------------- 《i have no friends》
+  typing: { title: "打字（手机键盘）", duration: 1.8, tags: ["手机", "打字", "键盘"], make: make.typing },
+  send: { title: "发送消息（嗖）", duration: 0.4, hit: 0.17, tags: ["手机", "发送", "消息"], make: make.send },
+  fail: { title: "发送失败（红色感叹号）", duration: 0.5, hit: 0, tags: ["手机", "失败", "提示"], make: make.fail },
+  match: { title: "划火柴", duration: 0.8, hit: 0.01, tags: ["火柴", "蜡烛", "生日"], make: make.match },
+  blow: { title: "吹蜡烛", duration: 0.9, hit: 0.1, tags: ["蜡烛", "生日", "吹"], make: make.blow },
+  flood: { title: "消息轰炸（一串通知）", duration: 2.6, tags: ["手机", "通知", "消息"], make: make.flood },
+  splat: { title: "蛋糕糊脸（啪）", duration: 0.5, hit: 0.01, tags: ["蛋糕", "派对", "啪"], make: make.splat },
+  pop: { title: "礼花（砰）", duration: 1.4, hit: 0, tags: ["礼花", "派对", "庆祝"], make: make.pop },
+  reply: { title: "回复提示音", duration: 0.8, hit: 0, tags: ["手机", "消息", "提示"], make: make.reply },
+  // ---------------- 《unhappy》小狗版
+  keys: { title: "门外的钥匙声", duration: 0.7, hit: 0.35, tags: ["钥匙", "门", "回家"], make: make.keys },
+  doorOpen: { title: "开门（锁舌和吱呀）", duration: 0.8, hit: 0, tags: ["门", "开门", "家"], make: make.doorOpen },
+  doorClose: { title: "关门", duration: 0.5, hit: 0, tags: ["门", "关门", "家"], make: make.doorClose },
+  roomDoor: { title: "远处的房门", duration: 0.5, hit: 0, tags: ["门", "房间"], make: make.roomDoor },
+  ball: { title: "球滚到床上又滚回来", duration: 1.4, tags: ["球", "玩具", "狗"], make: make.ball },
+  slam: { title: "用力摔门", duration: 0.7, hit: 0.01, tags: ["门", "摔门", "生气"], make: make.slam },
+  cough: { title: "小声干咳", duration: 0.6, hit: 0.01, tags: ["咳嗽", "狗", "生病"], make: make.cough },
+  squeak: { title: "吱吱叫的兔子玩具", duration: 0.35, hit: 0.15, tags: ["玩具", "兔子", "狗"], make: make.squeak },
+  rain: { title: "雨声（15 秒）", duration: 15, tags: ["雨", "下雨", "环境声", "天气"], description: "持续的雨声加零星的雨滴，15 秒；长环境声单独放一轨。", make: make.rain },
+  heartbeat: { title: "心跳（越来越慢）", duration: 2.4, tags: ["心跳", "生病", "紧张"], make: make.heartbeat },
+  click: { title: "手电开关", duration: 0.15, hit: 0, tags: ["开关", "手电", "咔哒"], make: make.click },
+  splash: { title: "踩着水洼跑", duration: 0.9, tags: ["脚步", "水", "雨", "跑"], make: make.splash },
+  whoosh: { title: "自动门滑开", duration: 0.6, hit: 0.3, tags: ["门", "自动门", "医院"], make: make.whoosh },
+  xray: { title: "灯箱亮起", duration: 0.9, hit: 0, tags: ["灯", "医院", "X光"], make: make.xray },
+  cash: { title: "钱拍在柜台上、硬币散落", duration: 1.4, hit: 0.02, tags: ["钱", "硬币", "付钱"], make: make.cash },
+  rewind: { title: "倒带（切到另一个视角）", duration: 0.7, tags: ["倒带", "转场", "视角"], description: "磁带倒带的上扫，切到另一个人的视角时用。", make: make.rewind },
+  pen: { title: "红笔划掉", duration: 1.4, tags: ["笔", "划掉", "红笔"], make: make.pen },
+  swipe: { title: "手机滑动", duration: 0.3, hit: 0.1, tags: ["手机", "滑动"], make: make.swipe },
+  tap: { title: "手机点击", duration: 0.2, hit: 0, tags: ["手机", "点击"], make: make.tap },
+  chime: { title: "手机提示音（达成）", duration: 1.2, hit: 0.14, tags: ["手机", "提示", "完成"], make: make.chime },
+  lightOff: { title: "「手术中」灯灭", duration: 0.3, hit: 0, tags: ["灯", "医院", "手术"], make: make.lightOff },
+  flips: { title: "日历翻页（十四天）", duration: 2, tags: ["日历", "翻页", "时间流逝"], make: make.flips },
+  thumps: { title: "尾巴拍被子", duration: 1.2, tags: ["狗", "尾巴", "开心"], make: make.thumps },
+  // ---------------- 《unhappy》聊天版
+  um: { title: "收到消息（两个轻音）", duration: 0.9, hit: 0.09, tags: ["手机", "消息", "提示"], make: make.um },
+  note: { title: "朋友的通知（更轻更高）", duration: 0.6, hit: 0, tags: ["手机", "通知"], make: make.note },
+  typing2: { title: "打字（1 秒）", duration: 1.1, tags: ["手机", "打字", "键盘"], make: make.typing2 },
+  typingLong: { title: "打字（2.6 秒）", duration: 2.7, tags: ["手机", "打字", "键盘"], make: make.typingLong },
+  del: { title: "长按删除", duration: 1.1, tags: ["手机", "删除", "键盘"], make: make.del },
+  send2: { title: "发送消息（聊天版）", duration: 0.4, hit: 0.17, tags: ["手机", "发送", "消息"], make: make.send2 },
+  lamp: { title: "台灯开关", duration: 0.15, hit: 0, tags: ["灯", "开关", "台灯"], make: make.lamp },
+  powerOff: { title: "关机", duration: 0.6, hit: 0, tags: ["手机", "关机"], make: make.powerOff },
+  rustle: { title: "被子窸窣", duration: 0.8, tags: ["被子", "床", "窸窣"], make: make.rustle },
+  whoosh2: { title: "镜头甩过街道推进窗户", duration: 0.8, tags: ["转场", "甩镜", "风声"], description: "0.7 秒逐渐变亮的噪声，镜头甩过街道、推进窗户时用。", make: make.whoosh2 },
+  rewind2: { title: "倒带（聊天版）", duration: 0.7, tags: ["倒带", "转场"], make: make.rewind2 },
+  heartFast: { title: "心跳加速", duration: 1.8, tags: ["心跳", "紧张", "心动"], make: make.heartFast },
+  bell: { title: "下课铃（叮——叮——）", duration: 1.6, tags: ["铃", "学校", "下课"], make: make.bell },
+  steps: { title: "脚步", duration: 0.8, tags: ["脚步", "走路"], make: make.steps },
+  shutter: { title: "拍照快门", duration: 0.3, hit: 0, tags: ["拍照", "快门", "手机"], make: make.shutter },
+  birds: { title: "清晨鸟叫", duration: 1.6, tags: ["鸟", "清晨", "环境声"], make: make.birds },
+  boot: { title: "开机", duration: 0.9, hit: 0, tags: ["手机", "开机"], make: make.boot },
+  run: { title: "跑步", duration: 2.1, tags: ["脚步", "跑"], make: make.run },
+  store: { title: "便利店门铃", duration: 1.2, hit: 0.22, tags: ["便利店", "门铃", "商店"], make: make.store },
+  pay: { title: "付款提示音", duration: 0.3, hit: 0, tags: ["付款", "手机", "商店"], make: make.pay },
+  door: { title: "开门（聊天版）", duration: 0.5, hit: 0, tags: ["门", "开门"], make: make.door },
+  milk: { title: "牛奶放在桌上", duration: 1, hit: 0.01, tags: ["牛奶", "桌子", "放下"], make: make.milk },
+  sparkle: { title: "闪光（叮铃）", duration: 1, tags: ["闪光", "可爱", "提示"], make: make.sparkle },
+  stickerPop: { title: "贴纸弹出", duration: 0.3, hit: 0, tags: ["贴纸", "手机", "弹出"], make: make.stickerPop },
+  // ---------------- 《i have no friends》重置版
+  bellElectric: { title: "电铃上课铃", duration: 1.25, tags: ["铃", "学校", "上课"], make: make.bellElectric },
+  horn: { title: "派对喇叭（吹出又泄气）", duration: 1.1, tags: ["派对", "喇叭", "生日"], description: "一个人吹的派对喇叭：嗡嗡的纸簧加颤音，突然断掉，再泄气地软软叫一声。放在「不压歌曲」的音效轨。", make: make.horn },
+  floodFast: { title: "消息轰炸（快，七条）", duration: 2.6, tags: ["手机", "通知", "消息"], description: "七声铃加振动，间隔 0.12 秒，对上画面上的通知。", make: make.floodFast },
+  // ---------------- 《mirrors》（瑕疵：0）
+  paperSlap: { title: "报纸啪地糊上镜子", duration: 1.25, hit: 0.89, tags: ["报纸", "纸", "镜子", "啪"], description: "一张报纸滑过镜子，然后啪地糊平：啪在第 0.89 秒，片段要提前 0.89 秒开始。", make: make.paperSlap },
+  tape: { title: "撕下胶带按上", duration: 0.25, hit: 0.07, tags: ["胶带", "纸"], make: make.tape },
+  scribble: { title: "记号笔划（四笔）", duration: 0.55, tags: ["笔", "记号笔", "圈"], description: "四笔记号笔的摩擦声（画圈、划掉）。", make: make.scribble },
+  ring: { title: "视频来电铃声", duration: 2.1, tags: ["手机", "来电", "铃声"], description: "马林巴乐句，每拍手机振动一下（8 个音间隔 0.254 秒，按歌曲的半拍重新卡点）。", make: make.ring },
+  hangup: { title: "挂断（嘟嘟）", duration: 0.3, hit: 0.1, tags: ["手机", "挂断"], make: make.hangup },
+  slider: { title: "拖动滑条", duration: 0.5, tags: ["手机", "滑条", "拖动"], make: make.slider },
+  zero: { title: "数字翻到 0（叮和闪光）", duration: 1.1, hit: 0.08, tags: ["数字", "提示", "完成"], make: make.zero },
+  dive: { title: "扑进沙发盖毯子", duration: 0.8, hit: 0, tags: ["沙发", "毯子", "扑"], make: make.dive },
+  ticks: { title: "钟表快走（一夜过去）", duration: 0.55, tags: ["时钟", "时间流逝"], make: make.ticks },
+  alarm: { title: "闹钟双铃", duration: 0.8, tags: ["闹钟", "早上", "铃"], make: make.alarm },
+  peel: { title: "从玻璃上揭纸", duration: 0.25, hit: 0.08, tags: ["纸", "揭"], make: make.peel },
+  metalDoor: { title: "天台铁门", duration: 0.7, hit: 0.01, tags: ["门", "铁门", "天台"], make: make.metalDoor },
+  slip: { title: "墨镜滑下鼻梁", duration: 0.4, tags: ["墨镜", "滑"], make: make.slip },
+  freeze: { title: "急停（摩擦、闷响、叮）", duration: 0.6, hit: 0.03, tags: ["停下", "惊讶"], make: make.freeze },
+  flip: { title: "翻一页", duration: 0.2, hit: 0.08, tags: ["翻页", "纸", "书"], make: make.flip },
+  sheet: { title: "床单扔到镜子上", duration: 0.9, hit: 0.5, tags: ["床单", "布", "扔"], description: "床单在空中翻开再落下：落地的闷响在第 0.5 秒。", make: make.sheet },
+  whip: { title: "甩镜头的风声", duration: 0.35, hit: 0.15, tags: ["转场", "甩镜", "冲镜", "风声"], description: "甩镜或冲进特写的一下风声：比切点早约 0.15 秒开始。", make: make.whip },
+  rip: { title: "一下撕掉所有的纸", duration: 0.7, hit: 0, tags: ["纸", "撕"], make: make.rip },
+  doubleTap: { title: "双击点赞（两下和啵）", duration: 0.7, tags: ["点赞", "双击", "手机", "结尾"], make: make.doubleTap },
+});

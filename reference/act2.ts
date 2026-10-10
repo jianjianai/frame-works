@@ -1,10 +1,10 @@
-import type { SceneOptions } from "../../../src/engine/types";
-import { clamp, phase, smooth } from "../../../src/engine/math";
-import { C, Ctx, F, H, Pt, W, addBlob, backOut, beatAt, camera, card, designScene, easeIn, easeOut, fillBg, flash, glow, paint, poly, pulse, rbox, shake, text } from "./lib/draw";
-import { drawKid } from "./lib/kid";
-import { CAST, Person, drawPerson, hahas } from "./lib/people";
-import { feedScreen, lockScreen, phone } from "./lib/phone";
-import { bedroom, lightPool } from "./lib/sets";
+import type { SceneOptions } from "@frame/engine/types";
+import { clamp, phase, smooth } from "@frame/engine/math";
+import { C, Ctx, F, H, Pt, W, addBlob, backOut, beatAt, camera, card, designScene, easeIn, easeOut, fillBg, flash, glow, paint, poly, pulse, rbox, shake, text } from "@materials/s0rrow/code/draw";
+import { drawKid } from "@materials/s0rrow/code/kid";
+import { CAST, Person, drawPerson, hahas } from "@materials/s0rrow/code/people";
+import { feedScreen, lockScreen, phone } from "@materials/s0rrow/code/phone";
+import { bedroom, lightPool } from "@materials/s0rrow/code/sets";
 
 /** ACT 2 (16.96 – 33.39s): the drop. A day of "no friends" as a beat-cut montage. */
 const T0 = beatAt(32); // 16.96

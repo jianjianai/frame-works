@@ -1,4 +1,4 @@
-import { beatAt } from "./draw";
+import { beatAt } from "@materials/s0rrow/code/draw";
 
 /** Bar n starts at beat 4n (work time = song time − 16.332). Song as cut for this work:
  *  verse 1 = bars 0–7, chorus 1 = 8–15, verse 2 = 16–23, then (CUT) the last loop of the outro, which keeps
