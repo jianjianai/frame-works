@@ -8,7 +8,10 @@
       "title": "I have no friend. #s0rrow #emo",
       "postedAt": "2026-10-05T17:12:00.000Z",
       "duration": 99.1,
-      "version": "9c08a8841219673b890390380c30029139e58912"
+      "version": "9c08a8841219673b890390380c30029139e58912",
+      "goals": {
+        "views": 1000000
+      }
     }
   ],
   "snapshots": [
@@ -339,6 +342,60 @@
       "values": [0, 0, 0, 0, 0, 0, 0, 0, 5, 1, 0, 4, 8, 4, 4, 4, 3, 4, 3, 7, 8, 4, 3, 0, 0]
     }
   ],
-  "moments": [],
-  "segments": []
+  "moments": [
+    {
+      "at": 67,
+      "label": "反转"
+    }
+  ],
+  "segments": [
+    {
+      "kind": "复盘分段",
+      "start": 0,
+      "end": 8,
+      "label": "开场钩子"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 17,
+      "end": 33,
+      "label": "第二遍副歌：砸字、查手机、朋友动态"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 18,
+      "end": 20,
+      "label": "唱「I have no friends」+ 同句大字"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 33,
+      "end": 41,
+      "label": "情侣远景 + 牵手特写"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 44,
+      "end": 50,
+      "label": "主角面部特写"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 50,
+      "end": 58,
+      "label": "发送失败"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 70,
+      "end": 83,
+      "label": "反转兑现"
+    },
+    {
+      "kind": "复盘分段",
+      "start": 84,
+      "end": 95,
+      "label": "尾声"
+    }
+  ]
 }
