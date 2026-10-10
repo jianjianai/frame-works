@@ -22,9 +22,3 @@
 - public/fonts/noto-sans-sc-400-extra.ttf: Noto Sans SC (Google Fonts), SIL Open Font License 1.1 — subset: 业交作数知给要道
 - public/production/long-cang-extra.css: Google Fonts CSS (Long Cang, SIL OFL 1.1) — subset request: P
 - public/fonts/long-cang-extra.ttf: Long Cang (Google Fonts), SIL Open Font License 1.1 — subset: P
-- public/uploads/2026-10-10/观众参与度数据.xlsx: 抖音创作者中心导出的作品后台数据（2026-10-10 导出，数据到 21 点）
-- public/uploads/2026-10-10/流量数据.xlsx: 抖音创作者中心导出的作品后台数据（2026-10-10 导出，数据到 21 点）
-- public/uploads/2026-10-10/内容吸引力数据.xlsx: 抖音创作者中心导出的作品后台数据（2026-10-10 导出，数据到 21 点）
-- public/uploads/2026-10-10/粉丝数据.xlsx: 抖音创作者中心导出的作品后台数据（2026-10-10 导出，数据到 21 点）
-- public/uploads/2026-10-10/流量来源.xlsx: 抖音创作者中心导出的作品后台数据（2026-10-10 导出，数据到 21 点）
-- public/uploads/2026-10-10/涨粉脱粉与不感兴趣.xlsx: 抖音创作者中心导出的作品后台数据（2026-10-10 导出，数据到 21 点）

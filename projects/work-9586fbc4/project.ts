@@ -22,6 +22,6 @@ const project: AnimationProject = {
   materials: ["s0rrow"],
   loadAudioDocument: () => import("./audio.json"),
   loadAudio: () => import("./audio"),
-  publishedAt: "2026-10-10T15:10:51.036Z",
+  publishedAt: "2026-10-08T21:06:05.689Z",
 };
 export default project;
