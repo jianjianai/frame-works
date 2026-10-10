@@ -23,6 +23,6 @@ const project: AnimationProject = {
   experiences: ["剧情音乐短片","s0rrow"],
   materials: ["s0rrow"],
   posterTime: 1.5,
-  publishedAt: "2026-10-10T15:10:47.028Z",
+  publishedAt: "2026-10-08T03:37:14.327Z",
 };
 export default project;
