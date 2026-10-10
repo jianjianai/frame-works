@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "background": "#101418",
+  "clips": [
+    {
+      "id": "title",
+      "name": "标题",
+      "source": {
+        "kind": "scene",
+        "module": "title",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 8,
+      "fadeIn": 1,
+      "fadeOut": 1
+    }
+  ]
+}
