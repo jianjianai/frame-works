@@ -4,3 +4,4 @@
 
 ## 来源与许可
 - `code/motion.ts`：来源 本任务原创 Canvas 2D / TypeScript 代码，无第三方素材下载。；许可 CC0-1.0；https://creativecommons.org/publicdomain/zero/1.0/
+- `README.ts`：来源 本任务原创素材库使用说明（准备移动为 README.md）。；许可 CC0-1.0；https://creativecommons.org/publicdomain/zero/1.0/
