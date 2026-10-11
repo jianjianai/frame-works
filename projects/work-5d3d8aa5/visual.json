@@ -4,7 +4,7 @@
   "clips": [
     {
       "id": "title",
-      "name": "标题",
+      "name": "知识手记 · 五段编排",
       "source": {
         "kind": "scene",
         "module": "title",
@@ -12,8 +12,13 @@
       },
       "start": 0,
       "duration": 24,
-      "fadeIn": 1,
-      "fadeOut": 1
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over",
+      "fadeIn": 0,
+      "fadeOut": 0
     }
   ]
 }
