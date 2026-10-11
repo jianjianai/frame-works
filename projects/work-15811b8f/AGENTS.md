@@ -18,7 +18,7 @@ project.tempo：120 BPM，首拍0秒，4/4。
 5.5–6.5、13.5–14.5、19.5–20.5秒为液态置换转场，下层镜头在中点切换。
 六个 Pixi scene 图层全程存在，特效由绝对时间控制显隐：避免短图层结束销毁 Pixi Application 时触发共享滤镜/渲染缓存问题（曾出现 geometry / clear 为 null）。实际转场仍只在三个 1 秒窗口可见。图层编排通过 layers_edit，声音通过 audio_place/audio_edit。
 所有运动只读绝对时间，固定种子，不使用真实时钟、ticker 或 Math.random；资源由 scene 生命周期释放。
-原创建合成配乐及音效不做 duck；使用各轨 gain 平衡。
+原创合成配乐及音效不做 duck；使用各轨 gain 平衡。
 所有修改后运行 work_check；资源逐一 resource_view；作品 preview_frames 多时间与 count 检查；交付前 version_save。
 
 ## 编辑约定
