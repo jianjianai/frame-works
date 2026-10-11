@@ -106,7 +106,8 @@ export const arrowOptions=z.object({
 });
 export function pathArrow(ctx:CanvasRenderingContext2D,x:number,y:number,t:number,options:z.input<typeof arrowOptions>={}) {
  const p=arrowOptions.parse(options);
- const e=cached(ctx,"arrow"+JSON.stringify(p),()=>{const point={x:0,y:0,rotation:0};const s={v:0};const path="M0,100 C"+p.width*0.35+",100 "+p.width*0.35+",0 "+p.width*0.62+",0 S"+p.width*0.8+",70 "+p.width+",30";const tl=gsap.timeline({paused:true}).to(point,{motionPath:{path,autoRotate:true},duration:p.duration,ease:"power1.inOut"},0).to(s,{v:1,duration:p.duration,ease:"power1.inOut"},0);return {tl,point,s,path};});
+ if(t<0)return;
+ const e=cached(ctx,"arrow"+JSON.stringify(p),()=>{const point={x:0,y:100,rotation:0};const s={v:0};const path="M0,100 C"+p.width*0.35+",100 "+p.width*0.35+",0 "+p.width*0.62+",0 S"+p.width*0.8+",70 "+p.width+",30";const tl=gsap.timeline({paused:true}).to(point,{motionPath:{path,autoRotate:true},duration:p.duration,ease:"power1.inOut"},0).to(s,{v:1,duration:p.duration,ease:"power1.inOut"},0);return {tl,point,s,path};});
  e.tl.seek(Math.max(0,t),true);ctx.save();ctx.translate(x,y);ctx.strokeStyle=p.color;ctx.lineWidth=3;ctx.globalAlpha*=0.2;strokePath(ctx,e.path,1);ctx.globalAlpha/=0.2;strokePath(ctx,e.path,e.s.v);
  ctx.translate(e.point.x,e.point.y);ctx.rotate(e.point.rotation*Math.PI/180);ctx.fillStyle=p.color;ctx.beginPath();ctx.moveTo(19,0);ctx.lineTo(-12,-11);ctx.lineTo(-6,0);ctx.lineTo(-12,11);ctx.closePath();ctx.fill();ctx.restore();
  ctx.save();text(ctx,p.text,x,y+168,25,p.color);ctx.restore();
