@@ -1,19 +1,108 @@
 {
   "schemaVersion": 1,
-  "background": "#101418",
+  "background": "#080d23",
   "clips": [
     {
-      "id": "title",
-      "name": "标题",
+      "id": "city",
+      "name": "霓虹夜城 · 月环与倒影",
       "source": {
         "kind": "scene",
-        "module": "title",
-        "engine": "canvas"
+        "module": "city",
+        "engine": "pixi"
       },
       "start": 0,
       "duration": 24,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over",
+      "fadeIn": 0.4,
+      "fadeOut": 0.7
+    },
+    {
+      "id": "atmosphere",
+      "name": "漂浮散景 · 加色精灵",
+      "source": {
+        "kind": "scene",
+        "module": "atmosphere",
+        "engine": "pixi"
+      },
+      "start": 0,
+      "duration": 24,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over",
       "fadeIn": 1,
-      "fadeOut": 1
+      "fadeOut": 0.7
+    },
+    {
+      "id": "weather",
+      "name": "双层雨幕 · 湿地涟漪",
+      "source": {
+        "kind": "scene",
+        "module": "weather",
+        "engine": "pixi"
+      },
+      "start": 0,
+      "duration": 24,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over",
+      "fadeIn": 0.5,
+      "fadeOut": 0.7
+    },
+    {
+      "id": "fireworks",
+      "name": "烟花 · 每小节爆发",
+      "source": {
+        "kind": "scene",
+        "module": "fireworks",
+        "engine": "pixi"
+      },
+      "start": 0,
+      "duration": 24,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "type",
+      "name": "霓虹字 · 四章叙事",
+      "source": {
+        "kind": "scene",
+        "module": "type",
+        "engine": "pixi"
+      },
+      "start": 0,
+      "duration": 24,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "wipeA",
+      "name": "液态转场 · 6 / 14 / 20 秒",
+      "source": {
+        "kind": "scene",
+        "module": "transition",
+        "engine": "pixi"
+      },
+      "start": 0,
+      "duration": 24,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     }
   ]
 }

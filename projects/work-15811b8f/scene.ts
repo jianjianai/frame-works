@@ -1,10 +1,10 @@
 import type { SceneOptions } from "@frame/engine/types";
 import { createCompositionScene } from "@frame/engine/compositor";
 import visual from "./visual.json";
-
-// visual.json 排列图层；"scene" 图层的 module 名称在这里注册。
-export function createScene(options: SceneOptions) {
-  return createCompositionScene(options, visual, {
-    title: () => import("./scenes/title"),
-  });
+export function createScene(options:SceneOptions){
+ return createCompositionScene(options,visual,{
+  city:()=>import("./scenes/city"),atmosphere:()=>import("./scenes/atmosphere"),
+  weather:()=>import("./scenes/weather"),type:()=>import("./scenes/type"),
+  fireworks:()=>import("./scenes/fireworks"),transition:()=>import("./scenes/transition"),
+ });
 }

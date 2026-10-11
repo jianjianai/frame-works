@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "src_4d0e5a84",
+      "kind": "generated",
+      "module": "materials/Pixi特效/code/sounds.ts",
+      "trackId": "nightDrive",
+      "engine": "custom"
+    },
+    {
+      "id": "src_5452f499",
+      "kind": "generated",
+      "module": "materials/Pixi特效/code/sounds.ts",
+      "trackId": "liquidSweep",
+      "engine": "custom"
+    },
+    {
+      "id": "src_0855419a",
+      "kind": "generated",
+      "module": "materials/Pixi特效/code/sounds.ts",
+      "trackId": "sparkle",
+      "engine": "custom"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "track_a6cc2600",
+      "name": "原创电子配乐",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "track_c98af793",
+      "name": "转场音效",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    },
+    {
+      "id": "track_eb25fa41",
+      "name": "烟花音效",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    }
+  ],
+  "clips": [
+    {
+      "id": "clip_c2cfd43b",
+      "track": "track_a6cc2600",
+      "source": "src_4d0e5a84",
+      "name": "夜行 · 120 BPM",
+      "start": 0,
+      "duration": 24,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.9,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0.2,
+      "fadeOut": 0.4,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_cc6abdcc",
+      "track": "track_c98af793",
+      "source": "src_5452f499",
+      "name": "入雨",
+      "start": 5.5,
+      "duration": 1,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.65,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_d4c5918a",
+      "track": "track_c98af793",
+      "source": "src_5452f499",
+      "name": "绽放",
+      "start": 13.5,
+      "duration": 1,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.65,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_fc1cd4c3",
+      "track": "track_c98af793",
+      "source": "src_5452f499",
+      "name": "余光",
+      "start": 19.5,
+      "duration": 1,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.65,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    },
+    {
+      "id": "clip_641fd602",
+      "track": "track_eb25fa41",
+      "source": "src_0855419a",
+      "name": "绽放的微光",
+      "start": 14,
+      "duration": 1.6,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.65,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    }
+  ],
+  "buses": [],
+  "master": {
+    "gain": 1,
+    "processors": []
+  },
+  "linkedVideo": true
+}

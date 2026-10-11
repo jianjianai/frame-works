@@ -3,7 +3,7 @@ import type { AnimationProject } from "@frame/engine/types";
 const project: AnimationProject = {
   id: "work-15811b8f",
   title: "示例：霓虹夜景特效",
-  subtitle: "",
+  subtitle: "AFTER HOURS · 夜色有回响",
   description: "官方 PixiJS 特效示例：原创 Pixi特效 素材库、固定种子粒子、霓虹辉光、雨幕、光斑和波动转场；24秒横屏霓虹夜景，多个 Pixi scene 图层合成，120 BPM。仅修改本新作品与新素材库。",
   renderer: "composition",
   engineProtocol: 1,
@@ -13,10 +13,14 @@ const project: AnimationProject = {
   accent: "#7aa2f7",
   tags: [],
   status: "draft",
-  beats: [],
+  beats: [{"at":0,"title":"01 · 入夜","detail":"光斑与城市点亮，主标题显现"},{"at":6,"title":"02 · 雨中脉冲","detail":"波纹置换转场，雨幕随拍提速"},{"at":14,"title":"03 · 夜空盛放","detail":"每小节烟花和火花"},{"at":20,"title":"04 · 留住微光","detail":"回到夜城，品牌落版与余音"}],
   subtitles: [],
   credits: [],
   load: () => import("./scene"),
   loadVisual: () => import("./visual.json"),
+  materials: ["Pixi特效"],
+  tempo: {"bpm":120,"firstBeat":0,"beatsPerBar":4},
+  posterTime: 3.5,
+  loadAudioDocument: () => import("./audio.json"),
 };
 export default project;
