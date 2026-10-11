@@ -7,3 +7,4 @@
 - `lottie/heart-pop.json`：来源 本仓库原创（FRAME Studio 官方示例）；许可 本仓库原创，CC0
 - `lottie/check-draw.json`：来源 本仓库原创（FRAME Studio 官方示例）；许可 本仓库原创，CC0
 - `lottie/orbit-loader.json`：来源 本仓库原创（FRAME Studio 官方示例）；许可 本仓库原创，CC0
+- `lottie/color-wipe.json`：来源 本仓库原创（FRAME Studio 官方示例）；许可 本仓库原创，CC0
