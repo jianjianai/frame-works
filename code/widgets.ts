@@ -32,7 +32,7 @@ type Painter = (ctx: CanvasRenderingContext2D, t: number, icon: Scene) => void;
 function text(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, size: number, color: string, weight = 700) {
   ctx.fillStyle = color; ctx.font = weight + " " + size + "px " + FONT;
   ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  ctx.fillText(s, x, y);
+  ctx.fillText(s, x, y, Math.max(1, 754 - x));
 }
 function panel(ctx: CanvasRenderingContext2D, theme: "paper" | "ink") {
   ctx.fillStyle = theme === "paper" ? "#fffdf4" : INK;
