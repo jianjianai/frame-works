@@ -1,5 +1,4 @@
-import { gsap } from "gsap";
-import { interpolate } from "flubber";
+import { gsap, morphPath } from "../../src/engine/gsap";
 import type { Scene, SceneOptions } from "../../src/engine/types";
 import { clamp, mix, phase, smooth, seeded } from "../../src/engine/math";
 import { cameraCurve } from "../../src/engine/camera-curve";
@@ -16,10 +15,9 @@ export function createScene({ width, height }: SceneOptions): Scene {
     .to(growth, { stem: 1, duration: 8, ease: "power2.inOut" }, 10.5)
     .to(growth, { leaves: 1, duration: 5.7, ease: "sine.inOut" }, 14)
     .to(growth, { flower: 1, duration: 4.5, ease: "sine.inOut" }, 19.8);
-  const leafMorph = interpolate(
+  const leafMorph = morphPath(
     "M0 0C-4-8 4-12 10-6C15 0 10 6 0 0Z",
     "M0 0C27-75 91-92 155-89C132-18 68 16 0 0Z",
-    { maxSegmentLength: 5 },
   );
   const rng = seeded(5129);
   const grit = Array.from({ length: 390 }, () => ({

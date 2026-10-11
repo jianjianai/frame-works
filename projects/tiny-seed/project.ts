@@ -61,7 +61,7 @@ const project: AnimationProject = {
     credits: [
       "矢量画面、花卉与角色动作：本项目原创",
       "原创三拍子配乐：钢琴、竖琴、大提琴、弦乐、长笛与钢片琴；GeneralUser GS 乐器采样",
-      "Canvas 2D + GSAP + Flubber；雨滴、根系、花瓣、蜜蜂与种子启程的连续近景",
+      "Canvas 2D + GSAP（MorphSVG 叶片形变）；雨滴、根系、花瓣、蜜蜂与种子启程的连续近景",
     ],
   },
   load: () => import("./scene"),
