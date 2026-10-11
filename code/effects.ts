@@ -36,7 +36,8 @@ function label(text: string, size: number, color: string, weight: "400"|"600"|"8
 }
 
 export const cityOptions = z.object({
-  ...sizes, seed,
+  width:z.number().min(160).max(3840).default(1600).describe("输出宽度"),
+  height:z.number().min(90).max(2160).default(900).describe("输出高度"), seed,
   accent: z.enum(["#79f5ed","#ff69c9","#ffc888"]).default("#79f5ed").describe("建筑与地平线高光"),
   hue: z.number().min(-90).max(90).default(0).describe("颜色矩阵色相偏移"),
   skyline: z.number().min(.5).max(1.4).default(1).describe("建筑高度倍率"),
@@ -70,7 +71,7 @@ export function nightCity(options: z.input<typeof cityOptions> = {}) {
     const ht=(40+random()*160+(x>850?random()*140:0))*p.skyline;
     const y=661-ht;
     const b=new Graphics().rect(x,y,bw,ht).fill(x>850?"#0a1430":"#0b1229")
-      .moveTo(x,y).lineTo(x+bw,y).lineTo(x+bw,661).stroke({color:p.accent,width:1,alpha:.26});
+      .moveTo(x,y).lineTo(x+bw,y).lineTo(x+bw,661).stroke({color:p.accent,width:1,alpha:.43});
     if(i%4===0)b.moveTo(x+bw*.5,y).lineTo(x+bw*.5,y-20-random()*30).stroke({color:p.accent,width:1,alpha:.4});
     buildings.addChild(b);
     for(let row=0;row<Math.floor(ht/16)-1;row++)for(let col=0;col<Math.floor(bw/10)-1;col++){
@@ -103,7 +104,8 @@ export function nightCity(options: z.input<typeof cityOptions> = {}) {
   }};
 }
 
-export const bokehOptions=z.object({...sizes,seed,
+export const bokehOptions=z.object({width:z.number().min(160).max(3840).default(1600).describe("输出宽度"),
+  height:z.number().min(90).max(2160).default(900).describe("输出高度"),seed,
   count:z.number().int().min(10).max(400).default(90).describe("光斑数量"),
   radius:z.number().min(4).max(140).default(35).describe("光斑半径（1600宽参考画布）"),
   softness:z.number().min(0).max(16).default(3).describe("模糊滤镜强度"),
@@ -128,7 +130,8 @@ export function bokeh(options:z.input<typeof bokehOptions>={}){
   }};
 }
 
-export const rainOptions=z.object({...sizes,seed,
+export const rainOptions=z.object({width:z.number().min(160).max(3840).default(1600).describe("输出宽度"),
+  height:z.number().min(90).max(2160).default(900).describe("输出高度"),seed,
   count:z.number().int().min(100).max(2400).default(720).describe("雨丝精灵数量"),
   speed:z.number().min(.2).max(3).default(1).describe("落雨速度倍率"),
   wind:z.number().min(-.7).max(.7).default(-.2).describe("风向倾斜"),
@@ -159,7 +162,8 @@ export function rain(options:z.input<typeof rainOptions>={}){
   }};
 }
 
-export const neonOptions=z.object({...sizes,
+export const neonOptions=z.object({width:z.number().min(160).max(3840).default(1600).describe("输出宽度"),
+  height:z.number().min(90).max(2160).default(900).describe("输出高度"),
   text:z.string().default("AFTER HOURS").describe("霓虹文字内容；支持换行"),
   fontSize:z.number().min(20).max(280).default(120).describe("字高（900高参考画布）"),
   color:z.enum(["#79f5ed","#ff69c9","#ffc888"]).default("#79f5ed").describe("灯管颜色"),
@@ -181,7 +185,8 @@ export function neonType(options:z.input<typeof neonOptions>={}){
   }};
 }
 
-export const burstOptions=z.object({...sizes,seed,
+export const burstOptions=z.object({width:z.number().min(160).max(3840).default(1600).describe("输出宽度"),
+  height:z.number().min(90).max(2160).default(900).describe("输出高度"),seed,
   count:z.number().int().min(100).max(2200).default(1000).describe("烟花粒子数量"),
   radius:z.number().min(40).max(650).default(310).describe("爆发半径（900高参考画布）"),
   color:z.enum(["#79f5ed","#ff69c9","#ffc888"]).default("#ff69c9").describe("主颜色"),
@@ -201,13 +206,14 @@ export function fireworks(options:z.input<typeof burstOptions>={}){
       const a=Math.max(0,age-d.delay),q=sat(a/life),ease=1-Math.exp(-q*4);
       const angle=d.a+cycle*.47,dist=p.radius*d.v*ease*p.height/900;
       const x=p.width*p.originX+Math.cos(angle)*dist,y=p.height*p.originY+Math.sin(angle)*dist+q*q*95*p.height/900;
-      d.s.position.set(x,y);d.s.width=(d.r*(2.5-q*1.5))*p.height/900;d.s.height=d.s.width*(1+q*3);
-      d.s.rotation=angle+Math.PI/2;d.s.alpha=(age>d.delay?1:0)*Math.pow(1-q,1.25)*(.5+.5*Math.sin(a*12+d.phase)**2);
+      d.s.position.set(x,y);d.s.width=(d.r*(8-q*3))*p.height/900;d.s.height=d.s.width*(1+q*3);
+      d.s.rotation=angle+Math.PI/2;d.s.alpha=(age>d.delay?1:0)*Math.pow(1-q,.85)*(.75+.25*Math.sin(a*12+d.phase)**2);
     }
   }};
 }
 
-export const rippleOptions=z.object({...sizes,
+export const rippleOptions=z.object({width:z.number().min(160).max(3840).default(1600).describe("输出宽度"),
+  height:z.number().min(90).max(2160).default(900).describe("输出高度"),
   duration:z.number().min(.4).max(3).default(1).describe("转场总长（秒），中点完全遮挡"),
   strength:z.number().min(0).max(160).default(70).describe("置换滤镜强度"),
   color:z.enum(["#79f5ed","#ff69c9","#ffc888"]).default("#79f5ed").describe("波纹边缘颜色"),
