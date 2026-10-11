@@ -27,9 +27,10 @@ function lightTexture() {
   g.fillStyle=grad; g.fillRect(0,0,96,96);
   return Texture.from(c);
 }
-function own(view: Container, texture: Texture) { view.on("destroyed", () => texture.destroy(true)); }
+// The stage is destroyed before the renderer. Release owned GPU objects after renderer teardown.
+function own(view: Container, texture: Texture) { view.on("destroyed", () => queueMicrotask(() => texture.destroy(true))); }
 function releaseFilters(view: Container, filters: {destroy(): void}[]) {
-  view.on("destroyed", () => filters.forEach(f=>f.destroy()));
+  view.on("destroyed", () => queueMicrotask(() => filters.forEach(f=>f.destroy())));
 }
 function label(text: string, size: number, color: string, weight: "400"|"600"|"800" = "600") {
   return new Text({text,style:{fontFamily:"Arial, sans-serif",fontSize:size,fontWeight:weight,fill:color,letterSpacing:2}});
