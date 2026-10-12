@@ -2,7 +2,7 @@ import type { AnimationProject } from "@frame/engine/types";
 
 const project: AnimationProject = {
   id: "work-9f925128",
-  title: "迟到三年的赞 · stalk ur socials",
+  title: "【已否】迟到三年的赞 · stalk ur socials",
   subtitle: "s0rrow",
   description: "",
   renderer: "composition",
