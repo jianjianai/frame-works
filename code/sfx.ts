@@ -740,6 +740,52 @@ const make: Record<string, () => StereoPcm> = {
     add(pcm, 0.16, 0.18, (t) => Math.sin(TAU * (500 + 1200 * t * 5) * t) * Math.exp(-t * 18), 0.22);
     return pcm;
   },
+  // ---------------- 《迟到三年的赞》(stalk ur socials)
+  // one heavy heartbeat (lub-dub) for a realisation: a low thump saturated into overtones so phone speakers carry it
+  heartOnce: () => {
+    const pcm = buffer(0.7);
+    const beat = (at: number, f: number, g: number, seed: number) => {
+      const nz = lowpass(seed, 0.25);
+      let ph = 0;
+      add(pcm, at, 0.34, (t) => {
+        ph += (TAU * (f + 30 * Math.exp(-t * 40))) / SR;
+        return attack(t, 0.003) * (Math.tanh(2.4 * Math.sin(ph)) * Math.exp(-t * 13) + nz() * 1.6 * Math.exp(-t * 70));
+      }, g);
+    };
+    beat(0, 60, 0.5, 421);
+    beat(0.18, 53, 0.36, 422);
+    return pcm;
+  },
+  // the reveal (his face in the glass): a swell sucking in like a cymbal played backwards, cut off on a low boom, and
+  // the glass ringing on after it. The ring is B (tuned 37 cents flat, with the song)
+  reveal: () => {
+    const pcm = buffer(2.6);
+    const H = 0.8;
+    const cut = (t: number) => Math.min(1, (H - t) / 0.008);
+    const r = seeded(431);
+    let a = 0,
+      b = 0;
+    add(pcm, 0, H, (t) => {
+      const u = t / H;
+      const k = 0.008 + 0.4 * u * u;
+      a += k * (r() * 2 - 1 - a);
+      b += k * (a - b);
+      return b * 3.2 * u ** 2.6 * cut(t);
+    }, 0.55);
+    const B5 = 987.77 * 2 ** (-37 / 1200);
+    add(pcm, 0, H, (t) => (Math.sin(TAU * B5 * t) * 0.6 + Math.sin(TAU * B5 * 2 * t) * 0.25) * Math.exp(-(H - t) * 6) * cut(t), 0.06);
+    let ph = 0;
+    add(pcm, H, 1.6, (t) => {
+      ph += (TAU * (45.3 + 66 * Math.exp(-t * 22))) / SR;
+      return attack(t, 0.003) * Math.tanh(2 * Math.sin(ph)) * Math.exp(-t * 3.4);
+    }, 0.45);
+    const nz = lowpass(432, 0.18);
+    add(pcm, H, 0.35, (t) => nz() * 3 * Math.exp(-t * 18), 0.28);
+    // the ring, a little apart in each ear: B, its octave and the fifth above
+    for (const [f, pan, g] of [[B5, -0.4, 0.06], [B5 * 1.003, 0.4, 0.06], [B5 * 2, 0, 0.025], [B5 * 3, 0, 0.012]] as const)
+      add(pcm, H, 1.7, (t) => attack(t, 0.002) * Math.sin(TAU * f * t) * Math.exp(-t * 2.4), g, pan);
+    return pcm;
+  },
 };
 
 /** Every sound: its title, length (the clip length when placed) and where its main hit lands. */
@@ -827,4 +873,7 @@ export default defineSounds(SR, {
   whip: { title: "甩镜头的风声", duration: 0.35, hit: 0.15, tags: ["转场", "甩镜", "冲镜", "风声"], description: "甩镜或冲进特写的一下风声：比切点早约 0.15 秒开始。", make: make.whip },
   rip: { title: "一下撕掉所有的纸", duration: 0.7, hit: 0, tags: ["纸", "撕"], make: make.rip },
   doubleTap: { title: "双击点赞（两下和啵）", duration: 0.7, tags: ["点赞", "双击", "手机", "结尾"], make: make.doubleTap },
+  // ---------------- 《迟到三年的赞》
+  heartOnce: { title: "一下重重的心跳", duration: 0.7, hit: 0, tags: ["心跳", "反转", "愣住", "认出"], description: "一下 lub-dub（第二下在 0.18 秒）：低频带饱和泛音，手机外放也听得到。认出来、愣住、匹配剪辑的那一下用。", make: make.heartOnce },
+  reveal: { title: "反转揭晓（倒吸、闷响、玻璃余音）", duration: 2.6, hit: 0.8, tags: ["反转", "揭晓", "倒影", "玻璃", "转场"], description: "像倒放的镲一样涌上来，在第 0.8 秒戛然而止，落在一下低沉的闷响上，玻璃的余音再响一秒多。片段比揭晓的画面早 0.8 秒开始。余音是 B（比标准音低 37 音分，和《stalk ur socials》同调），别的歌先试听。", make: make.reveal },
 });
