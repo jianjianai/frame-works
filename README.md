@@ -10,6 +10,7 @@ Lottie动效是一套原创 CC0 的轻快互动贴纸与 Canvas 组件，适合�
 | lottie/heart-pop.json | 512×512，3 秒，30 fps | 心动弹出与短射线，点赞贴纸 |
 | lottie/check-draw.json | 512×512，3 秒，30 fps | 圆形徽章和描边勾选 |
 | lottie/orbit-loader.json | 512×512，3 秒，30 fps | 八段环形加载 |
+| lottie/star-rating.json | 600×160，3 秒，30 fps | 五颗星依次弹出并由灰变金，评分贴纸；0–2 秒入场，之后保持 |
 | lottie/color-wipe.json | 1080×1920，1.2 秒，30 fps | 黑、珊瑚红、黄绿三色全屏擦拭 |
 | code/widgets.ts#likeCounter | Canvas，800×280 | 参数化点赞文案、计数起止、增长时间、配色 |
 | code/widgets.ts#loadingCard | Canvas，800×280 | 参数化加载文案、总时长、速度、配色 |
@@ -42,7 +43,7 @@ ctx.drawImage(card.canvas, 100, 1400, 880, 308);
 
 ## 素材来源与许可
 
-本库全部 5 个 Lottie JSON、Canvas 组件代码和文档均由本仓库原创，CC0；没有下载第三方素材，没有署名义务。原创来源：FRAME Studio 官方示例「Lottie 动效贴纸」制作任务。material_write 的 source 写“本仓库原创（FRAME Studio 官方示例）”，license 写“本仓库原创，CC0”。CC0 法律文本：https://creativecommons.org/publicdomain/zero/1.0/ 。
+本库全部 6 个 Lottie JSON、Canvas 组件代码和文档均由本仓库原创，CC0；没有下载第三方素材，没有署名义务。原创来源：FRAME Studio 官方示例「Lottie 动效贴纸」制作任务。material_write 的 source 写“本仓库原创（FRAME Studio 官方示例）”，license 写“本仓库原创，CC0”。CC0 法律文本：https://creativecommons.org/publicdomain/zero/1.0/ 。
 
 运行依赖 FRAME、zod 和平台已有的 Lottie 播放器；它们不是本库新增分发的素材，继续适用各自原有许可。
 
