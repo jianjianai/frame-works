@@ -445,7 +445,7 @@ export function selfiePhoto(ctx: Ctx, x: number, y: number, w: number, h: number
   ctx.restore();
 }
 
-export function momentsScreen(ctx: Ctx, abs: number, o: { dark?: boolean; mark?: number } = {}) {
+export function momentsScreen(ctx: Ctx, abs: number, o: { dark?: boolean; mark?: number; author?: string; caption?: string; location?: string; photo?: (ctx: Ctx, x: number, y: number, w: number, h: number) => void } = {}) {
   const dark = !!o.dark;
   ctx.fillStyle = dark ? "#111" : "#fff";
   ctx.fillRect(0, 0, SW, SH);
@@ -468,15 +468,16 @@ export function momentsScreen(ctx: Ctx, abs: number, o: { dark?: boolean; mark?:
     paint(ctx, "#7a4a24", null);
   }
   statusBar(ctx, { time: "23:20", airplane: false, battery: 0.39 });
-  text(ctx, "林夏", SW - 150, 372, { size: 34, font: F.ui, weight: 700, fill: "#fff", align: "right", shadow: 6 });
+  text(ctx, o.author ?? "林夏", SW - 150, 372, { size: 34, font: F.ui, weight: 700, fill: "#fff", align: "right", shadow: 6 });
   avatar(ctx, SW - 80, 380, "girl", 110);
   // the post
   const py = 500;
   avatar(ctx, 60, py + 36, "girl");
-  text(ctx, "林夏", 112, py + 16, { size: 30, font: F.ui, weight: 700, fill: "#576b95", align: "left" });
-  text(ctx, "今天好开心～", 112, py + 64, { size: 30, font: F.ui, fill: dark ? "#ddd" : "#111", align: "left" });
-  selfiePhoto(ctx, 112, py + 96, 400, 400, abs, "happy");
-  text(ctx, "5分钟前", 112, py + 540, { size: 28, font: F.ui, fill: dark ? "#b4b4b4" : "#888", align: "left" });
+  text(ctx, o.author ?? "林夏", 112, py + 16, { size: 30, font: F.ui, weight: 700, fill: "#576b95", align: "left" });
+  text(ctx, o.caption ?? "今天好开心～", 112, py + 64, { size: 30, font: F.ui, fill: dark ? "#ddd" : "#111", align: "left" });
+  if (o.photo) o.photo(ctx, 112, py + 96, 400, 400);
+  else selfiePhoto(ctx, 112, py + 96, 400, 400, abs, "happy");
+  text(ctx, o.location ?? "5分钟前", 112, py + 540, { size: 28, font: F.ui, fill: dark ? "#b4b4b4" : "#888", align: "left" });
   const mk = clamp(o.mark ?? 0);
   if (mk > 0) {
     ctx.save();
