@@ -660,10 +660,20 @@ function headBack(ctx: Ctx, p: KidPose, seed: number) {
     oval(ctx, side * 114, 36, 17, 26, seed + side * 2, 0.9);
     paint(ctx, K.skin, C.ink, 4.5);
   }
-  // nape of the neck under the hair
-  blob(ctx, [[-60, 60], [60, 60], [56, 140], [-56, 140]], seed + 4, 1);
-  paint(ctx, K.skinSh, C.ink, 5);
   if (p.hair === "short") {
+    // the back of the neck: slim (the crop shows it, so the mop's wide nape block won't do), in the shade of the
+    // hair at the top, a soft groove down the middle; it stops at the collar (no line across the bottom, so the
+    // collar drawn before it keeps its edge)
+    poly(ctx, [[-45, 40], [45, 40], [41, 126], [-41, 126]], seed + 4, 0.8);
+    ctx.fillStyle = K.skinSh;
+    ctx.fill();
+    const sh = ctx.createLinearGradient(0, 64, 0, 104);
+    sh.addColorStop(0, "rgba(150,100,55,0.5)");
+    sh.addColorStop(1, "rgba(150,100,55,0)");
+    ctx.fillStyle = sh;
+    ctx.fill();
+    for (const sd of [-1, 1]) inkLine(ctx, [[sd * 46, 70], [sd * 41, 100], [sd * 42, 126]], seed + 5 + sd, 4.5);
+    inkLine(ctx, [[0, 96], [1, 112], [0, 124]], seed + 8, 2, K.skinDeep);
     // the crop from behind: a neat dome, the whorl on the crown, a short tapered nape
     shaded(ctx, () => poly(ctx, wetMop(SHORT_BACK, wet), seed + 70, 1.2), K.hair, () => {
       // the lower edge, toward the nape, is in the shade of the head
@@ -675,6 +685,9 @@ function headBack(ctx: Ctx, p: KidPose, seed: number) {
     ctx.restore();
     return;
   }
+  // nape of the neck under the hair
+  blob(ctx, [[-60, 60], [60, 60], [56, 140], [-56, 140]], seed + 4, 1);
+  paint(ctx, K.skinSh, C.ink, 5);
   const mop = wetMop(MOP, wet);
   // from behind the mop is one big mass with spikes at the nape
   const back: Pt[] = [...mop.slice(0, -2), [126, 40], [100, 70], [76, 60], [52, 92], [24, 70], [0, 100], [-26, 72], [-52, 96], [-80, 62], [-106, 72]];
@@ -1018,9 +1031,10 @@ function uniformBack(ctx: Ctx, seed: number) {
     // a crease down the back
     inkLine(ctx, [[-20, 270], [-14, 330], [-22, 392]], seed + 9, 2, K.uniSh);
   }, C.ink, 6);
-  blob(ctx, [[-72, 138], [0, 148], [72, 138], [74, 168], [0, 178], [-74, 168]], seed + 10, 1);
+  blob(ctx, [[-72, 124], [0, 132], [72, 124], [76, 166], [0, 176], [-76, 166]], seed + 10, 1);
   paint(ctx, K.uniBlue, C.ink, 5);
-  inkLine(ctx, [[-68, 142], [0, 152], [68, 142]], seed + 11, 2.4, K.uni);
+  inkLine(ctx, [[-68, 129], [0, 137], [68, 129]], seed + 11, 2.4, K.uni);
+  inkLine(ctx, [[-60, 150], [0, 158], [60, 150]], seed + 12, 2, K.uniBlueDk);
 }
 
 function torsoFront(ctx: Ctx, p: KidPose, seed: number) {
