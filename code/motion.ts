@@ -48,13 +48,13 @@ export const titleOptions = z.object({
   size: z.number().min(24).max(200).default(96).describe("字号（设计像素）"),
   duration: z.number().min(0.3).max(5).default(1.2).describe("整句入场时长（秒）"),
   maxWidth: z.number().min(200).max(1800).default(1200).describe("自动换行宽度（缩放前设计单位；可用像素宽度/scale）"),
-  lineHeight: z.number().min(0.8).max(3).optional().describe("换行行高倍数；新多行标题可用0.9–1.25，省略保留旧排版"),
+  lineHeight: z.number().min(0.8).max(3).optional().describe("换行行高：字体高度的倍数，默认1.25；紧凑中文标题可用0.9–1.1"),
 });
 export function kineticTitle(ctx: CanvasRenderingContext2D, x: number, y: number, t: number, options: z.input<typeof titleOptions> = {}) {
   const p = titleOptions.parse(options); ctx.save(); ctx.translate(x,y);scaleLocal(ctx,p.scale);
   ctx.font = "700 " + p.size + "px " + FONT; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   const e = cached(ctx, "title" + JSON.stringify(p), () => {
-    const glyphs = splitText(ctx,p.text,{x:0,y:0,maxWidth:p.maxWidth,lineHeight:p.lineHeight ?? p.size*1.25,letterSpacing:1});
+    const glyphs = splitText(ctx,p.text,{x:0,y:0,maxWidth:p.maxWidth,lineHeight:p.lineHeight ?? 1.25,letterSpacing:1});
     const tl = gsap.timeline({paused:true}).from(glyphs,{y:"+=" + p.size*0.52,alpha:0,scale:0.78,duration:p.duration*0.65,stagger:glyphs.length > 1 ? p.duration*0.35/(glyphs.length-1) : 0,ease:"back.out(1.25)"},0);
     return {tl,glyphs};
   });
@@ -217,7 +217,7 @@ export function quoteCard(ctx:CanvasRenderingContext2D,x:number,y:number,t:numbe
  ctx.restore();
 }
 export const resources=defineResources({
- kineticTitle:resource({kind:"text",title:"逐字弹出大标题",description:"字体加载后 splitText，GSAP 逐字弹出。坐标是第一行左侧基线。",tags:["文字","标题","gsap","canvas"],usage:"await prepareTypography(); kineticTitle(ctx,x,y,localTime,{text,color,size,duration,maxWidth,scale,lineHeight}); disposeResources(ctx) 释放缓存。 scale默认1；x/y为调用方坐标，尺寸为缩放前设计单位；直接画布绘制用scale:motionScale(width,height)，不要再叠加全局缩放。 新多行标题设置lineHeight，例如紧凑中文标题用0.9。",params:titleOptions,presets:{"知识开场":{text:"让知识动起来",color:"#F2EFE4",size:96,duration:1.2},"珊瑚强调":{text:"先问为什么",color:"#FF805F",size:100,duration:1}},preview:{engine:"canvas",width:960,height:540,duration:2,time:1.5,background:"#12372F",prepare:prepareTypography,draw:(c,t,p)=>kineticTitle(c,100,290,t,p)}}),
+ kineticTitle:resource({kind:"text",title:"逐字弹出大标题",description:"字体加载后 splitText，GSAP 逐字弹出。坐标是第一行左侧基线。",tags:["文字","标题","gsap","canvas"],usage:"await prepareTypography(); kineticTitle(ctx,x,y,localTime,{text,color,size,duration,maxWidth,scale,lineHeight}); disposeResources(ctx) 释放缓存。 scale默认1；x/y为调用方坐标，尺寸为缩放前设计单位；直接画布绘制用scale:motionScale(width,height)，不要再叠加全局缩放。 多行标题的行距用lineHeight（字体高度的倍数，默认1.25）。",params:titleOptions,presets:{"知识开场":{text:"让知识动起来",color:"#F2EFE4",size:96,duration:1.2},"珊瑚强调":{text:"先问为什么",color:"#FF805F",size:100,duration:1}},preview:{engine:"canvas",width:960,height:540,duration:2,time:1.5,background:"#12372F",prepare:prepareTypography,draw:(c,t,p)=>kineticTitle(c,100,290,t,p)}}),
  callout:resource({kind:"effect",title:"生长引线与标注",description:"strokePath 按长度描边，标注跟随线段出现。",tags:["引线","标注","描边","gsap"],usage:"callout(ctx,x,y,localTime,{text,color,textColor,width,duration,scale})；原点是折线顶端的高度。 scale默认1；x/y为调用方坐标，尺寸为缩放前设计单位；直接画布绘制用scale:motionScale(width,height)，不要再叠加全局缩放。",params:lineOptions,presets:{"知识标注":{text:"看见关键线索",width:460},"浅色画面":{text:"记录真实现象",textColor:"#173B35",color:"#DF593E"}},preview:{engine:"canvas",width:960,height:540,duration:2,time:1.5,background:"#12372F",prepare:prepareTypography,draw:(c,t,p)=>callout(c,200,280,t,p)}}),
  morphIcon:resource({kind:"prop",title:"圆形到菱形的结构图标",description:"morphPath 与 CustomEase 让有机形态收束为几何结构。",tags:["图标","形变","gsap"],usage:"morphIcon(ctx,centerX,centerY,localTime,{text,color,textColor,size,duration,scale}) scale默认1；x/y为调用方坐标，尺寸为缩放前设计单位；直接画布绘制用scale:motionScale(width,height)，不要再叠加全局缩放。",params:morphOptions,presets:{"珊瑚结构":{color:"#FF805F",text:"从线索到结构"},"青柠结构":{color:"#D8ED99",text:"形成新的解释"}},preview:{engine:"canvas",width:960,height:540,duration:3,time:2.4,background:"#12372F",prepare:prepareTypography,draw:(c,t,p)=>morphIcon(c,480,235,t,p)}}),
  numberCard:resource({kind:"ui",title:"滚动数字数据卡",description:"数字纵向滚动并收束到目标值；数据由调用方提供。",tags:["数字","数据","卡片","gsap"],usage:"numberCard(ctx,x,y,localTime,{text,value,suffix,color,background,duration,scale})；卡片设计尺寸 420×310。 scale默认1；x/y为调用方坐标，尺寸为缩放前设计单位；直接画布绘制用scale:motionScale(width,height)，不要再叠加全局缩放。",params:numberOptions,presets:{"三个步骤":{text:"核心步骤",value:3,suffix:"步"},"示意数据":{text:"示意进度",value:100,suffix:"%"}},preview:{engine:"canvas",width:960,height:540,duration:2,time:1.8,background:"#12372F",prepare:prepareTypography,draw:(c,t,p)=>numberCard(c,270,115,t,p)}}),
