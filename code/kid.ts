@@ -146,7 +146,7 @@ function inHairCap(x: number, y: number) {
 
 // ---------------------------------------------------------------- short hair (hair: "short", his school years)
 /** A school crop: a dome hugging the skull with fine jags, temple to temple (same order as MOP). */
-function shortPts(): Pt[] {
+function shortPts(jagScale = 1): Pt[] {
   const pts: Pt[] = [[-124, 8]];
   const N = 40;
   for (let i = 0; i <= N; i++) {
@@ -155,6 +155,7 @@ function shortPts(): Pt[] {
     const outer = i % 2 === 0;
     let jag = outer ? 0.018 + hash(i * 4.1 + 7) * 0.024 : -0.008 - hash(i * 6.7 + 3) * 0.012;
     if (outer && (i === 12 || i === 20 || i === 26)) jag += 0.022; // a few tufts on the crown
+    jag *= jagScale;
     pts.push([2 + Math.cos(a) * (right ? 138 : 134) * (1 + jag), -46 + Math.sin(a) * 118 * (1 + jag)]);
   }
   pts.push([124, 8]);
@@ -169,7 +170,7 @@ const SHORT_FRINGE: Pt[] = [
 const SHORT_CAP: Pt[] = [...SHORT, ...SHORT_FRINGE.slice(1, -1)];
 /** from behind: the dome, tapered in above the ears (so they show) and down to a short, neat nape */
 const SHORT_BACK: Pt[] = [
-  ...SHORT.slice(1, -1),
+  ...shortPts(0.45).slice(1, -1),
   [126, -6], [114, 14], [106, 38], [92, 56], [72, 62],
   [56, 76], [34, 68], [14, 80], [-6, 70], [-26, 80], [-46, 68], [-64, 74],
   [-84, 60], [-100, 52], [-106, 34], [-112, 12], [-124, -8],
@@ -214,45 +215,30 @@ function shortTexture(ctx: Ctx, seed: number) {
 }
 function shortBackTexture(ctx: Ctx, seed: number) {
   const [wx, wy] = SHORT_WHORL;
-  // a few locks flow down from around the crown whorl toward the nape, curving with the skull
-  const LOCKS: [number, number, number][] = [
-    // [start angle around the whorl, start radius, end x]
-    [2.5, 30, -96], [2.0, 26, -52], [1.6, 34, -8], [1.15, 28, 40], [0.7, 30, 82], [0.25, 34, 112],
-  ];
-  LOCKS.forEach(([a, r, ex], i) => {
-    const sx = wx + Math.cos(a) * r,
-      sy = wy + Math.sin(a) * r * 0.8;
-    const ey = 50 - Math.abs(ex) * 0.22;
-    inkLine(ctx, [[sx, sy], [(sx + ex) / 2 + (ex - sx) * 0.12, (sy + ey) / 2 - 6], [ex, ey]], seed + 80 + i, 2.2, K.hairDk);
-  });
-  // the whorl itself (发旋): a small spiral
+  // the whorl (发旋): a small spiral and two short locks curling out of it
   const sp: Pt[] = [];
-  for (let k = 0; k <= 10; k++) {
-    const a = k * 0.66,
-      r = 1.5 + k * 0.95;
+  for (let k = 0; k <= 9; k++) {
+    const a = k * 0.7,
+      r = 1.5 + k * 0.9;
     sp.push([wx + Math.cos(a) * r, wy + Math.sin(a) * r * 0.8]);
   }
-  inkLine(ctx, sp, seed + 95, 2, K.hairDk, 0.25);
-  // short dashes of texture
-  ctx.lineCap = "round";
-  ctx.strokeStyle = K.hairDk;
-  ctx.lineWidth = 2.6;
-  for (const [x, y, a] of DASHES) {
-    const sx = x * 0.72 + 4,
-      sy = y * 0.62 + 30;
-    if (((sx - 2) / 110) ** 2 + ((sy + 40) / 96) ** 2 > 1) continue;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(a) * 6, sy + Math.sin(a) * 4);
-    ctx.stroke();
-  }
-  // a lit band on the upper left
+  inkLine(ctx, sp, seed + 95, 1.9, K.hairDk, 0.25);
+  inkLine(ctx, [[wx - 14, wy + 8], [wx - 30, wy + 22], [wx - 40, wy + 44]], seed + 96, 2, K.hairDk, 0.5);
+  inkLine(ctx, [[wx + 14, wy + 6], [wx + 32, wy + 18], [wx + 46, wy + 40]], seed + 97, 2, K.hairDk, 0.5);
+  // short strokes along the lower half, falling toward the nape, and round the sides with the skull
+  const STROKES: [number, number, number, number][] = [
+    // [x, y, dx, dy]
+    [-70, 0, -10, 34], [-30, 16, -4, 36], [12, 20, 2, 36], [52, 14, 8, 34], [88, -4, 12, 30],
+    [-104, -50, -10, 30], [110, -56, 10, 28], [-58, -76, -14, 22], [70, -80, 14, 20],
+  ];
+  STROKES.forEach(([x, y, dx, dy], i) => inkLine(ctx, [[x, y], [x + dx * 0.4, y + dy * 0.55], [x + dx, y + dy]], seed + 80 + i, 2.1, K.hairDk, 0.6));
+  // a lit band on the crown, upper left
   ctx.save();
   ctx.globalAlpha *= 0.75;
   for (let i = 0; i < 4; i++) {
     const a = Math.PI * (1.22 + i * 0.08);
-    const x = 2 + Math.cos(a) * 104,
-      y = -46 + Math.sin(a) * 92;
+    const x = 2 + Math.cos(a) * 100,
+      y = -46 + Math.sin(a) * 90;
     inkLine(ctx, [[x - 4, y + 9], [x, y], [x + 7, y - 6]], seed + 100 + i, 3.2, K.hairHi);
   }
   ctx.restore();
