@@ -14,9 +14,9 @@
 ## 资产清单
 | 文件 | 大小 | 内容 |
 |---|---:|---|
-| models/Avocado.glb | 8,110,040 bytes | 682 三角形，无动画 |
-| models/Fox.glb | 162,852 bytes | 576 三角形，带骨骼；Survey 3.417s / Walk 0.708s / Run 1.158s |
-| environments/studio_small_09_1k.hdr | 1,615,248 bytes | 1024×512（1k）HDR 全景图 |
+| models/Avocado.glb | 8,110,040 bytes | 牛油果（半个，带果核），682 三角形，无动画 |
+| models/Fox.glb | 162,852 bytes | 低多边形狐狸，576 三角形，带骨骼；Survey 3.417s / Walk 0.708s / Run 1.158s |
+| environments/studio_small_09_1k.hdr | 1,615,248 bytes | 摄影棚环境光，1024×512（1k）HDR 全景图 |
 所有文件小于 10 MB。GLB 自带纹理，三个原始下载文件均未修改。
 
 ## 用法要点
