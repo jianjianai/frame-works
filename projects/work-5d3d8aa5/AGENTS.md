@@ -11,7 +11,7 @@
 - 所有动效来自暂停的 GSAP 时间线和 seek(t,true)，不可使用自有时钟、随机数、requestAnimationFrame 或累计状态。
 - 字体使用系统中文字体，在 createScene 中 await prepareTypography() 后再 splitText。场景销毁时 disposeResources(ctx) 与 timeline.kill()。
 - 视觉图层用 layers_edit；作品代码用 files_batch；素材库用 material_write；更新库后 materials_use(update:true)。
-- 完整素材库说明在作品 docs/动态文字素材库.md 与素材库 docs/library-guide.json；material_write 当前禁止编辑默认 README.md，该接口限制需修复后才能把正文写回根目录。
+- 素材库的完整说明在它的 README.md（material_read 读取 动态文字/README.md）。
 - 不修改其他作品或素材库。原创代码和图形按 CC0-1.0 提供；系统字体与 FRAME/GSAP/zod 的许可不受此声明影响。
 - 本片为无旁白的视觉示例；无需声音即可阅读。不得悄悄加入第三方音乐或字体。
 - 每次修改后 work_check；preview_frames 检查关键帧和整体节奏；用户要求完成后 version_save 保存。
