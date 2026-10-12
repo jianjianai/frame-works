@@ -39,13 +39,7 @@
         "rotation": -4
       },
       "fit": "contain",
-      "blend": "source-over",
-      "crop": {
-        "x": 0,
-        "y": 0.21875,
-        "width": 1,
-        "height": 0.5625
-      }
+      "blend": "source-over"
     },
     {
       "id": "react_heart",
@@ -69,12 +63,6 @@
       },
       "fit": "contain",
       "blend": "source-over",
-      "crop": {
-        "x": 0,
-        "y": 0.21875,
-        "width": 1,
-        "height": 0.5625
-      },
       "fadeIn": 0.18
     },
     {
@@ -98,12 +86,6 @@
       },
       "fit": "contain",
       "blend": "source-over",
-      "crop": {
-        "x": 0,
-        "y": 0.21875,
-        "width": 1,
-        "height": 0.5625
-      },
       "fadeIn": 0.18
     },
     {
@@ -126,12 +108,6 @@
       },
       "fit": "contain",
       "blend": "source-over",
-      "crop": {
-        "x": 0,
-        "y": 0.21875,
-        "width": 1,
-        "height": 0.5625
-      },
       "fadeIn": 0.1
     },
     {
@@ -156,12 +132,6 @@
       },
       "fit": "contain",
       "blend": "source-over",
-      "crop": {
-        "x": 0,
-        "y": 0.21875,
-        "width": 1,
-        "height": 0.5625
-      },
       "fadeIn": 0.15
     },
     {

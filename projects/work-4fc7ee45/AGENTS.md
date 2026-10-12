@@ -23,4 +23,4 @@ scenes/background.ts 导入上述 3 个工厂，各创建一次；所有状态�
 ## 编辑约定
 作品代码用 files_batch，时间轴用 layers_edit，素材库用 material_write。修改后 work_check，再 preview_frames 检查完整节奏及切镜边界。时间可随意跳转、倒退与重复。保存版本前 materials_use 更新本次修改的素材版本。不要手改 materials.lock.json。
 
-循环时间公式为 offset + (((t-start)*rate+phase) % loop)。整段循环错相使用 phase，避免非零 offset 加整段 loop 导致素材越界。原生方形 Lottie 在竖屏全画布上的上下透明留边，用 crop {x:0,y:0.21875,width:1,height:0.5625} 去除；再放入方形图层框。
+循环时间公式为 offset + (((t-start)*rate+phase) % loop)。整段循环错相使用 phase，避免非零 offset 加整段 loop 导致素材越界。Lottie 图层按动画自己的宽高比绘制：方形贴纸放进方形图层框即可填满，不用 crop。
