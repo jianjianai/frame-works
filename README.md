@@ -1,6 +1,6 @@
-三维示例是用于产品展示、品牌片头与轻量角色短片的 Three.js 素材库，包含两份 GLB、1k HDR 环境光与四个可调三维资源。
-
 # 三维示例
+
+三维示例是用于产品展示、品牌片头与轻量角色短片的 Three.js 素材库，包含两份 GLB、1k HDR 环境光与四个可调三维资源。
 
 ## 资源清单
 均声明在 `code/studio.ts`，参数使用 zod，每个资源含 presets，preview engine 为 three。
