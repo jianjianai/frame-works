@@ -1,46 +1,101 @@
 # 动态文字
 
-动态文字是一套以 Canvas 2D 与 GSAP 制作的参数化文字和图形资源，适合科普、知识讲解、课程片头与数据解说视频。
+动态文字是一套 Canvas 2D + GSAP 的 7 个参数化文字与图形资源，适合横屏、竖屏和方形知识视频。所有资源统一支持 `scale`（默认 1，旧作品原样）；新作品可用 `motionScale(width, height)` 按画布短边等比缩放，锚点按画布比例排版。
 
-素材库 id：`动态文字`。所有视觉资源位于 `code/motion.ts`，使用 `defineResources/resource` 声明，参数由 zod 提供默认值、取值范围和说明，并附有预设。
+素材库 id：`动态文字`；代码：`code/motion.ts`；导入路径：`@materials/动态文字/code/motion`。
 
 ## 资源清单
 
-| 资源名 | 作用 | 动效接口 | 常用预设 |
+| 资源 | 用途 | x/y 锚点 | 原始尺寸 / 注意事项 |
 | --- | --- | --- | --- |
-| kineticTitle | 逐字弹出大标题，支持换行 | splitText / drawGlyphs / stagger | 知识开场、珊瑚强调 |
-| callout | 描边生长的折线与标注 | strokePath | 知识标注、浅色画面 |
-| morphIcon | 圆形转为菱形的结构图标 | morphPath / CustomEase | 珊瑚结构、青柠结构 |
-| numberCard | 纵向滚动数字卡片 | timeline.seek / 数值插值 | 三个步骤、示意数据 |
-| pathArrow | 沿曲线路径移动的箭头 | motionPath / strokePath | 探索路径、证据路径 |
-| lowerThird | 下三分之一主副字幕条 | CustomEase / 裁切展开 | 观察、收束 |
-| quoteCard | 引用卡片：引言逐字出现、竖线生长、署名淡入；可调文字、署名、颜色、字号、时长、换行宽度 | splitText / drawGlyphs / stagger | 深色引言、青柠大字 |
+| kineticTitle | 逐字弹出标题 | 第一行左侧基线 | `size` / `maxWidth` 为设计单位；新多行标题设 `lineHeight: 1.25` |
+| callout | 描边生长的标注 | 折线顶端高度 | 首个圆点位于 y+90；文字在 y−24 |
+| morphIcon | 圆形变菱形 | 图标中心 | `size` 是图标直径；说明文字在图标下方 |
+| numberCard | 滚动数字卡 | 卡片左上角 | 固定 420×310；`scale: 2` 后为 840×620 |
+| pathArrow | 沿路径移动的箭头 | 路径局部原点 | 路径高度约 100；说明基线 y+168；需给箭头头部留边 |
+| lowerThird | 主副字幕条 | 左上角 | 默认 `width:900`、高132；主字32、副字18；`wrap:true` 可自动换行增高 |
+| quoteCard | 逐字引言与署名 | 引言区域左上角 | `size` / `maxWidth` 为设计单位；左侧/上方装饰额外留约40设计单位 |
 
-在 `resources_search` 中以 `library: "动态文字", engine: "canvas"` 查找；在 `resource_view` 中使用 `动态文字/code/motion.ts#资源名`。每个资源可改文字、颜色、动画时长；另有字号、宽度、目标数字等专用参数。
+每项 `scale` 都缩放完整资源：图形、字体、间距、圆角、线宽、裁切区域、动画位移和署名；不改变时间、数字值或 x/y 锚点。资源数量仍为 7，`motionScale` 是辅助函数。
 
-## 用法要点
+## 一套坐标与缩放规则
 
-1. 用 `materials_link` 关联素材库，再用 `materials_use` 锁定 `动态文字/code/motion.ts`；作品中从 `@materials/动态文字/code/motion` 导入。
-2. 在异步 `createScene` 内先 `await prepareTypography()`，然后才开始调用标题。资源预览通过 `preview.prepare` 做同样的字体准备。
-3. 中文使用系统字体栈 Noto Sans CJK SC、Microsoft YaHei、PingFang SC、sans-serif。没有下载、复制或分发字体文件。不同系统的字形可能不同，换环境后要重新检查。
-4. 资源使用局部设计像素。预览 960×540 只是展示窗口，不是作品画幅限制。1920×1080 作品按自己的坐标摆放，画布实际尺寸通过 `ctx.scale(width / 1920, height / 1080)` 适配。
-5. 时间是资源局部秒数，例如 `kineticTitle(ctx, 120, 400, t - 0.3, {text:"保持好奇",size:128,duration:1.2})`。时间线只建一次并按参数缓存，所有动画使用暂停时间线和 `seek(t, true)`，支持跳转、倒放与重复绘制。
-6. 每个资源成对 save/restore，不占用作品的绘图状态。场景销毁时调用 `disposeResources(ctx)` 杀掉该画布关联的时间线。
-7. 标题的 x/y 为第一行左侧基线；callout 的 x/y 为折线顶端高度、首个圆点在其下方 90px；morphIcon 的 x/y 为中心；numberCard、lowerThird 为左上角；quoteCard 的 x/y 为引言区域左上角（引号和竖线在其左侧/上方，需留出约 40px 边距），署名自动排在最后一行下方；pathArrow 为路径局部原点。
-8. 字幕和标注建议保持简短。numberCard 设计尺寸 420×310；示例数值仅展示滚动效果，不是研究数据。
-9. 改素材库后，用 `materials_use update: true` 更新目标作品的锁定版本，再运行 `work_check` 与 `preview_frames`。
+- 960×540 是原资源预览窗口。资源内部使用**缩放前设计单位**；不是要求作品也使用这个画幅。
+- `x/y` 使用调用方当前 Canvas 坐标，不会被资源的 `scale` 再乘一次。没有外部 transform 时就是实际画布像素；例如 `(width * 0.08, height * 0.7)`。
+- `scale` 必须是大于 0 的有限数，省略等于 1。实际尺寸 = 设计尺寸 × scale；`size`、`width`、`maxWidth` 不要预先乘 scale。
+- 原始 Canvas 上的推荐值：`const scale = motionScale(width, height)`，即 `Math.min(width, height) / 540`。使用 `createScene` 收到的真实 `width/height`，预览和导出会一致。
+- 960×540 → 1；1920×1080 → 2；1080×1920 → 2；1080×1080 → 2；720×1280 → 4/3。横竖屏都等比缩放，不拉伸字形。
+- 这个辅助函数只负责资源大小，不会把整张横屏布局挤进竖屏。位置按画布比例设置；可用的局部设计宽度 = `(width - leftMargin - rightMargin) / scale`，需要调整密度时可直接选其他正数 scale。
+- 外层已经 `ctx.scale(...)` / `ctx.setTransform(...)` 的旧场景可继续使用 `scale:1`。若有意组合，最终倍率是外部变换 × 资源 scale；不要无意重复缩放。
+
+## 横屏与竖屏示例
+
+先 `materials_link` 关联本库，再 `materials_use` 锁定 `动态文字/code/motion.ts`。以下代码直接使用实际画布坐标，外层不另设设计画布 transform：
+
+```ts
+import { motionScale, prepareTypography, disposeResources,
+  kineticTitle, numberCard, lowerThird } from "@materials/动态文字/code/motion";
+
+// createScene({ width, height }) 内：
+await prepareTypography();
+const scale = motionScale(width, height);
+const margin = width / 15;
+const designWidth = (width - 2 * margin) / scale;
+
+// 1920×1080：scale=2；主字64px，副字36px，条高264px。
+// render(t)：
+lowerThird(ctx, margin, height * 0.7, t, {
+  text: "观察 · 从一个好问题开始",
+  detail: "KNOWLEDGE NOTES / 01",
+  width: designWidth, scale, wrap: true,
+});
+
+// 1080×1920：scale=2，designWidth=468。
+// 分别放在竖屏的顶部、中部和底部；t 是资源局部秒数。
+kineticTitle(ctx, margin, height * 0.19, t - 0.12, {
+  text: "把复杂问题\n拆成三步。", size: 64, maxWidth: designWidth,
+  lineHeight: 1.25, scale,
+});
+numberCard(ctx, (width - 420 * scale) / 2, height * 0.37, t - 0.7, {
+  text: "让思考更清楚", value: 3, suffix: "步", scale,
+});
+lowerThird(ctx, margin, height * 0.73, t - 1.3, {
+  text: "先记录事实，再建立解释，最后用证据检验想法。",
+  detail: "观察 / 建模 / 验证", width: designWidth, wrap: true, scale,
+});
+
+// dispose() 中：
+disposeResources(ctx);
+```
+
+以上横屏和竖屏是各自独立的排版片段，不要在同一画面叠画两条字幕。`width`、`maxWidth` 等仍遵守各资源原有参数范围，见 `resource_view`；特别窄的容器可降低 scale，而不是把字号缩成不可读的小字。
+
+## 避免文字被截断
+
+- `lowerThird` 默认保留原来的单行展开效果；长文字显式传 `wrap:true`。主副字幕均按 `width-64` 自动换行，固定原字号、自动增加条带高度，不删字、不加省略号；长西文单词也可按字素分行。
+- 高度（设计单位）= `132 + (副字幕行数-1)*26 + (主字幕行数-1)*44`。调用方需为增加后的高度留出空间，画布不会自动变高。换行发生在缩放前，再整体放大，动画展开时的短暂裁切属于入场效果。
+- 例：1080宽、左右各72、scale=2 → `width:468`，最终宽936。主字32×2=64px；不要传 `width:936` 又 `scale:2`。
+- `kineticTitle` 新多行内容设 `lineHeight:1.25`（**倍数，不是像素**），并给 `maxWidth` 设计单位。省略 `lineHeight` 时保留旧版行距，以免改动已有作品。
+- `quoteCard` 使用 `maxWidth` 自动换行，署名排在最后一行下方；标题、标注、数字卡标签宜简短，scale 本身不自动重新排版或适配任意长文本。
+
+## 兼容性、预览与生命周期
+
+1. 原有 7 个函数签名保留，新参数可选。默认 `scale:1`、`wrap:false`、未指定 `lineHeight` 与旧行为一致；已有作品无需改代码。
+2. 字体先 `await prepareTypography()` 再绘制。使用系统 Noto Sans CJK SC / Microsoft YaHei / PingFang SC / sans-serif；跨系统需重新检查字形。
+3. 动画以资源局部秒数驱动，例如 `t-0.3`；时间线按参数缓存、暂停并 `seek(t,true)`，支持倒放、重复和跳转。每项资源成对 save/restore；场景销毁时 `disposeResources(ctx)`。
+4. 用 `resources_search` 的 `library:"动态文字", engine:"canvas"` 找资源；`resource_view` 的 id 为 `动态文字/code/motion.ts#资源名`，可查看所有参数与预览。`width` 工具参数只改变返回图片尺寸，不改变资源的 960×540 设计窗口；放大预览可能超出窗口，作品中应按实际画幅排版。旧 lowerThird 预览会把局部 width 限为880，完整尺寸请用作品验证。
+5. 素材库改动自动保存为新版本；作品继续用锁定版本，需 `materials_use(update:true)` 显式升级，再 `work_check` 和 `preview_frames`。
+
+## 示例与验证作品
+
+- `frame-works/5d3d8aa5`《示例：知识讲解开场》：1920×1080，30fps，24秒，旧代码兼容性基准。
+- `frame-works/d9d6a690`《测试：竖屏知识卡片》：1080×1920，30fps，10秒，统一 scale + 三项资源 + 长字幕换行。
 
 ## 素材来源与许可
 
-- `code/motion.ts`、本 README：本任务原创代码和文字，原始来源就是本素材库，无第三方下载。原创内容以 **CC0-1.0** 提供，许可说明：https://creativecommons.org/publicdomain/zero/1.0/ 。
-- 图形路径、几何形状与配色：本任务原创 Canvas / SVG 路径数据，随上述原创代码以 CC0-1.0 提供。
-- 字体：仅调用运行环境已安装的系统字体；不随素材库分发，也不改变字体原有许可。使用者负责其环境中字体的授权。
-- FRAME、GSAP 与 zod：调用平台现有依赖，未复制其实现到素材库；依赖遵循各自原有许可，不属于本素材库的 CC0 声明范围。
-- 没有使用第三方图片、视频、模型、Lottie、音频或下载字体，不需要额外素材署名。
-
-## 示例作品
-
-`frame-works/5d3d8aa5` —《示例：知识讲解开场》，1920×1080，30fps，24 秒。结构：引子（0–4.8s）→观察（4.8–9.6s）→建模（9.6–14.4s）→验证（14.4–19.2s）→结语（19.2–24s）。
+- `code/motion.ts`、本 README、图形路径与几何配色：本素材库原创，无第三方下载；原创内容按 **CC0-1.0** 提供：https://creativecommons.org/publicdomain/zero/1.0/ 。
+- 字体仅调用运行环境已安装的系统字体，不分发字体文件；字体及 FRAME、GSAP、zod 依赖保留各自原有许可。
+- 无第三方图片、视频、模型、Lottie 或音频。
 
 ## 来源与许可
 
