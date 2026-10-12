@@ -45,3 +45,6 @@ ctx.drawImage(card.canvas, 100, 1400, 880, 308);
 本库全部 5 个 Lottie JSON、Canvas 组件代码和文档均由本仓库原创，CC0；没有下载第三方素材，没有署名义务。原创来源：FRAME Studio 官方示例「Lottie 动效贴纸」制作任务。material_write 的 source 写“本仓库原创（FRAME Studio 官方示例）”，license 写“本仓库原创，CC0”。CC0 法律文本：https://creativecommons.org/publicdomain/zero/1.0/ 。
 
 运行依赖 FRAME、zod 和平台已有的 Lottie 播放器；它们不是本库新增分发的素材，继续适用各自原有许可。
+
+## 来源与许可
+- `lottie/star-rating.json`：来源 本仓库原创（素材扩展任务）；许可 本仓库原创，CC0
