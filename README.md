@@ -14,6 +14,7 @@
 | numberCard | 纵向滚动数字卡片 | timeline.seek / 数值插值 | 三个步骤、示意数据 |
 | pathArrow | 沿曲线路径移动的箭头 | motionPath / strokePath | 探索路径、证据路径 |
 | lowerThird | 下三分之一主副字幕条 | CustomEase / 裁切展开 | 观察、收束 |
+| quoteCard | 引用卡片：引言逐字出现、竖线生长、署名淡入；可调文字、署名、颜色、字号、时长、换行宽度 | splitText / drawGlyphs / stagger | 深色引言、青柠大字 |
 
 在 `resources_search` 中以 `library: "动态文字", engine: "canvas"` 查找；在 `resource_view` 中使用 `动态文字/code/motion.ts#资源名`。每个资源可改文字、颜色、动画时长；另有字号、宽度、目标数字等专用参数。
 
@@ -25,7 +26,7 @@
 4. 资源使用局部设计像素。预览 960×540 只是展示窗口，不是作品画幅限制。1920×1080 作品按自己的坐标摆放，画布实际尺寸通过 `ctx.scale(width / 1920, height / 1080)` 适配。
 5. 时间是资源局部秒数，例如 `kineticTitle(ctx, 120, 400, t - 0.3, {text:"保持好奇",size:128,duration:1.2})`。时间线只建一次并按参数缓存，所有动画使用暂停时间线和 `seek(t, true)`，支持跳转、倒放与重复绘制。
 6. 每个资源成对 save/restore，不占用作品的绘图状态。场景销毁时调用 `disposeResources(ctx)` 杀掉该画布关联的时间线。
-7. 标题的 x/y 为第一行左侧基线；callout 的 x/y 为折线顶端高度、首个圆点在其下方 90px；morphIcon 的 x/y 为中心；numberCard、lowerThird 为左上角；pathArrow 为路径局部原点。
+7. 标题的 x/y 为第一行左侧基线；callout 的 x/y 为折线顶端高度、首个圆点在其下方 90px；morphIcon 的 x/y 为中心；numberCard、lowerThird 为左上角；quoteCard 的 x/y 为引言区域左上角（引号和竖线在其左侧/上方，需留出约 40px 边距），署名自动排在最后一行下方；pathArrow 为路径局部原点。
 8. 字幕和标注建议保持简短。numberCard 设计尺寸 420×310；示例数值仅展示滚动效果，不是研究数据。
 9. 改素材库后，用 `materials_use update: true` 更新目标作品的锁定版本，再运行 `work_check` 与 `preview_frames`。
 
