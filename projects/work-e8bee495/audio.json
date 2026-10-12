@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "song",
+      "kind": "file",
+      "src": "films/work-e8bee495/music/stalk-ur-socials-s0rrow.flac"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "music",
+      "name": "stalk ur socials · 剪辑版",
+      "gain": 0.88
+    }
+  ],
+  "clips": [
+    {
+      "id": "verse",
+      "track": "music",
+      "source": "song",
+      "start": 0,
+      "duration": 15.186757,
+      "offset": 0,
+      "fadeOut": 0.016
+    },
+    {
+      "id": "bridge_last",
+      "track": "music",
+      "source": "song",
+      "start": 15.170757,
+      "duration": 30.837093,
+      "offset": 30.581303,
+      "fadeIn": 0.016,
+      "fadeOut": 0.016
+    },
+    {
+      "id": "tail",
+      "track": "music",
+      "source": "song",
+      "start": 45.99185,
+      "duration": 1.21115,
+      "offset": 76.812943,
+      "fadeIn": 0.016,
+      "fadeOut": 0.14
+    }
+  ],
+  "master": {
+    "gain": 1,
+    "processors": [
+      {
+        "type": "limiter",
+        "ceiling": -1,
+        "release": 0.08
+      }
+    ]
+  }
+}
+

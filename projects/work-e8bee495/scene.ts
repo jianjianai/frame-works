@@ -1,0 +1,12 @@
+import type { SceneOptions } from "@frame/engine/types";
+import { createCompositionScene } from "@frame/engine/compositor";
+import visual from "./visual.json";
+
+// visual.json 排列图层；"scene" 图层的 module 名称在这里注册。
+export function createScene(options: SceneOptions) {
+  return createCompositionScene(options, visual, {
+    film: () => import("./scenes/film"),
+    lyrics: () => import("./scenes/lyrics"),
+    grain: () => import("@materials/s0rrow/code/grain"),
+  });
+}
