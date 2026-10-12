@@ -22,7 +22,12 @@ Pixi特效是一套可按绝对时间寻址的原创 PixiJS 夜景特效资源�
 ## 用法要点
 1. 先 materials_link 关联，再 materials_use 锁定所需文件。导入：`import { rain, neonType } from "@materials/Pixi特效/code/effects"`。
 2. 在 createPixiScene 的 build 中创建资源，将 fx.view 加到 app.stage；在返回的更新函数中调用 fx.update(t)。资源只依赖绝对时间，使用固定 seed；不使用真实时钟或累计模拟。
-3. width、height 传 SceneOptions 的实际尺寸。形状按画幅缩放；1600×900 是内部设计参考。竖屏应调整 originX / originY、文字 fontSize 和构图，避免横屏排版直接拉伸。
+3. width、height 传 SceneOptions 的实际尺寸。所有资源都按 1600×900 设计画布做**等比**适配，任意宽高比不变形，16:9 时和旧版完全一样：
+   - nightCity：按“铺满”等比缩放（竖屏按高度缩放、左右裁切），`anchorX`（默认 0.85）决定竖屏保留场景横向的哪一段，默认让月环居中。
+   - rain：雨丝粗细、长度、模糊、淟漪大小用统一倍率，淟漪落在 nightCity 的地面区域（两者用同一对齐规则）。
+   - neonType：文字按高度缩放，超过 `maxWidth`（默认 0.91）宽度时等比缩小；竖屏建议用换行文字。
+   - fireworks：爆发半径按“完整放入”的缩放（竖屏不会冲出画面），粒子大小用几何平均倍率；位置用 originX / originY 比例。
+   - bokeh、rippleWipe：大小/强度同样用统一倍率。
 4. neonType 的 view 原点是文字左上角，调用方设置 position；text 可换行。使用运行环境 Arial / sans-serif，无外部字体依赖。
 5. rippleWipe 在 duration/2 完全遮挡画面，应在此刻切换下层场景；0 与 duration 时透明。将它作为独立 scene 图层放在最上方。
 6. 素材库根据 FRAME 当前 tempo 的 pulse / beatLength 更新；不在模块顶层缓存节拍。示例作品为 120 BPM，4/4，首拍 0 秒。

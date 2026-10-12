@@ -16,6 +16,16 @@ const TAU = Math.PI * 2;
 const mod = (x: number, n: number) => ((x % n) + n) % n;
 const sat = (x: number) => Math.max(0, Math.min(1, x));
 const smooth = (x: number) => { x = sat(x); return x*x*(3-2*x); };
+/**
+ * Aspect-ratio independent layout against the 1600x900 design canvas. Every scale is uniform, so nothing is
+ * ever stretched: `cover` fills the frame (crops overflow, aligned by anchorX/centered in y), `contain` fits the
+ * whole canvas, `mid` is the geometric mean (for particle sizes). At 16:9 all three equal width/1600.
+ */
+function fit(width: number, height: number, anchorX = .5) {
+  const sx = width / 1600, sy = height / 900;
+  const cover = Math.max(sx, sy), contain = Math.min(sx, sy), mid = Math.sqrt(sx * sy);
+  return { cover, contain, mid, ox: -(1600 * cover - width) * anchorX, oy: -(900 * cover - height) * .5 };
+}
 function lightTexture() {
   const c = document.createElement("canvas"); c.width=c.height=96;
   const g=c.getContext("2d")!;
@@ -43,11 +53,12 @@ export const cityOptions = z.object({
   accent: z.enum(["#79f5ed","#ff69c9","#ffc888"]).default("#79f5ed").describe("建筑与地平线高光"),
   hue: z.number().min(-90).max(90).default(0).describe("颜色矩阵色相偏移"),
   skyline: z.number().min(.5).max(1.4).default(1).describe("建筑高度倍率"),
+  anchorX: z.number().min(0).max(1).default(.85).describe("画幅比 16:9 窄（竖屏）时，横向保留场景的哪一段：0 最左，1 最右（默认让月环和高楼居中偏右）；等比铺满不拉伸，16:9 无影响"),
 });
-/** Full-bleed vector skyline, glowing orbital moon and wet-floor reflections. */
+/** Full-bleed vector skyline, glowing orbital moon and wet-floor reflections. Uniform cover scale at any aspect ratio. */
 export function nightCity(options: z.input<typeof cityOptions> = {}) {
   const p=cityOptions.parse(options), view=new Container(), world=new Container();
-  view.addChild(world); world.scale.set(p.width/1600,p.height/900);
+  const f=fit(p.width,p.height,p.anchorX); view.addChild(world); world.scale.set(f.cover); world.position.set(f.ox,f.oy);
   const sky=new Graphics().rect(0,0,1600,900).fill("#080d23");
   world.addChild(sky);
   const tex=lightTexture(); own(view,tex);
@@ -122,11 +133,12 @@ export function bokeh(options:z.input<typeof bokehOptions>={}){
     const s=new Sprite(tex);s.anchor.set(.5);s.tint=colors[Math.floor(random()*3)];s.blendMode="add";dots.addChild(s);
     return {s,x:random(),y:random(),r:(.3+random())*p.radius,phase:random()*TAU,speed:.008+random()*.018};
   });
+  const f=fit(p.width,p.height);
   const filter=new BlurFilter({strength:p.softness,quality:3});dots.filters=[filter];releaseFilters(view,[filter]);
   return {view,update(t:number){
     for(const d of items){
       d.s.position.set(mod(d.x+t*d.speed*.12,1)*p.width,mod(d.y-t*d.speed,1)*p.height);
-      const r=d.r*(1+.15*Math.sin(t*.5+d.phase))*p.width/1600;d.s.width=d.s.height=r*4;
+      const r=d.r*(1+.15*Math.sin(t*.5+d.phase))*f.mid;d.s.width=d.s.height=r*4;
       d.s.alpha=p.intensity*(.35+.35*Math.sin(t*.65+d.phase)**2+.3*pulse(t,6));
     }
   }};
@@ -142,12 +154,12 @@ export const rainOptions=z.object({width:z.number().min(160).max(3840).default(1
 });
 export function rain(options:z.input<typeof rainOptions>={}){
   const p=rainOptions.parse(options),view=new Container(),far=new Container(),near=new Container();view.addChild(far,near);
-  const random=seeded(p.seed);
+  const random=seeded(p.seed),f=fit(p.width,p.height);
   const items=Array.from({length:p.count},(_,i)=>{
     const s=new Sprite(Texture.WHITE),depth=.3+random()*.7;s.tint=p.color;s.anchor.set(.5);(i%3?far:near).addChild(s);
     return {s,x:random(),y:random(),depth,phase:random()*TAU};
   });
-  const filter=new BlurFilter({strength:.5*p.width/1600,quality:2});far.filters=[filter];releaseFilters(view,[filter]);
+  const filter=new BlurFilter({strength:.5*f.mid,quality:2});far.filters=[filter];releaseFilters(view,[filter]);
   const splashes=Array.from({length:48},()=>{
     const g=new Graphics().ellipse(0,0,8,2).stroke({color:p.color,width:1,alpha:.6});view.addChild(g);
     return {g,x:random(),y:.745+random()*.21,phase:random()*2};
@@ -157,10 +169,10 @@ export function rain(options:z.input<typeof rainOptions>={}){
     for(const d of items){
       const travel=t*p.speed*(.26+d.depth*.34);
       d.s.position.set(mod(d.x+travel*p.wind,1.1)*p.width-.05*p.width,mod(d.y+travel,1.12)*p.height-.06*p.height);
-      d.s.width=(.6+d.depth*.85)*p.width/1600;d.s.height=(9+d.depth*26)*p.height/900;
+      d.s.width=(.6+d.depth*.85)*f.mid;d.s.height=(9+d.depth*26)*f.mid;
       d.s.rotation=-p.wind;d.s.alpha=p.opacity*(.35+d.depth*.65)*(1+.15*pulse(t,8));
     }
-    for(const d of splashes){const q=mod(t+d.phase,beat*2)/(beat*2);d.g.position.set(d.x*p.width,d.y*p.height);d.g.scale.set((.3+q*2.3)*p.width/1600);d.g.alpha=(1-q)*p.opacity;}
+    for(const d of splashes){const q=mod(t+d.phase,beat*2)/(beat*2);d.g.position.set(d.x*p.width,f.oy+d.y*900*f.cover);d.g.scale.set((.3+q*2.3)*f.mid);d.g.alpha=(1-q)*p.opacity;}
   }};
 }
 
@@ -171,16 +183,18 @@ export const neonOptions=z.object({width:z.number().min(160).max(3840).default(1
   color:z.enum(["#79f5ed","#ff69c9","#ffc888"]).default("#79f5ed").describe("灯管颜色"),
   glow:z.number().min(1).max(40).default(16).describe("辉光模糊强度"),
   beatAmount:z.number().min(0).max(1).default(.24).describe("随节拍辉光强度"),
+  maxWidth:z.number().min(.2).max(1).default(.91).describe("文字最宽占画面宽度的比例，超出则等比缩小（竖屏适配）"),
 });
 export function neonType(options:z.input<typeof neonOptions>={}){
   const p=neonOptions.parse(options),view=new Container(),group=new Container();view.addChild(group);
-  const style={fontFamily:"Arial, sans-serif",fontSize:p.fontSize*p.height/900,fontWeight:"800" as const,letterSpacing:-2*p.width/1600,lineHeight:p.fontSize*p.height/900*.94};
+  const u=p.height/900; // text is sized by height only (a single uniform scale), then shrunk to fit maxWidth
+  const style={fontFamily:"Arial, sans-serif",fontSize:p.fontSize*u,fontWeight:"800" as const,letterSpacing:-2*u,lineHeight:p.fontSize*u*.94};
   const halo=new Text({text:p.text,style:{...style,fill:p.color}});
   const edge=new Text({text:p.text,style:{...style,fill:"#0d1731",stroke:{color:p.color,width:1.6*p.height/900}}});
   const front=new Text({text:p.text,style:{...style,fill:"#ecfffc"}});
   const blur=new BlurFilter({strength:p.glow*p.height/900,quality:5});halo.filters=[blur];halo.alpha=.8;releaseFilters(view,[blur]);
   front.alpha=.88;group.addChild(halo,edge,front);
-  const maxWidth=p.width*.91;if(group.width>maxWidth)group.scale.set(maxWidth/group.width);
+  const maxWidth=p.width*p.maxWidth;if(group.width>maxWidth)group.scale.set(maxWidth/group.width);
   return {view,update(t:number){
     const k=pulse(t,7);halo.alpha=.55+p.beatAmount*k;
     front.alpha=.85+.1*k;blur.strength=(p.glow*(.8+.25*k))*p.height/900;
@@ -197,7 +211,7 @@ export const burstOptions=z.object({width:z.number().min(160).max(3840).default(
   originY:z.number().min(0).max(1).default(.42).describe("爆发中心纵向比例"),
 });
 export function fireworks(options:z.input<typeof burstOptions>={}){
-  const p=burstOptions.parse(options),view=new Container(),tex=lightTexture();own(view,tex);const random=seeded(p.seed);
+  const p=burstOptions.parse(options),view=new Container(),tex=lightTexture();own(view,tex);const random=seeded(p.seed),f=fit(p.width,p.height);
   const items=Array.from({length:p.count},(_,i)=>{
     const s=new Sprite(tex);s.anchor.set(.5);s.blendMode="add";s.tint=i%7===0?"#fff1d5":i%3===0?cyan:p.color;view.addChild(s);
     return {s,a:random()*TAU,v:.3+random()*.7,delay:random()*.055,r:1+random()*2.1,z:random(),phase:random()*TAU};
@@ -206,9 +220,9 @@ export function fireworks(options:z.input<typeof burstOptions>={}){
     const period=p.intervalBeats*beatLength(),age=mod(t,period),life=Math.min(period,2.1),cycle=Math.floor(t/period);
     for(const d of items){
       const a=Math.max(0,age-d.delay),q=sat(a/life),ease=1-Math.exp(-q*4);
-      const angle=d.a+cycle*.47,dist=p.radius*d.v*ease*p.height/900;
-      const x=p.width*p.originX+Math.cos(angle)*dist,y=p.height*p.originY+Math.sin(angle)*dist+q*q*95*p.height/900;
-      d.s.position.set(x,y);d.s.width=(d.r*(8-q*3))*p.height/900;d.s.height=d.s.width*(1+q*3);
+      const angle=d.a+cycle*.47,dist=p.radius*d.v*ease*f.contain;
+      const x=p.width*p.originX+Math.cos(angle)*dist,y=p.height*p.originY+Math.sin(angle)*dist+q*q*95*f.mid;
+      d.s.position.set(x,y);d.s.width=(d.r*(8-q*3))*f.mid;d.s.height=d.s.width*(1+q*3);
       d.s.rotation=angle+Math.PI/2;d.s.alpha=(age>d.delay?1:0)*Math.pow(1-q,.85)*(.75+.25*Math.sin(a*12+d.phase)**2);
     }
   }};
@@ -223,6 +237,7 @@ export const rippleOptions=z.object({width:z.number().min(160).max(3840).default
 /** Opaque traveling curtain: cut underlying scenes at duration/2. Both endpoints transparent. */
 export function rippleWipe(options:z.input<typeof rippleOptions>={}){
   const p=rippleOptions.parse(options),view=new Container(),curtain=new Container();view.addChild(curtain);
+  const f=fit(p.width,p.height);
   const cover=new Graphics().rect(-p.width*.4,-p.height*.3,p.width*1.8,p.height*1.6).fill("#101a34");
   const rings=new Graphics();
   for(let i=0;i<30;i++){const x=i*p.width/25;
@@ -234,13 +249,13 @@ export function rippleWipe(options:z.input<typeof rippleOptions>={}){
   for(let y=0;y<128;y++)for(let x=0;x<128;x++){const i=(y*128+x)*4;
     data.data[i]=128+110*Math.sin(x*.08+y*.1);data.data[i+1]=128+80*Math.cos(y*.09-x*.045);data.data[i+2]=128;data.data[i+3]=255;}
   ctx.putImageData(data,0,0);const texture=Texture.from(c);own(view,texture);const map=new Sprite(texture);map.width=p.width*2;map.height=p.height*2;view.addChild(map);
-  const filter=new DisplacementFilter({sprite:map,scale:{x:p.strength*p.width/1600,y:p.strength*p.height/900*.25}});curtain.filters=[filter];releaseFilters(view,[filter]);
+  const filter=new DisplacementFilter({sprite:map,scale:{x:p.strength*f.mid,y:p.strength*f.mid*.25}});curtain.filters=[filter];releaseFilters(view,[filter]);
   return {view,update(t:number){
     const q=sat(t/p.duration);view.visible=t>0&&t<p.duration;
     const travel=q<.5?smooth(q*2):smooth((q-.5)*2);
     curtain.x=q<.5?p.width*1.6*(1-travel):-p.width*1.8*travel;
     rings.x=Math.sin(q*TAU)*p.width*.08;map.x=-q*p.width*.3;map.y=-q*p.height*.1;
-    filter.scale.x=p.strength*p.width/1600*Math.sin(q*Math.PI);
+    filter.scale.x=p.strength*f.mid*Math.sin(q*Math.PI);
   }};
 }
 
