@@ -47,3 +47,4 @@
 - `fonts/zcool-kuaile.ttf`：Google Fonts，ZCOOL KuaiLe 站酷快乐体；SIL Open Font License 1.1。
 - `fonts/long-cang.ttf`：Google Fonts，Long Cang 龙藏体；SIL Open Font License 1.1。
 - `fonts/noto-sans-sc-400.ttf`、`fonts/noto-sans-sc-700.ttf`：Google Fonts，Noto Sans SC（400、700）；SIL Open Font License 1.1。
+- `code/cafe.ts`：来源 为作品 work-e8bee495《空着的位置》原创绘制。；许可 自制
