@@ -5,9 +5,13 @@
     {
       "id": "storyboard",
       "name": "分镜占位（待制作的分镜）",
-      "source": { "kind": "scene", "module": "storyboard", "engine": "canvas" },
+      "source": {
+        "kind": "scene",
+        "module": "storyboard",
+        "engine": "canvas"
+      },
       "start": 0,
-      "duration": 46.5,
+      "duration": 46.9,
       "offset": 0,
       "phase": 0,
       "rate": 1,
@@ -17,7 +21,11 @@
     {
       "id": "act1",
       "name": "第一幕 · 凌晨三点 / 毕业那天",
-      "source": { "kind": "scene", "module": "act1", "engine": "canvas" },
+      "source": {
+        "kind": "scene",
+        "module": "act1",
+        "engine": "canvas"
+      },
       "start": 0,
       "duration": 15.2,
       "offset": 0,
@@ -27,11 +35,47 @@
       "blend": "source-over"
     },
     {
+      "id": "act2",
+      "name": "第二幕 · 现在（主歌）",
+      "source": {
+        "kind": "scene",
+        "module": "act2",
+        "engine": "canvas"
+      },
+      "start": 15.2,
+      "duration": 15.14,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act3",
+      "name": "第三幕 · 她（最后一遍副歌）",
+      "source": {
+        "kind": "scene",
+        "module": "act3",
+        "engine": "canvas"
+      },
+      "start": 30.34,
+      "duration": 16.56,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
       "id": "lyrics",
       "name": "中英歌词",
-      "source": { "kind": "scene", "module": "lyrics", "engine": "canvas" },
+      "source": {
+        "kind": "scene",
+        "module": "lyrics",
+        "engine": "canvas"
+      },
       "start": 0,
-      "duration": 46.5,
+      "duration": 46.9,
       "offset": 0,
       "phase": 0,
       "rate": 1,
@@ -41,13 +85,19 @@
     {
       "id": "grain",
       "name": "胶片颗粒",
-      "source": { "kind": "scene", "module": "grain", "engine": "canvas" },
+      "source": {
+        "kind": "scene",
+        "module": "grain",
+        "engine": "canvas"
+      },
       "start": 0,
-      "duration": 46.5,
+      "duration": 46.9,
       "offset": 0,
       "phase": 0,
       "rate": 1,
-      "transform": { "opacity": 0.5 },
+      "transform": {
+        "opacity": 0.5
+      },
       "fit": "contain",
       "blend": "overlay"
     }

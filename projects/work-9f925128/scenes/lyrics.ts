@@ -5,7 +5,7 @@ import { phase } from "@frame/engine/math";
 import { Ctx, F, W, backOut, easeOut, measure, rr, text } from "@materials/s0rrow/code/draw";
 import { createLyricsScene, lyricLines, parts } from "@materials/s0rrow/code/lyrics";
 import { LYRIC_WORDS } from "./krc";
-import { END, songTime } from "./timeline";
+import { END, EV, songTime } from "./timeline";
 
 /** 每句中文拆成和英文单词数相同的词（第 i 个中文词用第 i 个英文词的时间点亮）；词组之间加空格；"" 表示这个英文词不亮。 */
 const CHORUS: string[][] = [
@@ -55,6 +55,8 @@ function hook(ctx: Ctx, t: number) {
 const LABELS: [number, number, string][] = [
   // [from, to, label] in work time
   [4.4, 7.7, "凌晨 3:07"],
+  [23.4, 24.55, "同一时刻，她"],
+  [30.4, 32.6, "三年前，她"],
 ];
 function pill(ctx: Ctx, t: number) {
   for (const [a, b, label] of LABELS) {
@@ -74,7 +76,8 @@ function pill(ctx: Ctx, t: number) {
 export function createScene(options: SceneOptions) {
   return createLyricsScene(options, {
     lines: lyricLines(LYRIC_WORDS, CN),
-    end: songTime(END),
+    // the last line clears before the end card (EV.s15card)
+    end: songTime(Math.min(END, EV.s15card + 0.2)),
     style,
     songTime,
     before: (ctx, _abs, t) => {

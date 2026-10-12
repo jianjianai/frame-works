@@ -7,6 +7,8 @@ export function createScene(options: SceneOptions) {
   return createCompositionScene(options, visual, {
     storyboard: () => import("./scenes/storyboard"),
     act1: () => import("./scenes/act1"),
+    act2: () => import("./scenes/act2"),
+    act3: () => import("./scenes/act3"),
     lyrics: () => import("./scenes/lyrics"),
     grain: () => import("@materials/s0rrow/code/grain"),
   });

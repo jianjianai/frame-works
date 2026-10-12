@@ -141,6 +141,16 @@ function glassReflections(ctx: Ctx, reflect: number) {
   // his face, mirrored, cold and very faint — the camera stands behind and to his left, so it shows right of his
   // head, against the dark block across the field. Only the face, its edges melting into the glass.
   if (reflect > 0.003) {
+    // turned up (the reveal), the glass behind his face sinks dark so the face reads over the lit windows
+    const dark = clamp((reflect - 0.15) / 0.6);
+    if (dark > 0) {
+      const g = ctx.createRadialGradient(REFLECT.x, REFLECT.y, 30, REFLECT.x, REFLECT.y, 125);
+      g.addColorStop(0, `rgba(22,18,40,${0.8 * dark})`);
+      g.addColorStop(0.6, `rgba(22,18,40,${0.55 * dark})`);
+      g.addColorStop(1, "rgba(22,18,40,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(REFLECT.x - 130, REFLECT.y - 130, 260, 260);
+    }
     filtered(
       ctx,
       "saturate(0.3) brightness(1.15)",
@@ -230,6 +240,55 @@ function wall(ctx: Ctx) {
   g.addColorStop(1, "rgba(40,30,70,0.2)");
   ctx.fillStyle = g;
   ctx.fillRect(0, SILL + 42, PW, PH - SILL - 42);
+}
+
+/** The corridor itself (分镜 6), in photo units: the same window, sill and walls as in her photo, wider and deeper so a
+ *  camera can move (walls out to x −400…1000, the floor down to y 1600), and `people` in front of the sill instead of
+ *  him. */
+export function corridorScene(ctx: Ctx, people: (c: Ctx) => void, o: { reflect?: number } = {}) {
+  outside(ctx);
+  glassReflections(ctx, o.reflect ?? 0.07);
+  windowFrame(ctx);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(-400, -400, PW + 800, PH + 1200);
+  ctx.rect(WIN.x0 - 16, 56, WIN.x1 - WIN.x0 + 32, SILL - 56);
+  ctx.clip("evenodd");
+  ctx.fillStyle = vgrad(ctx, -400, SILL, [[0, "#bba98a"], [1, "#e6d7bd"]]);
+  ctx.fillRect(-400, -400, PW + 800, SILL + 400);
+  ctx.fillStyle = vgrad(ctx, SILL, 790, [[0, "#e9d9bb"], [1, "#d8c4a2"]]);
+  ctx.fillRect(-400, SILL, PW + 800, 790 - SILL);
+  ctx.fillStyle = "#86a18c";
+  ctx.fillRect(-400, 724, PW + 800, 66);
+  inkLine(ctx, [[-400, 724], [300, 725], [1000, 723]], 4310, 3, "#5d7563");
+  // the floor: grey terrazzo in perspective, the sunset lying across it in a long warm patch
+  ctx.fillStyle = vgrad(ctx, 790, 1600, [[0, "#b8b0a2"], [1, "#8f887d"]]);
+  ctx.fillRect(-400, 790, PW + 800, 810);
+  inkLine(ctx, [[-400, 790], [300, 791], [1000, 789]], 4313, 4);
+  for (let i = 1; i < 7; i++) {
+    const y = 790 + i * i * 18;
+    inkLine(ctx, [[-400, y], [1000, y]], 4314 + i, 1.6, "rgba(60,55,50,0.3)");
+  }
+  for (let i = -6; i <= 8; i++) inkLine(ctx, [[300 + i * 40, 790], [300 + i * 180, 1600]], 4330 + i, 1.6, "rgba(60,55,50,0.25)");
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.fillStyle = "rgba(255,170,100,0.3)";
+  ctx.beginPath();
+  ctx.moveTo(WIN.x0, 800);
+  ctx.lineTo(300, 800);
+  ctx.lineTo(560, 1600);
+  ctx.lineTo(-200, 1600);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  ctx.restore();
+  // the sill, all the way along
+  shaded(ctx, () => poly(ctx, [[-400, SILL - 4], [PW + 400, SILL - 6], [PW + 400, SILL + 16], [-400, SILL + 18]], 4311, 0.8), "#f1ede4", () => {
+    ctx.fillStyle = "rgba(255,190,120,0.35)";
+    ctx.fillRect(-400, SILL - 10, 700, 30);
+  }, C.ink, 4);
+  shaded(ctx, () => poly(ctx, [[-400, SILL + 17], [PW + 400, SILL + 15], [PW + 400, SILL + 40], [-400, SILL + 42]], 4312, 0.8), "#c8c2b6", null, C.ink, 4);
+  people(ctx);
 }
 
 /** The photo at the origin, scaled into w × h. `reflect` = how much of his reflection the glass shows (0.07 as she
