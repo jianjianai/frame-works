@@ -7,9 +7,9 @@ Lottie动效是一套原创 CC0 的轻快互动贴纸与 Canvas 组件，适合�
 | 文件 / 资源 | 规格 | 用途 |
 |---|---|---|
 | lottie/spark-star.json | 512×512，3 秒，30 fps | 弹跳八角笑脸星星，开场贴纸 |
-| lottie/heart-pop.json | 512×512，3 秒，30 fps | 心动弹出与短射线，点赞贴纸 |
-| lottie/check-draw.json | 512×512，3 秒，30 fps | 圆形徽章和描边勾选 |
-| lottie/orbit-loader.json | 512×512，3 秒，30 fps | 八段环形加载 |
+| lottie/heart-pop.json | 512×512，3 秒，30 fps | 红色爱心弹出与短射线，点赞贴纸 |
+| lottie/check-draw.json | 512×512，3 秒，30 fps | 圆形徽章和描边勾选（对勾、完成） |
+| lottie/orbit-loader.json | 512×512，3 秒，30 fps | 八段环形加载（转圈、等待） |
 | lottie/star-rating.json | 600×160，3 秒，30 fps | 五颗星依次弹出并由灰变金，评分贴纸；0–2 秒入场，之后保持 |
 | lottie/color-wipe.json | 1080×1920，1.2 秒，30 fps | 黑、珊瑚红、黄绿三色全屏擦拭 |
 | code/widgets.ts#likeCounter | Canvas，800×280 | 参数化点赞文案、计数起止、增长时间、配色 |
