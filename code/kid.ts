@@ -30,7 +30,7 @@ export const kidPose = z.object({
   tears: z.number().min(0).max(1).default(0).describe("眼泪流下来的长度"),
   wet: z.number().min(0).max(1).default(0).describe("淋湿：头发塌下、滴水"),
   cake: z.number().min(0).max(1).default(0).describe("脸上抹的奶油（蛋糕大战）"),
-  outfit: z.enum(["hoodie", "rider", "pajamas", "cardigan", "uniform"]).optional().describe("衣服：男主默认 hoodie 帽衫，rider 黄色外卖服，uniform 校服（白色运动服 + 蓝色肩袖、立领拉链）；女主默认 pajamas 粉睡衣，cardigan 开衫+百褶裙"),
+  outfit: z.enum(["hoodie", "rider", "pajamas", "cardigan", "uniform"]).optional().describe("衣服：男主默认 hoodie 帽衫，rider 黄色外卖服；女主默认 pajamas 粉睡衣，cardigan 开衫+百褶裙；uniform 校服（白色运动服 + 蓝色肩袖、立领拉链，两人都能穿，女主配运动裤和白球鞋）"),
   hair: z.enum(["mop", "short"]).default("mop").describe("男主发型：mop 封面的蓬发；short 上学时的短发（刘海短、露出额头，后脑勺有发旋）"),
   bracelet: z.enum(["none", "red", "faded"]).default("none").describe("男主左手腕的红绳（男左女右）：red 鲜红，faded 戴久了褪色"),
   clip: z.boolean().default(true).describe("女主：向日葵发卡"),
@@ -872,7 +872,7 @@ function armSpecs(p: KidPose): [ArmSpec, ArmSpec] {
 function sleeveArm(ctx: Ctx, shoulder: Pt, spec: ArmSpec, side: number, p: KidPose, seed: number) {
   const rider = p.outfit === "rider";
   const girl = p.who === "girl";
-  const uni = !girl && p.outfit === "uniform";
+  const uni = p.outfit === "uniform";
   const [gc, gd, gcuff] = girlSleeve(p);
   const col = girl ? gc : rider ? K.rider : uni ? K.uniBlue : K.hood,
     dk = girl ? gd : rider ? K.riderDk : uni ? K.uniBlueDk : K.hoodDk;
@@ -1297,6 +1297,14 @@ function girlHeadFront(ctx: Ctx, p: KidPose, seed: number) {
 }
 
 function girlTorsoFront(ctx: Ctx, p: KidPose, seed: number) {
+  if (p.outfit === "uniform") {
+    // the same school tracksuit as his, a little narrower
+    ctx.save();
+    ctx.scale(0.9, 1);
+    uniformFront(ctx, seed);
+    ctx.restore();
+    return;
+  }
   const pj = p.outfit !== "cardigan";
   const col = pj ? G.pj : G.cardi,
     dk = pj ? G.pjDk : G.cardiDk;
@@ -1353,6 +1361,13 @@ function girlTorsoFront(ctx: Ctx, p: KidPose, seed: number) {
 }
 
 function girlTorsoBack(ctx: Ctx, p: KidPose, seed: number) {
+  if (p.outfit === "uniform") {
+    ctx.save();
+    ctx.scale(0.9, 1);
+    uniformBack(ctx, seed);
+    ctx.restore();
+    return;
+  }
   const pj = p.outfit !== "cardigan";
   const col = pj ? G.pj : G.cardi,
     dk = pj ? G.pjDk : G.cardiDk;
@@ -1368,6 +1383,7 @@ function girlTorsoBack(ctx: Ctx, p: KidPose, seed: number) {
 }
 
 function girlSleeve(p: KidPose): [string, string, string] {
+  if (p.outfit === "uniform") return [K.uniBlue, K.uniBlueDk, K.uniBlueDk];
   return p.outfit === "cardigan" ? [G.cardi, G.cardiDk, G.cardiDk] : [G.pj, G.pjDk, G.pjTrim];
 }
 
@@ -1381,11 +1397,24 @@ function girlLeg(ctx: Ctx, hip: Pt, ankle: Pt, side: number, p: KidPose, seed: n
   else [knee] = ik2(hip, ankle, 172, 168, side);
   const spine = sub([hip, knee, ankle]);
   if (!skirt) {
+    const uni = p.outfit === "uniform";
     const widths = [80, 72, 64, 58, 56];
-    shaded(ctx, () => blob(ctx, tubePts(spine, widths, true, true), seed, 1.2), G.pj, () => {
+    shaded(ctx, () => blob(ctx, tubePts(spine, widths, true, true), seed, 1.2), uni ? "#2b3550" : G.pj, () => {
       blob(ctx, tubePts(spine.map(([x, y]) => [x + 16 * side, y]) as Pt[], widths.map((w) => w * 0.55), true, true), seed + 1, 1);
-      paint(ctx, G.pjDk, null);
+      paint(ctx, uni ? "#1f2740" : G.pjDk, null);
+      if (uni) inkLine(ctx, spine.map(([x, y]) => [x - 18 * side, y]) as Pt[], seed + 2, 6, K.uni);
     }, C.ink, 5.5);
+    if (uni && mode !== "kneel") {
+      // white sneakers
+      ctx.save();
+      ctx.translate(ankle[0] + side * 4, ankle[1] + 20);
+      blob(ctx, [[-36, -14], [0, -22], [36, -14], [44, 8], [28, 20], [-28, 20], [-44, 8]], seed + 4, 0.9);
+      paint(ctx, "#f4f4f0", C.ink, 4.5);
+      ctx.fillStyle = "#c9ced6";
+      ctx.fillRect(-40, 10, 80, 8);
+      ctx.restore();
+      return;
+    }
     // socks
     oval(ctx, ankle[0] + side * 4, ankle[1] + 18, 34, 22, seed + 3, 0.8);
     paint(ctx, "#f7e4ea", C.ink, 4.5);
@@ -1543,6 +1572,7 @@ export const resources = defineResources({
       戴耳机: { earbuds: true, arms: "phone" },
       女主睡衣: { who: "girl", body: "full", outfit: "pajamas" },
       女主开衫: { who: "girl", body: "full", outfit: "cardigan", eyes: "open", mouth: "smile" },
+      女主校服: { who: "girl", body: "full", outfit: "uniform", eyes: "happy", mouth: "smile" },
       女主害羞: { who: "girl", blush: 0.9, eyes: "happy", mouth: "smile" },
     },
     preview: {
