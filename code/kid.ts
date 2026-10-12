@@ -167,10 +167,12 @@ const SHORT_FRINGE: Pt[] = [
   [-10, -30], [-22, -50], [-42, -28], [-54, -48], [-74, -26], [-86, -44], [-104, -18], [-114, -30], [-124, 8],
 ];
 const SHORT_CAP: Pt[] = [...SHORT, ...SHORT_FRINGE.slice(1, -1)];
-/** from behind: the crop runs down the sides and ends in a short tapered nape */
+/** from behind: the dome, tapered in above the ears (so they show) and down to a short, neat nape */
 const SHORT_BACK: Pt[] = [
-  ...SHORT,
-  [128, 30], [120, 58], [100, 76], [78, 70], [56, 88], [30, 80], [6, 94], [-20, 80], [-46, 90], [-70, 72], [-96, 78], [-118, 58], [-128, 30],
+  ...SHORT.slice(1, -1),
+  [126, -6], [114, 14], [106, 38], [92, 56], [72, 62],
+  [56, 76], [34, 68], [14, 80], [-6, 70], [-26, 80], [-46, 68], [-64, 74],
+  [-84, 60], [-100, 52], [-106, 34], [-112, 12], [-124, -8],
 ];
 const SHORT_WHORL: Pt = [16, -112];
 const inShortCap = (x: number, y: number) => ((x - 2) / 122) ** 2 + ((y + 62) / 100) ** 2 < 1 && y < -54;
@@ -212,22 +214,38 @@ function shortTexture(ctx: Ctx, seed: number) {
 }
 function shortBackTexture(ctx: Ctx, seed: number) {
   const [wx, wy] = SHORT_WHORL;
-  // locks fan out from the crown whorl and run down to the nape
-  for (let i = 0; i < 11; i++) {
-    const a = Math.PI * (0.02 + i * 0.096);
-    const tx = Math.cos(a),
-      ty = Math.sin(a);
-    const r1 = i < 2 || i > 8 ? 120 : 176;
-    inkLine(ctx, [[wx + tx * 18, wy + ty * 14], [wx + tx * r1 * 0.55 + 6, wy + ty * r1 * 0.5], [wx + tx * r1, wy + ty * r1 * 0.98]], seed + 80 + i, 2.3, K.hairDk);
-  }
+  // a few locks flow down from around the crown whorl toward the nape, curving with the skull
+  const LOCKS: [number, number, number][] = [
+    // [start angle around the whorl, start radius, end x]
+    [2.5, 30, -96], [2.0, 26, -52], [1.6, 34, -8], [1.15, 28, 40], [0.7, 30, 82], [0.25, 34, 112],
+  ];
+  LOCKS.forEach(([a, r, ex], i) => {
+    const sx = wx + Math.cos(a) * r,
+      sy = wy + Math.sin(a) * r * 0.8;
+    const ey = 50 - Math.abs(ex) * 0.22;
+    inkLine(ctx, [[sx, sy], [(sx + ex) / 2 + (ex - sx) * 0.12, (sy + ey) / 2 - 6], [ex, ey]], seed + 80 + i, 2.2, K.hairDk);
+  });
   // the whorl itself (发旋): a small spiral
   const sp: Pt[] = [];
-  for (let k = 0; k <= 14; k++) {
-    const a = k * 0.62,
-      r = 2 + k * 1.05;
+  for (let k = 0; k <= 10; k++) {
+    const a = k * 0.66,
+      r = 1.5 + k * 0.95;
     sp.push([wx + Math.cos(a) * r, wy + Math.sin(a) * r * 0.8]);
   }
-  inkLine(ctx, sp, seed + 95, 2.2, K.hairDk, 0.3);
+  inkLine(ctx, sp, seed + 95, 2, K.hairDk, 0.25);
+  // short dashes of texture
+  ctx.lineCap = "round";
+  ctx.strokeStyle = K.hairDk;
+  ctx.lineWidth = 2.6;
+  for (const [x, y, a] of DASHES) {
+    const sx = x * 0.72 + 4,
+      sy = y * 0.62 + 30;
+    if (((sx - 2) / 110) ** 2 + ((sy + 40) / 96) ** 2 > 1) continue;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(a) * 6, sy + Math.sin(a) * 4);
+    ctx.stroke();
+  }
   // a lit band on the upper left
   ctx.save();
   ctx.globalAlpha *= 0.75;
@@ -662,9 +680,9 @@ function headBack(ctx: Ctx, p: KidPose, seed: number) {
   if (p.hair === "short") {
     // the crop from behind: a neat dome, the whorl on the crown, a short tapered nape
     shaded(ctx, () => poly(ctx, wetMop(SHORT_BACK, wet), seed + 70, 1.2), K.hair, () => {
-      // the nape is in the shade of the head
-      blob(ctx, [[-130, 20], [130, 20], [126, 100], [-126, 100]], seed + 71, 1);
-      paint(ctx, "rgba(79,58,26,0.35)", null);
+      // the lower edge, toward the nape, is in the shade of the head
+      blob(ctx, [[-130, 34], [130, 34], [126, 100], [-126, 100]], seed + 71, 1);
+      paint(ctx, "rgba(79,58,26,0.2)", null);
       shortBackTexture(ctx, seed);
     }, C.ink, 5.5);
     if (p.helmet) helmet(ctx, seed + 100);
