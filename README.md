@@ -20,7 +20,7 @@ Lottie动效是一套原创 CC0 的轻快互动贴纸与 Canvas 组件，适合�
 ## 用法要点
 
 1. 用 materials_link 关联本库，用 materials_use 锁定所需代码和 JSON 版本。引用地址为 materials/Lottie动效/lottie/文件名.json。
-2. JSON 可直接放入 visual.json 的 lottie 图层。512×512 贴纸使用 fit: contain，并按画幅配置 transform。当前原生 Lottie 图层先按整幅作品生成 canvas：在 1080×1920 中，方形贴纸会带上下透明留边，本示例用 crop: { x: 0, y: 0.21875, width: 1, height: 0.5625 } 去掉留边后再放进方形图层框（其他画幅需要按实际宽高重新算）。竖屏 color-wipe 使用全屏 contain 或 fill，切镜时刻设在其 0.6 秒处。
+2. JSON 可直接放入 visual.json 的 lottie 图层。512×512 贴纸使用 fit: contain，并按画幅配置 transform。Lottie 图层按动画自己的宽高比绘制，方形贴纸放进方形的图层框就正好填满，不需要裁剪。竖屏 color-wipe 使用全屏 contain 或 fill，切镜时刻设在其 0.6 秒处。
 3. 三秒贴纸可设 loop: 3；rate 为播放速度。时间公式是 offset + (((t - start) * rate + phase) % loop)。整段循环错相请用 phase（例如 0.4），保持 offset: 0；offset 是循环段的起点，必须保证 offset + loop 不超过素材时长，不能把非零 offset 与整段 loop: 3 直接叠加。本作品只在非循环勾选层演示 offset: 0.12、rate: 0.55。非循环 check 建议保留完成帧；原生图层长度不要让素材时间超过 3 秒，或用极低 rate 保持。代码 successChip 已将结束时间限制在最后有效帧。
 4. 转场 color-wipe 的图层长度用 1.2 秒，rate: 1；在素材中间遮满画面时切换下层场景。它是覆盖式转场，不要求图层蒙版功能。
 5. 组件使用 createLottieScene 加载 JSON，再用 render(t) 定位、drawImage 合成。创建只做一次，场景退出必须 dispose；计数与进度完全由 t 推导，可重复、倒放、任意跳转。
