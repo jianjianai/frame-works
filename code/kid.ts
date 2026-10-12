@@ -664,7 +664,7 @@ function headBack(ctx: Ctx, p: KidPose, seed: number) {
     // the back of the neck: slim (the crop shows it, so the mop's wide nape block won't do), in the shade of the
     // hair at the top, a soft groove down the middle; it stops at the collar (no line across the bottom, so the
     // collar drawn before it keeps its edge)
-    poly(ctx, [[-45, 40], [45, 40], [41, 126], [-41, 126]], seed + 4, 0.8);
+    poly(ctx, [[-50, 40], [50, 40], [46, 126], [-46, 126]], seed + 4, 0.8);
     ctx.fillStyle = K.skinSh;
     ctx.fill();
     const sh = ctx.createLinearGradient(0, 64, 0, 104);
@@ -672,7 +672,7 @@ function headBack(ctx: Ctx, p: KidPose, seed: number) {
     sh.addColorStop(1, "rgba(150,100,55,0)");
     ctx.fillStyle = sh;
     ctx.fill();
-    for (const sd of [-1, 1]) inkLine(ctx, [[sd * 46, 70], [sd * 41, 100], [sd * 42, 126]], seed + 5 + sd, 4.5);
+    for (const sd of [-1, 1]) inkLine(ctx, [[sd * 51, 70], [sd * 46, 100], [sd * 47, 126]], seed + 5 + sd, 4.5);
     inkLine(ctx, [[0, 96], [1, 112], [0, 124]], seed + 8, 2, K.skinDeep);
     // the crop from behind: a neat dome, the whorl on the crown, a short tapered nape
     shaded(ctx, () => poly(ctx, wetMop(SHORT_BACK, wet), seed + 70, 1.2), K.hair, () => {
