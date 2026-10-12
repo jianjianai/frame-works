@@ -8,7 +8,7 @@
 
 | 资源 | 用途 | x/y 锚点 | 原始尺寸 / 注意事项 |
 | --- | --- | --- | --- |
-| kineticTitle | 逐字弹出标题 | 第一行左侧基线 | `size` / `maxWidth` 为设计单位；新多行标题设 `lineHeight: 1.25` |
+| kineticTitle | 逐字弹出标题 | 第一行左侧基线 | `size` / `maxWidth` 为设计单位；新多行标题显式设 `lineHeight` 倍数，例如0.9 |
 | callout | 描边生长的标注 | 折线顶端高度 | 首个圆点位于 y+90；文字在 y−24 |
 | morphIcon | 圆形变菱形 | 图标中心 | `size` 是图标直径；说明文字在图标下方 |
 | numberCard | 滚动数字卡 | 卡片左上角 | 固定 420×310；`scale: 2` 后为 840×620 |
@@ -54,7 +54,7 @@ lowerThird(ctx, margin, height * 0.7, t, {
 // 分别放在竖屏的顶部、中部和底部；t 是资源局部秒数。
 kineticTitle(ctx, margin, height * 0.19, t - 0.12, {
   text: "把复杂问题\n拆成三步。", size: 64, maxWidth: designWidth,
-  lineHeight: 1.25, scale,
+  lineHeight: 0.9, scale,
 });
 numberCard(ctx, (width - 420 * scale) / 2, height * 0.37, t - 0.7, {
   text: "让思考更清楚", value: 3, suffix: "步", scale,
@@ -75,7 +75,7 @@ disposeResources(ctx);
 - `lowerThird` 默认保留原来的单行展开效果；长文字显式传 `wrap:true`。主副字幕均按 `width-64` 自动换行，固定原字号、自动增加条带高度，不删字、不加省略号；长西文单词也可按字素分行。
 - 高度（设计单位）= `132 + (副字幕行数-1)*26 + (主字幕行数-1)*44`。调用方需为增加后的高度留出空间，画布不会自动变高。换行发生在缩放前，再整体放大，动画展开时的短暂裁切属于入场效果。
 - 例：1080宽、左右各72、scale=2 → `width:468`，最终宽936。主字32×2=64px；不要传 `width:936` 又 `scale:2`。
-- `kineticTitle` 新多行内容设 `lineHeight:1.25`（**倍数，不是像素**），并给 `maxWidth` 设计单位。省略 `lineHeight` 时保留旧版行距，以免改动已有作品。
+- `kineticTitle` 新多行内容显式设 `lineHeight`（**字体度量的倍数，不是像素**；紧凑中文标题可用0.9，宽松排版可用1.25），并给 `maxWidth` 设计单位。省略 `lineHeight` 时保留旧版行距，以免改动已有作品。
 - `quoteCard` 使用 `maxWidth` 自动换行，署名排在最后一行下方；标题、标注、数字卡标签宜简短，scale 本身不自动重新排版或适配任意长文本。
 
 ## 兼容性、预览与生命周期
