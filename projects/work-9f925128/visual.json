@@ -1,19 +1,55 @@
 {
   "schemaVersion": 1,
-  "background": "#101418",
+  "background": "#0b0e1f",
   "clips": [
     {
-      "id": "title",
-      "name": "标题",
-      "source": {
-        "kind": "scene",
-        "module": "title",
-        "engine": "canvas"
-      },
+      "id": "storyboard",
+      "name": "分镜占位（待制作的分镜）",
+      "source": { "kind": "scene", "module": "storyboard", "engine": "canvas" },
       "start": 0,
-      "duration": 60,
-      "fadeIn": 1,
-      "fadeOut": 1
+      "duration": 46.5,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act1",
+      "name": "第一幕 · 凌晨三点 / 毕业那天",
+      "source": { "kind": "scene", "module": "act1", "engine": "canvas" },
+      "start": 0,
+      "duration": 15.2,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "lyrics",
+      "name": "中英歌词",
+      "source": { "kind": "scene", "module": "lyrics", "engine": "canvas" },
+      "start": 0,
+      "duration": 46.5,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "grain",
+      "name": "胶片颗粒",
+      "source": { "kind": "scene", "module": "grain", "engine": "canvas" },
+      "start": 0,
+      "duration": 46.5,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "transform": { "opacity": 0.5 },
+      "fit": "contain",
+      "blend": "overlay"
     }
   ]
 }
