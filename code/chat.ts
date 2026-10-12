@@ -445,7 +445,7 @@ export function selfiePhoto(ctx: Ctx, x: number, y: number, w: number, h: number
   ctx.restore();
 }
 
-export function momentsScreen(ctx: Ctx, abs: number, o: { dark?: boolean; mark?: number; author?: string; caption?: string; location?: string; photo?: (ctx: Ctx, x: number, y: number, w: number, h: number) => void } = {}) {
+export function momentsScreen(ctx: Ctx, abs: number, o: { dark?: boolean; mark?: number; author?: string; caption?: string; location?: string; photoHeight?: number; photo?: (ctx: Ctx, x: number, y: number, w: number, h: number) => void } = {}) {
   const dark = !!o.dark;
   ctx.fillStyle = dark ? "#111" : "#fff";
   ctx.fillRect(0, 0, SW, SH);
@@ -475,23 +475,25 @@ export function momentsScreen(ctx: Ctx, abs: number, o: { dark?: boolean; mark?:
   avatar(ctx, 60, py + 36, "girl");
   text(ctx, o.author ?? "林夏", 112, py + 16, { size: 30, font: F.ui, weight: 700, fill: "#576b95", align: "left" });
   text(ctx, o.caption ?? "今天好开心～", 112, py + 64, { size: 30, font: F.ui, fill: dark ? "#ddd" : "#111", align: "left" });
-  if (o.photo) o.photo(ctx, 112, py + 96, 400, 400);
+  const photoHeight = o.photoHeight ?? 400;
+  const footerY = py + 96 + photoHeight + 44;
+  if (o.photo) o.photo(ctx, 112, py + 96, 400, photoHeight);
   else selfiePhoto(ctx, 112, py + 96, 400, 400, abs, "happy");
-  text(ctx, o.location ?? "5分钟前", 112, py + 540, { size: 28, font: F.ui, fill: dark ? "#b4b4b4" : "#888", align: "left" });
+  text(ctx, o.location ?? "5分钟前", 112, footerY, { size: 28, font: F.ui, fill: dark ? "#b4b4b4" : "#888", align: "left" });
   const mk = clamp(o.mark ?? 0);
   if (mk > 0) {
     ctx.save();
     ctx.strokeStyle = C.red;
     ctx.lineWidth = 6;
     ctx.beginPath();
-    ctx.ellipse(160, py + 540, 76, 32, -0.05, 0, Math.PI * 2 * mk);
+    ctx.ellipse(160, footerY, 76, 32, -0.05, 0, Math.PI * 2 * mk);
     ctx.stroke();
     ctx.restore();
   }
   ctx.fillStyle = dark ? "#2a2a2a" : "#f3f3f3";
-  rr(ctx, SW - 110, py + 520, 66, 40, 8);
+  rr(ctx, SW - 110, footerY - 20, 66, 40, 8);
   ctx.fill();
-  text(ctx, "··", SW - 77, py + 534, { size: 30, font: F.ui, weight: 700, fill: "#576b95" });
+  text(ctx, "··", SW - 77, footerY - 6, { size: 30, font: F.ui, weight: 700, fill: "#576b95" });
 }
 
 /** her contact card: a sunny photo, name and signature */
