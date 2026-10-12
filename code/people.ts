@@ -34,6 +34,7 @@ export const personSchema = z.object({
   tilt: z.number().min(-0.6).max(0.6).default(0).describe("歪头（弧度）"),
   glasses: z.boolean().default(false).describe("眼镜"),
   coat: z.boolean().default(false).describe("白大褂"),
+  uniform: z.boolean().default(false).describe("校服：白色运动服、蓝色肩袖和立领拉链（和男主的 outfit uniform 同款），top 颜色不用"),
   mask: z.number().min(0).max(1).optional().describe("口罩：不写就没有；1 戴上，0 拉到下巴"),
   handL: point.optional().describe("覆盖预设的左手腕目标点（头部单位）"),
   handR: point.optional().describe("覆盖预设的右手腕目标点（头部单位）"),
@@ -345,12 +346,18 @@ function armTargets(p: Person): [ArmT | null, ArmT | null] {
   return [L, R];
 }
 
-function sleeve(ctx: Ctx, shoulder: Pt, t: ArmT, color: string, seed: number, mirror: boolean) {
+function sleeve(ctx: Ctx, shoulder: Pt, t: ArmT, color: string, seed: number, mirror: boolean, stripe = false) {
   const [elbow, wrist] = ik2(shoulder, t.wrist, 128, 124, t.bend);
   const spine = [shoulder, lerp2(shoulder, elbow, 0.5), elbow, lerp2(elbow, wrist, 0.5), wrist];
   shaded(ctx, () => blob(ctx, tubePts(spine, [54, 50, 46, 42, 40], true, true), seed, 1), color, () => {
     blob(ctx, tubePts(spine.map(([x, y]) => [x + 12, y + 4]) as Pt[], [34, 30, 28, 26, 24], true, true), seed + 1, 1);
     paint(ctx, darker(color.startsWith("#") ? color : "#888888", 0.82), null);
+    if (stripe) {
+      // the tracksuit's white stripe down the outside of the sleeve
+      const side = mirror ? -1 : 1;
+      curve(ctx, spine.map(([x, y]) => [x + 13 * side, y + 2]) as Pt[], seed + 3, 0.8);
+      paint(ctx, null, "#f3f4f1", 8);
+    }
   }, C.ink, 5);
   inkLine(ctx, [lerp2(elbow, shoulder, 0.15), elbow, lerp2(elbow, wrist, 0.15)], seed + 2, 2.2, "rgba(0,0,0,0.25)");
   return { wrist, ang: Math.atan2(wrist[1] - elbow[1], wrist[0] - elbow[0]), mirror };
@@ -386,10 +393,24 @@ export function drawPerson(ctx: Ctx, x: number, y: number, s: number, p: Person)
   paint(ctx, darker(skin.startsWith("#") ? skin : "#f3dcae", 0.92), C.ink, 4.5);
   // torso (shirt) and optional lab coat
   const torso: Pt[] = [[-60, 124], [-96, 140], [-108, 220], [-104, 350], [0, 360], [104, 350], [108, 220], [96, 140], [60, 124], [0, 134]];
-  shaded(ctx, () => blob(ctx, torso, seed + 10, 1.2), top, () => {
-    blob(ctx, [[50, 124], [120, 150], [120, 380], [60, 380], [74, 240]], seed + 11, 1.2);
-    paint(ctx, "rgba(0,0,0,0.16)", null);
-  }, C.ink, 5.5);
+  if (p.uniform) {
+    // the school tracksuit: white body, blue yoke piped white, zip, a stand-up collar
+    shaded(ctx, () => blob(ctx, torso, seed + 10, 1.2), "#f3f4f1", () => {
+      blob(ctx, [[50, 124], [120, 150], [120, 380], [60, 380], [74, 240]], seed + 11, 1.2);
+      paint(ctx, "rgba(70,90,130,0.16)", null);
+      poly(ctx, [[-130, 100], [130, 100], [130, 196], [0, 212], [-130, 196]], seed + 12, 1);
+      paint(ctx, "#2f63b0", null);
+      inkLine(ctx, [[-120, 200], [0, 216], [120, 200]], seed + 13, 4.5, "#f3f4f1");
+      inkLine(ctx, [[0, 150], [2, 250], [0, 352]], seed + 14, 2.6, "#8b919c");
+    }, C.ink, 5.5);
+    blob(ctx, [[-58, 118], [0, 130], [58, 118], [62, 148], [0, 160], [-62, 148]], seed + 15, 0.9);
+    paint(ctx, "#2f63b0", C.ink, 4.5);
+    inkLine(ctx, [[-54, 123], [0, 135], [54, 123]], seed + 16, 2.2, "#f3f4f1");
+  } else
+    shaded(ctx, () => blob(ctx, torso, seed + 10, 1.2), top, () => {
+      blob(ctx, [[50, 124], [120, 150], [120, 380], [60, 380], [74, 240]], seed + 11, 1.2);
+      paint(ctx, "rgba(0,0,0,0.16)", null);
+    }, C.ink, 5.5);
   if (p.coat) {
     for (const side of [-1, 1]) {
       shaded(ctx, () => poly(ctx, [[side * 20, 132], [side * 100, 142], [side * 114, 230], [side * 112, 400], [side * 40, 404], [side * 34, 250]], seed + 12 + side, 1.2), "#f6f7f8", () => {
@@ -407,9 +428,9 @@ export function drawPerson(ctx: Ctx, x: number, y: number, s: number, p: Person)
     inkLine(ctx, [[-70, 232], [-70, 256]], seed + 20, 4, "#c0392b");
   }
   const [L, R] = armTargets(p);
-  const coatCol = p.coat ? "#f6f7f8" : top;
-  const al = L ? sleeve(ctx, [-90, 156], L, coatCol, seed + 22, true) : null;
-  const ar = R ? sleeve(ctx, [90, 156], R, coatCol, seed + 26, false) : null;
+  const coatCol = p.coat ? "#f6f7f8" : p.uniform ? "#2f63b0" : top;
+  const al = L ? sleeve(ctx, [-90, 156], L, coatCol, seed + 22, true, !!p.uniform && !p.coat) : null;
+  const ar = R ? sleeve(ctx, [90, 156], R, coatCol, seed + 26, false, !!p.uniform && !p.coat) : null;
   p.holding?.(ctx);
   if (al && L) drawHand(ctx, al.wrist[0], al.wrist[1], 0.86, al.ang, L.shape, true, false, seed + 30);
   if (ar && R) drawHand(ctx, ar.wrist[0], ar.wrist[1], 0.86, ar.ang, R.shape, false, false, seed + 31);
