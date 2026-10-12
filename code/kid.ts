@@ -1,6 +1,7 @@
 /**
  * 主角（封面的男孩：棕色蓬乱头发、困倦的厚眼皮、蓝帽衫）和女主（波波头+刘海、向日葵发卡、雀斑），正面或背影，关节手臂和腿（IK）。
  * drawKid(ctx, x, y, s, pose)：(x, y) = 头中心，s = 1 时脸宽约 236。姿势字段见 kidPose（全部可省略）。
+ * 男主还可以换上学时的样子：hair: "short" 短发、outfit: "uniform" 校服、bracelet 左手腕的红绳。
  * 另有单只手特写 drawHand、手提头盔 helmetProp、向日葵发卡 sunflowerClip、跟拍子点头 bob。
  */
 import { z } from "zod";
@@ -29,7 +30,9 @@ export const kidPose = z.object({
   tears: z.number().min(0).max(1).default(0).describe("眼泪流下来的长度"),
   wet: z.number().min(0).max(1).default(0).describe("淋湿：头发塌下、滴水"),
   cake: z.number().min(0).max(1).default(0).describe("脸上抹的奶油（蛋糕大战）"),
-  outfit: z.enum(["hoodie", "rider", "pajamas", "cardigan"]).optional().describe("衣服：男主默认 hoodie 帽衫，rider 黄色外卖服；女主默认 pajamas 粉睡衣，cardigan 开衫+百褶裙"),
+  outfit: z.enum(["hoodie", "rider", "pajamas", "cardigan", "uniform"]).optional().describe("衣服：男主默认 hoodie 帽衫，rider 黄色外卖服，uniform 校服（白色运动服 + 蓝色肩袖、立领拉链）；女主默认 pajamas 粉睡衣，cardigan 开衫+百褶裙"),
+  hair: z.enum(["mop", "short"]).default("mop").describe("男主发型：mop 封面的蓬发；short 上学时的短发（刘海短、露出额头，后脑勺有发旋）"),
+  bracelet: z.enum(["none", "red", "faded"]).default("none").describe("男主左手腕的红绳（男左女右）：red 鲜红，faded 戴久了褪色"),
   clip: z.boolean().default(true).describe("女主：向日葵发卡"),
   freckles: z.boolean().default(true).describe("女主：雀斑"),
   helmet: z.boolean().default(false).describe("外卖头盔"),
@@ -81,6 +84,13 @@ const K = {
   eyeWhite: "#f7f3ea",
   iris: "#3a2a1f",
   irisHi: "#7a5839",
+  // the school tracksuit (outfit "uniform"): white body, blue yoke, sleeves and collar
+  uni: "#f3f4f1",
+  uniSh: "#d3d9e2",
+  uniBlue: "#2f63b0",
+  uniBlueDk: "#214a87",
+  red: "#e0352f",
+  redFaded: "#b8605a",
 };
 
 // ---------------------------------------------------------------- head geometry (head units)
@@ -132,6 +142,102 @@ const DASHES: [number, number, number][] = Array.from({ length: 34 }, (_, i) => 
 function inHairCap(x: number, y: number) {
   // rough ellipse test so texture stays inside the cap
   return ((x - 6) / 150) ** 2 + ((y + 70) / 128) ** 2 < 1 && y < -46;
+}
+
+// ---------------------------------------------------------------- short hair (hair: "short", his school years)
+/** A school crop: a dome hugging the skull with fine jags, temple to temple (same order as MOP). */
+function shortPts(): Pt[] {
+  const pts: Pt[] = [[-124, 8]];
+  const N = 40;
+  for (let i = 0; i <= N; i++) {
+    const a = Math.PI * (0.95 + (i / N) * 1.1);
+    const right = Math.cos(a) > 0;
+    const outer = i % 2 === 0;
+    let jag = outer ? 0.018 + hash(i * 4.1 + 7) * 0.024 : -0.008 - hash(i * 6.7 + 3) * 0.012;
+    if (outer && (i === 12 || i === 20 || i === 26)) jag += 0.022; // a few tufts on the crown
+    pts.push([2 + Math.cos(a) * (right ? 138 : 134) * (1 + jag), -46 + Math.sin(a) * 118 * (1 + jag)]);
+  }
+  pts.push([124, 8]);
+  return pts;
+}
+const SHORT: Pt[] = shortPts();
+/** the short fringe, right → left: the tips stop well above the brows, so the forehead shows */
+const SHORT_FRINGE: Pt[] = [
+  [124, 8], [116, -20], [104, -10], [94, -36], [78, -22], [68, -46], [48, -26], [38, -50], [20, -30], [10, -52],
+  [-10, -30], [-22, -50], [-42, -28], [-54, -48], [-74, -26], [-86, -44], [-104, -18], [-114, -30], [-124, 8],
+];
+const SHORT_CAP: Pt[] = [...SHORT, ...SHORT_FRINGE.slice(1, -1)];
+/** from behind: the crop runs down the sides and ends in a short tapered nape */
+const SHORT_BACK: Pt[] = [
+  ...SHORT,
+  [128, 30], [120, 58], [100, 76], [78, 70], [56, 88], [30, 80], [6, 94], [-20, 80], [-46, 90], [-70, 72], [-96, 78], [-118, 58], [-128, 30],
+];
+const SHORT_WHORL: Pt = [16, -112];
+const inShortCap = (x: number, y: number) => ((x - 2) / 122) ** 2 + ((y + 62) / 100) ** 2 < 1 && y < -54;
+
+function shortTexture(ctx: Ctx, seed: number) {
+  // short lock separations rising from the fringe valleys
+  for (let i = 1; i < SHORT_FRINGE.length - 1; i += 2) {
+    const [vx, vy] = SHORT_FRINGE[i];
+    inkLine(ctx, [[vx - 2, vy + 2], [vx + 3, vy - 18], [vx + 10, vy - 34]], seed + i, 2.4, K.hairDk);
+  }
+  // the crop follows the skull on the sides
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI * (i < 3 ? 1.04 + i * 0.09 : 1.66 + (i - 3) * 0.1);
+    inkLine(ctx, [[2 + Math.cos(a) * 92, -46 + Math.sin(a) * 82], [2 + Math.cos(a + 0.05) * 108, -46 + Math.sin(a + 0.05) * 98], [2 + Math.cos(a + 0.1) * 124, -46 + Math.sin(a + 0.1) * 112]], seed + 20 + i, 2.2, K.hairDk);
+  }
+  // lit (left) side of the dome
+  ctx.save();
+  ctx.globalAlpha *= 0.8;
+  for (let i = 0; i < 5; i++) {
+    const a = Math.PI * (1.2 + i * 0.07);
+    const r = 98 + (i % 2) * 8;
+    const x = 2 + Math.cos(a) * r,
+      y = -46 + Math.sin(a) * r * 0.86;
+    inkLine(ctx, [[x - 5, y + 8], [x, y], [x + 8, y - 5]], seed + 40 + i, 3.4, K.hairHi);
+  }
+  ctx.restore();
+  ctx.lineCap = "round";
+  ctx.strokeStyle = K.hairDk;
+  ctx.lineWidth = 2.8;
+  for (const [x, y, a] of DASHES) {
+    const sx = x * 0.8,
+      sy = y * 0.8 + 6;
+    if (!inShortCap(sx, sy)) continue;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(a) * 7, sy + Math.sin(a) * 4);
+    ctx.stroke();
+  }
+}
+function shortBackTexture(ctx: Ctx, seed: number) {
+  const [wx, wy] = SHORT_WHORL;
+  // locks fan out from the crown whorl and run down to the nape
+  for (let i = 0; i < 11; i++) {
+    const a = Math.PI * (0.02 + i * 0.096);
+    const tx = Math.cos(a),
+      ty = Math.sin(a);
+    const r1 = i < 2 || i > 8 ? 120 : 176;
+    inkLine(ctx, [[wx + tx * 18, wy + ty * 14], [wx + tx * r1 * 0.55 + 6, wy + ty * r1 * 0.5], [wx + tx * r1, wy + ty * r1 * 0.98]], seed + 80 + i, 2.3, K.hairDk);
+  }
+  // the whorl itself (发旋): a small spiral
+  const sp: Pt[] = [];
+  for (let k = 0; k <= 14; k++) {
+    const a = k * 0.62,
+      r = 2 + k * 1.05;
+    sp.push([wx + Math.cos(a) * r, wy + Math.sin(a) * r * 0.8]);
+  }
+  inkLine(ctx, sp, seed + 95, 2.2, K.hairDk, 0.3);
+  // a lit band on the upper left
+  ctx.save();
+  ctx.globalAlpha *= 0.75;
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI * (1.22 + i * 0.08);
+    const x = 2 + Math.cos(a) * 104,
+      y = -46 + Math.sin(a) * 92;
+    inkLine(ctx, [[x - 4, y + 9], [x, y], [x + 7, y - 6]], seed + 100 + i, 3.2, K.hairHi);
+  }
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------- eyes / brows / mouth
@@ -375,8 +481,11 @@ function headFront(ctx: Ctx, p: KidPose, seed: number) {
   ctx.save();
   ctx.translate(p.headX ?? 0, p.headY ?? 0);
   ctx.rotate(p.tilt ?? 0);
-  const mop = wetMop(MOP, wet);
-  const cap = wetMop(HAIR_CAP, wet);
+  const short = p.hair === "short";
+  const mop = wetMop(short ? SHORT : MOP, wet);
+  const cap = wetMop(short ? SHORT_CAP : HAIR_CAP, wet);
+  const fringe = short ? SHORT_FRINGE : FRINGE;
+  const texture = () => (short ? shortTexture(ctx, seed + 72) : hairTexture(ctx, seed + 72, wet));
   if (p.hood) hoodBehind(ctx, seed + 130);
   // back of the mop
   else {
@@ -400,7 +509,7 @@ function headFront(ctx: Ctx, p: KidPose, seed: number) {
       blob(ctx, [[60, 130], [104, 80], [124, 20], [140, 90], [80, 150]], seed + 6, 1);
       paint(ctx, "rgba(214,170,110,0.35)", null);
       // fringe shadow on the forehead (a zigzag strip just under the fringe)
-      poly(ctx, [...(FRINGE.map(([x, y]) => [x + 5, y + 14]) as Pt[]), [-200, -200], [200, -200]], seed + 7, 1);
+      poly(ctx, [...(fringe.map(([x, y]) => [x + 5, y + 14]) as Pt[]), [-200, -200], [200, -200]], seed + 7, 1);
       ctx.fillStyle = "rgba(196,150,96,0.38)";
       ctx.fill();
     },
@@ -445,14 +554,14 @@ function headFront(ctx: Ctx, p: KidPose, seed: number) {
     ctx.save();
     blob(ctx, HOOD_HOLE, seed + 131, 1.4);
     ctx.clip();
-    shaded(ctx, () => poly(ctx, cap, seed + 71, 1.4), K.hair, () => hairTexture(ctx, seed + 72, wet), C.ink, 5.5);
+    shaded(ctx, () => poly(ctx, cap, seed + 71, 1.4), K.hair, texture, C.ink, 5.5);
     ctx.restore();
     hoodRim(ctx, seed + 130);
-  } else shaded(ctx, () => poly(ctx, cap, seed + 71, 1.4), K.hair, () => hairTexture(ctx, seed + 72, wet), C.ink, 5.5);
+  } else shaded(ctx, () => poly(ctx, cap, seed + 71, 1.4), K.hair, texture, C.ink, 5.5);
   if (wet > 0) {
     // drips off the fringe
     for (let i = 0; i < 4; i++) {
-      const [tx, ty] = FRINGE[2 + i * 3] ?? [0, 0];
+      const [tx, ty] = fringe[2 + i * 3] ?? [0, 0];
       const k = (hash(seed + i) + (p.walk ?? 0) * 0.05) % 1;
       oval(ctx, tx, ty + 10 + k * 30, 4, 6, seed + 90 + i, 0.4);
       paint(ctx, "rgba(190,225,255,0.9)", null);
@@ -550,6 +659,18 @@ function headBack(ctx: Ctx, p: KidPose, seed: number) {
   // nape of the neck under the hair
   blob(ctx, [[-60, 60], [60, 60], [56, 140], [-56, 140]], seed + 4, 1);
   paint(ctx, K.skinSh, C.ink, 5);
+  if (p.hair === "short") {
+    // the crop from behind: a neat dome, the whorl on the crown, a short tapered nape
+    shaded(ctx, () => poly(ctx, wetMop(SHORT_BACK, wet), seed + 70, 1.2), K.hair, () => {
+      // the nape is in the shade of the head
+      blob(ctx, [[-130, 20], [130, 20], [126, 100], [-126, 100]], seed + 71, 1);
+      paint(ctx, "rgba(79,58,26,0.35)", null);
+      shortBackTexture(ctx, seed);
+    }, C.ink, 5.5);
+    if (p.helmet) helmet(ctx, seed + 100);
+    ctx.restore();
+    return;
+  }
   const mop = wetMop(MOP, wet);
   // from behind the mop is one big mass with spikes at the nape
   const back: Pt[] = [...mop.slice(0, -2), [126, 40], [100, 70], [76, 60], [52, 92], [24, 70], [0, 100], [-26, 72], [-52, 96], [-80, 62], [-106, 72]];
@@ -734,9 +855,10 @@ function armSpecs(p: KidPose): [ArmSpec, ArmSpec] {
 function sleeveArm(ctx: Ctx, shoulder: Pt, spec: ArmSpec, side: number, p: KidPose, seed: number) {
   const rider = p.outfit === "rider";
   const girl = p.who === "girl";
+  const uni = !girl && p.outfit === "uniform";
   const [gc, gd, gcuff] = girlSleeve(p);
-  const col = girl ? gc : rider ? K.rider : K.hood,
-    dk = girl ? gd : rider ? K.riderDk : K.hoodDk;
+  const col = girl ? gc : rider ? K.rider : uni ? K.uniBlue : K.hood,
+    dk = girl ? gd : rider ? K.riderDk : uni ? K.uniBlueDk : K.hoodDk;
   const [elbow, wrist]: [Pt, Pt] = spec.elbow ? [spec.elbow, spec.wrist] : ik2(shoulder, spec.wrist, girl ? 134 : 142, girl ? 128 : 134, spec.bend);
   // sleeve tube ends a little before the wrist, then the cuff
   const cuffStart = lerp2(elbow, wrist, 0.86);
@@ -754,6 +876,12 @@ function sleeveArm(ctx: Ctx, shoulder: Pt, spec: ArmSpec, side: number, p: KidPo
       const band = tubePts([a, b], [90, 90], false, false);
       poly(ctx, band, seed + 2, 0.6);
       paint(ctx, K.reflect, null);
+    }
+    if (uni) {
+      // the tracksuit's white stripe down the outside of the sleeve
+      const stripe = spine.map(([x, y]) => [x + 15 * side, y + 2]) as Pt[];
+      curve(ctx, stripe, seed + 2, 0.8);
+      paint(ctx, null, K.uni, 9);
     }
   }, C.ink, 5.5);
   // elbow folds
@@ -833,7 +961,66 @@ const TORSO: Pt[] = [
   [118, 432], [122, 320], [122, 214], [104, 168], [64, 150], [0, 158],
 ];
 
+/** the school tracksuit (outfit "uniform"), front: white body, blue yoke with a white piping, zip, school badge,
+ *  ribbed hem and a stand-up collar */
+function uniformFront(ctx: Ctx, seed: number) {
+  shaded(ctx, () => blob(ctx, TORSO, seed + 1, 1.3), K.uni, () => {
+    // cel shadow on the right side + under the chest
+    blob(ctx, [[60, 150], [140, 170], [150, 460], [70, 460], [90, 330], [70, 220]], seed + 2, 1.5);
+    paint(ctx, K.uniSh, null);
+    // the blue yoke over the shoulders, its lower edge piped white
+    poly(ctx, [[-160, 120], [160, 120], [160, 222], [80, 236], [0, 240], [-80, 236], [-160, 222]], seed + 3, 1);
+    paint(ctx, K.uniBlue, null);
+    blob(ctx, [[60, 150], [160, 160], [160, 226], [80, 236]], seed + 4, 1);
+    paint(ctx, K.uniBlueDk, null);
+    inkLine(ctx, [[-150, 226], [-80, 240], [0, 244], [80, 240], [150, 226]], seed + 5, 5, K.uni);
+    inkLine(ctx, [[-150, 232], [-80, 246], [0, 250], [80, 246], [150, 232]], seed + 6, 1.8, "rgba(0,0,0,0.3)");
+    // hem band
+    poly(ctx, [[-150, 410], [150, 410], [150, 470], [-150, 470]], seed + 7, 1);
+    paint(ctx, K.uniBlue, null);
+    inkLine(ctx, [[-134, 412], [0, 418], [134, 412]], seed + 8, 3.5);
+    for (let i = -6; i <= 6; i++) inkLine(ctx, [[i * 20, 418], [i * 20, 438]], seed + 9 + i, 1.6, "rgba(0,0,0,0.3)");
+    // the zip, and a small badge on his left chest
+    inkLine(ctx, [[0, 176], [2, 300], [0, 412]], seed + 20, 3, "#8b919c");
+    for (let y = 186; y < 404; y += 14) inkLine(ctx, [[-4, y], [4, y]], seed + 21 + y, 1.4, "#8b919c");
+    blob(ctx, [[52, 270], [84, 270], [84, 292], [68, 306], [52, 292]], seed + 22, 0.6);
+    paint(ctx, K.uniBlue, C.ink, 2.4);
+    inkLine(ctx, [[60, 282], [76, 282]], seed + 23, 2, K.uni);
+    // folds
+    inkLine(ctx, [[-120, 260], [-96, 284], [-92, 316]], seed + 24, 2.2, K.uniSh);
+    inkLine(ctx, [[-40, 330], [-12, 338], [18, 332]], seed + 25, 2, K.uniSh);
+  }, C.ink, 6);
+  // stand-up collar with the zip pull
+  blob(ctx, [[-76, 140], [0, 156], [76, 140], [80, 178], [0, 194], [-80, 178]], seed + 26, 1);
+  paint(ctx, K.uniBlue, C.ink, 5);
+  inkLine(ctx, [[-72, 146], [0, 162], [72, 146]], seed + 27, 2.4, K.uni);
+  blob(ctx, [[-5, 186], [5, 186], [6, 212], [-6, 212]], seed + 28, 0.4);
+  paint(ctx, "#c9ced6", C.ink, 2.2);
+}
+/** the tracksuit from behind: the yoke across the upper back and the back of the collar */
+function uniformBack(ctx: Ctx, seed: number) {
+  shaded(ctx, () => blob(ctx, TORSO, seed + 1, 1.3), K.uni, () => {
+    blob(ctx, [[60, 150], [140, 170], [150, 460], [80, 460], [96, 300]], seed + 2, 1.5);
+    paint(ctx, K.uniSh, null);
+    poly(ctx, [[-160, 120], [160, 120], [160, 230], [0, 252], [-160, 230]], seed + 3, 1);
+    paint(ctx, K.uniBlue, null);
+    blob(ctx, [[64, 150], [160, 162], [160, 232], [96, 242]], seed + 4, 1);
+    paint(ctx, K.uniBlueDk, null);
+    inkLine(ctx, [[-150, 234], [0, 256], [150, 234]], seed + 5, 5, K.uni);
+    inkLine(ctx, [[-150, 240], [0, 262], [150, 240]], seed + 6, 1.8, "rgba(0,0,0,0.3)");
+    poly(ctx, [[-150, 410], [150, 410], [150, 470], [-150, 470]], seed + 7, 1);
+    paint(ctx, K.uniBlue, null);
+    inkLine(ctx, [[-134, 412], [0, 418], [134, 412]], seed + 8, 3.5);
+    // a crease down the back
+    inkLine(ctx, [[-20, 270], [-14, 330], [-22, 392]], seed + 9, 2, K.uniSh);
+  }, C.ink, 6);
+  blob(ctx, [[-72, 138], [0, 148], [72, 138], [74, 168], [0, 178], [-74, 168]], seed + 10, 1);
+  paint(ctx, K.uniBlue, C.ink, 5);
+  inkLine(ctx, [[-68, 142], [0, 152], [68, 142]], seed + 11, 2.4, K.uni);
+}
+
 function torsoFront(ctx: Ctx, p: KidPose, seed: number) {
+  if (p.outfit === "uniform") return uniformFront(ctx, seed);
   const rider = p.outfit === "rider";
   const col = rider ? K.rider : K.hood,
     dk = rider ? K.riderDk : K.hoodDk;
@@ -890,6 +1077,7 @@ function torsoFront(ctx: Ctx, p: KidPose, seed: number) {
 }
 
 function torsoBack(ctx: Ctx, p: KidPose, seed: number) {
+  if (p.outfit === "uniform") return uniformBack(ctx, seed);
   const rider = p.outfit === "rider";
   const col = rider ? K.rider : K.hood,
     dk = rider ? K.riderDk : K.hoodDk;
@@ -1215,6 +1403,24 @@ function girlSkirt(ctx: Ctx, p: KidPose, seed: number) {
   }, C.ink, 5.5);
 }
 
+/** The red string on his left wrist (bracelet "red": new, "faded": worn for years): a cord just past the cuff, a knot
+ *  and two short loose ends. Wrist `w`, forearm direction `ang` (head units). */
+function redString(ctx: Ctx, w: Pt, ang: number, col: string, seed: number) {
+  ctx.save();
+  ctx.translate(w[0], w[1]);
+  ctx.rotate(ang);
+  const band: Pt[] = [[5, -25], [9, -9], [9, 9], [5, 25]];
+  curve(ctx, band, seed, 0.5);
+  paint(ctx, null, C.ink, 10);
+  curve(ctx, band, seed, 0.5);
+  paint(ctx, null, col, 6);
+  oval(ctx, 10, 12, 5.5, 5, seed + 1, 0.3);
+  paint(ctx, col, C.ink, 2.4);
+  inkLine(ctx, [[12, 16], [19, 24], [17, 32]], seed + 2, 3.2, col, 0.4);
+  inkLine(ctx, [[9, 17], [8, 27], [12, 33]], seed + 3, 3.2, col, 0.4);
+  ctx.restore();
+}
+
 // ---------------------------------------------------------------- public
 /** A single hand in design space (for close-ups): wrist at (x, y), pointing along ang. */
 export function drawHand(ctx: Ctx, x: number, y: number, s: number, ang: number, shape: HandShape, mirror = false, bandaid = false, seed = 1900, girl = false) {
@@ -1280,6 +1486,11 @@ export function drawKid(ctx: Ctx, x: number, y: number, s: number, p: KidPose = 
       hand(ctx, al.wrist, al.ang, L.shape === "hidden" ? "hidden" : "relax", false, seed + 280, false, sk);
       hand(ctx, ar.wrist, ar.ang, R.shape === "hidden" ? "hidden" : "relax", true, seed + 290, false, sk);
     }
+    // his left wrist: on screen right from the front, on screen left from behind
+    if (!girl && p.bracelet && p.bracelet !== "none") {
+      const [arm, spec] = back ? [al, L] : [ar, R];
+      if (spec.shape !== "hidden") redString(ctx, arm.wrist, arm.ang, p.bracelet === "red" ? K.red : K.redFaded, seed + 300);
+    }
   }
   if (back) headBack(ctx, p, seed);
   else headFront(ctx, p, seed);
@@ -1307,6 +1518,8 @@ export const resources = defineResources({
       生日帽: { hat: true, eyes: "open", mouth: "smile" },
       走路: { body: "full", legs: "walk", arms: "pockets" },
       外卖骑手: { body: "full", outfit: "rider", helmet: true, eyes: "open" },
+      上学时短发校服: { body: "full", hair: "short", outfit: "uniform", bracelet: "red", eyes: "open" },
+      短发校服背影: { body: "full", view: "back", hair: "short", outfit: "uniform", bracelet: "red", arms: "custom", handL: [-250, 330], bendL: 1 },
       背影: { body: "full", view: "back" },
       淋雨: { wet: 1, eyes: "sad" },
       戴耳机: { earbuds: true, arms: "phone" },
