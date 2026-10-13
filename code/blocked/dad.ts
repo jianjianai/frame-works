@@ -771,7 +771,7 @@ export const resources = defineResources({
         drawDad(ctx, 350, 300, 1, {
           ...p,
           tap: p.arms === "type" ? 0.5 + 0.5 * Math.sin(t * 9) : p.tap,
-          holding: hands ? (k) => (p.arms === "mouth" ? phoneBack(k, -70, 470, 130, 240, 0.1) : phoneBack(k, -10, 400, 150, 270, -0.08)) : undefined,
+          holding: hands ? (k) => (p.arms === "mouth" ? phoneBack(k, -70, 470, 130, 240, 0.1, 0, { detailed: p.frontDetails, caseColor: "#252d35", cameraColor: "#343e47" }) : phoneBack(k, -10, 400, 150, 270, -0.08, 0, { detailed: p.frontDetails, caseColor: "#252d35", cameraColor: "#343e47" })) : undefined,
         });
       },
     },
