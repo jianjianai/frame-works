@@ -3,16 +3,16 @@
 // 发出「爸，这么晚还不睡？」→ 岗亭里他的手机亮了 → 他的脸 → 拉出窗外，雪夜里亮着的岗亭。
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase } from "@frame/engine/math";
-import { C, Ctx, H, W, backOut, blob, camera, designScene, easeInOut, easeOut, fillBg, filtered, flash, glow, oldFilm, oldScreenCut, paint, smearV } from "@materials/s0rrow/code/draw";
+import { C, Ctx, F, H, W, backOut, blob, camera, designScene, easeInOut, easeOut, fillBg, filtered, flash, glow, litFigure, measure, oldFilm, oldScreenCut, paint, smearV } from "@materials/s0rrow/code/draw";
 import { phoneBack } from "@materials/s0rrow/code/phone";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { hahas } from "@materials/s0rrow/code/people";
 import { SHOT, WORD, at } from "./timeline";
 import { ACC_B, DAD_CALLS_HER, MOMENT_COMMENT_Y, PERM_ROW, SHE_CALLS_DAD, TOGGLE_AT, SEND_AT, slide, wxContact, dadLock, vidBanner, vidPost, couplePhoto, wxBanner, wxChat, wxMoment, wxPermission } from "./ui";
-import { boothFront, boothOutside, deskTop, dorm, drawDad, herRoomShade, herRoomSnow, roomBokeh, roommates } from "./world";
+import { dorm, herFace, herPhoneBack, lumpInBed, roomBokeh, roommates } from "./world";
+import { boothFront, boothOutside, deskTop } from "@materials/s0rrow/code/blocked/booth";
+import { drawDad } from "@materials/s0rrow/code/blocked/dad";
 import { aim, aimLerp, drawPhone, tap, timeCard, whip } from "./shots";
-import { F } from "@materials/s0rrow/code/draw";
-import { measure } from "@materials/s0rrow/code/draw";
 
 /** visual.json: act3 starts on beat 67. */
 export const ACT3_START = 32.27483;
@@ -46,16 +46,8 @@ function draw(c: Ctx, abs: number) {
 /** 16 · the dark room; she is a lump under the duvet; the phone on the pillow lights; she peeks out. */
 function shot16(c: Ctx, abs: number, t0: number) {
   const u = abs - t0;
-  camera(c, 540, 760, 1.35, 0, 0, 120);
-  herRoomSnow(c, abs, { lamp: 0 });
-  const peek = easeOut(phase(u, 0.35, 0.75));
-  drawKid(c, 300, 820 - 90 * peek, 0.95, { who: "girl", outfit: "pajamas", body: "head", eyes: peek > 0.5 ? "wide" : "tired", look: [0.6, 0.5] });
-  // the duvet pulled over her
-  blob(c, [[-80, 860], [200, 800], [460, 820], [640, 900], [660, 1180], [-80, 1180]], 6301, 3);
-  paint(c, "#f2a7bd", C.ink, 6);
-  herRoomShade(c, abs, { lamp: 0, phone: [470, 900, 0.9] });
-  // the phone lying lit on the pillow
-  glow(c, 470, 880, 260, "rgba(160,190,255,0.8)");
+  camera(c, 540, 760, 1.35 + 0.05 * phase(u, 0, 0.8), 0, 0, 120);
+  lumpInBed(c, abs, easeOut(phase(u, 0.28, 0.66)), phase(u, 0.02, 0.12));
 }
 
 /** where 「多穿点」 sits on her phone's banner, and on the memory's comment (screen units, the middle of the word) */
@@ -121,7 +113,8 @@ function memory(c: Ctx, abs: number, end: number) {
       const laugh = phase(abs, dormAt + 0.2, dormAt + 0.5);
       roommates(k, abs, laugh);
       const hide = phase(abs, dormAt + 0.7, dormAt + 1.0);
-      drawKid(k, 540, 820, 1.0, { who: "girl", outfit: "uniform", body: "bust", eyes: hide > 0.5 ? "shut" : "open", mouth: hide > 0.5 ? "bite" : "o", blush: 0.4 + 0.6 * hide, arms: "phone", headY: 10 * hide });
+      // she presses her phone to her chest, screen in, so they can't read any more
+      drawKid(k, 540, 820, 1.0, { who: "girl", outfit: "uniform", body: "bust", eyes: hide > 0.5 ? "shut" : "open", mouth: hide > 0.5 ? "bite" : "o", blush: 0.4 + 0.6 * hide, arms: "phone", headY: 10 * hide, grip: (q) => herPhoneBack(q, 0, 316 - 20 * hide, 96, 176, 0.04) });
       hahas(k, 540, 560, 360, laugh, 971, F.cn, 4);
     } else {
       fillBg(k, "#f3d9b0");
@@ -146,13 +139,8 @@ function shot18(c: Ctx, abs: number, t0: number) {
 /** 19 · straight out of the memory: her face, crying. */
 function shot19(c: Ctx, abs: number, t0: number) {
   const u = abs - t0;
-  filtered(c, "blur(6px) brightness(0.55)", (k) => {
-    camera(k, 540, 620, 1.9, 0, 0, 120);
-    herRoomSnow(k, abs, { lamp: 0 });
-  }, "s19bg");
   camera(c, 540, 780, 1 + 0.06 * phase(u, 0, 1));
-  drawKid(c, 540, 780, 1.6, { who: "girl", outfit: "pajamas", body: "bust", eyes: "teary", mouth: "wobble", brows: "sad", tears: 0.3 + 0.7 * phase(u, 0, 0.7), headY: 4 * Math.sin(u * 14), arms: "phone" });
-  glow(c, 540, 1300, 700, "rgba(150,180,255,0.4)");
+  herFace(c, abs, { lamp: 0, top: 1070, grip: 1, s: 1.6, pose: { eyes: "teary", mouth: "wobble", brows: "sad", tears: 0.3 + 0.7 * phase(u, 0, 0.7), headY: 4 * Math.sin(u * 14) } });
 }
 
 /** 20 · the chat with 爸爸: his unanswered 「吃饭了吗🌹」 「降温了 多穿点🌹」; she sends 「爸，这么晚还不睡？」. */
@@ -209,23 +197,46 @@ function shot21(c: Ctx, abs: number, t0: number) {
   }, { old: true, buzz: abs > drop && abs < drop + 0.4 ? 1 - (abs - drop) / 0.4 : 0 });
 }
 
-/** 21b · his face: stunned, then the tears, then he laughs. */
+/** 21b · his face as her message sinks in: stunned (eyes wide, mouth open) → his hand over his mouth, the tears
+ *  coming → he laughs through them. Lit by the phone in his hands. */
 function shot21b(c: Ctx, abs: number, t0: number) {
   const u = abs - t0;
-  boothFront(c, abs, { blur: 6 });
-  camera(c, 540, 760, 1 + 0.12 * easeInOut(phase(u, 0, 2.2)));
-  const face = u < 0.6 ? "o" : u < 1.5 ? "sad" : "laugh";
-  drawDad(c, 540, 740, 1.5, { face, tilt: u < 1.5 ? 0.03 : -0.05, tears: phase(u, 0.7, 1.4) });
-  glow(c, 540, 1180, 600, "rgba(150,180,255,0.45)");
-  phoneBack(c, 540, 1440, 300, 560, -0.05, 0);
+  boothFront(c, abs, { blur: 7 });
+  c.fillStyle = "rgba(6,8,20,0.4)";
+  c.fillRect(-60, -60, 1200, 2040);
+  camera(c, 540, 700, 1 + 0.12 * easeInOut(phase(u, 0, 2.2)));
+  const stage = u < 0.55 ? 0 : u < 1.45 ? 1 : 2;
+  const pose =
+    stage === 0
+      ? { eyes: "wide" as const, brows: "up" as const, mouth: "o" as const, arms: "phone" as const }
+      : stage === 1
+        ? { eyes: "teary" as const, brows: "sad" as const, mouth: "wobble" as const, arms: "mouth" as const }
+        : { eyes: "happy" as const, mouth: "laugh" as const, arms: "phone" as const };
+  const phoneHeld = (q: Ctx) => (stage === 1 ? phoneBack(q, -70, 500, 140, 260, 0.2, 0) : phoneBack(q, 0, 420, 150, 270, 0, 0));
+  const shake = stage === 2 ? Math.sin(u * 22) * 4 : 0;
+  litFigure(c, (k) => drawDad(k, 540 + shake, 600, 1.42, { coat: true, ...pose, tears: phase(u, 0.6, 1.3), tilt: stage === 2 ? -0.05 : 0.02, holding: phoneHeld }), {
+    shade: 0.28,
+    lights: [
+      { x: 540, y: 1060, r: 430, rgb: "160,195,255", a: 0.4 },
+      { x: 1040, y: 300, r: 520, rgb: "255,170,90", a: 0.15 + 0.12 * (stage === 2 ? 1 : 0) },
+    ],
+    rim: { ux: 1, uy: -0.4, rgb: "255,190,120", a: 0.5 },
+  });
 }
 
-/** 22 · out through the booth window into the snow: the small warm booth, him bowed over the phone; the end. */
+/** 22 · out through the booth window into the snow: the small warm booth, him bowed over the phone typing his reply
+ *  with one finger, smiling; the end. */
 function shot22(c: Ctx, abs: number, t0: number) {
   const e = easeInOut(phase(abs, t0, t0 + 1.9));
   const z = 2.6 * Math.pow(1 / 2.6, e);
   camera(c, 590, 960, z, 0, 0, 130 * e);
-  boothOutside(c, abs);
+  const u = abs - t0;
+  const tapK = Math.max(0, Math.sin(u * 9)) ** 3;
+  boothOutside(c, abs, (k) => {
+    litFigure(k, (q) => drawDad(q, 590, 925, 0.4, { coat: true, eyes: "happy", mouth: "smile", arms: "type", tap: tapK, holding: (r) => phoneBack(r, -10, 400, 150, 270, -0.08, 0) }), {
+      lights: [{ x: 586, y: 1060, r: 200, rgb: "170,200,255", a: 0.45 }],
+    });
+  });
   void H;
   void W;
 }

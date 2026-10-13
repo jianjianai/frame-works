@@ -3,13 +3,12 @@
 // → 关灯 → 又一个灰头像：「那个男生配不上你🌹」→ 锁屏，黑屏里她惊恐的脸。
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase } from "@frame/engine/math";
-import { C, Ctx, H, W, backOut, blob, camera, designScene, easeInOut, easeOut, fillBg, filtered, glow, paint, smear, smearV } from "@materials/s0rrow/code/draw";
+import { C, Ctx, H, W, backOut, blob, camera, designScene, easeInOut, easeOut, fillBg, filtered, glow, litFigure, paint, smear, smearV } from "@materials/s0rrow/code/draw";
 import { phoneBack } from "@materials/s0rrow/code/phone";
-import { herBlanket } from "@materials/s0rrow/code/places";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { SHOT, WORD, at } from "./timeline";
 import { ACC_A, ACC_B, HISTORY_END, MENU_AT, POST_BTN, ROW_B, couplePhoto, pulseBox, say, snowPhoto, vidBanner, vidBlock, vidComments, vidCompose, vidFollowing, vidPost, vidProfile, slide } from "./ui";
-import { herInBed, herRoomShade, herRoomSnow, roomBokeh } from "./world";
+import { LAMP_AT, bedFromAbove, herFace, herInBed, herPhoneBack, herRoomSnow, lapDuvet, roomBokeh } from "./world";
 import { aim, aimLerp, drawPhone, tap, whip, type PhoneSpec } from "./shots";
 import { pullOut } from "./journey";
 
@@ -164,21 +163,11 @@ function shot3(c: Ctx, abs: number, t0: number, end: number) {
     (k) => {
       k.save();
       k.translate(0, dy);
-      // the room, out of focus behind her
-      filtered(k, "blur(5px)", (b) => {
-        camera(b, 540, 620, 1.9, 0, 0, 120);
-        herRoomSnow(b, abs, { lamp: 1 });
-      }, "s3room");
       const push = 1 + 0.08 * backOut(phase(abs, t0 + 0.3, t0 + 0.5));
       camera(k, 540, 760, push);
+      // she clutches the duvet and pulls it up to her nose, eyes darting
       const up = easeOut(phase(abs, t0 + 0.1, t0 + 0.55));
-      herInBed(k, 540, 780, 1.55, { eyes: "wide", mouth: "o", look: [0.25 * Math.sin((abs - t0) * 9), 0.55], arms: "down", blush: 0 });
-      // the duvet, pulled up to her nose
-      const top = 1010 - 125 * up;
-      blob(k, [[-80, top + 40], [300, top - 10], [560, top + 10], [800, top - 6], [1160, top + 30], [1160, H + 80], [-80, H + 80]], 6101, 2);
-      paint(k, "#f2a7bd", C.ink, 7);
-      // phone light from below
-      glow(k, 540, 1300, 760, "rgba(140,170,255,0.38)");
+      herFace(k, abs, { lamp: 1, top: 1030 - 140 * up, grip: up, pose: { eyes: "wide", mouth: "o", brows: "up", look: [0.25 * Math.sin((abs - t0) * 9), 0.55], blush: 0 } });
       k.restore();
     },
     sm,
@@ -245,48 +234,134 @@ function shot5(c: Ctx, abs: number, t0: number) {
 
 /** 6 · she lets out a breath, puts the phone face down, the lamp goes off. */
 function shot6(c: Ctx, abs: number, t0: number) {
-  const off = at(21); // lamp off on the beat
+  const off = at(21); // lamp off on the beat (the switch's click is in audio.json)
   const lamp = abs < off ? 1 : 0;
   const u = abs - t0;
+  const k = off - t0; // when the lamp goes off, in shot time
   camera(c, 540, 700, 1.25 + 0.04 * phase(u, 0, 1.4), 0, 0, 160);
   herRoomSnow(c, abs, { lamp });
-  const holding = u < 0.45;
-  herInBed(c, 540, 640, 0.95, { eyes: u < 0.3 ? "sad" : u < 0.9 ? "shut" : "tired", mouth: u < 0.9 ? "o" : "flat", arms: holding ? "phone" : "down", headY: u > 0.2 && u < 0.9 ? 8 : 0 });
-  herBlanket(c);
-  herRoomShade(c, abs, { lamp, phone: holding ? [560, 900, 0.6] : undefined });
+  if (!lamp) {
+    c.fillStyle = "rgba(6,6,20,0.6)";
+    c.fillRect(-60, -60, W + 120, H + 120);
+    glow(c, 830, 470, 380, "rgba(110,140,230,0.28)");
+    glow(c, LAMP_AT[0], LAMP_AT[1] + 20, 60, "rgba(255,170,90,0.6)", 1 - phase(abs, off, off + 0.35));
+  }
+  // her hands: both on the phone → the left lays it face down on the pillow beside her while the right reaches for
+  // the lamp → both back under the duvet
+  const lerp2 = (a: [number, number], b: [number, number], e: number): [number, number] => [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e];
+  const LAMP_R: [number, number] = [(LAMP_AT[0] - HX) / HS, (LAMP_AT[1] + 40 - HY) / HS];
+  const put = easeInOut(phase(u, 0.28, 0.56)),
+    settle = easeInOut(phase(u, 0.62, 0.95)),
+    reach = easeInOut(phase(u, 0.42, k - 0.02)),
+    back = easeInOut(phase(u, k + 0.18, k + 0.6));
+  const handL = settle > 0 ? lerp2(PILLOW_L, REST_L, settle) : lerp2([-58, 330], PILLOW_L, put);
+  const handR = back > 0 ? lerp2(LAMP_R, REST_R, back) : lerp2([58, 330], LAMP_R, reach);
+  const holding = put < 1;
+  // the phone, turning flat as it goes down onto the pillow (head units, in her hand's space)
+  const phoneIn = (q: Ctx, e: number, p: [number, number]) => {
+    q.save();
+    q.translate(p[0] + 40 * (1 - e), p[1] - 10);
+    q.scale(1, 1 - 0.58 * e);
+    herPhoneBack(q, 0, 0, 92, 176, -0.1 + (Math.PI / 2 + 0.35) * e);
+    q.restore();
+  };
+  if (!holding) {
+    c.save();
+    c.translate(HX, HY);
+    c.scale(HS, HS);
+    phoneIn(c, 1, PILLOW_L);
+    c.restore();
+  }
+  const her = (q: Ctx) =>
+    herInBed(q, HX, HY, HS, {
+      eyes: u < 0.3 ? "shut" : "tired",
+      mouth: u < 0.3 ? "o" : "flat",
+      look: u >= k + 0.1 ? [0.6, -0.4] : reach > 0.3 ? [0.9, -0.1] : put > 0 ? [-0.6, 0.5] : [0.1, 0.7],
+      headY: u < 0.3 ? 6 : 0,
+      tilt: reach > 0 && back < 1 ? 0.08 : 0,
+      arms: "custom",
+      handL,
+      handR,
+      shapeL: holding ? "hold" : "relax",
+      shapeR: reach === 0 ? "hold" : back < 0.5 ? "flat" : "relax",
+      grip: (q) => holding && phoneIn(q, put, put > 0 ? handL : [-18, 330]),
+    });
+  if (lamp)
+    litFigure(c, her, { shade: 0.08, shadeCol: "rgb(70,30,40)", lights: [{ x: LAMP_AT[0], y: LAMP_AT[1], r: 620, rgb: "255,186,110", a: 0.32 }], rim: { ux: 1, uy: -0.25, rgb: "255,205,150", a: 0.5 } });
+  else
+    litFigure(c, her, { shade: 0.5, shadeCol: "rgb(12,14,40)", lights: [{ x: 880, y: 420, r: 760, rgb: "120,150,240", a: 0.22 }], rim: { ux: 0.7, uy: -0.7, rgb: "170,195,255", a: 0.6 } });
+  lapDuvet(c, 1 - lamp);
 }
+/** where she sits in shot 6 (head centre, scale) */
+const HX = 470,
+  HY = 640,
+  HS = 0.95;
+/** her hands in shot 6 (head units): the phone goes down on the pillow at her left; at rest they're under the duvet */
+const PILLOW_L: [number, number] = [-232, 190],
+  REST_L: [number, number] = [-70, 420],
+  REST_R: [number, number] = [70, 420];
 
-/** 7 · the dark; the phone face down on the pillow lights round its edges and buzzes; she turns it over. */
+/** 7 · the dark, from straight above: her phone face down on the pillow; light leaks out round its edges onto the
+ *  pillowcase and it buzzes; it turns over (the screen's light floods the pillow). */
 function shot7(c: Ctx, abs: number, t0: number, end: number) {
   const u = abs - t0;
   const z = 1 + 0.25 * easeInOut(phase(u, 0, end - t0));
-  fillBg(c, "#0c0b16");
   camera(c, 540, 900, z);
-  // pillow and duvet from above
-  blob(c, [[120, 520], [960, 500], [1000, 1300], [90, 1320]], 6201, 3);
-  paint(c, "#3a2f45", C.ink, 6);
-  blob(c, [[-60, 1250], [1140, 1200], [1140, 2000], [-60, 2000]], 6202, 3);
-  paint(c, "#4a2b3a", C.ink, 6);
-  const lit = abs >= t0 + 0.0;
-  const flip = phase(u, 0.75, 1.05);
+  // the bed at the phone's scale: the pillow fills the frame
+  c.save();
+  c.translate(540, 900);
+  c.scale(1.9, 1.9);
+  c.translate(-540, -900);
+  bedFromAbove(c, abs);
+  c.restore();
+  const flip = easeInOut(phase(u, 0.75, 1.05));
   const sx = Math.cos(flip * Math.PI);
   const buzz = u < 0.6 ? 1 - u / 0.6 : 0;
+  const jx = buzz > 0 ? Math.sin(abs * 90) * 6 * buzz : 0;
+  const rot = -0.25 + 0.25 * flip;
+  // light spilling onto the pillowcase (a rim round the case while face down, a flood once it's up)
   c.save();
-  c.translate(540 + (buzz > 0 ? Math.sin(abs * 90) * 6 * buzz : 0), 900);
-  c.rotate(-0.25 + 0.25 * flip);
-  c.scale(Math.abs(sx) < 0.02 ? 0.02 : sx, 1);
+  c.globalCompositeOperation = "lighter";
+  glow(c, 540 + jx, 900, 430 + 380 * flip, "rgba(110,140,230,0.55)", 0.7 + 0.3 * flip);
+  c.restore();
+  c.save();
+  c.translate(540 + jx, 900);
+  c.rotate(rot);
+  const w = Math.abs(sx) < 0.02 ? 0.02 : sx;
+  // contact shadow (narrows with the phone as it turns on its edge)
+  c.save();
+  c.scale(Math.abs(w), 1);
+  c.fillStyle = `rgba(4,4,14,${(0.4 * (0.3 + 0.7 * Math.abs(w))).toFixed(3)})`;
+  rrPath(c, -170 + 12, -345 + 16, 340, 690, 52);
+  c.fill();
+  c.restore();
+  c.scale(w, 1);
   if (sx > 0) {
-    if (lit) glow(c, 0, 0, 380, "rgba(150,180,255,0.55)");
-    phoneBack(c, 0, 0, 330, 680, 0, 0);
+    // the glow line round the edges of the case, where the screen meets the pillow
+    c.save();
+    c.globalCompositeOperation = "lighter";
+    c.strokeStyle = "rgba(170,200,255,0.55)";
+    c.lineWidth = 16;
+    rrPath(c, -172, -347, 344, 694, 54);
+    c.stroke();
+    c.restore();
+    herPhoneBack(c, 0, 0, 330, 680);
+    // the back faces up into the dark: only the leak round its edges lights it
+    c.fillStyle = "rgba(10,8,26,0.42)";
+    rrPath(c, -165, -340, 330, 680, 52);
+    c.fill();
   } else {
     c.scale(-1, 1);
-    glow(c, 0, 0, 520, "rgba(150,180,255,0.6)");
     drawPhone(c, abs, { cx: 0, cy: 0, s: 0.55 }, (p) => {
       vidPost(p, { time: "02:49", photo: couplePhoto(false), caption: "周末～", ago: "3小时前" });
       vidBanner(p, phase(u, 1.05, 1.3), { name: ACC_B, body: "那个男生配不上你", rose: true });
     });
   }
   c.restore();
+}
+function rrPath(c: Ctx, x: number, y: number, w: number, h: number, r: number) {
+  c.beginPath();
+  c.roundRect(x, y, w, h, r);
 }
 
 /** 8 · the new message: the grey avatar again, on her photo with her boyfriend — the camera rushes onto the banner
@@ -316,16 +391,20 @@ function shot9(c: Ctx, abs: number, t0: number) {
 const ACT2_AT = 15.41955;
 export function faceScared(c: Ctx, abs: number, t0: number) {
   const u = abs - t0;
-  filtered(c, "blur(6px) brightness(0.45)", (b) => {
-    camera(b, 540, 620, 1.9, 0, 0, 120);
-    herRoomSnow(b, abs, { lamp: 0 });
-  }, "s9room");
   camera(c, 540, 760, 1.04 + 0.1 * easeOut(phase(u, 0, 1.2)));
   // surprise first (brows up, a jolt back), then fear: brows knit, she shrinks down and trembles
   const jolt = backOut(phase(u, 0, 0.18)) * (1 - phase(u, 0.18, 0.5));
   const scared = phase(u, 0.4, 0.6);
   const tremble = scared * Math.sin(abs * 38) * 3;
-  herInBed(c, 540 + tremble, 780 - 26 * jolt + 22 * scared, 1.6, { eyes: "wide", mouth: "o", brows: scared > 0.5 ? "worried" : "up", look: [0.15 * Math.sin(u * 7) * scared, 0.45], headY: 10 * scared, arms: "down" });
+  herFace(c, abs, {
+    lamp: 0,
+    top: 1050 - 30 * scared,
+    grip: scared,
+    x: 540 + tremble,
+    y: 780 - 26 * jolt + 22 * scared,
+    s: 1.6,
+    pose: { eyes: "wide", mouth: "o", brows: scared > 0.5 ? "worried" : "up", look: [0.15 * Math.sin(u * 7) * scared, 0.45], headY: 10 * scared },
+  });
   // a bead of cold sweat
   if (scared > 0) {
     c.save();
@@ -334,7 +413,8 @@ export function faceScared(c: Ctx, abs: number, t0: number) {
     c.strokeStyle = C.ink;
     c.lineWidth = 4;
     c.beginPath();
-    const sx = 690, sy = 770 + 22 * scared + 34 * phase(u, 0.6, 1.2);
+    const sx = 690,
+      sy = 770 + 22 * scared + 34 * phase(u, 0.6, 1.2);
     c.moveTo(sx, sy - 26);
     c.quadraticCurveTo(sx + 18, sy, sx, sy + 12);
     c.quadraticCurveTo(sx - 18, sy, sx, sy - 26);
@@ -342,13 +422,4 @@ export function faceScared(c: Ctx, abs: number, t0: number) {
     c.stroke();
     c.restore();
   }
-  blob(c, [[-80, 1060], [300, 1010], [560, 1030], [800, 1012], [1160, 1050], [1160, H + 80], [-80, H + 80]], 6111, 2);
-  paint(c, "#7a4f66", C.ink, 7);
-  // the phone's cold light from below, the rest of the room dark
-  glow(c, 540, 1250, 820, "rgba(140,170,255,0.5)");
-  const v = c.createRadialGradient(540, 760, 260, 540, 760, 1000);
-  v.addColorStop(0, "rgba(0,0,0,0)");
-  v.addColorStop(1, "rgba(2,3,10,0.7)");
-  c.fillStyle = v;
-  c.fillRect(-60, -60, W + 120, H + 120);
 }

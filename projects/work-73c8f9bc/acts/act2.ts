@@ -3,11 +3,12 @@
 // → 微信「囡囡」的朋友圈只有一条横线 → 他用一根手指打字。
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase } from "@frame/engine/math";
-import { Ctx, camera, designScene, easeInOut, easeOut, fillBg, filtered, flash, glow, smearV, zoomBlur } from "@materials/s0rrow/code/draw";
+import { Ctx, camera, designScene, easeInOut, easeOut, fillBg, filtered, flash, glow, litFigure, smearV, zoomBlur } from "@materials/s0rrow/code/draw";
 import { phone, phoneBack, statusBar } from "@materials/s0rrow/code/phone";
 import { SHOT, WORD, at } from "./timeline";
-import { ACC_B, DAD_CALLS_HER, WALL_FACE, couplePhoto, dadLock, slide, vidPost, wxContact, wxMomentsBlocked } from "./ui";
-import { boothBack, boothFront, dadBack, deskTop, drawDad } from "./world";
+import { ACC_B, DAD_CALLS_HER, WALL_FACE, WALL_S, couplePhoto, dadLock, slide, vidPost, wxContact, wxMomentsBlocked } from "./ui";
+import { boothBack, boothFront, deskTop } from "@materials/s0rrow/code/blocked/booth";
+import { drawDad } from "@materials/s0rrow/code/blocked/dad";
 import { drawPhone, tap, timeCard, whip } from "./shots";
 import { BOOTH_AT, facadeWide, flight } from "./journey";
 import { faceScared } from "./act1";
@@ -129,9 +130,9 @@ function shot10(c: Ctx, abs: number) {
  *  gate outside; he puts the phone down on the desk, rubs his eyes. */
 function shot11(c: Ctx, abs: number, t0: number, end: number) {
   const e = easeInOut(phase(abs, t0, t0 + 1.6));
-  // where the phone sits in the wide shot (in his hands, above his shoulder), then down on the desk
+  // where the phone sits in the wide shot (held up by his face, beside his cap), then down on the desk
   const down = easeInOut(phase(abs, t0 + 1.25, t0 + 1.95));
-  const P = { x: 640 + 30 * down, y: 1000 + 80 * down };
+  const P = { x: 700 + 30 * down, y: 1010 + 70 * down };
   const ps = 0.3;
   const Z0 = 1 / ps;
   const z = Math.pow(Z0, 1 - e);
@@ -150,9 +151,13 @@ function shot11(c: Ctx, abs: number, t0: number, end: number) {
   glow(c, P.x, P.y, 300, "rgba(150,180,255,0.4)");
   phone(c, P.x, P.y, ps, 0, (p) => hisPost(p, Math.min(abs, WORD.kissing + 0.8)));
   c.restore();
-  // him, from behind
-  const rub = phase(abs, t0 + 2.2, t0 + 3.2);
-  dadBack(c, 520, 1240 + 18 * Math.sin(rub * Math.PI), 1.05, 0.8);
+  // him, from behind, dark against the window with a warm rim from the lamp outside; he lets his head drop, sighs
+  const sigh = Math.sin(phase(abs, t0 + 2.1, t0 + 3.4) * Math.PI);
+  litFigure(c, (k) => drawDad(k, 510, 1170 + 10 * sigh, 1.12, { view: "back", coat: true, tilt: 0.04 * sigh, headY: 16 * sigh }), {
+    shade: 0.45,
+    lights: [{ x: P.x, y: P.y, r: 320, rgb: "150,185,255", a: 0.35 * (1 - down) }],
+    rim: { ux: 0.3, uy: -1, rgb: "255,190,120", a: 0.55, width: 8 },
+  });
   c.restore();
   void end;
 }
@@ -190,7 +195,7 @@ function shot12(c: Ctx, abs: number, t0: number, end: number) {
       p.fillRect(0, 0, 600, 1280);
       p.save();
       p.globalAlpha = 0.6 * clamp((abs - off) / 0.35) * (1 - mix);
-      drawDad(p, fx, fy, 1.3, { face: "sad", tilt: 0.04 });
+      drawDad(p, fx, fy, WALL_S, { coat: true, eyes: "tired", look: [0, 0.2], brows: "worried", mouth: "flat", tilt: 0.03 });
       p.restore();
       p.fillStyle = `rgba(4,8,20,${(0.5 * (1 - mix)).toFixed(3)})`;
       p.fillRect(0, 0, 600, 1280);
@@ -234,23 +239,26 @@ function shot14(c: Ctx, abs: number, t0: number) {
 
 /** 15 · his face over the phone, glasses pushed up, typing with one finger. */
 function shot15(c: Ctx, abs: number, t0: number) {
-  boothFront(c, abs, { blur: 6 });
   const u = abs - t0;
-  camera(c, 540, 800, 1 + 0.05 * phase(u, 0, 1.5));
-  drawDad(c, 540, 760, 1.55, { face: "neutral", tilt: 0.05 });
-  // the phone (we see its back) and his one finger tapping
-  glow(c, 540, 1160, 520, "rgba(150,180,255,0.45)");
-  phoneBack(c, 540, 1420, 300, 560, -0.08, 0);
+  const dark = (k: Ctx) => {
+    boothFront(k, abs, { blur: 7 });
+    k.fillStyle = "rgba(6,8,20,0.45)";
+    k.fillRect(-60, -60, 1200, 2040);
+  };
+  dark(c);
+  camera(c, 540, 760, 1 + 0.05 * phase(u, 0, 1.5));
+  // one finger, four slow taps (多 · 穿 · 点 · send)
   const taps = [0.12, 0.47, 0.72, 0.96];
-  const near = taps.some((t) => Math.abs(u - t) < 0.06);
-  c.save();
-  c.fillStyle = "#e9c99a";
-  c.strokeStyle = "#17161a";
-  c.lineWidth = 5;
-  c.beginPath();
-  c.ellipse(560, near ? 1150 : 1120, 34, 40, 0, 0, Math.PI * 2);
-  c.fill();
-  c.stroke();
-  c.restore();
-  fillBg; // keep import used in drafts
+  const tapK = taps.reduce((m, t) => Math.max(m, 1 - Math.min(1, Math.abs(u - t) / 0.07)), 0);
+  const phoneAt: [number, number] = [540 - 10 * 1.42, 600 + 400 * 1.42];
+  litFigure(c, (k) => drawDad(k, 540, 600, 1.42, { coat: true, eyes: "down", brows: "worried", mouth: "press", tilt: 0.04, arms: "type", tap: tapK, holding: (q) => phoneBack(q, -10, 400, 150, 270, -0.08, 0) }), {
+    shade: 0.3,
+    lights: [
+      { x: phoneAt[0], y: phoneAt[1] - 160, r: 430, rgb: "160,195,255", a: 0.4 },
+      { x: 1040, y: 300, r: 520, rgb: "255,170,90", a: 0.18 },
+    ],
+    rim: { ux: 1, uy: -0.4, rgb: "255,190,120", a: 0.45 },
+  });
+  // the screen's light caught in his reading glasses
+  for (const side of [-1, 1]) glow(c, 540 + side * 50 * 1.42, 600 + 42 * 1.42, 60, "rgba(190,215,255,0.5)");
 }

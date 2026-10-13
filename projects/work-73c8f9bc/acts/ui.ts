@@ -2,11 +2,12 @@
 // 关注列表、互动消息、拉黑；微信（浅色）的资料页（朋友圈被屏蔽时只有一条横线）、朋友圈、权限开关、对话框、横幅；
 // 爸爸手机的锁屏（壁纸是他扛着小时候的她）。爸爸的手机字号调到最大（big）、贴膜有裂痕（crackedGlass）。
 import { clamp } from "@frame/engine/math";
-import { C, Ctx, F, blob, hash, inkLine, measure, oval, paint, poly, rr, text } from "@materials/s0rrow/code/draw";
+import { C, Ctx, F, Pt, blob, hash, inkLine, measure, oval, paint, poly, rr, text, tubePts } from "@materials/s0rrow/code/draw";
 import { SH, SW, statusBar } from "@materials/s0rrow/code/phone";
 import { avatar } from "@materials/s0rrow/code/chat";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { drawPerson } from "@materials/s0rrow/code/people";
+import { drawDad } from "@materials/s0rrow/code/blocked/dad";
 
 export { SH, SW };
 
@@ -399,26 +400,76 @@ export const partyPhoto: Photo = (c, x, y, w, h) =>
     drawKid(c, x + w * 0.5, y + h * 0.5, 0.86 * s, { who: "girl", outfit: "uniform", body: "bust", eyes: "happy", mouth: "grin", tilt: 0.08, seed: 863 });
   });
 
-/** His lock-screen wallpaper: young him with little her on his shoulders, a sunny day in the park. His face sits at
- *  (FACE_X, FACE_Y) of the photo (0..1), so his reflection can melt into it. */
-export const WALL_FACE: [number, number] = [0.5, 0.6];
+/** His lock-screen wallpaper: a sunny afternoon in the park twenty years ago — young him (black hair, white shirt,
+ *  laughing) with little her (five, the same sunflower clip) riding on his shoulders, her hands in his hair, his hands
+ *  holding her shins. His face sits at WALL_FACE (0..1 of the photo) at WALL_S, so his reflection can melt into it. */
+export const WALL_FACE: [number, number] = [0.5, 0.64];
+export const WALL_S = 1.15;
 export const wallpaperPhoto: Photo = (c, x, y, w, h) =>
   clipRect(c, x, y, w, h, () => {
+    const sw = w / 600;
+    // sky, a soft sun, round trees, a grassy hill
     const g = c.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, "#8fd0f5");
-    g.addColorStop(0.6, "#d9f0ff");
-    g.addColorStop(1, "#8ccf7e");
+    g.addColorStop(0, "#7cc3ef");
+    g.addColorStop(0.55, "#cfeaf9");
+    g.addColorStop(1, "#f6e7b8");
     c.fillStyle = g;
     c.fillRect(x, y, w, h);
-    c.fillStyle = "#7cc06a";
+    const sun = c.createRadialGradient(x + w * 0.82, y + h * 0.16, 0, x + w * 0.82, y + h * 0.16, w * 0.5);
+    sun.addColorStop(0, "rgba(255,250,215,0.95)");
+    sun.addColorStop(0.2, "rgba(255,240,190,0.55)");
+    sun.addColorStop(1, "rgba(255,240,190,0)");
+    c.fillStyle = sun;
+    c.fillRect(x, y, w, h);
+    for (let i = 0; i < 6; i++) {
+      const tx = x + w * (0.05 + i * 0.19),
+        ty = y + h * (0.6 + (i % 2) * 0.03);
+      oval(c, tx, ty, 70 * sw, 80 * sw, 3700 + i, 1.2);
+      paint(c, i % 2 ? "#7fc06a" : "#69ad5c", "rgba(30,60,30,0.6)", 3 * sw);
+      c.fillStyle = "#6b4a2b";
+      c.fillRect(tx - 6 * sw, ty + 70 * sw, 12 * sw, 60 * sw);
+    }
+    c.fillStyle = "#86c56e";
     c.beginPath();
-    c.ellipse(x + w * 0.5, y + h * 1.02, w * 0.9, h * 0.25, 0, 0, Math.PI * 2);
+    c.ellipse(x + w * 0.5, y + h * 1.08, w * 0.95, h * 0.3, 0, 0, Math.PI * 2);
     c.fill();
-    const s = w / 600;
     const fx = x + w * WALL_FACE[0],
       fy = y + h * WALL_FACE[1];
-    drawPerson(c, fx, fy, 1.3 * s, { x: 0, hair: "short", hairColor: "#1b1715", top: "#f4f2ea", face: "laugh", body: "bust", seed: 871, arms: "up" });
-    drawKid(c, fx, fy - 250 * s, 0.7 * s, { who: "girl", outfit: "pajamas", body: "bust", eyes: "happy", mouth: "laugh", blush: 0.6, arms: "up", seed: 872 });
+    const s = WALL_S * sw;
+    // little her, sitting behind his head (her body hidden by it), legs over his shoulders
+    const kx = fx,
+      ky = fy - 238 * s;
+    drawKid(c, kx, ky, 0.62 * s, { who: "girl", outfit: "pajamas", body: "bust", eyes: "happy", mouth: "laugh", blush: 0.7, arms: "custom", handL: [-60, 300], handR: [60, 300], shapeL: "hidden", shapeR: "hidden", tilt: 0.06, seed: 872 });
+    // him
+    drawDad(c, fx, fy, s, { young: true, eyes: "happy", mouth: "laugh", seed: 871 });
+    // her legs down over his shoulders, her shoes on his chest, his hands round her shins
+    c.save();
+    c.translate(fx, fy);
+    c.scale(s, s);
+    for (const side of [-1, 1]) {
+      const hip: Pt = [side * 118, 96],
+        knee: Pt = [side * 186, 176],
+        foot: Pt = [side * 172, 330];
+      blob(c, tubePts([hip, knee, foot], [64, 56, 48], true, true), 3720 + side, 1);
+      paint(c, "#f3a7bf", C.ink, 5);
+      oval(c, foot[0] + side * 6, foot[1] + 28, 32, 22, 3722 + side, 0.8);
+      paint(c, "#e8343c", C.ink, 4.5);
+      // his hand round her shin
+      oval(c, side * 178, 262, 38, 40, 3724 + side, 0.8);
+      paint(c, "#f1d2a6", C.ink, 4.5);
+      // his sleeve coming up from below to the hand
+      blob(c, tubePts([[side * 236, 520], [side * 226, 400], [side * 188, 298]], [74, 66, 58], true, true), 3726 + side, 1);
+      paint(c, "#f4f2ea", C.ink, 5);
+    }
+    c.restore();
+    // her hands in his hair
+    for (const side of [-1, 1]) {
+      oval(c, fx + side * 66 * s, fy - 118 * s, 28 * s, 28 * s, 3730 + side, 0.8);
+      paint(c, "#f6e1c3", C.ink, 4 * s);
+    }
+    // the warm photo look
+    c.fillStyle = "rgba(255,200,120,0.08)";
+    c.fillRect(x, y, w, h);
   });
 
 // ---------------------------------------------------------------- the short-video app (dark)
