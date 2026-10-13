@@ -1,7 +1,7 @@
 /**
  * draw.ts 里效果和转场的预览（这个文件只放资源声明，函数本身从 draw.ts 导入）：回忆的老胶片 oldFilm 和进回忆的老式屏幕转场 oldScreenCut、
  * 甩镜 smear、冲镜 zoomBlur、白场黑场 flash、高光溢出 bloom、灰色世界 grade、光柱和浮尘 lightShaft / motes、景深 filtered、
- * 手持镜头 handheld、轮廓光 rimFigure、地上和墙上的影子 groundShadow / castShadow、时间卡 card、逐字写出 writeOn。
+ * 手持镜头 handheld、轮廓光 rimFigure、人物打光 litFigure、地上和墙上的影子 groundShadow / castShadow、时间卡 card、逐字写出 writeOn。
  */
 import { z } from "zod";
 import { defineResources, resource } from "@frame/engine/resources";
@@ -23,6 +23,7 @@ import {
   groundShadow,
   handheld,
   lightShaft,
+  litFigure,
   loadFonts,
   motes,
   oldFilm,
@@ -34,6 +35,7 @@ import {
   zoomBlur,
 } from "./draw";
 import { drawKid } from "./kid";
+import { phoneBack } from "./phone";
 import { bedroom, classroom, corridor, cupcake, desk, street } from "./sets";
 
 /** Previews of whole frames: the 1080×1920 design frame. */
@@ -251,6 +253,35 @@ export const resources = defineResources({
       draw(ctx, t, p) {
         beginFrame(ctx, t);
         rimFigure(ctx, (c) => drawKid(c, 400, 260, 1, { body: "full", view: "back" }), Math.cos(p.angle), Math.sin(p.angle), "rgb(255,222,165)", 0.9, 10);
+      },
+    },
+  }),
+  litFigure: resource({
+    kind: "effect",
+    title: "人物打光（暗部 + 点光 + 轮廓光）",
+    description:
+      "夜景里给人物单独打光（《屏蔽》全片的做法）：先画人，再只在人物身上压暗（shade、shadeCol），叠几盏点光（手机在下巴下面的冷光、台灯、路灯；screen 叠加会把盖住的墨线冲灰，半径和强度都要小），最后在朝光的一侧、墨线内侧加一圈轮廓光（rim）。手机照脸：shade 0.3、lights [{ x, y, r: 430, rgb: \"170,195,255\", a: 0.4 }]；关灯后只剩月光：shade 0.5、冷色轮廓光 0.6。房间要在画人之前压暗，画完人再整幅压暗会把轮廓光一起压没。",
+    tags: ["打光", "光影", "人物", "手机光", "台灯", "轮廓光", "夜景", "暗部"],
+    usage: "litFigure(ctx, (c) => drawKid(c, x, y, s, pose), { shade, shadeCol, lights: [{ x, y, r, rgb, a }], rim: { ux, uy, rgb, a, width } })",
+    params: z.object({
+      shade: z.number().min(0).max(1).default(0.3).describe("人物身上的暗部"),
+      phone: z.number().min(0).max(1).default(0.45).describe("手机光（从下巴下面照上来）"),
+      rim: z.number().min(0).max(1).default(0.55).describe("窗外月光的轮廓光"),
+    }),
+    presets: { 关灯后的月光: { shade: 0.5, phone: 0, rim: 0.6 } },
+    preview: {
+      width: 800,
+      height: 1200,
+      background: "#141a33",
+      duration: 2,
+      draw(ctx, t, p) {
+        beginFrame(ctx, t);
+        litFigure(ctx, (c) => drawKid(c, 400, 330, 1.1, { who: "girl", arms: "phone", eyes: "open", look: [0, 0.6], grip: (k) => phoneBack(k, 0, 300, 96, 176, 0) }), {
+          shade: p.shade,
+          shadeCol: "rgb(12,14,40)",
+          lights: p.phone > 0 ? [{ x: 400, y: 720, r: 430, rgb: "170,195,255", a: p.phone }] : [],
+          rim: { ux: 0.75, uy: -0.65, rgb: "170,195,255", a: p.rim },
+        });
       },
     },
   }),
