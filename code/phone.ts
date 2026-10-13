@@ -49,7 +49,102 @@ export function phone(ctx: Ctx, cx: number, cy: number, s: number, rot: number, 
 /** A phone seen from behind, in someone's hand (we see its back while they read it): dark case, the camera bump top
  *  left, the screen's light spilling out round the top edge; `torch` 0..1 lights the flashlight LED, blazing at us.
  *  (cx, cy) = its centre; draw it in the hand's `grip`/`holding` so the fingers go over it. */
-export function phoneBack(ctx: Ctx, cx: number, cy: number, w: number, h: number, rot = 0, torch = 0) {
+/** Optional close-up finish; old calls keep the original dark case. */
+export interface PhoneBackOptions {
+  detailed?: boolean;
+  caseColor?: string;
+  cameraColor?: string;
+  /** Three lenses on a triangular grid; the LED and sensor have their own clear space. */
+  triple?: boolean;
+}
+function detailedPhoneBack(ctx: Ctx, cx: number, cy: number, w: number, h: number, rot: number, torch: number, o: PhoneBackOptions) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(w / 360, w / 360);
+  const hh = h / w * 180;
+  const caseColor = o.caseColor ?? "#262832";
+  const cameraColor = o.cameraColor ?? "#363944";
+  const circle = (x: number, y: number, r: number, fill: string | CanvasGradient, stroke?: string, line = 1) => {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = fill; ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = line; ctx.stroke(); }
+  };
+  const box = (x: number, y: number, bw: number, bh: number, r: number, color: string) => {
+    ctx.fillStyle = color; rr(ctx, x, y, bw, bh, r); ctx.fill();
+  };
+  // Keys are behind the case edge; the raised case has a shallow dark lower lip.
+  for (const [x, y, bh] of [[-187, -hh + 182, 24], [-187, -hh + 230, 60], [-187, -hh + 307, 60], [179, -hh + 257, 103]]) {
+    box(x, y, 9, bh, 4, "#635366");
+    box(x + 1, y + 3, 5, bh - 6, 2, "#b9a3b2");
+  }
+  box(-180, -hh + 7, 360, 2 * hh, 55, "#5b4356");
+  box(-180, -hh, 360, 2 * hh, 55, caseColor);
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 5; ctx.stroke();
+  ctx.save();
+  rr(ctx, -177, -hh + 3, 354, 2 * hh - 6, 52); ctx.clip();
+  const finish = ctx.createLinearGradient(-180, -hh, 180, hh);
+  finish.addColorStop(0, "rgba(255,242,248,0.19)");
+  finish.addColorStop(0.43, "rgba(255,240,248,0.03)");
+  finish.addColorStop(1, "rgba(67,30,57,0.24)");
+  ctx.fillStyle = finish; ctx.fillRect(-180, -hh, 360, 2 * hh);
+  // Low relief rim and inner case seam, neither is an emissive light.
+  rr(ctx, -172, -hh + 8, 344, 2 * hh - 16, 49);
+  ctx.strokeStyle = "rgba(255,227,241,0.5)"; ctx.lineWidth = 3; ctx.stroke();
+  rr(ctx, -164, -hh + 16, 328, 2 * hh - 32, 43);
+  ctx.strokeStyle = "rgba(103,55,81,0.22)"; ctx.lineWidth = 1.5; ctx.stroke();
+  // A few faint scuffs on the case; deterministic and small enough for the hand-drawn finish.
+  ctx.lineCap = "round"; ctx.strokeStyle = "rgba(255,233,243,0.26)"; ctx.lineWidth = 1.4;
+  for (const [x, y, dx, dy] of [[128, -hh + 105, -7, 20], [142, hh - 140, -8, 17], [-136, hh - 91, 8, -14], [75, hh - 55, 18, -4]]) {
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx, y + dy); ctx.stroke();
+  }
+  ctx.restore();
+  // All camera coordinates are relative to this bump, never to the phone width.
+  const b = 156, bx = -148, by = -hh + 30;
+  box(bx + 3, by + 6, b, b, 31, "rgba(41,24,37,0.35)");
+  box(bx, by, b, b, 31, cameraColor);
+  ctx.strokeStyle = "#6e4059"; ctx.lineWidth = 3; ctx.stroke();
+  rr(ctx, bx + 4, by + 4, b - 8, b - 8, 27);
+  ctx.strokeStyle = "rgba(255,222,237,0.42)"; ctx.lineWidth = 1.7; ctx.stroke();
+  const lenses = o.triple ? [[0.29, 0.28], [0.29, 0.72], [0.72, 0.5]] : [[0.3, 0.29], [0.3, 0.71]];
+  const r = b * 0.167;
+  for (const [u, v] of lenses) {
+    const x = bx + b * u, y = by + b * v;
+    circle(x + 1.3, y + 2.6, r + 2, "rgba(45,23,39,0.48)");
+    const metal = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+    metal.addColorStop(0, "#bdafb9"); metal.addColorStop(0.35, "#716574"); metal.addColorStop(1, "#423a4d");
+    circle(x, y, r, metal, "#24202d", 2);
+    circle(x, y, r * 0.79, "#121420", "#c4b7c2", 0.8);
+    const glass = ctx.createRadialGradient(x - r * 0.28, y - r * 0.3, 0, x, y, r * 0.67);
+    glass.addColorStop(0, "#375b75"); glass.addColorStop(0.55, "#182438"); glass.addColorStop(1, "#080d19");
+    circle(x, y, r * 0.63, glass);
+    circle(x + r * 0.05, y + r * 0.03, r * 0.31, "#080d18", "rgba(107,132,158,0.35)", 0.7);
+    ctx.strokeStyle = "rgba(159,191,214,0.65)"; ctx.lineWidth = 1.8;
+    ctx.beginPath(); ctx.arc(x, y, r * 0.73, -2.6, -1.2); ctx.stroke();
+    circle(x - r * 0.3, y - r * 0.34, r * 0.1, "#b6d1e0");
+    circle(x + r * 0.3, y + r * 0.3, r * 0.08, "rgba(106,133,176,0.65)");
+  }
+  const fx = bx + b * 0.72, fy = by + b * (o.triple ? 0.17 : 0.29);
+  circle(fx, fy, b * 0.067, "#e8d9cc", "#926d7e", 1.4);
+  circle(fx, fy, b * 0.042, "#fff0d9");
+  circle(fx - 2, fy - 2, 2, "#fff8ec");
+  circle(bx + b * 0.72, by + b * (o.triple ? 0.84 : 0.71), b * 0.045, "#34343e", "#ad879b", 1.3);
+  circle(bx + b * 0.89, by + b * 0.23, 1.5, "#5f4358");
+  // A small port and speaker holes in the lower edge, seen in the raised case lip.
+  box(-15, hh - 3, 30, 3.2, 1.6, "#5f4358");
+  for (const side of [-1, 1]) for (let i = 0; i < 4; i++) circle(side * (29 + i * 6), hh - 1, 1.2, "#705063");
+  if (torch > 0) {
+    const light = ctx.createRadialGradient(fx, fy, 0, fx, fy, 360 * 1.6);
+    light.addColorStop(0, "rgba(255,255,250," + (0.95 * torch).toFixed(3) + ")");
+    light.addColorStop(0.15, "rgba(240,245,255," + (0.5 * torch).toFixed(3) + ")");
+    light.addColorStop(1, "rgba(220,230,255,0)");
+    ctx.fillStyle = light; ctx.fillRect(fx - 576, fy - 576, 1152, 1152);
+  }
+  ctx.restore();
+}
+
+export function phoneBack(ctx: Ctx, cx: number, cy: number, w: number, h: number, rot = 0, torch = 0, options: PhoneBackOptions = {}) {
+  if (options.detailed) { detailedPhoneBack(ctx, cx, cy, w, h, rot, torch, options); return; }
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(rot);
@@ -793,11 +888,18 @@ export const resources = defineResources({
   }),
   phoneBack: resource({
     kind: "prop",
-    title: "手机背面（手电）",
-    description: "别人拿着看的手机，我们看到背面：深色机身、左上角摄像头、屏幕的光从边上漏出来；torch 打开手电。",
-    tags: ["手机", "背面", "手电"],
-    usage: "phoneBack(ctx, cx, cy, w, h, rot, torch)",
-    params: z.object({ torch: z.number().min(0).max(1).default(0).describe("手电亮度") }),
+    title: "手机背面（手电 / 精细机身）",
+    description: "可选精细保护壳、侧键、双摄或三摄；镜头在模组内对齐，带镜圈、玻璃反光、闪光灯和传感器。默认沿用深色机身；torch 打开手电。",
+    tags: ["手机", "背面", "摄像头", "手机壳", "细节", "手电"],
+    usage: "phoneBack(ctx, cx, cy, w, h, rot, torch, { detailed, caseColor, cameraColor, triple })",
+    params: z.object({
+      torch: z.number().min(0).max(1).default(0).describe("手电亮度"),
+      detailed: z.boolean().default(false).describe("精细机身"),
+      caseColor: z.string().default("#262832").describe("保护壳颜色"),
+      cameraColor: z.string().default("#363944").describe("摄像头底座颜色"),
+      triple: z.boolean().default(false).describe("三摄模组"),
+    }),
+    presets: { 粉色三摄: { detailed: true, triple: true, caseColor: "#e9a5bd", cameraColor: "#cf859f" } },
     preview: {
       width: 600,
       height: 900,
@@ -805,7 +907,7 @@ export const resources = defineResources({
         beginFrame(ctx, t);
         ctx.fillStyle = "#1c1f2b";
         ctx.fillRect(0, 0, 600, 900);
-        phoneBack(ctx, 300, 450, 300, 600, 0.05, p.torch);
+        phoneBack(ctx, 300, 450, 300, 600, 0.05, p.torch, p);
       },
     },
   }),
