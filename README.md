@@ -66,3 +66,4 @@
 - `code/blocked/desk-detail.ts`：来源 原创 Canvas 手绘值班桌精细化，复用 s0rrow 的 draw.ts / kid.ts。；许可 自制
 - `code/blocked/booth-front-detail.ts`：来源 原创 Canvas 岗亭正面精细场景与桌面前景，复用 s0rrow 雪、搪瓷杯和绘图库。；许可 自制
 - `code/dorm.ts`：来源 原创 Canvas 手绘学生宿舍与桌面，复用 s0rrow draw / sets.desk / snow；由 FRAME 制作。；许可 自制
+- `code/blocked/booth-outside-detail.ts`：来源 为《屏蔽》原创雪夜岗亭外景细化，复用原 gateNight、booth-front-detail 和 snow。；许可 自制
