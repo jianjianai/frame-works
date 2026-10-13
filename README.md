@@ -61,3 +61,4 @@
 - `code/bedroom-detail.ts`：来源 为作品 work-73c8f9bc 卧室细节与灯光补全编写；由 places.ts 的 herRoom detailed 参数调用；许可 自制
 - `code/bedroom-detail.ts`：来源 原创 Canvas 手绘卧室，由 places.herRoom 的 detailed 参数调用。；许可 原创
 - `code/couple-photo.ts`：来源 为作品 work-73c8f9bc 手机合照细化原创组合；复用 s0rrow 的 kid.ts 与 cafe.ts。；许可 自制
+- `code/blocked/booth-detail.ts`：来源 为作品 work-73c8f9bc 的岗亭背影镜头原创细化，复用 blocked/booth 的厂门和杯瓶。；许可 自制
