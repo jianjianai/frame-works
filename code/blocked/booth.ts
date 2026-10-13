@@ -17,6 +17,7 @@ import { snow } from "./snow";
 import { detailedBoothBack } from "./booth-detail";
 import { detailedDeskTop } from "./desk-detail";
 import { detailedBoothFront, detailedFrontDesk } from "./booth-front-detail";
+import { detailedBoothOutside } from "./booth-outside-detail";
 
 /** the sodium lamp's colour (r,g,b): light from outside the booth */
 export const LAMP = "255,168,86";
@@ -59,6 +60,7 @@ export const deskOptions = z.object({
 });
 export type DeskOptions = z.input<typeof deskOptions>;
 export const boothOutsideOptions = z.object({
+  detailed: z.boolean().default(false).describe("精细雪夜外景：积雪层次、冷暖反光、窗框结霜、岗亭墙体五金、砖柱伸缩门与完整旧自行车"),
   sign: z.string().default("门卫室").describe("写在窗下蓝色腰线上的字"),
   name: z.string().default("红星机械厂").describe("厂门上的厂名牌"),
   led: z.string().default("出入平安").describe("伸缩门上的 LED 小屏"),
@@ -483,6 +485,7 @@ export function deskTop(c: Ctx, abs: number, o: DeskOptions = {}) {
  *  band, a bulb over the door, his old bicycle; in its warm window `inside` draws him (in the window's own coordinates:
  *  the window spans 430–750 × 830–1080). */
 export function boothOutside(c: Ctx, abs: number, inside: (c: Ctx) => void, o: BoothOutsideOptions = {}) {
+  if (o.detailed) { detailedBoothOutside(c, abs, inside, o, { gate: gateNight }); return; }
   gateNight(c, abs, 60, o);
   // the booth body: white walls with a blue band
   rbox(c, 380, 760, 420, 560, 8, 6400, 1.4);
@@ -649,10 +652,11 @@ export const resources = defineResources({
     kind: "set",
     title: "门卫室外景（雪夜）",
     description:
-      "雪夜里厂门口的门卫室：屋顶厚厚的雪和冰溜子、白墙和写着字的蓝腰线（sign）、门口的灯泡、靠墙的旧自行车，背后是 gateNight。暖色的窗里由 inside 画人（窗在 430–750 × 830–1080，中心 BOOTH_WINDOW）；适合结尾从窗里拉出来的长镜头。",
+      "雪夜里厂门口的门卫室：屋顶厚厚的雪和冰溜子、白墙和写着字的蓝腰线（sign）、门口的灯泡、靠墙的旧自行车，背后是 gateNight。暖色的窗里由 inside 画人（窗在 430–750 × 830–1080，中心 BOOTH_WINDOW）；适合结尾从窗里拉出来的长镜头。 detailed 开启冷蓝雪地、暖窗雪地反光、积雪厚度和冰挂、窗台/玻璃结霜/偏置滑窗、外墙五金/侧门/通风口、厂门砖缝和完整自行车；窗内背景复用 boothFront，inside 只需画人物，前后景雪分层。",
     tags: ["门卫室", "岗亭", "外景", "雪夜", "暖窗", "自行车", "工厂", "结尾"],
-    usage: 'boothOutside(ctx, abs, (k) => drawDad(k, 590, 925, 0.4, { coat: true, arms: "type", holding }), { sign, name, led })',
+    usage: 'boothOutside(ctx, abs, (k) => drawDad(k, 590, 925, 0.4, { coat: true, frontDetails: true, arms: "type", holding }), { detailed: true, sign, name, led })',
     params: boothOutsideOptions,
+    presets: { 精细雪夜结尾: { detailed: true } },
     preview: {
       width: 1080,
       height: 1920,
@@ -660,7 +664,7 @@ export const resources = defineResources({
       prepare: loadFonts,
       draw(ctx, t, p) {
         beginFrame(ctx, t);
-        boothOutside(ctx, t, (k) => drawDad(k, 590, 925, 0.4, { coat: true, eyes: "happy", mouth: "smile", arms: "type", tap: typing(t), holding: heldPhone }), p);
+        boothOutside(ctx, t, (k) => drawDad(k, 590, 925, 0.4, { coat: true, frontDetails: p.detailed, eyes: "happy", mouth: "smile", arms: "type", tap: typing(t), holding: heldPhone }), p);
       },
     },
   }),
