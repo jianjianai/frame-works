@@ -16,6 +16,7 @@ import { drawDad } from "./dad";
 import { snow } from "./snow";
 import { detailedBoothBack } from "./booth-detail";
 import { detailedDeskTop } from "./desk-detail";
+import { detailedBoothFront, detailedFrontDesk } from "./booth-front-detail";
 
 /** the sodium lamp's colour (r,g,b): light from outside the booth */
 export const LAMP = "255,168,86";
@@ -33,6 +34,7 @@ export const boothBackOptions = z.object({
 });
 export type BoothBackOptions = z.input<typeof boothBackOptions>;
 export const boothFrontOptions = z.object({
+  detailed: z.boolean().default(false).describe("精细反打：挂钟、日历、旧画、围巾、结霜侧窗、椅背与取暖器，已有夜景光影"),
   blur: z.number().min(0).max(12).default(0).describe("景深虚化（px），人物近景的背景用 6–8"),
   clock: z.number().min(0).max(24).default(2.8334).describe("挂钟的时间（小时，2.8334 = 2:50）"),
   month: z.string().default("一月").describe("挂历的月份"),
@@ -40,6 +42,11 @@ export const boothFrontOptions = z.object({
   drawing: z.string().default("爸爸").describe("墙上蜡笔画写的字"),
 });
 export type BoothFrontOptions = z.input<typeof boothFrontOptions>;
+export const frontDeskOptions = z.object({
+  y: z.number().min(1100).max(1800).default(1495).describe("前景桌面后沿，放在人物腰部之前遮住半身下沿"),
+  phoneLight: z.number().min(0).max(1).default(1).describe("桌面微弱的手机冷光"),
+});
+export type FrontDeskOptions = z.input<typeof frontDeskOptions>;
 export const deskOptions = z.object({
   detailed: z.boolean().default(false).describe("精细桌面：木纹玻璃、旧相纸、值班本、茶汤、钥匙与冷暖光"),
   phoneLight: z.number().min(0).max(1).default(0).describe("中央手机在玻璃上的弱漏光（0 熄屏，1 亮屏；仅精细版）"),
@@ -295,6 +302,7 @@ export function boothBack(c: Ctx, abs: number, o: BoothBackOptions = {}) {
  *  the side window with snow and the lamp. `blur` softens it (depth of field). */
 export function boothFront(c: Ctx, abs: number, o: BoothFrontOptions = {}) {
   const draw = (k: Ctx) => {
+    if (o.detailed) { detailedBoothFront(k, abs, o); return; }
     fillBg(k, vgrad(k, 0, H, [[0, "#30333f"], [0.62, "#2a2d39"], [0.62, "#253a30"], [1, "#1c2b24"]]));
     // the side window: snow and the orange lamp
     k.save();
@@ -350,6 +358,11 @@ export function boothFront(c: Ctx, abs: number, o: BoothFrontOptions = {}) {
   const b = o.blur ?? 0;
   if (b > 0.2) filtered(c, `blur(${b.toFixed(1)}px)`, draw, "boothFront");
   else draw(c);
+}
+
+/** Reverse-angle foreground table, drawn after the seated figure; mug and log change sides with the camera. */
+export function boothFrontDesk(c: Ctx, abs: number, o: FrontDeskOptions = {}) {
+  detailedFrontDesk(c, abs, o, { mug: enamelMug });
 }
 
 // ---------------------------------------------------------------- the desk from above
@@ -578,11 +591,11 @@ export const resources = defineResources({
     kind: "set",
     title: "门卫室·背墙",
     description:
-      "门卫室里他身后的那面墙（正面拍他时的背景）：挂钟（clock，小时）、红头挂历（month、day）、女儿小时候的蜡笔画（drawing 是画上的字）、钩子上的围巾、侧窗外的雪和路灯、绿墙裙、小太阳的暖光。blur 做景深虚化，人物近景用 6–8；人物在它之后画。",
+      "门卫室里他身后的那面墙（正面拍他时的背景）：挂钟（clock，小时）、红头挂历（month、day）、女儿小时候的蜡笔画（drawing 是画上的字）、钩子上的围巾、侧窗外的雪和路灯、绿墙裙、小太阳的暖光。blur 做景深虚化。detailed 开启精细挂钟与日历、旧画、围巾、侧窗五金与霜、椅背与实体取暖器，内含夜景光影，精细近景宜 blur 3–4；人物在它之后画，可用 boothFrontDesk 在人物之后加玻璃桌前景。",
     tags: ["门卫室", "岗亭", "室内", "挂钟", "挂历", "蜡笔画", "背景", "雪夜"],
     usage: 'boothFront(ctx, abs, { blur: 7, clock, month, day, drawing }); drawDad(ctx, 540, 600, 1.42, { coat: true, arms: "phone", holding })',
     params: boothFrontOptions,
-    presets: { 人物近景的背景: { blur: 7 } },
+    presets: { 人物近景的背景: { blur: 7 }, 精细人物近景: { detailed: true, blur: 3.5 } },
     preview: {
       width: 1080,
       height: 1920,
@@ -592,6 +605,23 @@ export const resources = defineResources({
         beginFrame(ctx, t);
         boothFront(ctx, t, p);
         if (p.blur > 2) drawDad(ctx, 540, 600, 1.42, { coat: true, arms: "phone", eyes: "down", brows: "worried", holding: heldPhone });
+      },
+    },
+  }),
+  boothFrontDesk: resource({
+    kind: "prop",
+    title: "值班桌前景（正面反打）",
+    description: "放在坐姿人物之后，遮住半身下沿：旧木桌、玻璃厚边和反射、左侧搪瓷茶杯、右侧值班本，与背面和俯拍同一套陈设。y 控制桌后沿，phoneLight 控制弱屏幕漏光。",
+    tags: ["值班桌", "前景", "桌面", "门卫室", "玻璃", "搪瓷杯", "反打", "景深"],
+    usage: "boothFront(ctx, abs, { detailed: true, blur: 3.5 }); drawDad(ctx, 540, 600, 1.42, { coat: true, frontDetails: true }); boothFrontDesk(ctx, abs, { y: 1495 })",
+    params: frontDeskOptions,
+    preview: {
+      width: 1080, height: 1920, duration: 3, prepare: loadFonts,
+      draw(ctx, t, p) {
+        beginFrame(ctx,t);
+        boothFront(ctx,t,{detailed:true,blur:3.5});
+        drawDad(ctx,540,600,1.42,{coat:true,frontDetails:true,screenReflection:.8,eyes:"down",arms:"type",holding:heldPhone});
+        boothFrontDesk(ctx,t,p);
       },
     },
   }),
