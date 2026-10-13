@@ -50,3 +50,4 @@
 - `code/cafe.ts`：来源 为作品 work-e8bee495《空着的位置》原创绘制。；许可 自制
 - `code/blocked/snow.ts`：来源 为作品 work-73c8f9bc《屏蔽》编写；许可 自制
 - `code/blocked/dad.ts`：来源 为作品 work-73c8f9bc《屏蔽》原创绘制；许可 自制
+- `code/blocked/booth.ts`：来源 为作品 work-73c8f9bc《屏蔽》原创绘制；许可 自制
