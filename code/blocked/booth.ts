@@ -15,6 +15,7 @@ import { phoneBack } from "../phone";
 import { drawDad } from "./dad";
 import { snow } from "./snow";
 import { detailedBoothBack } from "./booth-detail";
+import { detailedDeskTop } from "./desk-detail";
 
 /** the sodium lamp's colour (r,g,b): light from outside the booth */
 export const LAMP = "255,168,86";
@@ -40,6 +41,9 @@ export const boothFrontOptions = z.object({
 });
 export type BoothFrontOptions = z.input<typeof boothFrontOptions>;
 export const deskOptions = z.object({
+  detailed: z.boolean().default(false).describe("精细桌面：木纹玻璃、旧相纸、值班本、茶汤、钥匙与冷暖光"),
+  phoneLight: z.number().min(0).max(1).default(0).describe("中央手机在玻璃上的弱漏光（0 熄屏，1 亮屏；仅精细版）"),
+  phoneResting: z.boolean().default(false).describe("中央手机的接触阴影，机身坐标 (540,880)、比例 .92、旋转 .06；手机由镜头画"),
   note: z.string().default("囡囡生日 6月18日").describe("玻璃板下手写便条的第一行"),
   note2: z.string().default("别忘了打电话").describe("便条的第二行"),
   logTitle: z.string().default("值班记录").describe("值班本的标题"),
@@ -370,6 +374,7 @@ function photo(c: Ctx, x: number, y: number, rot: number, s: number, seed: numbe
  *  note in his hand (`note`, `note2`); the duty log (`logTitle`, `log`), a pen, the enamel mug of tea, his keys. The
  *  phone lies at (540, 880) (drawn by the shot). */
 export function deskTop(c: Ctx, abs: number, o: DeskOptions = {}) {
+  if (o.detailed) { detailedDeskTop(c, abs, o); return; }
   fillBg(c, "#5a3f2a");
   for (let i = 0; i < 14; i++) inkLine(c, [[-40, 80 + i * 140 + Math.sin(i) * 20], [W + 40, 100 + i * 140]], 6300 + i, 3, "rgba(30,18,8,0.35)");
   for (let i = 0; i < 6; i++) {
@@ -594,10 +599,11 @@ export const resources = defineResources({
     kind: "set",
     title: "值班桌俯拍",
     description:
-      "俯拍门卫室的值班桌：木桌上压着一块玻璃板，玻璃下是女儿从小到大的照片（photos）和他手写的便条（note、note2）；上面摊着值班本（logTitle、log）、一支笔、一杯茶、一串钥匙，外面的路灯从左上照进来，四周压暗。桌子中间 (540, 880) 留给手机，由镜头自己画。",
+      "俯拍门卫室的值班桌：木桌上压着一块玻璃板，玻璃下是女儿的照片（photos）和手写便条（note、note2）；上面摊着值班本（logTitle、log）、一支笔、一杯茶、一串钥匙。detailed 开启木纹清漆、厚玻璃与窗光反射、旧相纸、书脊与叠页、钢笔、搪瓷杯茶汤与热气、钥匙齿口和一致的投影。精细版用窗外暖光和监控冷光；phoneLight 控制中央手机的微弱漏光，phoneResting 加接触阴影。桌子中间 (540, 880) 留给手机，由镜头自己画。",
     tags: ["桌面", "俯拍", "值班", "门卫室", "照片", "便条", "玻璃板", "父亲", "茶杯", "钥匙"],
-    usage: "deskTop(ctx, abs, { note, note2, logTitle, log, photos }); /* 手机放在 (540, 880) */",
+    usage: "deskTop(ctx, abs, { detailed: true, phoneLight: 1, phoneResting: true, note, note2, logTitle, log, photos }); /* 手机放在 (540, 880)、scale .92、rot .06 */",
     params: deskOptions,
+    presets: { 精细值班桌: { detailed: true } },
     preview: {
       width: 1080,
       height: 1920,
