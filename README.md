@@ -64,3 +64,4 @@
 - `code/blocked/booth-detail.ts`：来源 为作品 work-73c8f9bc 的岗亭背影镜头原创细化，复用 blocked/booth 的厂门和杯瓶。；许可 自制
 - `code/blocked/desk-detail.ts`：来源 原创 Canvas 手绘值班桌精细化，复用 s0rrow 的 draw.ts / kid.ts。；许可 自制
 - `code/blocked/booth-front-detail.ts`：来源 原创 Canvas 岗亭正面精细场景与桌面前景，复用 s0rrow 雪、搪瓷杯和绘图库。；许可 自制
+- `code/dorm.ts`：来源 原创 Canvas 手绘学生宿舍与桌面，复用 s0rrow draw / sets.desk / snow；由 FRAME 制作。；许可 自制
