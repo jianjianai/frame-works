@@ -958,6 +958,36 @@ export function rimFigure(ctx: Ctx, draw: (c: Ctx) => void, ux: number, uy: numb
   rimLight(ctx, m, ux, uy, width, color, alpha, "lighter", ink);
 }
 
+/** A figure lit the way a cel painter does it (《屏蔽》): drawn, then — on the figure only — darkened by `shade` (in
+ *  `shadeCol`), tinted by point lights (radial glows `screen`ed on: the phone under the chin, a lamp; keep them small
+ *  and weak, `screen` greys the ink lines it covers) and given a rim of light just inside its outline on the side
+ *  facing (ux, uy). A face lit by its phone at night: shade 0.3, lights [{ x, y, r: 430, rgb: "170,195,255", a: 0.4 }];
+ *  the lamp switched off: shade 0.5 in "rgb(12,14,40)", a cold rim from the window at 0.6. Darken the room before the
+ *  figure, not after (a dark wash on top would kill the rim). All figures share one mask buffer ("lit"). */
+export function litFigure(
+  ctx: Ctx,
+  draw: (c: Ctx) => void,
+  o: { shade?: number; shadeCol?: string; lights?: { x: number; y: number; r: number; rgb: string; a: number }[]; rim?: { ux: number; uy: number; rgb: string; a: number; width?: number } } = {},
+) {
+  draw(ctx);
+  const m = figureMask(ctx, draw, "lit");
+  if (o.shade)
+    onFigure(ctx, m, (k) => {
+      k.fillStyle = o.shadeCol ?? "rgb(10,12,30)";
+      k.fillRect(-200, -200, W + 400, H + 400);
+    }, "source-over", o.shade);
+  for (const L of o.lights ?? [])
+    onFigure(ctx, m, (k) => {
+      const g = k.createRadialGradient(L.x, L.y, 0, L.x, L.y, L.r);
+      g.addColorStop(0, `rgba(${L.rgb},1)`);
+      g.addColorStop(0.5, `rgba(${L.rgb},0.45)`);
+      g.addColorStop(1, `rgba(${L.rgb},0)`);
+      k.fillStyle = g;
+      k.fillRect(L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
+    }, "screen", L.a);
+  if (o.rim) rimLight(ctx, m, o.rim.ux, o.rim.uy, o.rim.width ?? 7, `rgb(${o.rim.rgb})`, o.rim.a);
+}
+
 /** A figure's shadow on the ground from a lamp or the sun: its silhouette sheared flat onto the floor — the feet at
  *  `foot` stay put and the top of the head (`height` design units above the feet) lands at `tip` (where the light
  *  throws it: away from the light, long when the light is low or close). `sx` widens/narrows it, `soft` blurs it
