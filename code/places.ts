@@ -9,6 +9,7 @@ import { defineResources, resource } from "@frame/engine/resources";
 import { C, Ctx, F, H, Pt, W, beginFrame, blob, curve, fillBg, glow, hash, inkLine, loadFonts, oval, paint, poly, rbox, rr, shaded, text, tubePts, vgrad } from "./draw";
 import { ballToy, drawDog, fluffPuppy } from "./dog";
 import { drawKid, helmetProp } from "./kid";
+import { detailedBedroom, type BedroomDetailOptions } from "./bedroom-detail";
 
 /** Environments for 「unhappy」: the flat's entrance, his bedroom, the rainy street with the pet shop,
  *  the bus stop, the pet hospital (counter, surgery hallway, recovery room) and the tree from the cover.
@@ -878,7 +879,8 @@ export function strawberryMilk(ctx: Ctx, x: number, y: number, s: number, rot = 
 }
 
 /** Her room at night: the mirror image of his (bed on the left, window on the right), fairy lights, polaroids. */
-export function herRoom(ctx: Ctx, abs: number, o: { dawn?: number; lights?: number } = {}) {
+export function herRoom(ctx: Ctx, abs: number, o: BedroomDetailOptions & { detailed?: boolean } = {}) {
+  if (o.detailed) { detailedBedroom(ctx, abs, o); return; }
   const dawn = o.dawn ?? 0;
   const lights = o.lights ?? 1;
   fillBg(ctx, vgrad(ctx, 0, H, [[0, mix("#2a2446", "#d9cdea", dawn)], [1, mix("#1b1730", "#b9a9d0", dawn)]]));
@@ -1538,10 +1540,11 @@ export const resources = defineResources({
   herRoom: resource({
     kind: "set",
     title: "女生房间（夜）",
-    description: "她的房间：和男生房间镜像（床在左、窗在右），串灯 lights、拍立得，dawn 天亮。先画床上的她，再画 herBlanket() 粉色被子。",
+    description: "床在左、窗在右的女生卧室。detailed 开启雪夜精细版：床头柜、书杯、熊、照片、窗帘和地毯；lamp 控制台灯，lights 控制串灯，winter 窗外雪；lampAt 可匹配人物开关动作，photos 可传入本片照片绘制函数。基础版保留 dawn 天亮。人物和被子在房间之后画，并按相同光源打光。",
     tags: ["卧室", "女生", "房间", "串灯", "夜晚"],
-    usage: "herRoom(ctx, abs, { dawn, lights }); drawKid(…, { who: \"girl\" }); herBlanket(ctx)",
-    params: z.object({ dawn: unit.default(0).describe("天亮"), lights: unit.default(1).describe("串灯"), sitting: z.boolean().default(true).describe("预览里让她坐在床上") }),
+    usage: "herRoom(ctx, abs, { detailed: true, lamp: 1, lights: 0.55, winter: true, lampAt: [830, 690], photos }); // 然后画人物和被子",
+    params: z.object({ dawn: unit.default(0).describe("基础版天亮"), lights: unit.default(1).describe("串灯"), detailed: z.boolean().default(false).describe("精细雪夜卧室"), lamp: unit.default(1).describe("精细版台灯"), winter: z.boolean().default(false).describe("精细版窗外雪"), sitting: z.boolean().default(true).describe("预览里让她坐在床上") }),
+    presets: { 雪夜开灯: { detailed: true, lamp: 1, winter: true, lights: 0.55, sitting: false }, 雪夜关灯: { detailed: true, lamp: 0, winter: true, lights: 0.55, sitting: false } },
     preview: {
       ...FRAME,
       draw(ctx, t, p) {
