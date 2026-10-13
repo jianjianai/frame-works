@@ -3,11 +3,11 @@
 // → 关灯 → 又一个灰头像：「那个男生配不上你🌹」→ 锁屏，黑屏里她惊恐的脸。
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase } from "@frame/engine/math";
-import { C, Ctx, H, W, backOut, blob, camera, designScene, easeInOut, easeOut, fillBg, filtered, glow, litFigure, paint, smear, smearV } from "@materials/s0rrow/code/draw";
-import { phoneBack } from "@materials/s0rrow/code/phone";
+import { C, Ctx, H, W, backOut, blob, camera, castShadow, designScene, easeInOut, easeOut, fillBg, filtered, glow, litFigure, paint, smear, smearV } from "@materials/s0rrow/code/draw";
+import { SH, SW } from "@materials/s0rrow/code/phone";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { SHOT, WORD, at } from "./timeline";
-import { ACC_A, ACC_B, HISTORY_END, MENU_AT, POST_BTN, ROW_B, couplePhoto, pulseBox, say, snowPhoto, vidBanner, vidBlock, vidComments, vidCompose, vidFollowing, vidPost, vidProfile, slide } from "./ui";
+import { ACC_A, ACC_B, BLOCK_AT, HISTORY_END, INBOX_AT, MENU_AT, POST_BTN, ROW_B, couplePhoto, pulseBox, say, snowPhoto, vidBanner, vidBlock, vidComments, vidCompose, vidFollowing, vidPost, vidProfile, slide } from "./ui";
 import { LAMP_AT, bedFromAbove, herFace, herInBed, herPhoneBack, herRoomSnow, lapDuvet, roomBokeh } from "./world";
 import { aim, aimLerp, drawPhone, tap, whip, type PhoneSpec } from "./shots";
 import { pullOut } from "./journey";
@@ -59,7 +59,7 @@ function newBanner(p: Ctx, abs: number) {
   const t = NEW[n - 1].at();
   const hold = (NEW[n - 1] as { hold?: number }).hold;
   const shown = phase(abs, t, t + 0.2) * (hold ? 1 - phase(abs, t + hold, t + hold + 0.2) : 1);
-  vidBanner(p, shown, { name: ACC_A, body: NEW[n - 1].text, rose: true });
+  vidBanner(p, shown, { name: ACC_A, body: NEW[n - 1].text, rose: true, details: true });
   if (shown <= 0) return;
   const bump = 1 + 0.25 * (1 - phase(abs, t, t + 0.15));
   p.save();
@@ -81,6 +81,7 @@ function postWithComment(p: Ctx, abs: number, mark = 0) {
     caption: "下雪了",
     ago: "刚刚",
     likes: 0,
+    details: true,
     showComments: true,
     mark,
     comments: NEW.slice(0, 2).map((c) => ({ name: ACC_A, text: c.text, rose: true, ago: "刚刚", pop: phase(abs, c.at(), c.at() + 0.15) })),
@@ -113,7 +114,7 @@ function shot1(c: Ctx, abs: number) {
       compose(p);
       p.restore();
     }
-  }, { buzz: newBuzz(abs), touches: [tap(abs, press, POST_BTN[0], POST_BTN[1])] });
+  }, { buzz: newBuzz(abs), touches: [tap(abs, press, POST_BTN[0], POST_BTN[1]), tap(abs, at(SHOT.s2) - 0.04, INBOX_AT[0], INBOX_AT[1])] });
 }
 
 /** 2 · she opens her message list: the camera pulls back off the comment as the list slides in, and she flicks it —
@@ -211,7 +212,7 @@ function shot5(c: Ctx, abs: number, t0: number) {
   camera(c, 540, 900, z);
   drawPhone(c, abs, { cx: 540, cy: 930, s: 1 }, (p) => {
     const following = (q: Ctx) => vidFollowing(q, { time: TIME });
-    const profile = (q: Ctx) => vidProfile(q, { name: ACC_A, time: TIME, menu: phase(u, 0.56, 0.64) * (1 - phase(u, 0.72, 0.8)) });
+    const profile = (q: Ctx) => vidProfile(q, { name: ACC_A, time: TIME, menu: phase(u, 0.56, 0.64) * (1 - phase(u, 0.72, 0.8)), blocked: phase(u, 1.46, 1.6) });
     // back: the profile slides back in from the left
     if (u < 0.2) {
       const e = 1 - Math.pow(1 - clamp(u / 0.2), 3);
@@ -228,7 +229,7 @@ function shot5(c: Ctx, abs: number, t0: number) {
     vidBlock(p, { sheet: phase(u, 0.62, 0.8) * (1 - phase(u, 1.02, 1.1)), hot: phase(u, 0.94, 1.0), confirm: phase(u, 1.08, 1.2), done: phase(u, 1.46, 2.15) });
   }, {
     buzz: newBuzz(abs),
-    touches: [tap(abs, t0 + 0.02, 40, 120), tap(abs, t0 + 0.6, MENU_AT[0], MENU_AT[1]), tap(abs, t0 + 0.98, 300, 975), tap(abs, t0 + 1.42, 420, 720)],
+    touches: [tap(abs, t0 + 0.02, 40, 120), tap(abs, t0 + 0.6, MENU_AT[0], MENU_AT[1]), tap(abs, t0 + 0.98, BLOCK_AT[0], BLOCK_AT[1]), tap(abs, t0 + 1.42, 420, 720)],
   });
 }
 
@@ -241,9 +242,6 @@ function shot6(c: Ctx, abs: number, t0: number) {
   camera(c, 540, 700, 1.25 + 0.04 * phase(u, 0, 1.4), 0, 0, 160);
   herRoomSnow(c, abs, { lamp });
   if (!lamp) {
-    c.fillStyle = "rgba(6,6,20,0.6)";
-    c.fillRect(-60, -60, W + 120, H + 120);
-    glow(c, 830, 470, 380, "rgba(110,140,230,0.28)");
     glow(c, LAMP_AT[0], LAMP_AT[1] + 20, 60, "rgba(255,170,90,0.6)", 1 - phase(abs, off, off + 0.35));
   }
   // her hands: both on the phone → the left lays it face down on the pillow beside her while the right reaches for
@@ -286,10 +284,15 @@ function shot6(c: Ctx, abs: number, t0: number) {
       shapeR: reach === 0 ? "hold" : back < 0.5 ? "flat" : "relax",
       grip: (q) => holding && phoneIn(q, put, put > 0 ? handL : [-18, 330]),
     });
-  if (lamp)
-    litFigure(c, her, { shade: 0.08, shadeCol: "rgb(70,30,40)", lights: [{ x: LAMP_AT[0], y: LAMP_AT[1], r: 620, rgb: "255,186,110", a: 0.32 }], rim: { ux: 1, uy: -0.25, rgb: "255,205,150", a: 0.5 } });
+  if (lamp) {
+    // Cast away from the bedside bulb onto the wall and upholstered headboard.
+    castShadow(c, LAMP_AT, 1.25, her, "#0b1026", 12, 0.36, (q) => {
+      q.beginPath(); q.rect(-100, 0, 1300, 960); q.rect(632, 230, 406, 510); q.clip("evenodd");
+    });
+    litFigure(c, her, { shade: 0.2, shadeCol: "rgb(22,17,44)", lights: [{ x: LAMP_AT[0], y: LAMP_AT[1], r: 520, rgb: "255,186,110", a: 0.35 }], rim: { ux: 1, uy: -0.25, rgb: "255,205,150", a: 0.4 } });
+  }
   else
-    litFigure(c, her, { shade: 0.5, shadeCol: "rgb(12,14,40)", lights: [{ x: 880, y: 420, r: 760, rgb: "120,150,240", a: 0.22 }], rim: { ux: 0.7, uy: -0.7, rgb: "170,195,255", a: 0.6 } });
+    litFigure(c, her, { shade: 0.5, shadeCol: "rgb(12,14,40)", lights: [{ x: 880, y: 420, r: 760, rgb: "120,150,240", a: 0.22 }], rim: { ux: 0.7, uy: -0.7, rgb: "170,195,255", a: 0.48 } });
   lapDuvet(c, 1 - lamp);
 }
 /** where she sits in shot 6 (head centre, scale) */
@@ -319,6 +322,8 @@ function shot7(c: Ctx, abs: number, t0: number, end: number) {
   const buzz = u < 0.6 ? 1 - u / 0.6 : 0;
   const jx = buzz > 0 ? Math.sin(abs * 90) * 6 * buzz : 0;
   const rot = -0.25 + 0.25 * flip;
+  // Both sides use the same outer shell dimensions, including the screen's frame.
+  const phoneScale = 0.55, pw = (SW + 52) * phoneScale, ph = (SH + 52) * phoneScale;
   // light spilling onto the pillowcase (a rim round the case while face down, a flood once it's up)
   c.save();
   c.globalCompositeOperation = "lighter";
@@ -328,33 +333,61 @@ function shot7(c: Ctx, abs: number, t0: number, end: number) {
   c.translate(540 + jx, 900);
   c.rotate(rot);
   const w = Math.abs(sx) < 0.02 ? 0.02 : sx;
-  // contact shadow (narrows with the phone as it turns on its edge)
+  const edge = Math.sin(flip * Math.PI);
+  // A soft cast shadow plus a tight contact edge follows the width of the turning phone.
   c.save();
-  c.scale(Math.abs(w), 1);
-  c.fillStyle = `rgba(4,4,14,${(0.4 * (0.3 + 0.7 * Math.abs(w))).toFixed(3)})`;
-  rrPath(c, -170 + 12, -345 + 16, 340, 690, 52);
+  c.scale(Math.max(0.1, Math.abs(w)), 1);
+  c.shadowColor = "rgba(3,3,12,0.58)";
+  c.shadowBlur = 22 + 12 * edge;
+  c.shadowOffsetX = 9 + 8 * edge; c.shadowOffsetY = 14 + 14 * edge;
+  c.fillStyle = "rgba(4,4,14,0.38)";
+  rrPath(c, -pw / 2 + 7, -ph / 2 + 10, pw, ph, 55);
   c.fill();
   c.restore();
+  // Faint creases where the pillow gives under the two lower corners.
+  if (flip < 0.5) {
+    c.save(); c.globalAlpha = 0.3 * (1 - 2 * flip);
+    c.lineCap = "round"; c.lineWidth = 2.2;
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 3; i++) {
+        const x = side * (pw / 2 - 5), y = ph / 2 - 84 + i * 19;
+        c.strokeStyle = "rgba(10,12,28,0.7)";
+        c.beginPath(); c.moveTo(x, y);
+        c.quadraticCurveTo(x + side * 24, y + 7, x + side * (45 + i * 13), y + 30 + i * 7); c.stroke();
+      }
+    }
+    c.restore();
+  }
+  // A narrow metal rail stays visible when the handset is exactly on its edge.
+  if (edge > 0.02) {
+    const thickness = 16 * edge, edgeX = -pw / 2 * Math.abs(w);
+    const metal = c.createLinearGradient(edgeX - thickness, 0, edgeX + thickness, 0);
+    metal.addColorStop(0, "#554252"); metal.addColorStop(0.45, "#b09ab5"); metal.addColorStop(1, "#382c43");
+    c.fillStyle = metal;
+    rrPath(c, edgeX - thickness / 2, -ph / 2 + 7, thickness, ph - 14, thickness / 2);
+    c.fill();
+  }
   c.scale(w, 1);
   if (sx > 0) {
-    // the glow line round the edges of the case, where the screen meets the pillow
+    // Screen light leaks onto the cloth under the case, with a soft edge rather than a solid neon rim.
     c.save();
     c.globalCompositeOperation = "lighter";
-    c.strokeStyle = "rgba(170,200,255,0.55)";
-    c.lineWidth = 16;
-    rrPath(c, -172, -347, 344, 694, 54);
+    c.shadowColor = "rgba(150,183,255,0.6)"; c.shadowBlur = 18;
+    c.strokeStyle = "rgba(160,190,245,0.32)";
+    c.lineWidth = 7;
+    rrPath(c, -pw / 2 - 3, -ph / 2 - 3, pw + 6, ph + 6, 58);
     c.stroke();
     c.restore();
-    herPhoneBack(c, 0, 0, 330, 680);
+    herPhoneBack(c, 0, 0, pw, ph);
     // the back faces up into the dark: only the leak round its edges lights it
     c.fillStyle = "rgba(10,8,26,0.42)";
-    rrPath(c, -165, -340, 330, 680, 52);
+    rrPath(c, -pw / 2, -ph / 2, pw, ph, 55);
     c.fill();
   } else {
     c.scale(-1, 1);
-    drawPhone(c, abs, { cx: 0, cy: 0, s: 0.55 }, (p) => {
-      vidPost(p, { time: "02:49", photo: couplePhoto(false), caption: "周末～", ago: "3小时前" });
-      vidBanner(p, phase(u, 1.05, 1.3), { name: ACC_B, body: "那个男生配不上你", rose: true });
+    drawPhone(c, abs, { cx: 0, cy: 0, s: phoneScale }, (p) => {
+      vidPost(p, { time: "02:49", photo: couplePhoto(false), caption: "周末～", ago: "3小时前", details: true });
+      vidBanner(p, phase(u, 1.05, 1.3), { name: ACC_B, body: "那个男生配不上你", rose: true, details: true });
     });
   }
   c.restore();
@@ -374,8 +407,8 @@ function shot8(c: Ctx, abs: number, t0: number) {
   const P = aimLerp(A, B, e);
   glow(c, P.cx, P.cy - 120 * P.s, 900 * P.s, "rgba(120,150,255,0.3)");
   drawPhone(c, abs, P, (p) => {
-    vidPost(p, { time: "02:49", photo: couplePhoto(false), caption: "周末～", ago: "3小时前" });
-    vidBanner(p, 1, { name: ACC_B, body: "那个男生配不上你", rose: true });
+    vidPost(p, { time: "02:49", photo: couplePhoto(false), caption: "周末～", ago: "3小时前", details: true });
+    vidBanner(p, 1, { name: ACC_B, body: "那个男生配不上你", rose: true, details: true });
     pulseBox(p, 18, 84, 564, 172, phase(abs, t0 + 0.55, t0 + 1.25));
   });
 }

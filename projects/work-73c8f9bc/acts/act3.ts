@@ -3,14 +3,15 @@
 // 发出「爸，这么晚还不睡？」→ 岗亭里他的手机亮了 → 他的脸 → 拉出窗外，雪夜里亮着的岗亭。
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase } from "@frame/engine/math";
-import { C, Ctx, F, H, W, backOut, blob, camera, designScene, easeInOut, easeOut, fillBg, filtered, flash, glow, litFigure, measure, oldFilm, oldScreenCut, paint, smearV } from "@materials/s0rrow/code/draw";
+import { C, Ctx, F, H, W, backOut, blob, camera, castShadow, designScene, easeInOut, easeOut, fillBg, filtered, flash, glow, litFigure, measure, oldFilm, oldScreenCut, paint, smearV } from "@materials/s0rrow/code/draw";
 import { phoneBack } from "@materials/s0rrow/code/phone";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { hahas } from "@materials/s0rrow/code/people";
+import { dormDesk } from "@materials/s0rrow/code/dorm";
 import { SHOT, WORD, at } from "./timeline";
 import { ACC_B, DAD_CALLS_HER, MOMENT_COMMENT_Y, PERM_ROW, SHE_CALLS_DAD, TOGGLE_AT, SEND_AT, slide, wxContact, dadLock, vidBanner, vidPost, couplePhoto, wxBanner, wxChat, wxMoment, wxPermission } from "./ui";
 import { dorm, herFace, herPhoneBack, lumpInBed, roomBokeh, roommates } from "./world";
-import { boothFront, boothOutside, deskTop } from "@materials/s0rrow/code/blocked/booth";
+import { boothFront, boothFrontDesk, boothOutside, deskTop } from "@materials/s0rrow/code/blocked/booth";
 import { drawDad } from "@materials/s0rrow/code/blocked/dad";
 import { aim, aimLerp, drawPhone, tap, timeCard, whip } from "./shots";
 
@@ -113,15 +114,18 @@ function memory(c: Ctx, abs: number, end: number) {
       const laugh = phase(abs, dormAt + 0.2, dormAt + 0.5);
       roommates(k, abs, laugh);
       const hide = phase(abs, dormAt + 0.7, dormAt + 1.0);
-      // she presses her phone to her chest, screen in, so they can't read any more
-      drawKid(k, 540, 820, 1.0, { who: "girl", outfit: "uniform", body: "bust", eyes: hide > 0.5 ? "shut" : "open", mouth: hide > 0.5 ? "bite" : "o", blush: 0.4 + 0.6 * hide, arms: "phone", headY: 10 * hide, grip: (q) => herPhoneBack(q, 0, 316 - 20 * hide, 96, 176, 0.04) });
+      // She presses her phone to her chest; her unchanged pose is lit by the actual room sources.
+      const girl = (q: Ctx) => drawKid(q, 540, 820, 1.0, { who: "girl", outfit: "uniform", body: "bust", eyes: hide > 0.5 ? "shut" : "open", mouth: hide > 0.5 ? "bite" : "o", blush: 0.4 + 0.6 * hide, arms: "phone", headY: 10 * hide, grip: (p) => herPhoneBack(p, 0, 316 - 20 * hide, 96, 176, 0.04) });
+      castShadow(k, [218, 610], 1.08, girl, "#263e45", 19, 0.20, (q) => { q.beginPath(); q.rect(360, 619, 365, 650); q.clip(); });
+      litFigure(k, girl, { shade: 0.13, shadeCol: "#263c49", lights: [{ x: 329, y: 786, r: 620, rgb: "249,218,164", a: 0.29 }, { x: 675, y: 718, r: 400, rgb: "153,194,219", a: 0.16 }], rim: { ux: 0.65, uy: -0.8, rgb: "161,204,223", a: 0.32, width: 5 } });
+      dormDesk(k, abs, { y: 1250, lamp: 1 });
       hahas(k, 540, 560, 360, laugh, 971, F.cn, 4);
     } else {
       fillBg(k, "#f3d9b0");
       const on = phase(abs, WORD.heart4 - 0.05, WORD.heart4 + 0.12);
       drawPhone(k, abs, { cx: 540, cy: 930, s: 1 }, (p) => wxPermission(p, on, { time: "21:20" }), { touches: [tap(abs, WORD.heart4, TOGGLE_AT[0], TOGGLE_AT[1])] });
     }
-  });
+  }, "dormMemory", abs >= dormAt && abs < toggleAt ? 0.68 : 1);
   timeCard(c, abs, "三年前", t0 + 0.1, t0 + 2.2);
   void end;
 }
@@ -188,9 +192,8 @@ function shot20(c: Ctx, abs: number, t0: number) {
 function shot21(c: Ctx, abs: number, t0: number) {
   const z = 1.08 + 0.06 * phase(abs, t0, t0 + 0.8);
   camera(c, 540, 880, z);
-  deskTop(c, abs);
+  deskTop(c, abs, { detailed: true, phoneLight: 1, phoneResting: true });
   const drop = at(86.5);
-  glow(c, 540, 880, 520, "rgba(150,180,255,0.45)");
   drawPhone(c, abs, { cx: 540, cy: 880, s: 0.92, rot: 0.06 }, (p) => {
     dadLock(p, { time: "02:54", date: "1月14日 星期二" });
     wxBanner(p, phase(abs, drop, drop + 0.25), DAD_CALLS_HER, REPLY, true);
@@ -201,9 +204,7 @@ function shot21(c: Ctx, abs: number, t0: number) {
  *  coming → he laughs through them. Lit by the phone in his hands. */
 function shot21b(c: Ctx, abs: number, t0: number) {
   const u = abs - t0;
-  boothFront(c, abs, { blur: 7 });
-  c.fillStyle = "rgba(6,8,20,0.4)";
-  c.fillRect(-60, -60, 1200, 2040);
+  boothFront(c, abs, { detailed: true, blur: 3.5, clock: 2.9 });
   camera(c, 540, 700, 1 + 0.12 * easeInOut(phase(u, 0, 2.2)));
   const stage = u < 0.55 ? 0 : u < 1.45 ? 1 : 2;
   const pose =
@@ -212,31 +213,43 @@ function shot21b(c: Ctx, abs: number, t0: number) {
       : stage === 1
         ? { eyes: "teary" as const, brows: "sad" as const, mouth: "wobble" as const, arms: "mouth" as const }
         : { eyes: "happy" as const, mouth: "laugh" as const, arms: "phone" as const };
-  const phoneHeld = (q: Ctx) => (stage === 1 ? phoneBack(q, -70, 500, 140, 260, 0.2, 0) : phoneBack(q, 0, 420, 150, 270, 0, 0));
+  const phoneFinish = { detailed: true, caseColor: "#252d35", cameraColor: "#343e47" };
+  const phoneHeld = (q: Ctx) => (stage === 1 ? phoneBack(q, -70, 500, 140, 260, 0.2, 0, phoneFinish) : phoneBack(q, 0, 420, 150, 270, 0, 0, phoneFinish));
   const shake = stage === 2 ? Math.sin(u * 22) * 4 : 0;
-  litFigure(c, (k) => drawDad(k, 540 + shake, 600, 1.42, { coat: true, ...pose, tears: phase(u, 0.6, 1.3), tilt: stage === 2 ? -0.05 : 0.02, holding: phoneHeld }), {
-    shade: 0.28,
+  litFigure(c, (k) => drawDad(k, 540 + shake, 600, 1.42, { coat: true, frontDetails: true, screenReflection: stage === 1 ? 0.3 : 0.65, ...pose, tears: phase(u, 0.6, 1.3), tilt: stage === 2 ? -0.05 : 0.02, holding: phoneHeld }), {
+    shade: 0.35,
+    shadeCol: "rgb(12,27,39)",
     lights: [
-      { x: 540, y: 1060, r: 430, rgb: "160,195,255", a: 0.4 },
-      { x: 1040, y: 300, r: 520, rgb: "255,170,90", a: 0.15 + 0.12 * (stage === 2 ? 1 : 0) },
+      { x: 535, y: 815, r: 320, rgb: "149,190,210", a: stage === 1 ? 0.18 : 0.25 },
+      { x: 535, y: 1180, r: 215, rgb: "144,183,201", a: 0.1 },
+      { x: 865, y: 555, r: 480, rgb: "245,178,106", a: 0.19 + 0.12 * (stage === 2 ? 1 : 0) },
     ],
-    rim: { ux: 1, uy: -0.4, rgb: "255,190,120", a: 0.5 },
+    rim: { ux: 1, uy: -0.4, rgb: "245,190,123", a: stage === 2 ? 0.43 : 0.34, width: 5 },
   });
+  filtered(c, "blur(0.7px)", (k) => boothFrontDesk(k, abs), "s21bdesk");
 }
 
 /** 22 · out through the booth window into the snow: the small warm booth, him bowed over the phone typing his reply
  *  with one finger, smiling; the end. */
 function shot22(c: Ctx, abs: number, t0: number) {
+  // Overscan the night sky before the final downward camera offset exposes the top edge.
+  fillBg(c, "#070b1d");
   const e = easeInOut(phase(abs, t0, t0 + 1.9));
   const z = 2.6 * Math.pow(1 / 2.6, e);
   camera(c, 590, 960, z, 0, 0, 130 * e);
   const u = abs - t0;
   const tapK = Math.max(0, Math.sin(u * 9)) ** 3;
   boothOutside(c, abs, (k) => {
-    litFigure(k, (q) => drawDad(q, 590, 925, 0.4, { coat: true, eyes: "happy", mouth: "smile", arms: "type", tap: tapK, holding: (r) => phoneBack(r, -10, 400, 150, 270, -0.08, 0) }), {
-      lights: [{ x: 586, y: 1060, r: 200, rgb: "170,200,255", a: 0.45 }],
+    litFigure(k, (q) => drawDad(q, 590, 925, 0.4, { coat: true, frontDetails: true, screenReflection: 0.5, eyes: "happy", mouth: "smile", arms: "type", tap: tapK, holding: (r) => phoneBack(r, -10, 400, 150, 270, -0.08, 0, { detailed: true, caseColor: "#252d35", cameraColor: "#343e47" }) }), {
+      shade: 0.24,
+      shadeCol: "#1c3443",
+      lights: [
+        { x: 586, y: 1048, r: 124, rgb: "158,194,211", a: 0.26 },
+        { x: 690, y: 875, r: 256, rgb: "246,192,121", a: 0.30 },
+      ],
+      rim: { ux: 0.8, uy: -0.5, rgb: "249,201,130", a: 0.38, width: 1.8 },
     });
-  });
+  }, { detailed: true });
   void H;
   void W;
 }

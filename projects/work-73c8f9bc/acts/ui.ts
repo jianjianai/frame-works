@@ -8,6 +8,8 @@ import { avatar } from "@materials/s0rrow/code/chat";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { drawPerson } from "@materials/s0rrow/code/people";
 import { drawDad } from "@materials/s0rrow/code/blocked/dad";
+import { socialButton, socialHomeBar, socialIcon } from "@materials/s0rrow/code/social";
+import { cafeCouplePhoto } from "@materials/s0rrow/code/couple-photo";
 
 export { SH, SW };
 
@@ -291,50 +293,9 @@ export const snowPhoto: Photo = (c, x, y, w, h) =>
     c.fillRect(x, y + h * 0.95, w, h * 0.05);
   });
 
-/** Her and her boyfriend in a café: arm round her (photo 1), or kissing her cheek (photo 2). */
+/** The same two detailed café photos in her post, his viewer and the room's polaroid. */
 export function couplePhoto(kiss: boolean): Photo {
-  return (c, x, y, w, h) =>
-    clipRect(c, x, y, w, h, () => {
-      const g = c.createLinearGradient(0, y, 0, y + h);
-      g.addColorStop(0, "#f3c98b");
-      g.addColorStop(1, "#c98a5e");
-      c.fillStyle = g;
-      c.fillRect(x, y, w, h);
-      // café lights behind
-      for (let i = 0; i < 7; i++) {
-        const bx = x + w * (0.1 + i * 0.14),
-          by = y + h * (0.12 + (i % 2) * 0.06);
-        const bg = c.createRadialGradient(bx, by, 0, bx, by, w * 0.08);
-        bg.addColorStop(0, "rgba(255,245,210,0.9)");
-        bg.addColorStop(1, "rgba(255,245,210,0)");
-        c.fillStyle = bg;
-        c.fillRect(bx - w * 0.08, by - w * 0.08, w * 0.16, w * 0.16);
-      }
-      const s = w / 600;
-      if (!kiss) {
-        drawPerson(c, x + w * 0.66, y + h * 0.42, 0.95 * s, { x: 0, hair: "short", hairColor: "#1e1a18", top: "#7fa7c9", face: "smile", body: "bust", turn: -0.2, seed: 821, arms: "down" });
-        drawKid(c, x + w * 0.36, y + h * 0.47, 0.82 * s, { who: "girl", outfit: "cardigan", body: "bust", eyes: "happy", mouth: "grin", tilt: 0.12, blush: 0.5, seed: 822 });
-        // his arm round her shoulders
-        c.save();
-        c.translate(x, y);
-        c.scale(s, s);
-        blob(c, [[420, 470], [330, 500], [190, 520], [150, 560], [200, 580], [340, 548], [430, 520]], 823, 1.2);
-        paint(c, "#7fa7c9", C.ink, 5);
-        oval(c, 160, 556, 30, 26, 824, 1);
-        paint(c, C.skin, C.ink, 4.5);
-        c.restore();
-      } else {
-        drawKid(c, x + w * 0.4, y + h * 0.48, 0.86 * s, { who: "girl", outfit: "cardigan", body: "bust", eyes: "shut", mouth: "grin", tilt: -0.1, blush: 0.9, seed: 832 });
-        drawPerson(c, x + w * 0.68, y + h * 0.4, 0.95 * s, { x: 0, hair: "short", hairColor: "#1e1a18", top: "#7fa7c9", face: "smile", body: "bust", turn: -0.9, tilt: -0.25, seed: 831, arms: "down" });
-        // a little heart
-        c.save();
-        c.translate(x + w * 0.56, y + h * 0.2);
-        c.scale(s, s);
-        blob(c, [[0, 12], [-22, -6], [-30, -2], [-30, 14], [0, 40], [30, 14], [30, -2], [22, -6]], 833, 0.8);
-        paint(c, "#ff5d7e", C.ink, 4);
-        c.restore();
-      }
-    });
+  return (c, x, y, w, h) => cafeCouplePhoto(c, x, y, w, h, { kiss });
 }
 
 /** Graduation, 2023: her in a mortarboard. */
@@ -475,149 +436,180 @@ export const wallpaperPhoto: Photo = (c, x, y, w, h) =>
 // ---------------------------------------------------------------- the short-video app (dark)
 const VBG = "#14151d";
 const GREY = "#8b8c94";
+const VLINE = "rgba(255,255,255,0.08)";
 
-/** where the first comment's text sits on a post page with the comment area (screen units, its left edge and middle) */
+/** Keep the comment, list and touch anchors in the approved camera composition. */
 export const firstCommentAt = (big = false): [number, number] => [104, 620 + 180 + 46 * (big ? 1.3 : 1)];
+export const INBOX_AT: [number, number] = [480, 748];
 
-/** Her post: author row, photo, caption and time, counts; with `showComments` (or comments given) the photo is
- *  shorter and the comment area shows under it (each comment can `pop` in; `mark` pulses the first one). `big` = his
- *  font. */
-export function vidPost(c: Ctx, o: { time: string; photo: Photo; caption: string; ago: string; author?: string; big?: boolean; likes?: number; count?: number; showComments?: boolean; mark?: number; photoH?: number; comments?: { name: string; text: string; rose?: boolean; ago?: string; pop?: number; gray?: boolean }[]; photoZoom?: { k: number; fx: number; fy: number } }) {
+/** The full first-act controls are opt-in, so later scenes keep their matching compositions. */
+export function vidPost(c: Ctx, o: { time: string; photo: Photo; caption: string; ago: string; author?: string; big?: boolean; likes?: number; count?: number; showComments?: boolean; mark?: number; photoH?: number; details?: boolean; comments?: { name: string; text: string; rose?: boolean; ago?: string; pop?: number; gray?: boolean }[]; photoZoom?: { k: number; fx: number; fy: number } }) {
   const big = o.big ? 1.3 : 1;
   const compact = o.showComments || !!o.comments?.length;
   c.fillStyle = VBG;
   c.fillRect(0, 0, SW, SH);
   statusBar(c, { time: o.time, airplane: false, battery: 0.42 });
-  text(c, "‹", 40, 120, { size: 60, font: F.ui, fill: "#fff" });
+  if (o.details) socialIcon(c, "back", 40, 120, 30, "#fff");
+  else text(c, "‹", 40, 120, { size: 60, font: F.ui, fill: "#fff" });
   herAvatar(c, 110, 120, 30);
   say(c, o.author ?? HER, 156, 120, 30 * big, { weight: 700 });
-  // the photo (with an optional pinch zoom about a point of it); shorter when the comments show under it
-  const px = 0,
-    py = 170,
-    pw = SW,
-    ph = o.photoH ?? (compact ? 400 : 640);
+  if (o.details) {
+    say(c, "我的日常", 408, 120, 21, { color: GREY });
+    socialIcon(c, "more", 550, 120, 32, "#eeeef3");
+  }
+  const px = 0, py = 170, pw = SW, ph = o.photoH ?? (compact ? 400 : 640);
   c.save();
-  c.beginPath();
-  c.rect(px, py, pw, ph);
-  c.clip();
+  c.beginPath(); c.rect(px, py, pw, ph); c.clip();
   if (o.photoZoom && o.photoZoom.k > 1.001) {
     const { k, fx, fy } = o.photoZoom;
-    const cx = px + pw * fx,
-      cy = py + ph * fy;
+    const cx = px + pw * fx, cy = py + ph * fy;
     c.translate(px + pw / 2, py + ph / 2);
     c.scale(k, k);
     c.translate(-cx, -cy);
   }
   o.photo(c, px, py, pw, ph);
   c.restore();
+  if (o.details) {
+    socialButton(c, 506, py + 18, 72, 38, compact ? "1 / 1" : "1 / 2", { fill: "rgba(0,0,0,0.45)", size: 19, radius: 19 });
+    if (!compact) {
+      for (let i = 0; i < 2; i++) {
+        c.fillStyle = i ? "#737480" : "#fff";
+        c.beginPath(); c.arc(290 + i * 20, py + ph + 15, 3.5, 0, Math.PI * 2); c.fill();
+      }
+    }
+  }
   const shown = (o.comments ?? []).filter((cm) => (cm.pop ?? 1) > 0);
   const ty = py + ph + 50;
   say(c, o.caption, 36, ty, 38 * big, { weight: 700 });
   say(c, o.ago, 36, ty + 52, 26 * big, { color: GREY });
-  // like / comment counts
   heartIcon(c, SW - 230, ty + 52, 26 * big, GREY);
   say(c, String(o.likes ?? 23), SW - 208, ty + 52, 26 * big, { color: GREY });
   bubbleIcon(c, SW - 130, ty + 52, 26 * big, GREY);
   say(c, String(o.count ?? (compact ? shown.length : 6)), SW - 108, ty + 52, 26 * big, { color: GREY });
-  c.fillStyle = "rgba(255,255,255,0.08)";
+  if (o.details) socialIcon(c, "share", 558, ty + 52, 28, GREY);
+  c.fillStyle = VLINE;
   c.fillRect(0, ty + 90, SW, 2);
-  if (!compact) return;
-  say(c, `评论 ${o.count ?? shown.length}`, 36, ty + 128, 26 * big, { color: "#c9cad1", weight: 700 });
-  let cy = ty + 180;
-  if (!shown.length) say(c, "还没有评论，快来抢沙发～", SW / 2, cy + 40, 26 * big, { color: GREY, align: "center" });
-  (o.comments ?? []).forEach((cm, i) => {
-    const k = clamp(cm.pop ?? 1);
-    if (k <= 0) return;
-    const e = 1 - Math.pow(1 - k, 3);
-    c.save();
-    c.globalAlpha *= e;
-    c.translate(-36 * (1 - e), 0);
-    if (i === 0 && (o.mark ?? 0) > 0) pulseBox(c, 24, cy - 26, SW - 48, 132 * big, o.mark ?? 0);
-    grayAvatar(c, 58, cy + 34 * big, 30 * big);
-    say(c, cm.name, 104, cy, 24 * big, { color: GREY });
-    say(c, cm.text, 104, cy + 46 * big, 36 * big, { weight: 700, rose: cm.rose });
-    say(c, cm.ago ?? "刚刚", 104, cy + 92 * big, 22 * big, { color: GREY });
-    c.restore();
-    cy += 140 * big;
-  });
+  if (compact) {
+    say(c, "评论 " + (o.count ?? shown.length), 36, ty + 128, 26 * big, { color: "#c9cad1", weight: 700 });
+    if (o.details) {
+      say(c, "互动消息", 538, ty + 128, 22, { color: "#b1b3c0", align: "right" });
+      socialIcon(c, "chevron", 561, ty + 128, 20, GREY);
+      if (shown.length) {
+        c.fillStyle = "#fe2c55";
+        c.beginPath(); c.arc(426, ty + 127, 4.5, 0, Math.PI * 2); c.fill();
+      }
+    }
+    let cy = ty + 180;
+    if (!shown.length) say(c, "还没有评论，快来抢沙发～", SW / 2, cy + 40, 26 * big, { color: GREY, align: "center" });
+    (o.comments ?? []).forEach((cm, i) => {
+      const k = clamp(cm.pop ?? 1);
+      if (k <= 0) return;
+      const e = 1 - Math.pow(1 - k, 3);
+      c.save(); c.globalAlpha *= e; c.translate(-36 * (1 - e), 0);
+      if (i === 0 && (o.mark ?? 0) > 0) pulseBox(c, 24, cy - 26, SW - 48, 132 * big, o.mark ?? 0);
+      grayAvatar(c, 58, cy + 34 * big, 30 * big);
+      say(c, cm.name, 104, cy, 24 * big, { color: GREY });
+      say(c, cm.text, 104, cy + 46 * big, 36 * big, { weight: 700, rose: cm.rose });
+      say(c, cm.ago ?? "刚刚", 104, cy + 92 * big, 22 * big, { color: GREY });
+      if (o.details) {
+        say(c, "回复", 194, cy + 92 * big, 22, { color: "#adaeb8" });
+        heartIcon(c, 551, cy + 34 * big, 23, "#72737e");
+        say(c, "赞", 551, cy + 64 * big, 17, { color: "#72737e", align: "center" });
+      }
+      c.restore();
+      cy += 140 * big;
+    });
+  } else if (o.details) {
+    socialIcon(c, "music", 49, ty + 145, 25, GREY);
+    say(c, "stalk ur socials · s0rrow", 76, ty + 145, 22, { color: "#b0b1bb" });
+    say(c, "查看全部 " + (o.count ?? 6) + " 条评论", 36, ty + 217, 25, { color: "#b7b8c2" });
+    socialIcon(c, "chevron", 554, ty + 217, 22, GREY);
+  }
+  if (o.details) {
+    c.fillStyle = "#1b1c25"; c.fillRect(0, 1160, SW, 120);
+    c.fillStyle = VLINE; c.fillRect(0, 1160, SW, 1);
+    socialButton(c, 24, 1178, 414, 56, "留下你的评论…", { color: "#8f909c", size: 24, radius: 28, fill: "#2a2b35" });
+    socialIcon(c, "smile", 405, 1206, 28, "#aaabb5");
+    socialIcon(c, "bookmark", 477, 1206, 27, "#bbbcc6");
+    socialIcon(c, "share", 547, 1206, 28, "#bbbcc6");
+    socialHomeBar(c);
+  }
 }
 
-/** Posting: the compose page with her photo and caption; `press` 0..1 lights the 「发布」 button. The button sits at
- *  POST_BTN (screen units). */
+/** Publishing stays at POST_BTN so the original press and sound remain aligned. */
 export const POST_BTN: [number, number] = [SW / 2, 1120];
 export function vidCompose(c: Ctx, o: { time: string; photo: Photo; caption: string; caret?: boolean; press?: number }) {
-  c.fillStyle = VBG;
-  c.fillRect(0, 0, SW, SH);
+  c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
   statusBar(c, { time: o.time, airplane: false, battery: 0.42 });
-  text(c, "‹", 40, 120, { size: 60, font: F.ui, fill: "#fff" });
+  socialIcon(c, "back", 40, 120, 30, "#fff");
   say(c, "发日常", SW / 2, 120, 34, { weight: 700, align: "center" });
-  // caption with a caret
-  const w = say(c, o.caption, 40, 240, 44, { weight: 700 });
-  if (o.caret) {
-    c.fillStyle = "#fe2c55";
-    c.fillRect(46 + w, 214, 4, 52);
-  }
-  // the photo
-  c.save();
-  rr(c, 40, 310, 360, 480, 18);
-  c.clip();
-  o.photo(c, 40, 310, 360, 480);
-  c.restore();
-  say(c, "# 下雪", 40, 850, 28, { color: "#8fb3ff" });
-  say(c, "公开 · 所有人可见", 40, 930, 26, { color: GREY });
-  // 发布
+  say(c, "存草稿", 560, 120, 22, { color: GREY, align: "right" });
+  c.fillStyle = VLINE; c.fillRect(24, 166, SW - 48, 1);
+  const w = say(c, o.caption, 40, 230, 44, { weight: 700 });
+  if (o.caret) { c.fillStyle = "#fe2c55"; c.fillRect(46 + w, 204, 4, 52); }
+  say(c, o.caption.length + " / 1000", 560, 272, 18, { color: "#71727e", align: "right" });
+  c.save(); rr(c, 40, 310, 360, 480, 18); c.clip(); o.photo(c, 40, 310, 360, 480); c.restore();
+  socialButton(c, 304, 734, 72, 36, "1 / 1", { fill: "rgba(0,0,0,0.4)", size: 20, radius: 18 });
+  c.fillStyle = "rgba(0,0,0,0.4)"; c.beginPath(); c.arc(372, 338, 17, 0, Math.PI * 2); c.fill();
+  socialIcon(c, "close", 372, 338, 19, "#fff");
+  c.save(); c.strokeStyle = "#454651"; c.lineWidth = 1.5; c.setLineDash([6, 6]);
+  rr(c, 424, 310, 136, 156, 16); c.stroke(); c.restore();
+  socialIcon(c, "plus", 492, 366, 36, "#9798a4");
+  say(c, "添加图片", 492, 420, 22, { color: GREY, align: "center" });
+  socialButton(c, 40, 818, 144, 48, "# 下雪", { size: 25, color: "#a0bbf6", radius: 24 });
+  socialButton(c, 200, 818, 144, 48, "@ 朋友", { size: 24, color: "#bbbcc7", radius: 24 });
+  const rows: [number, "globe" | "pin", string, string][] = [[924, "globe", "谁可以看", "公开"], [1006, "pin", "所在位置", "不显示位置"]];
+  rows.forEach(([y, icon, title, value]) => {
+    socialIcon(c, icon, 54, y, 27, "#c5c6ce");
+    say(c, title, 88, y, 28, { color: "#e1e2e9" });
+    say(c, value, 526, y, 24, { color: GREY, align: "right" });
+    socialIcon(c, "chevron", 551, y, 22, GREY);
+    c.fillStyle = VLINE; c.fillRect(40, y + 38, 520, 1);
+  });
   const k = clamp(o.press ?? 0);
-  c.fillStyle = k > 0 ? "#d81e44" : "#fe2c55";
-  rr(c, 40, POST_BTN[1] - 48, SW - 80, 96, 48);
-  c.fill();
-  say(c, "发布", POST_BTN[0], POST_BTN[1], 38, { weight: 700, align: "center" });
+  socialButton(c, 40, POST_BTN[1] - 48, SW - 80, 96, "发布", { fill: k > 0 ? "#d81e44" : "#fe2c55", radius: 22, size: 38 });
+  say(c, "日常会展示在你的主页", SW / 2, 1200, 20, { color: "#797a86", align: "center" });
+  socialHomeBar(c);
 }
 
-/** The in-app banner that drops in at the top: "<name> 评论了你：<body>". `k` 0..1 = slid in. */
-export function vidBanner(c: Ctx, k: number, o: { name: string; body: string; rose?: boolean; big?: boolean; reply?: boolean }) {
+/** The body anchor stays at (140, y + 112) for the later match cut into her memory. */
+export function vidBanner(c: Ctx, k: number, o: { name: string; body: string; rose?: boolean; big?: boolean; reply?: boolean; details?: boolean }) {
   if (k <= 0) return;
   const e = 1 - Math.pow(1 - clamp(k), 3);
-  const big = o.big ? 1.25 : 1;
-  const h = 172 * big;
-  const y = -h + (84 + h) * e;
+  const big = o.big ? 1.25 : 1, h = 172 * big, y = -h + (84 + h) * e;
   c.save();
-  c.shadowColor = "rgba(0,0,0,0.5)";
-  c.shadowBlur = 24;
-  c.fillStyle = "rgba(44,45,54,0.97)";
-  rr(c, 18, y, SW - 36, h, 30);
-  c.fill();
-  c.shadowColor = "transparent";
+  c.shadowColor = "rgba(0,0,0,0.5)"; c.shadowBlur = 24; c.shadowOffsetY = o.details ? 8 : 0;
+  c.fillStyle = "rgba(44,45,54,0.97)"; rr(c, 18, y, SW - 36, h, 30); c.fill();
+  c.shadowColor = "transparent"; c.shadowOffsetY = 0;
+  if (o.details) { c.strokeStyle = "rgba(255,255,255,0.1)"; c.lineWidth = 1; c.stroke(); }
   if (o.reply) herAvatar(c, 82, y + h / 2, 40 * big);
   else grayAvatar(c, 82, y + h / 2, 40 * big);
-  say(c, `${o.name} ${o.reply ? "回复了你" : "评论了你"}`, 140, y + 50 * big, 27 * big, { color: "#c9cad1" });
+  say(c, o.name + " " + (o.reply ? "回复了你" : "评论了你"), 140, y + 50 * big, (o.details ? 24 : 27) * big, { color: "#c9cad1" });
+  if (o.details) say(c, "现在", 554, y + 25, 17, { color: "#93949f", align: "right" });
   say(c, o.body, 140, y + 112 * big, 44 * big, { weight: 700, rose: o.rose });
   c.restore();
 }
 
-/** The stranger's profile page. `pulse` marks 「关注 1」. */
-/** `menu` 0..1 highlights 「···」 (block from there); `blocked` shows the 「已拉黑」 state. MENU_AT = 「···」. */
+/** The unknown account stays anonymous: no location, portrait or biographical clues. */
 export const MENU_AT: [number, number] = [SW - 64, 116];
 export function vidProfile(c: Ctx, o: { name: string; pulse?: number; time: string; menu?: number; blocked?: number }) {
-  c.fillStyle = VBG;
-  c.fillRect(0, 0, SW, SH);
-  const g = c.createLinearGradient(0, 0, 0, 380);
-  g.addColorStop(0, "#3a3b45");
-  g.addColorStop(1, VBG);
-  c.fillStyle = g;
-  c.fillRect(0, 0, SW, 380);
+  c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
+  const g = c.createLinearGradient(0, 0, 0, 408);
+  g.addColorStop(0, "#3b3c49"); g.addColorStop(1, VBG);
+  c.fillStyle = g; c.fillRect(0, 0, SW, 408);
   statusBar(c, { time: o.time, airplane: false, battery: 0.41 });
-  text(c, "‹", 40, 120, { size: 60, font: F.ui, fill: "#fff" });
-  text(c, "···", SW - 64, 112, { size: 44, font: F.ui, weight: 700, fill: "#fff" });
+  socialIcon(c, "back", 40, 120, 30, "#fff");
+  socialIcon(c, "more", MENU_AT[0], MENU_AT[1], 34, "#fff");
   if ((o.menu ?? 0) > 0) {
-    c.fillStyle = `rgba(255,255,255,${(0.18 * (o.menu ?? 0)).toFixed(3)})`;
-    c.beginPath();
-    c.arc(MENU_AT[0], MENU_AT[1], 40, 0, Math.PI * 2);
-    c.fill();
+    c.fillStyle = "rgba(255,255,255," + (0.18 * (o.menu ?? 0)).toFixed(3) + ")";
+    c.beginPath(); c.arc(MENU_AT[0], MENU_AT[1], 40, 0, Math.PI * 2); c.fill();
   }
-  grayAvatar(c, 120, 300, 84);
-  say(c, o.name, 230, 270, 40, { weight: 700 });
-  say(c, "没有简介", 230, 324, 26, { color: GREY });
-  // stats
+  grayAvatar(c, 116, 283, 78);
+  c.strokeStyle = "rgba(255,255,255,0.15)"; c.lineWidth = 3;
+  c.beginPath(); c.arc(116, 283, 81, 0, Math.PI * 2); c.stroke();
+  say(c, o.name, 220, 246, 36, { weight: 700 });
+  say(c, "抖音号：" + o.name.replace("用户", ""), 220, 300, 22, { color: "#b0b1bd" });
+  say(c, "这个人很懒，什么都没留下", 40, 390, 24, { color: GREY });
   const stats: [string, string][] = [["0", "获赞"], ["1", "关注"], ["0", "粉丝"]];
   stats.forEach(([n, l], i) => {
     const x = 70 + i * 170;
@@ -625,164 +617,177 @@ export function vidProfile(c: Ctx, o: { name: string; pulse?: number; time: stri
     say(c, l, x + measure(c, n, 44, F.ui, 700) + 10, 454, 28, { color: GREY });
   });
   pulseBox(c, 228, 420, 132, 64, o.pulse ?? 0);
-  c.fillStyle = "rgba(255,255,255,0.1)";
-  c.fillRect(0, 520, SW, 2);
-  say(c, "作品 0", 60, 570, 30, { weight: 700 });
-  c.fillStyle = "#fff";
-  c.fillRect(60, 596, 96, 5);
-  say(c, "TA 还没有发布过作品", SW / 2, 820, 30, { color: GREY, align: "center" });
-  const b = clamp(o.blocked ?? 0);
-  if (b > 0) {
-    c.save();
-    c.globalAlpha *= b;
-    c.fillStyle = "#33343d";
-    rr(c, 40, 640, SW - 80, 84, 14);
-    c.fill();
-    say(c, "已拉黑", SW / 2, 682, 32, { color: "#c9cad1", weight: 700, align: "center" });
-    c.restore();
+  const blocked = clamp(o.blocked ?? 0);
+  if (blocked > 0) {
+    socialButton(c, 36, 512, 528, 70, "已拉黑", { icon: "shield", fill: "#292a34", color: "#b7b8c3", size: 29 });
+    say(c, "对方无法再评论你的作品", SW / 2, 616, 21, { color: GREY, align: "center" });
+  } else {
+    socialButton(c, 36, 512, 340, 70, "关注", { fill: "#fe2c55", icon: "plus", size: 29 });
+    socialButton(c, 392, 512, 172, 70, "私信", { size: 27 });
   }
+  c.fillStyle = VLINE; c.fillRect(0, 648, SW, 1);
+  say(c, "作品 0", 145, 691, 28, { weight: 700, align: "center" });
+  say(c, "喜欢", 435, 691, 27, { color: "#747582", align: "center" });
+  socialIcon(c, "lock", 483, 691, 19, "#747582");
+  c.fillStyle = "#eeeef3"; rr(c, 111, 727, 68, 4, 2); c.fill();
+  c.fillStyle = VLINE; c.fillRect(0, 746, SW, 1);
+  // A complete empty state: the zero works itself is part of the clue.
+  c.fillStyle = "#1c1d28"; c.beginPath(); c.arc(300, 838, 50, 0, Math.PI * 2); c.fill();
+  socialIcon(c, "image", 300, 838, 56, "#5d5e6b");
+  say(c, "暂无作品", SW / 2, 927, 30, { color: "#b3b4bf", weight: 700, align: "center" });
+  say(c, "TA 还没有发布过作品", SW / 2, 975, 23, { color: "#6e6f7d", align: "center" });
+  socialHomeBar(c);
 }
 
-/** Whom the stranger follows: only her. */
+/** Only one person is in the list. Search and footer explain the otherwise empty screen. */
 export function vidFollowing(c: Ctx, o: { pulse?: number; time: string }) {
-  c.fillStyle = VBG;
-  c.fillRect(0, 0, SW, SH);
+  c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
   statusBar(c, { time: o.time, airplane: false, battery: 0.41 });
-  text(c, "‹", 40, 120, { size: 60, font: F.ui, fill: "#fff" });
+  socialIcon(c, "back", 40, 120, 30, "#fff");
   say(c, "TA 的关注（1）", SW / 2, 120, 34, { weight: 700, align: "center" });
+  socialIcon(c, "search", 552, 120, 28, GREY);
+  c.fillStyle = VLINE; c.fillRect(0, 174, SW, 1);
   herAvatar(c, 90, 260, 50);
   say(c, HER, 166, 240, 36, { weight: 700 });
-  c.fillStyle = "#fe2c55";
-  rr(c, 166 + measure(c, HER, 36, F.ui, 700) + 14, 222, 52, 36, 8);
-  c.fill();
-  say(c, "我", 166 + measure(c, HER, 36, F.ui, 700) + 40, 240, 24, { weight: 700, align: "center" });
+  socialButton(c, 166 + measure(c, HER, 36, F.ui, 700) + 14, 223, 50, 34, "我", { fill: "#fe2c55", size: 22, radius: 7 });
   say(c, "今天也要开心呀", 166, 288, 26, { color: GREY });
+  socialIcon(c, "chevron", 550, 260, 23, "#777885");
   pulseBox(c, 30, 196, SW - 60, 130, o.pulse ?? 0);
+  c.fillStyle = VLINE; c.fillRect(166, 336, 398, 1);
+  say(c, "已显示全部关注", SW / 2, 398, 22, { color: "#6e6f7d", align: "center" });
+  socialHomeBar(c);
 }
 
-/** Her "comments" inbox: rows of the same grey avatar, three years deep (newest first). `scroll` in px; `gone` 0..1
- *  fades the rows out. ROW_A / ROW_B are rows the camera can stop on; HISTORY_END is the scroll that shows the oldest. */
-const HISTORY: [string, string][] = [
-  ["这么晚还不睡？", "刚刚"],
-  ["又熬夜", "2026-01-09"],
-  ["和谁出去了", "2025-08-02"],
-  ["瘦了", "2025-06-30"],
-  ["别哭", "2025-03-11"],
-  ["到家了吗", "2024-12-31"],
-  ["那个男生是谁", "2024-12-25"],
-  ["几点了还不睡", "2024-10-03"],
-  ["裙子太短", "2024-06-17"],
-  ["头发剪了", "2024-03-02"],
-  ["一个人？", "2024-01-01"],
-  ["换手机号了", "2023-11-20"],
-  ["又熬夜", "2023-09-14"],
-  ["到学校了吗", "2023-09-01"],
-  ["瘦了", "2023-06-18"],
-  ["又不吃早饭", "2023-06-09"],
-  ["谁送你回来的", "2023-06-01"],
-  ["又换头像了", "2023-05-31"],
+/** The history starts with the same two live comments that arrived in the opening shot.
+ *  Each original post uses existing film art; the 2023 graduation is not a placeholder rectangle. */
+type HistoryItem = { text: string; date: string; photo: Photo };
+const HISTORY: HistoryItem[] = [
+  { text: "窗户关好", date: "刚刚", photo: snowPhoto },
+  { text: "这么晚还不睡？", date: "刚刚", photo: snowPhoto },
+  { text: "又熬夜", date: "2026-01-09", photo: snowPhoto },
+  { text: "和谁出去了", date: "2025-08-02", photo: couplePhoto(false) },
+  { text: "瘦了", date: "2025-06-30", photo: gradPhoto },
+  { text: "别哭", date: "2025-03-11", photo: snowPhoto },
+  { text: "到家了吗", date: "2024-12-31", photo: nightPhoto },
+  { text: "那个男生是谁", date: "2024-12-25", photo: couplePhoto(false) },
+  { text: "几点了还不睡", date: "2024-10-03", photo: nightPhoto },
+  { text: "裙子太短", date: "2024-06-17", photo: partyPhoto },
+  { text: "头发剪了", date: "2024-03-02", photo: gradPhoto },
+  { text: "一个人？", date: "2024-01-01", photo: nightPhoto },
+  { text: "换手机号了", date: "2023-11-20", photo: partyPhoto },
+  { text: "又熬夜", date: "2023-09-14", photo: snowPhoto },
+  { text: "到学校了吗", date: "2023-09-01", photo: partyPhoto },
+  { text: "瘦了", date: "2023-06-18", photo: gradPhoto },
+  { text: "又不吃早饭", date: "2023-06-09", photo: gradPhoto },
+  { text: "谁送你回来的", date: "2023-06-01", photo: partyPhoto },
+  { text: "又换头像了", date: "2023-05-31", photo: gradPhoto },
 ];
-export const ROW_A = 5; // 到家了吗 · 2024-12-31
-export const ROW_B = 14; // 瘦了 · 2023-06-18
+export const ROW_A = HISTORY.findIndex(row => row.date === "2024-12-31");
+export const ROW_B = HISTORY.findIndex(row => row.date === "2023-06-18");
 const ROW_H = 150;
+// The extra newest row moves the scroll distance equally; the landing row stays at y=500.
 export const HISTORY_END = (HISTORY.length - 6) * ROW_H;
 export function vidComments(c: Ctx, o: { scroll: number; time: string; marks?: [number, number][]; gone?: number; press?: number }) {
-  c.fillStyle = VBG;
-  c.fillRect(0, 0, SW, SH);
-  c.save();
-  c.beginPath();
-  c.rect(0, 170, SW, SH - 170);
-  c.clip();
-  HISTORY.forEach(([t, d], i) => {
+  c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
+  c.save(); c.beginPath(); c.rect(0, 176, SW, 1050); c.clip();
+  HISTORY.forEach(({ text: body, date, photo }, i) => {
     const y = 200 + i * ROW_H - o.scroll;
-    if (y < 80 || y > SH + 40) return;
-    c.save();
-    c.globalAlpha *= 1 - clamp(o.gone ?? 0);
+    if (y < 45 || y > SH + 40) return;
+    c.save(); c.globalAlpha *= 1 - clamp(o.gone ?? 0);
     if (o.press && i === ROW_A) {
-      c.fillStyle = `rgba(255,255,255,${(0.08 * o.press).toFixed(3)})`;
+      c.fillStyle = "rgba(255,255,255," + (0.08 * o.press).toFixed(3) + ")";
       c.fillRect(0, y - 20, SW, ROW_H);
     }
-    grayAvatar(c, 64, y + 46, 38);
-    say(c, ACC_A, 124, y + 18, 26, { color: GREY });
-    say(c, t, 124, y + 66, 38, { weight: 700, rose: true });
-    say(c, `评论了你的作品 · ${d}`, 124, y + 110, 22, { color: GREY });
-    // thumbnail of the post
-    c.fillStyle = ["#3a3564", "#9fd0f0", "#c98a5e", "#1a1640"][i % 4];
-    rr(c, SW - 110, y + 6, 78, 104, 10);
-    c.fill();
+    if (i < 2) {
+      c.fillStyle = "rgba(254,44,85,0.045)"; c.fillRect(0, y - 14, SW, ROW_H);
+      c.fillStyle = "#fe2c55"; c.beginPath(); c.arc(17, y + 43, 4, 0, Math.PI * 2); c.fill();
+    }
+    grayAvatar(c, 64, y + 46, 36);
+    say(c, ACC_A, 122, y + 15, 25, { color: "#a9aab5" });
+    say(c, body, 122, y + 66, 36, { weight: 700, rose: true });
+    say(c, date, 122, y + 111, 23, { color: GREY });
+    say(c, "回复", 454, y + 111, 21, { color: "#8b8c99", align: "right" });
+    // Draw in the photos' normal design coordinates, scaling lines/flakes as well as geometry.
+    c.save(); rr(c, 492, y + 7, 76, 104, 9); c.clip();
+    c.translate(492, y + 7); c.scale(76 / 600, 104 / 800);
+    photo(c, 0, 0, 600, 800); c.restore();
+    c.strokeStyle = "rgba(255,255,255,0.1)"; c.lineWidth = 1;
+    rr(c, 492, y + 7, 76, 104, 9); c.stroke();
+    c.fillStyle = VLINE; c.fillRect(122, y + 134, 446, 1);
     c.restore();
   });
   for (const [row, k] of o.marks ?? []) {
     const y = 200 + row * ROW_H - o.scroll;
     pulseBox(c, 20, y - 6, SW - 150, ROW_H - 24, k);
   }
-  // scroll bar: a long list
-  const total = HISTORY.length * ROW_H + 60;
-  const view = SH - 170;
+  const total = HISTORY.length * ROW_H + 60, view = 1050;
   const barH = Math.max(60, (view * view) / total);
-  const barY = 170 + (o.scroll / Math.max(1, total - view)) * (view - barH);
-  c.fillStyle = "rgba(255,255,255,0.35)";
-  rr(c, SW - 14, barY, 6, barH, 3);
-  c.fill();
+  const barY = 176 + (o.scroll / Math.max(1, total - view)) * (view - barH);
+  c.fillStyle = "rgba(255,255,255,0.28)"; rr(c, SW - 12, barY, 4, barH, 2); c.fill();
+  const endY = 200 + HISTORY.length * ROW_H - o.scroll + 18;
+  say(c, "没有更多消息了", SW / 2, endY, 21, { color: "#686a77", align: "center" });
   c.restore();
-  c.fillStyle = VBG;
-  c.fillRect(0, 0, SW, 170);
+  c.fillStyle = VBG; c.fillRect(0, 0, SW, 176);
   statusBar(c, { time: o.time, airplane: false, battery: 0.41 });
-  say(c, "互动消息", SW / 2, 120, 34, { weight: 700, align: "center" });
-  say(c, "评论", 60, 120, 28, { color: "#fff", weight: 700 });
+  socialIcon(c, "back", 37, 120, 28, "#eeeef3");
+  say(c, "互动消息", 298, 113, 32, { weight: 700, align: "center" });
+  say(c, "评论与回复", 298, 154, 18, { color: "#858794", align: "center" });
+  socialIcon(c, "filter", 552, 120, 27, "#b9bac4");
+  c.fillStyle = VLINE; c.fillRect(0, 175, SW, 1);
+  socialHomeBar(c, { background: VBG });
 }
 
-/** Blocking: `sheet` 0..1 the bottom sheet up, `confirm` 0..1 the dialog, `done` 0..1 the toast. */
+/** The action rows clear the lyric band. The confirmation keeps its approved screen position. */
+export const BLOCK_AT: [number, number] = [300, 746];
 export function vidBlock(c: Ctx, o: { sheet: number; confirm: number; done: number; hot?: number }) {
   if (o.sheet > 0) {
     c.save();
-    c.fillStyle = `rgba(0,0,0,${(0.5 * clamp(o.sheet)).toFixed(3)})`;
-    c.fillRect(0, 0, SW, SH);
-    const e = 1 - Math.pow(1 - clamp(o.sheet), 3);
-    const y = SH - 470 * e;
-    c.fillStyle = "#24252d";
-    rr(c, 0, y, SW, 520, 36);
-    c.fill();
-    say(c, ACC_A, SW / 2, y + 60, 28, { color: GREY, align: "center" });
-    const items: [string, string][] = [["拉黑", "#fe2c55"], ["举报", "#fff"], ["取消", "#fff"]];
-    items.forEach(([t, col], i) => {
+    c.fillStyle = "rgba(0,0,0," + (0.5 * clamp(o.sheet)).toFixed(3) + ")"; c.fillRect(0, 0, SW, SH);
+    const e = 1 - Math.pow(1 - clamp(o.sheet), 3), y = SH - 680 * e;
+    c.fillStyle = "#24252d"; rr(c, 0, y, SW, 740, 32); c.fill();
+    c.fillStyle = "#555660"; rr(c, 270, y + 15, 60, 5, 3); c.fill();
+    say(c, ACC_A, SW / 2, y + 60, 25, { color: GREY, align: "center" });
+    // Privacy actions are near the top; cancel remains in the bottom safe area.
+    const actions: ["shield" | "filter", string, string, string][] = [
+      ["shield", "拉黑", "不再接收对方的评论", "#fe2c55"],
+      ["filter", "举报", "反馈不当内容", "#e4e4eb"],
+    ];
+    actions.forEach(([icon, label, hint, color], i) => {
+      const rowY = y + 146 + i * 116;
       if (i === 0 && (o.hot ?? 0) > 0) {
-        c.fillStyle = `rgba(254,44,85,${(0.18 * (o.hot ?? 0)).toFixed(3)})`;
-        c.fillRect(0, y + 110, SW, 110);
+        c.fillStyle = "rgba(254,44,85," + (0.18 * (o.hot ?? 0)).toFixed(3) + ")";
+        c.fillRect(24, rowY - 40, SW - 48, 108);
       }
-      say(c, t, SW / 2, y + 165 + i * 110, 36, { color: col, weight: 700, align: "center" });
-      c.fillStyle = "rgba(255,255,255,0.08)";
-      c.fillRect(40, y + 220 + i * 110, SW - 80, 2);
+      socialIcon(c, icon, 67, rowY + 8, 32, color);
+      say(c, label, 110, rowY, 36, { color, weight: 700 });
+      say(c, hint, 110, rowY + 43, 22, { color: GREY });
+      socialIcon(c, "chevron", 546, rowY + 10, 22, GREY);
+      c.fillStyle = VLINE; c.fillRect(32, rowY + 73, SW - 64, 1);
     });
-    c.restore();
+    c.fillStyle = "#1b1c24"; c.fillRect(0, y + 532, SW, 12);
+    say(c, "取消", SW / 2, y + 585, 34, { weight: 700, align: "center" });
+    socialHomeBar(c); c.restore();
   }
   if (o.confirm > 0 && o.done <= 0) {
     const k = clamp(o.confirm);
-    c.save();
-    c.globalAlpha *= k;
-    c.fillStyle = "rgba(0,0,0,0.45)";
-    c.fillRect(0, 0, SW, SH);
-    c.translate(SW / 2, 620);
-    c.scale(0.9 + 0.1 * k, 0.9 + 0.1 * k);
-    c.fillStyle = "#2c2d36";
-    rr(c, -240, -150, 480, 300, 28);
-    c.fill();
-    say(c, "确定拉黑对方吗？", 0, -70, 36, { weight: 700, align: "center" });
-    say(c, "拉黑后，对方将无法评论你", 0, -12, 24, { color: GREY, align: "center" });
-    c.fillStyle = "rgba(255,255,255,0.1)";
-    c.fillRect(-240, 50, 480, 2);
+    c.save(); c.globalAlpha *= k;
+    c.fillStyle = "rgba(0,0,0,0.5)"; c.fillRect(0, 0, SW, SH);
+    c.translate(SW / 2, 620); c.scale(0.9 + 0.1 * k, 0.9 + 0.1 * k);
+    c.fillStyle = "#2c2d36"; rr(c, -250, -156, 500, 312, 24); c.fill();
+    c.strokeStyle = "rgba(255,255,255,0.09)"; c.lineWidth = 1; c.stroke();
+    say(c, "确定拉黑对方吗？", 0, -78, 35, { weight: 700, align: "center" });
+    say(c, "拉黑后，对方将无法评论你", 0, -18, 25, { color: "#a6a7b2", align: "center" });
+    c.fillStyle = VLINE; c.fillRect(-250, 50, 500, 1); c.fillRect(0, 50, 1, 106);
     say(c, "取消", -120, 100, 32, { color: "#ddd", align: "center" });
     say(c, "拉黑", 120, 100, 32, { color: "#fe2c55", weight: 700, align: "center" });
     c.restore();
   }
   if (o.done > 0) {
     const k = clamp(o.done);
-    c.save();
-    c.globalAlpha *= Math.min(1, k * 3) * (1 - clamp((k - 0.8) / 0.2));
-    c.fillStyle = "rgba(60,61,70,0.95)";
-    rr(c, SW / 2 - 130, 560, 260, 96, 20);
-    c.fill();
-    say(c, "已拉黑", SW / 2, 608, 34, { weight: 700, align: "center" });
+    c.save(); c.globalAlpha *= Math.min(1, k * 3) * (1 - clamp((k - 0.8) / 0.2));
+    c.fillStyle = "rgba(61,63,74,0.97)"; rr(c, SW / 2 - 130, 596, 260, 80, 18); c.fill();
+    socialIcon(c, "check", 225, 636, 29, "#a2e7c1");
+    say(c, "已拉黑", 326, 636, 32, { weight: 700, align: "center" });
     c.restore();
   }
 }

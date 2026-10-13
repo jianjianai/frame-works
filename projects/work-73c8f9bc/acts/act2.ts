@@ -3,11 +3,11 @@
 // → 微信「囡囡」的朋友圈只有一条横线 → 他用一根手指打字。
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase } from "@frame/engine/math";
-import { Ctx, camera, designScene, easeInOut, easeOut, fillBg, filtered, flash, glow, litFigure, smearV, zoomBlur } from "@materials/s0rrow/code/draw";
+import { Ctx, camera, castShadow, designScene, easeInOut, easeOut, fillBg, filtered, flash, glow, litFigure, oval, paint, smearV, zoomBlur } from "@materials/s0rrow/code/draw";
 import { phone, phoneBack, statusBar } from "@materials/s0rrow/code/phone";
 import { SHOT, WORD, at } from "./timeline";
 import { ACC_B, DAD_CALLS_HER, WALL_FACE, WALL_S, couplePhoto, dadLock, slide, vidPost, wxContact, wxMomentsBlocked } from "./ui";
-import { boothBack, boothFront, deskTop } from "@materials/s0rrow/code/blocked/booth";
+import { boothBack, boothFront, boothFrontDesk, deskTop } from "@materials/s0rrow/code/blocked/booth";
 import { drawDad } from "@materials/s0rrow/code/blocked/dad";
 import { drawPhone, tap, timeCard, whip } from "./shots";
 import { BOOTH_AT, facadeWide, flight } from "./journey";
@@ -110,7 +110,7 @@ function hisPost(p: Ctx, abs: number) {
 
 /** 10 · the same post on another phone; two fingers zoom in on her laughing, swipe, the kiss, the boyfriend. */
 function shot10(c: Ctx, abs: number) {
-  filtered(c, "blur(9px) brightness(0.55)", (k) => boothBack(k, abs), "s10bg");
+  filtered(c, "blur(9px) brightness(0.55)", (k) => boothBack(k, abs, { detailed: true }), "s10bg");
   glow(c, 540, 860, 900, "rgba(140,170,255,0.28)");
   const pinch = (t0: number, t1: number) => {
     const k = phase(abs, t0, t1);
@@ -142,21 +142,32 @@ function shot11(c: Ctx, abs: number, t0: number, end: number) {
   c.translate(sx, sy);
   c.scale(z, z);
   c.translate(-P.x, -P.y);
-  filtered(c, `blur(${(7 * (1 - e)).toFixed(1)}px)`, (k) => boothBack(k, abs), "s11bg");
+  filtered(c, `blur(${(7 * (1 - e)).toFixed(1)}px)`, (k) => boothBack(k, abs, { detailed: true }), "s11bg");
+  // A soft contact shadow settles onto the glass as the phone lowers.
+  c.save();
+  c.globalAlpha = 0.26 + 0.2 * down;
+  oval(c, P.x + 8, 1203 - 49 * down, 96 + 14 * down, 17 + 8 * down, 88400, 0.4);
+  paint(c, "#091520", null);
+  c.restore();
   // the phone (in his hands, then lying on the desk)
   c.save();
   c.translate(P.x, P.y);
   c.scale(1, 1 - 0.55 * down);
   c.translate(-P.x, -P.y);
-  glow(c, P.x, P.y, 300, "rgba(150,180,255,0.4)");
+  glow(c, P.x, P.y + 35, 235, "rgba(150,180,255,0.24)");
   phone(c, P.x, P.y, ps, 0, (p) => hisPost(p, Math.min(abs, WORD.kissing + 0.8)));
   c.restore();
   // him, from behind, dark against the window with a warm rim from the lamp outside; he lets his head drop, sighs
   const sigh = Math.sin(phase(abs, t0 + 2.1, t0 + 3.4) * Math.PI);
-  litFigure(c, (k) => drawDad(k, 510, 1170 + 10 * sigh, 1.12, { view: "back", coat: true, tilt: 0.04 * sigh, headY: 16 * sigh }), {
-    shade: 0.45,
-    lights: [{ x: P.x, y: P.y, r: 320, rgb: "150,185,255", a: 0.35 * (1 - down) }],
-    rim: { ux: 0.3, uy: -1, rgb: "255,190,120", a: 0.55, width: 8 },
+  litFigure(c, (k) => drawDad(k, 510, 1170 + 10 * sigh, 1.12, { view: "back", coat: true, backDetails: true, tilt: 0.04 * sigh, headY: 16 * sigh }), {
+    shade: 0.38,
+    shadeCol: "rgb(13,23,33)",
+    lights: [
+      { x: P.x, y: P.y, r: 285, rgb: "150,185,255", a: 0.3 * (1 - down) + 0.04 },
+      { x: 280, y: 906, r: 355, rgb: "132,191,211", a: 0.12 },
+      { x: 970, y: 1510, r: 445, rgb: "238,147,79", a: 0.13 },
+    ],
+    rim: { ux: 0.48, uy: -1, rgb: "255,191,125", a: 0.38, width: 7 },
   });
   c.restore();
   void end;
@@ -171,14 +182,13 @@ function shot12(c: Ctx, abs: number, t0: number, end: number) {
   const lit = abs < off ? 1 : abs < wake ? 0 : 1;
   c.save();
   camera(c, 540, 880, z);
-  deskTop(c, abs);
-  glow(c, 540, 880, 520, "rgba(150,180,255,0.4)", lit ? 1 : 0.15);
+  deskTop(c, abs, { detailed: true, phoneLight: lit, phoneResting: true });
   c.restore();
   // into the close-up: the phone lifts off the desk, turns straight and settles where shot 14 holds it, while the
   // desk melts into the dark booth behind
   const e = easeInOut(phase(abs, end - 0.55, end));
   if (e > 0) {
-    filtered(c, "blur(9px) brightness(0.5)", (k) => boothFront(k, abs), "s12bg", e);
+    filtered(c, "blur(9px) brightness(0.75)", (k) => boothFront(k, abs, { detailed: true }), "s12bg", e);
     glow(c, 540, 860, 900, "rgba(150,180,255,0.3)", e);
   }
   const P = { cx: 540, cy: 880 + 20 * e, s: 0.92 * z * (1 - e) + e, rot: 0.06 * (1 - e) };
@@ -224,7 +234,7 @@ const HIGH_NOTE = 29.87;
 /** 14 · close on his phone: her profile, Moments shows nothing; he taps Moments — the page opens on her cover, and on
  *  the high note a single grey line draws across: she hid her Moments from him. */
 function shot14(c: Ctx, abs: number, t0: number) {
-  filtered(c, "blur(9px) brightness(0.5)", (k) => boothFront(k, abs), "s14bg");
+  filtered(c, "blur(9px) brightness(0.75)", (k) => boothFront(k, abs, { detailed: true }), "s14bg");
   glow(c, 540, 860, 900, "rgba(150,180,255,0.3)");
   const tapAt = HIGH_NOTE - 0.32;
   const open = (abs - tapAt - 0.02) / 0.22;
@@ -240,25 +250,24 @@ function shot14(c: Ctx, abs: number, t0: number) {
 /** 15 · his face over the phone, glasses pushed up, typing with one finger. */
 function shot15(c: Ctx, abs: number, t0: number) {
   const u = abs - t0;
-  const dark = (k: Ctx) => {
-    boothFront(k, abs, { blur: 7 });
-    k.fillStyle = "rgba(6,8,20,0.45)";
-    k.fillRect(-60, -60, 1200, 2040);
-  };
-  dark(c);
+  boothFront(c, abs, { detailed: true, blur: 3.5, clock: 2 + 53 / 60 });
   camera(c, 540, 760, 1 + 0.05 * phase(u, 0, 1.5));
   // one finger, four slow taps (多 · 穿 · 点 · send)
   const taps = [0.12, 0.47, 0.72, 0.96];
   const tapK = taps.reduce((m, t) => Math.max(m, 1 - Math.min(1, Math.abs(u - t) / 0.07)), 0);
   const phoneAt: [number, number] = [540 - 10 * 1.42, 600 + 400 * 1.42];
-  litFigure(c, (k) => drawDad(k, 540, 600, 1.42, { coat: true, eyes: "down", brows: "worried", mouth: "press", tilt: 0.04, arms: "type", tap: tapK, holding: (q) => phoneBack(q, -10, 400, 150, 270, -0.08, 0) }), {
-    shade: 0.3,
+  const dad = (k: Ctx) => drawDad(k, 540, 600, 1.42, { coat: true, frontDetails: true, screenReflection: 0.85, eyes: "down", brows: "worried", mouth: "press", tilt: 0.04, arms: "type", tap: tapK, holding: (q) => phoneBack(q, -10, 400, 150, 270, -0.08, 0, { detailed: true, caseColor: "#252d35", cameraColor: "#343e47" }) });
+  castShadow(c, [960, 400], 1.13, dad, "#071a21", 25, 0.17, (k) => { k.beginPath(); k.rect(-60, -60, 745, 2040); k.clip(); });
+  litFigure(c, dad, {
+    shade: 0.38,
+    shadeCol: "rgb(12,27,39)",
     lights: [
-      { x: phoneAt[0], y: phoneAt[1] - 160, r: 430, rgb: "160,195,255", a: 0.4 },
-      { x: 1040, y: 300, r: 520, rgb: "255,170,90", a: 0.18 },
+      { x: phoneAt[0], y: 805, r: 310, rgb: "149,190,210", a: 0.27 },
+      { x: phoneAt[0], y: phoneAt[1] - 10, r: 215, rgb: "144,183,201", a: 0.1 },
+      { x: 220, y: 850, r: 490, rgb: "118,158,174", a: 0.075 },
+      { x: 865, y: 555, r: 480, rgb: "245,178,106", a: 0.19 },
     ],
-    rim: { ux: 1, uy: -0.4, rgb: "255,190,120", a: 0.45 },
+    rim: { ux: 1, uy: -0.4, rgb: "245,190,123", a: 0.34, width: 5 },
   });
-  // the screen's light caught in his reading glasses
-  for (const side of [-1, 1]) glow(c, 540 + side * 50 * 1.42, 600 + 42 * 1.42, 60, "rgba(190,215,255,0.5)");
+  filtered(c, "blur(0.7px)", (k) => boothFrontDesk(k, abs), "s15desk");
 }
