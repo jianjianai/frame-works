@@ -262,7 +262,7 @@ export const resources = defineResources({
     description:
       "夜景里给人物单独打光（《屏蔽》全片的做法）：先画人，再只在人物身上压暗（shade、shadeCol），叠几盏点光（手机在下巴下面的冷光、台灯、路灯；screen 叠加会把盖住的墨线冲灰，半径和强度都要小），最后在朝光的一侧、墨线内侧加一圈轮廓光（rim）。手机照脸：shade 0.3、lights [{ x, y, r: 430, rgb: \"170,195,255\", a: 0.4 }]；关灯后只剩月光：shade 0.5、冷色轮廓光 0.6。房间要在画人之前压暗，画完人再整幅压暗会把轮廓光一起压没。",
     tags: ["打光", "光影", "人物", "手机光", "台灯", "轮廓光", "夜景", "暗部"],
-    usage: "litFigure(ctx, (c) => drawKid(c, x, y, s, pose), { shade, shadeCol, lights: [{ x, y, r, rgb, a }], rim: { ux, uy, rgb, a, width } })",
+    usage: 'import { litFigure } from "@materials/s0rrow/code/draw"; litFigure(ctx, (c) => drawKid(c, x, y, s, pose), { shade, shadeCol, lights: [{ x, y, r, rgb, a }], rim: { ux, uy, rgb, a, width } })',
     params: z.object({
       shade: z.number().min(0).max(1).default(0.3).describe("人物身上的暗部"),
       phone: z.number().min(0).max(1).default(0.45).describe("手机光（从下巴下面照上来）"),
