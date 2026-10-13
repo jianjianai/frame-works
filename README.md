@@ -23,6 +23,7 @@
 | `code/hand.ts` | 握手机的双手、触点、点击涟漪 |
 | `code/phone.ts` | 手机、锁屏（黄昏秋千壁纸）、群聊、动态、控制中心、通知、角标、手机背面 |
 | `code/chat.ts` | 微信风格聊天、朋友圈、资料页、主页、App 窗口、关机、开机、头像、贴纸、合照 |
+| `code/social.ts` | 深色社交界面线性图标、适宽按钮、手机底部手势条；600×1280 屏幕坐标 |
 | `code/screens.ts` | 《unhappy》的相册、存钱、外卖接单、便利贴、小狗照片 |
 | `code/sets.ts`、`code/shared.ts` | 《i have no friends》的场景和道具，生日书桌镜头 |
 | `code/places.ts` | 《unhappy》的场景（家、雨夜、宠物医院、学校、便利店）、雨、道具 |
