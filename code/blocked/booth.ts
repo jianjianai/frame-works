@@ -14,6 +14,7 @@ import { drawKid } from "../kid";
 import { phoneBack } from "../phone";
 import { drawDad } from "./dad";
 import { snow } from "./snow";
+import { detailedBoothBack } from "./booth-detail";
 
 /** the sodium lamp's colour (r,g,b): light from outside the booth */
 export const LAMP = "255,168,86";
@@ -24,6 +25,7 @@ export const gateText = z.object({
 });
 export type GateText = z.input<typeof gateText>;
 export const boothBackOptions = z.object({
+  detailed: z.boolean().default(false).describe("精细岗亭：四路真实监控、窗框五金、桌面与取暖器，冷暖光影"),
   cctv: z.string().default("02:49").describe("监控屏上的时间"),
   name: z.string().default("红星机械厂").describe("窗外厂门上的厂名牌"),
   led: z.string().default("出入平安").describe("伸缩门上的 LED 小屏"),
@@ -195,6 +197,7 @@ function thermos(c: Ctx, x: number, y: number, s: number, seed: number) {
 
 /** The booth from inside, looking out of its window over his shoulder: drawn without him. */
 export function boothBack(c: Ctx, abs: number, o: BoothBackOptions = {}) {
+  if (o.detailed) { detailedBoothBack(c, abs, o, { gate: gateNight, thermos, mug: enamelMug }); return; }
   // the view, cropped by the window
   c.save();
   c.beginPath();
@@ -549,10 +552,11 @@ export const resources = defineResources({
     kind: "set",
     title: "门卫室·朝窗（背对镜头）",
     description:
-      "从门卫室里朝窗外看（他背对镜头坐在桌前）：窗外是雪夜的厂门口，窗角结霜、有水汽流下的痕；铝合金窗框、墙上的钥匙板、桌上的监控屏（cctv 是屏上的时间）、红色暖水瓶、冒热气的搪瓷杯、收音机，桌下小太阳的暖光。人物在它之后画（预览里是 drawDad 的背影）。",
+      "从门卫室里朝窗外看（他背对镜头坐在桌前）：窗外是雪夜的厂门口，窗角结霜、有水汽流下的痕；铝合金窗框、墙上的钥匙板、桌上的监控屏（cctv 是屏上的时间）、红色暖水瓶、冒热气的搪瓷杯、收音机，桌下小太阳的暖光。detailed 开启精细版（真实四路监控、窗框五金与结霜、玻璃木桌、值班本、杯瓶使用痕迹、桌下取暖器与椅子、冷暖分区打光）。人物在它之后画（预览里是 drawDad 的背影）。",
     tags: ["门卫室", "岗亭", "保安", "值班", "室内", "窗", "雪夜", "监控", "搪瓷杯", "暖水瓶"],
     usage: 'boothBack(ctx, abs, { cctv, name, led }); drawDad(ctx, 510, 1170, 1.12, { view: "back", coat: true })',
     params: boothBackOptions,
+    presets: { 精细值班岗亭: { detailed: true } },
     preview: {
       width: 1080,
       height: 1920,
@@ -561,7 +565,7 @@ export const resources = defineResources({
       draw(ctx, t, p) {
         beginFrame(ctx, t);
         boothBack(ctx, t, p);
-        drawDad(ctx, 510, 1170, 1.12, { view: "back", coat: true });
+        drawDad(ctx, 510, 1170, 1.12, { view: "back", coat: true, backDetails: p.detailed });
       },
     },
   }),
