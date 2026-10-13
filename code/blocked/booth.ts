@@ -4,7 +4,7 @@
  * boothBack 室内朝窗（窗外就是 gateNight：结霜的铝合金窗、钥匙板、监控屏、暖水瓶、搪瓷杯冒热气、收音机、桌下小太阳）；
  * boothFront 室内背墙（挂钟、挂历、女儿小时候的蜡笔画、围巾、侧窗外的雪，blur 做景深）；
  * deskTop 值班桌俯拍（玻璃板下压着女儿的照片和手写便条、值班本、茶、钥匙）；
- * boothOutside 雪夜里的门卫室外景（屋顶厚雪、牌子、门灯、旧自行车；暖色窗里由 inside 画人）。
+ * boothOutside 雪夜里的门卫室外景（屋顶厚雪、蓝腰线上的「门卫室」、门灯、旧自行车；暖色窗里由 inside 画人）。
  * 厂名、LED 屏、监控时间、挂钟、挂历、便条和值班记录都是参数（默认是《屏蔽》里的）。雪是 ./snow。
  */
 import { z } from "zod";
@@ -23,8 +23,10 @@ export const gateText = z.object({
   led: z.string().default("出入平安").describe("伸缩门上的 LED 小屏"),
 });
 export type GateText = z.input<typeof gateText>;
-export const boothBackOptions = gateText.extend({
+export const boothBackOptions = z.object({
   cctv: z.string().default("02:49").describe("监控屏上的时间"),
+  name: z.string().default("红星机械厂").describe("窗外厂门上的厂名牌"),
+  led: z.string().default("出入平安").describe("伸缩门上的 LED 小屏"),
 });
 export type BoothBackOptions = z.input<typeof boothBackOptions>;
 export const boothFrontOptions = z.object({
@@ -43,8 +45,10 @@ export const deskOptions = z.object({
   photos: z.boolean().default(true).describe("玻璃板下压着女儿从小到大的照片"),
 });
 export type DeskOptions = z.input<typeof deskOptions>;
-export const boothOutsideOptions = gateText.extend({
-  sign: z.string().default("门卫室").describe("门卫室的牌子"),
+export const boothOutsideOptions = z.object({
+  sign: z.string().default("门卫室").describe("写在窗下蓝色腰线上的字"),
+  name: z.string().default("红星机械厂").describe("厂门上的厂名牌"),
+  led: z.string().default("出入平安").describe("伸缩门上的 LED 小屏"),
 });
 export type BoothOutsideOptions = z.input<typeof boothOutsideOptions>;
 
@@ -454,9 +458,9 @@ export function deskTop(c: Ctx, abs: number, o: DeskOptions = {}) {
 }
 
 // ---------------------------------------------------------------- the booth from outside
-/** The guard booth in the snow at the factory gate: thick snow on the roof, 「门卫室」, a bulb over the door, his old
- *  bicycle; in its warm window `inside` draws him (in the window's own coordinates: the window spans 430–750 ×
- *  830–1080). */
+/** The guard booth in the snow at the factory gate: thick snow on the roof, 「门卫室」 (`o.sign`) in white on the blue
+ *  band, a bulb over the door, his old bicycle; in its warm window `inside` draws him (in the window's own coordinates:
+ *  the window spans 430–750 × 830–1080). */
 export function boothOutside(c: Ctx, abs: number, inside: (c: Ctx) => void, o: BoothOutsideOptions = {}) {
   gateNight(c, abs, 60, o);
   // the booth body: white walls with a blue band
@@ -464,6 +468,7 @@ export function boothOutside(c: Ctx, abs: number, inside: (c: Ctx) => void, o: B
   paint(c, "#d5dbe5", C.ink, 7);
   c.fillStyle = "#2f5d9e";
   c.fillRect(384, 1110, 412, 40);
+  text(c, o.sign ?? "门卫室", 590, 1131, { size: 30, font: F.ui, weight: 700, fill: "#f4f6fb" });
   // window, warm, with him inside
   c.save();
   c.beginPath();
@@ -479,10 +484,7 @@ export function boothOutside(c: Ctx, abs: number, inside: (c: Ctx) => void, o: B
   paint(c, null, C.ink, 4);
   inkLine(c, [[590, 830], [590, 1080]], 6402, 6, "#8c94a3");
   glow(c, 590, 1000, 420, "rgba(255,190,110,0.35)");
-  // the sign and the door bulb
-  rbox(c, 470, 772, 240, 50, 6, 6403, 0.8);
-  paint(c, "#f4f2ea", C.ink, 4);
-  text(c, o.sign ?? "门卫室", 590, 798, { size: 34, font: F.ui, weight: 700, fill: "#c0392b" });
+  // the bulb over the door
   oval(c, 780, 840, 12, 12, 6404, 0.5);
   paint(c, "#fff1c8", C.ink, 3);
   glow(c, 780, 850, 200, "rgba(255,214,150,0.6)");
@@ -526,7 +528,11 @@ export const resources = defineResources({
       "老工厂的大门口，下着雪的深夜：两根砖柱顶着雪、中间的厂名牌（name）、伸缩门和它的 LED 小屏（led）、钠灯和橙色光锥、雪地上的车辙和一串脚印、远处的厂房（零星亮着的窗）、冒烟的烟囱和水塔。ox 左右平移做视差。也是门卫室窗外的景。",
     tags: ["工厂", "厂门", "大门", "雪夜", "路灯", "伸缩门", "冬天", "夜晚", "保安"],
     usage: "gateNight(ctx, abs, ox, { name, led })",
-    params: gateText.extend({ ox: z.number().min(-200).max(200).default(0).describe("左右平移（视差）") }),
+    params: z.object({
+      ox: z.number().min(-200).max(200).default(0).describe("左右平移（视差）"),
+      name: z.string().default("红星机械厂").describe("厂门上的厂名牌"),
+      led: z.string().default("出入平安").describe("伸缩门上的 LED 小屏"),
+    }),
     presets: { 换个厂名: { name: "第三纺织厂", led: "欢迎回家" } },
     preview: {
       width: 1080,
@@ -603,7 +609,7 @@ export const resources = defineResources({
     kind: "set",
     title: "门卫室外景（雪夜）",
     description:
-      "雪夜里厂门口的门卫室：屋顶厚厚的雪和冰溜子、白墙蓝腰线、窗上的牌子（sign）、门口的灯泡、靠墙的旧自行车，背后是 gateNight。暖色的窗里由 inside 画人（窗在 430–750 × 830–1080，中心 BOOTH_WINDOW）；适合结尾从窗里拉出来的长镜头。",
+      "雪夜里厂门口的门卫室：屋顶厚厚的雪和冰溜子、白墙和写着字的蓝腰线（sign）、门口的灯泡、靠墙的旧自行车，背后是 gateNight。暖色的窗里由 inside 画人（窗在 430–750 × 830–1080，中心 BOOTH_WINDOW）；适合结尾从窗里拉出来的长镜头。",
     tags: ["门卫室", "岗亭", "外景", "雪夜", "暖窗", "自行车", "工厂", "结尾"],
     usage: 'boothOutside(ctx, abs, (k) => drawDad(k, 590, 925, 0.4, { coat: true, arms: "type", holding }), { sign, name, led })',
     params: boothOutsideOptions,
