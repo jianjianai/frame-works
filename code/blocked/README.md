@@ -9,6 +9,7 @@
 | `booth-detail.ts` | `boothBack({ detailed: true })` 的精细实现：窗框凹槽、锁扣螺丝、冷凝水与霜、四路厂区监控、玻璃木桌与值班本、杯瓶磨损、收音机、钥匙、柜腿、椅子、地砖和桌下取暖器。厂门和杯瓶通过原模块直接复用；默认基础版不变。 |
 | `desk-detail.ts` | `deskTop({ detailed: true })` 的精细实现：木纹清漆、玻璃厚边与窗光、玻璃下的旧照片/便条、值班本叠页与书脊、钢笔、茶汤/杯沿/热气、钥匙齿口与皮牌。`phoneLight: 0..1` 控制微弱漏光，`phoneResting: true` 加中央手机接触阴影（机身中心 (540, 880)、scale .92、rot .06）；手机由镜头画，默认基础版不变。 |
 | `booth-front-detail.ts` | `boothFront({ detailed: true })` 的正面反打：挂钟刻度、日历叠页、旧蜡笔画、针织围巾、侧窗锁扣与结霜、椅背和取暖器。`boothFrontDesk(ctx, abs, { y: 1495, phoneLight: 1 })` 在人物之后画玻璃桌、左侧茶杯和右侧值班本，遮住半身下沿。精细背景自带夜景光影，近景 blur 约 3.5，不再整幅叠黑。 |
+| `booth-outside-detail.ts` | `boothOutside({ detailed: true })` 的雪夜外景：屋顶积雪与冰挂、墙体板缝/五金/侧门、偏置滑窗/窗台/霜、砖柱与伸缩门、自行车轮辐/挡泥板/链条/后架、雪地压痕和脚印。复用原厂门及正面室内背景，冷蓝雪地承接柔边暖窗光；窗内人物由调用方画，原窗中心保持不变。 |
 | `snow.ts` | **下雪** `snow(ctx, abs, { n, seed, speed, size, alpha, drift, x, y, w, h })`：按绝对时间、确定性；远景一层小而密，近景再叠一层 `filtered` blur 4px 的大雪花。 |
 
 人物的夜景打光用 draw.ts 的 `litFigure`（暗部 + 点光 + 轮廓光）：手机照脸 `{ shade: 0.3, lights: [{ x, y, r: 430, rgb: "170,195,255", a: 0.4 }], rim }`。精细岗亭的背影加 `backDetails: true`（帽子拼缝、花白短发、毛领、大衣肩线与半腰带），shade 约 0.38、冷色环境底，手机/监控的点光照在后脑，取暖器暖光落在大衣下方，窗外路灯的内侧轮廓光约 0.38、width 7；各点光坐标跟镜头里真实物件对齐。场景已经处理材质暗部和光池，画完人物后不要再整幅压黑。
