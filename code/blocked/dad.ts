@@ -15,6 +15,7 @@ const point = z.tuple([z.number(), z.number()]);
 export const dadPose = z.object({
   view: z.enum(["front", "back"]).default("front").describe("正面 / 背影"),
   body: z.enum(["head", "bust"]).default("bust").describe("只画头 / 半身"),
+  backDetails: z.boolean().default(false).describe("背影精细纹理：帽子拼缝、花白短发、毛领、大衣肩线和半腰带"),
   eyes: z.enum(["open", "tired", "wide", "shut", "teary", "down", "happy"]).default("tired").describe("眼睛：tired 熬夜的厚眼皮、down 低头看手机、teary 含泪、happy 笑眯眼"),
   look: point.optional().describe("瞳孔看向 [x, y]，各 -1..1"),
   brows: z.enum(["flat", "sad", "up", "worried"]).optional().describe("眉毛；不写时跟着眼睛（teary→sad，wide→up）"),
@@ -352,12 +353,28 @@ function headBack(c: Ctx, p: DadPose, seed: number) {
   // back of the head: grey crew cut, the nape
   shaded(c, () => blob(c, [[-118, -40], [-120, 40], [-96, 104], [-56, 132], [56, 132], [96, 104], [120, 40], [118, -40], [0, -60]], seed + 3, 1.2), D.hair, () => {
     for (let i = 0; i < 14; i++) inkLine(c, [[-90 + i * 13, 40 + hash(seed + i) * 40], [-88 + i * 13, 70 + hash(seed + i * 2) * 30]], seed + 4 + i, 1.8, D.hairDk);
+    if (p.backDetails) {
+      for (let i=0;i<45;i++) {
+        const x=-105+hash(seed+i*3.1)*210,y=-13+hash(seed+i*7.9)*120;
+        inkLine(c,[[x,y],[x-2,y+7]],seed+170+i,1.2,i%3?"rgba(214,217,213,.28)":"rgba(63,68,77,.25)",.2);
+      }
+      inkLine(c,[[-70,110],[-38,122],[39,122],[70,110]],seed+217,2.5,"rgba(63,66,77,.26)",.4);
+    }
     blob(c, [[-60, 104], [60, 104], [52, 140], [-52, 140]], seed + 20, 0.8);
     paint(c, D.skinSh, null);
   }, C.ink, 5);
   if (hasCap) {
     shaded(c, () => blob(c, [[-128, -40], [-140, -96], [-104, -150], [0, -168], [104, -150], [140, -96], [128, -40]], seed + 30, 1.1), D.cap, () => {
       inkLine(c, [[-80, -140], [0, -158], [80, -140]], seed + 31, 5, "rgba(255,255,255,0.1)");
+      if (p.backDetails) {
+        inkLine(c, [[-78,-142],[-89,-109],[-85,-66]], seed+100,2,"rgba(8,15,29,.45)",.3);
+        inkLine(c, [[78,-142],[91,-109],[87,-66]], seed+101,2,"rgba(8,15,29,.45)",.3);
+        inkLine(c, [[0,-156],[3,-106],[0,-67]], seed+102,1.5,"rgba(108,130,159,.22)",.2);
+        for(let i=0;i<16;i++){
+          const x=-90+hash(seed+i*4.3)*180,y=-133+hash(seed+i*2.1)*62;
+          inkLine(c,[[x,y],[x+3,y+1]],seed+105+i,.8,"rgba(148,162,181,.09)",.1);
+        }
+      }
     }, C.ink, 5.5);
     poly(c, [[-128, -62], [128, -62], [126, -36], [-126, -36]], seed + 32, 0.7);
     paint(c, D.capDk, C.ink, 4);
@@ -486,6 +503,31 @@ function torsoBack(c: Ctx, p: DadPose, seed: number) {
     // seam down the back, a fold
     inkLine(c, [[0, 230], [4, 640]], seed + 3, 2.4, "rgba(0,0,0,0.3)");
     inkLine(c, [[-120, 380], [-96, 560]], seed + 4, 2.2, "rgba(0,0,0,0.2)");
+    if (p.backDetails) {
+      // The shoulder yoke, sleeve seams and a half-belt show how the heavy wool hangs.
+      inkLine(c, [[-192,227],[-99,258],[0,267],[99,258],[192,227]], seed+40,3.2,"rgba(27,35,28,.46)",.5);
+      inkLine(c, [[-190,233],[-97,264],[0,273],[98,264],[192,233]], seed+41,1.4,"rgba(166,164,116,.3)",.4);
+      for(const side of [-1,1]) {
+        inkLine(c, [[side*182,234],[side*168,342],[side*180,453],[side*210,579]],seed+42+side,3.3,"rgba(25,34,26,.42)",.6);
+        inkLine(c, [[side*144,298],[side*132,345],[side*146,402]],seed+45+side,9,"rgba(13,24,24,.09)",.7);
+        inkLine(c, [[side*112,522],[side*125,578],[side*160,628]],seed+48+side,2.4,"rgba(171,167,115,.16)",.4);
+        inkLine(c, [[side*163,477],[side*184,464],[side*192,443]],seed+51+side,2,"rgba(22,31,28,.36)",.4);
+      }
+      blob(c,[[-130,455],[-4,468],[131,455],[128,492],[0,504],[-128,492]],seed+54,.6);
+      paint(c,coat?"#4b5a34":"#283955","#263326",2.2);
+      inkLine(c,[[-116,463],[0,477],[119,464]],seed+55,1.1,"rgba(187,178,124,.32)",.3);
+      inkLine(c,[[-115,487],[0,498],[117,486]],seed+56,1.1,"rgba(17,26,23,.4)",.3);
+      for(const side of [-1,1]) {
+        oval(c,side*109,478,5.5,5.5,seed+59+side,.2);paint(c,"#877b4d","#243022",1.5);
+        inkLine(c,[[side*109-2,477],[side*109+2,479]],seed+62+side,.7,"#c2ae71",.1);
+      }
+      // Low-contrast wool flecks, clipped to the coat by shaded().
+      for(let i=0;i<85;i++){
+        const x=-224+hash(seed+i*3.7)*448,y=225+hash(seed+i*6.3)*395;
+        inkLine(c,[[x,y],[x+2,y+3]],seed+70+i,.8,"rgba(191,190,144,.095)",.15);
+      }
+      inkLine(c,[[-214,624],[0,639],[214,624]],seed+160,1.7,"rgba(140,147,101,.2)",.4);
+    }
   }, C.ink, 6);
   if (coat) {
     // the fur collar round the back of the neck
@@ -503,6 +545,10 @@ function torsoBack(c: Ctx, p: DadPose, seed: number) {
     for (let k = 0; k < 7; k++) {
       const a = Math.PI * (1.12 + k * 0.12);
       inkLine(c, [[Math.cos(a) * 130, 214 + Math.sin(a) * 40], [Math.cos(a) * 150, 212 + Math.sin(a) * 52]], seed + 7 + k, 2, D.furDk);
+      if (p.backDetails) for(let j=0;j<3;j++) {
+        const f=a+(j-1)*.025;
+        inkLine(c,[[Math.cos(f)*134,214+Math.sin(f)*44],[Math.cos(f)*159,213+Math.sin(f)*56]],seed+180+k*3+j,1.1,j===1?"#e3cca1":"#8f7d5c",.3);
+      }
     }
   }
 }
@@ -587,6 +633,7 @@ export const resources = defineResources({
       捂嘴哭: { coat: true, arms: "mouth", eyes: "teary", brows: "sad", tears: 0.8 },
       笑着哭: { coat: true, arms: "phone", eyes: "happy", mouth: "laugh", tears: 0.6 },
       背影: { view: "back" },
+      精细值班背影: { view: "back", coat: true, backDetails: true },
       年轻时: { young: true, eyes: "happy", mouth: "laugh" },
     },
     preview: {
