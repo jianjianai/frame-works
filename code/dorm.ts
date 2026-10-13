@@ -19,13 +19,13 @@ function pool(c:Ctx,x:number,y:number,rx:number,ry:number,rgb:string,a:number) {
   c.fillStyle=g;c.fillRect(-1,-1,2,2);c.restore();
 }
 function wall(c:Ctx) {
-  fillBg(c,vgrad(c,0,1340,[[0,"#97958a"],[.44,"#afa58b"],[1,"#747e75"]]));
+  fillBg(c,vgrad(c,0,1340,[[0,"#a7a28c"],[.44,"#beb396"],[1,"#849384"]]));
   // Shadows inside the bed alcoves give the window and the faces breathing room.
   const side=c.createLinearGradient(0,0,W,0);
-  side.addColorStop(0,"rgba(30,42,49,.36)");side.addColorStop(.31,"rgba(30,42,49,.02)");
+  side.addColorStop(0,"rgba(30,42,49,.30)");side.addColorStop(.31,"rgba(30,42,49,.02)");
   side.addColorStop(.6,"rgba(30,42,49,0)");side.addColorStop(1,"rgba(26,43,58,.33)");
   c.fillStyle=side;c.fillRect(-60,0,W+120,1380);
-  poly(c,[[-60,-60],[1140,-60],[1140,88],[-60,96]],92000,.5);paint(c,"#b2afa0","#565b56",3);
+  poly(c,[[-60,-60],[1140,-60],[1140,88],[-60,96]],92000,.5);paint(c,"#c0bda6","#62695e",3);
   inkLine(c,[[-40,93],[540,87],[1120,91]],92001,3,"rgba(231,222,186,.5)",.3);
   for(let i=0;i<92;i++){
     const x=hash(92005+i*6.2)*W,y=104+hash(92004+i*2.7)*1170;
@@ -164,7 +164,7 @@ function bed(c:Ctx,right:boolean) {
 }
 function shelves(c:Ctx,right:boolean) {
   c.save();if(right){c.translate(W,0);c.scale(-1,1);}
-  rbox(c,-30,513,324,23,3,92700,.4);paint(c,"#68786b","#3a5352",3);
+  rbox(c,-30,513,324,23,3,92700,.4);paint(c,"#897856","#3a5352",3);
   inkLine(c,[[-20,516],[288,516]],92701,2,"#c0b895",.2);
   poly(c,[[-20,537],[284,537],[280,550],[-20,550]],92702,.3);paint(c,"rgba(26,46,51,.25)",null);
   for(const x of [43,257]){poly(c,[[x,537],[x+29,537],[x+3,573]],92703+x,.3);paint(c,"#677c73","#486260",1.7);}
@@ -238,9 +238,9 @@ function readingLamp(c:Ctx,intensity:number) {
   oval(c,216,609,35,9,92908,.4,-.08);paint(c,"#706e55","#455755",2);
   oval(c,217,610,27,5,92909,.3,-.08);paint(c,intensity>.05?"#fbe9af":"#b5b29b",null);
   if(intensity>.005){
-    lightShaft(c,[[189,615],[244,610],[745,1350],[35,1350]],216,612,382,1370,"248,208,141",.20*intensity,25,"dorm_reading_light");
-    pool(c,241,661,140,150,"253,221,152",.30*intensity);
-    pool(c,344,848,385,460,"247,207,139",.16*intensity);
+    lightShaft(c,[[189,615],[244,610],[745,1350],[35,1350]],216,612,382,1370,"248,208,141",.29*intensity,25,"dorm_reading_light");
+    pool(c,241,661,170,190,"253,221,152",.40*intensity);
+    pool(c,344,848,410,470,"247,207,139",.22*intensity);
     glow(c,218,609,63,"rgba(255,229,162,.44)",intensity);
   }
 }
@@ -253,7 +253,7 @@ function fairy(c:Ctx,t:number,a:number) {
     const u=(i+.5)/13,x=118+u*845,y=127+Math.sin(u*Math.PI)*41+Math.sin(u*Math.PI*2)*15;
     const pink=i%3===0,rgb=pink?"242,175,184":"253,224,150";
     inkLine(c,[[x,y],[x,y+8]],92925+i,2.4,"#485d55",.2);
-    glow(c,x,y+17,38,"rgba("+rgb+",.30)",a*(.94+.06*Math.sin(t*1.4+i)));
+    glow(c,x,y+17,47,"rgba("+rgb+",.43)",a*(.94+.06*Math.sin(t*1.4+i)));
     oval(c,x,y+16,6,10,92940+i,.3);paint(c,pink?"#e9b5bd":"#f4dfa1","#786e56",1.3);
     inkLine(c,[[x-1,y+12],[x-1,y+19]],92955+i,1.1,"#fff5d3",.1);
   }
@@ -372,8 +372,8 @@ export function dormDesk(c:Ctx,t:number,o:DormDeskOptions={}) {
   desk(c,y,{props:false,wood:"#886c4e",detailed:true});
   c.save();poly(c,[[-40,y],[1120,y-10],[1120,1960],[-40,1960]],21,2);c.clip();
   // Low-angle warm reading light and a cool reflection from the night window.
-  pool(c,327,1425,760,550,"244,197,123",.25*lamp);
-  paneLight(c,[[581,y+1],[749,y],[1043,1790],[671,1810]],"127,178,205",.10,6,"dorm_desk_window");
+  pool(c,327,1425,760,550,"244,197,123",.36*lamp);
+  paneLight(c,[[581,y+1],[749,y],[1043,1790],[671,1810]],"127,178,205",.14,6,"dorm_desk_window");
   pool(c,795,1860,550,270,"23,44,54",.19);
   for(const [x,cy,rx,ry,a] of [[185,y+6,129,38,.16],[545,y+14,164,55,.25],[877,y-2,135,43,.21]] as [number,number,number,number,number][]){
     pool(c,x,cy,rx,ry,"20,39,47",a);
