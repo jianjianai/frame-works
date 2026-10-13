@@ -54,3 +54,4 @@
 - `code/blocked/booth.ts`：来源 为作品 work-73c8f9bc《屏蔽》原创绘制；许可 自制
 - `code/blocked/README.md`：来源 为作品 work-73c8f9bc《屏蔽》编写；许可 自制
 - `code/blocked/booth.ts`：来源 为作品 work-73c8f9bc《屏蔽》原创绘制；许可 自制
+- `code/social.ts`：来源 为作品 work-73c8f9bc 第一幕手机界面补全编写；许可 自制
