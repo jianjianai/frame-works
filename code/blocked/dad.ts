@@ -31,6 +31,7 @@ export const dadPose = z.object({
   young: z.boolean().default(false).describe("年轻版：黑发、光滑的脸、白衬衫、不戴帽子和眼镜（旧合照里）"),
   arms: z.enum(["down", "phone", "type", "mouth", "none"]).default("down").describe("手：垂着（不画）/ 两手捧手机 / 一根手指打字 / 右手捂嘴、左手低低拿着手机"),
   tap: z.number().min(0).max(1).default(0).describe("打字的手指按下去（arms: type）"),
+  mouthK: z.number().min(0).max(1).default(1).describe("arms: mouth 时右手从手机抬到嘴边的进度（0 还捧着手机，1 捂住嘴）：做抬手、放下的动画，不要在两种手势之间直接切换"),
   seed: z.number().int().default(4100).describe("抖动线条的种子"),
 });
 /** drawDad's pose. `holding` is drawn between the sleeves and the hands (the phone in his hands). */
@@ -702,16 +703,35 @@ function arms(c: Ctx, p: DadPose, seed: number, stage: "sleeves" | "hands") {
     return;
   }
   if (a === "mouth") {
-    // his right hand pressed over his mouth, the left holding the phone low
+    // his right hand comes up off the phone and presses over his mouth (mouthK 0 → 1), the left lowers the phone;
+    // at 0 it is exactly the two-handed "phone" pose, so the change of gesture can be animated
+    const k = Math.min(1, Math.max(0, p.mouthK ?? 1));
+    const det = !!p.frontDetails;
+    const mix = (a0: Pt, a1: Pt): Pt => [a0[0] + (a1[0] - a0[0]) * k, a0[1] + (a1[1] - a0[1]) * k];
+    // the right forearm swings up in an arc (its elbow drops out a little on the way) instead of sliding straight
+    const lift = Math.sin(k * Math.PI);
+    const L: [Pt, Pt, Pt] = [[-150, 300], mix([-156, 470], [-156, 480]), mix([-60, 420], [-60, 470])];
+    const R: [Pt, Pt, Pt] = [mix([150, 300], [150, 320]), [156 + (190 - 156) * k + 26 * lift, 470 + 14 * lift], [60 + (44 - 60) * k + 34 * lift, 420 + (150 - 420) * k]];
     if (stage === "sleeves") {
-      sleeve(c, [-150, 300], [-156, 480], [-60, 470], col, dk, seed);
-      p.holding?.(c);
-      sleeve(c, [150, 320], [190, 470], [44, 150], col, dk, seed + 5);
+      sleeve(c, L[0], L[1], L[2], col, dk, seed, det);
+      // the right arm is behind the phone while it still holds it, in front of it once the hand has come away
+      if (k < 0.12) {
+        sleeve(c, R[0], R[1], R[2], col, dk, seed + 5, det);
+        p.holding?.(c);
+      } else {
+        p.holding?.(c);
+        sleeve(c, R[0], R[1], R[2], col, dk, seed + 5, det);
+      }
       return;
     }
-    roundHand(c, -62, 478, 34, skin, seed + 10);
-    roundHand(c, 20, 118, 44, skin, seed + 12);
-    for (let k = 0; k < 3; k++) inkLine(c, [[-6 + k * 16, 84], [-4 + k * 16, 104]], seed + 14 + k, 2, D.skinDeep);
+    roundHand(c, (det ? -83 : -62) + (det ? 21 : 0) * k, 430 + 48 * k, 34, skin, seed + 10, det);
+    roundHand(c, R[2][0] + 2 * (1 - k) - 24 * k, R[2][1] + 10 * (1 - k) - 32 * k, 34 + 10 * k, skin, seed + 12);
+    if (k > 0.8) {
+      c.save();
+      c.globalAlpha *= (k - 0.8) / 0.2;
+      for (let j = 0; j < 3; j++) inkLine(c, [[-6 + j * 16, 84], [-4 + j * 16, 104]], seed + 14 + j, 2, D.skinDeep);
+      c.restore();
+    }
   }
 }
 
@@ -743,7 +763,7 @@ export const resources = defineResources({
     kind: "character",
     title: "爸爸（夜班保安）",
     description:
-      "五十多岁的夜班保安爸爸：花白鬓角、老花镜、保安大檐帽、深蓝制服，可以披带毛领的军大衣；正面 / 背影、几种表情和手（捧手机、一根手指打字、捂嘴），young 是年轻时的他（黑发白衬衫，放进旧合照）。手里的手机用 holding 画（在袖子和手之间），例如 holding: (k) => phoneBack(k, -10, 400, 150, 270, -0.08)。frontDetails 开启帽子织纹/帽徽缝线、灰白鬓角、眼镜五金与局部屏幕反射、制服毛领与袖口；打字的手位于手机屏幕一侧，仍用简单圆手。screenReflection 控制镜片里的小块倒影，不盖瞳孔。夜里被手机照亮的脸：先画他，再用 figureMask + onFigure 叠屏幕光、rimLight 加轮廓光。",
+      "五十多岁的夜班保安爸爸：花白鬓角、老花镜、保安大檐帽、深蓝制服，可以披带毛领的军大衣；正面 / 背影、几种表情和手（捧手机、一根手指打字、捂嘴），young 是年轻时的他（黑发白衬衫，放进旧合照）。手里的手机用 holding 画（在袖子和手之间），例如 holding: (k) => phoneBack(k, -10, 400, 150, 270, -0.08)。frontDetails 开启帽子织纹/帽徽缝线、灰白鬓角、眼镜五金与局部屏幕反射、制服毛领与袖口；打字的手位于手机屏幕一侧，仍用简单圆手。从捧手机到捂嘴的动作用 arms: \"mouth\" + mouthK 0→1 连续过渡（0 就是捧手机的姿势），不要两种手势直接切换。screenReflection 控制镜片里的小块倒影，不盖瞳孔。夜里被手机照亮的脸：先画他，再用 figureMask + onFigure 叠屏幕光、rimLight 加轮廓光。",
     tags: ["爸爸", "父亲", "保安", "门卫", "老人", "中年", "夜班", "军大衣", "老花镜", "人物"],
     usage: "drawDad(ctx, x, y, s, { coat, eyes, mouth, arms, tap, view, young, holding })  // (x, y) 头中心，s = 1 脸宽约 236",
     params: dadPose,
