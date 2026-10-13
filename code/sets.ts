@@ -294,9 +294,10 @@ export function fairyGlow(ctx: Ctx, abs: number, blur = 0, a = 1) {
   ctx.restore();
 }
 
-export function desk(ctx: Ctx, y: number) {
+export interface DeskStyle { props?: boolean; wood?: string; detailed?: boolean; }
+export function desk(ctx: Ctx, y: number, o: DeskStyle = {}) {
   // the desk top: plank seams, grain, a warm highlight on the front edge
-  shaded(ctx, () => poly(ctx, [[-40, y], [W + 40, y - 10], [W + 40, H + 40], [-40, H + 40]], 21, 2), "#4a3322", () => {
+  shaded(ctx, () => poly(ctx, [[-40, y], [W + 40, y - 10], [W + 40, H + 40], [-40, H + 40]], 21, 2), o.wood ?? "#4a3322", () => {
     for (let i = 0; i < 5; i++) inkLine(ctx, [[-20, y + 60 + i * 110], [W * 0.5, y + 70 + i * 110 + jit(i, 4)], [W + 20, y + 54 + i * 110]], 22 + i, 3, "#3a2618");
     ctx.save();
     ctx.globalAlpha = 0.4;
@@ -308,6 +309,18 @@ export function desk(ctx: Ctx, y: number) {
     ctx.restore();
     inkLine(ctx, [[-40, y + 8], [W + 40, y - 2]], 27, 6, "rgba(255,210,150,0.22)");
   }, C.ink, 7);
+  if(o.detailed) {
+    const light=ctx.createLinearGradient(0,y,W,H);
+    light.addColorStop(0,"rgba(246,190,111,.16)");light.addColorStop(.55,"rgba(40,56,67,.025)");light.addColorStop(1,"rgba(21,38,52,.24)");
+    ctx.save();poly(ctx,[[-40,y],[W+40,y-10],[W+40,H+40],[-40,H+40]],21,2);ctx.clip();
+    ctx.fillStyle=light;ctx.fillRect(-40,y-10,W+80,H-y+60);
+    for(let i=0;i<65;i++){
+      const gx=hash(i*7.7)*W,gy=y+18+hash(i*3.1)*(H-y),len=30+hash(i*1.7)*240;
+      inkLine(ctx,[[gx,gy],[gx+len*.42,gy-3],[gx+len,gy+1]],61000+i,.8,i%3?"rgba(20,32,34,.11)":"rgba(216,181,130,.13)",.15);
+    }
+    ctx.restore();
+  }
+  if(o.props===false) return;
   // textbooks stacked on the left
   const books: [number, number, number, string][] = [
     [40, y + 120, 220, "#3f6fa0"],
@@ -1302,16 +1315,16 @@ export const resources = defineResources({
   desk: resource({
     kind: "set",
     title: "书桌（桌面）",
-    description: "画面下半部分的木书桌桌面（木纹、前沿的暖色高光），y 是桌面上沿。和 bedroom、cupcake 一起组成生日书桌。",
+    description: "画面下半部分的木书桌桌面（木纹、前沿的暖色高光），y 是桌面上沿。和 bedroom、cupcake 一起组成生日书桌。props:false 只画桌面，wood 调整木色，detailed 增加细木纹、暖光和前沿暗部，便于宿舍等场景另配道具。",
     tags: ["书桌", "桌子", "桌面"],
-    usage: "desk(ctx, y)",
-    params: z.object({ y: z.number().min(600).max(1800).default(1200).describe("桌面上沿") }),
+    usage: "desk(ctx, y, { props: true, wood: \"#4a3322\", detailed: false })",
+    params: z.object({ y: z.number().min(600).max(1800).default(1200).describe("桌面上沿"), props: z.boolean().default(true).describe("附带书堆和笔筒"), wood: z.string().default("#4a3322").describe("木桌底色"), detailed: z.boolean().default(false).describe("精细木纹、暖色光区与前沿暗部") }),
     preview: {
       ...FRAME,
       draw(ctx, t, p) {
         beginFrame(ctx, t);
         bedroom(ctx, t);
-        desk(ctx, p.y);
+        desk(ctx, p.y, p);
       },
     },
   }),
