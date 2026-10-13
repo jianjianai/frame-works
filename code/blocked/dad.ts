@@ -16,6 +16,8 @@ export const dadPose = z.object({
   view: z.enum(["front", "back"]).default("front").describe("正面 / 背影"),
   body: z.enum(["head", "bust"]).default("bust").describe("只画头 / 半身"),
   backDetails: z.boolean().default(false).describe("背影精细纹理：帽子拼缝、花白短发、毛领、大衣肩线和半腰带"),
+  frontDetails: z.boolean().default(false).describe("正面近景：帽徽织纹、老花镜五金、鬓角、制服缝线与毛领，保留圆手"),
+  screenReflection: z.number().min(0).max(1).default(0).describe("精细老花镜里的局部屏幕倒影，保留瞳孔，不用整片光晕"),
   eyes: z.enum(["open", "tired", "wide", "shut", "teary", "down", "happy"]).default("tired").describe("眼睛：tired 熬夜的厚眼皮、down 低头看手机、teary 含泪、happy 笑眯眼"),
   look: point.optional().describe("瞳孔看向 [x, y]，各 -1..1"),
   brows: z.enum(["flat", "sad", "up", "worried"]).optional().describe("眉毛；不写时跟着眼睛（teary→sad，wide→up）"),
@@ -211,12 +213,30 @@ function mouth(c: Ctx, p: DadPose, seed: number) {
   }
 }
 
-function glasses(c: Ctx, seed: number) {
+function glasses(c: Ctx, seed: number, detail = false, reflection = 0) {
   for (const side of [-1, 1]) {
     const gx = side * 50;
     rbox(c, gx - 37, 18, 74, 44, 14, seed + side, 0.6);
-    paint(c, "rgba(210,232,255,0.16)", "#1a1a1e", 3.6);
-    inkLine(c, [[gx - 22, 26], [gx - 10, 22]], seed + 3 + side, 2.4, "rgba(255,255,255,0.75)");
+    paint(c, detail ? "rgba(190,216,226,0.04)" : "rgba(210,232,255,0.16)", "#1a1a1e", 3.6);
+    inkLine(c, [[gx - 22, 26], [gx - 10, 22]], seed + 3 + side, detail ? 1.2 : 2.4, detail ? "rgba(223,233,219,.35)" : "rgba(255,255,255,0.75)");
+    if (detail) {
+      c.save();rbox(c,gx-34,20,68,40,12,seed+side,.3);c.clip();
+      const tint=c.createLinearGradient(gx-30,20,gx+31,62);
+      tint.addColorStop(0,"rgba(185,206,220,.015)");tint.addColorStop(1,"rgba(98,145,159,.08)");
+      c.fillStyle=tint;c.fillRect(gx-37,18,74,44);
+      // Small phone reflections at the outer bottom corner, clear of the pupils.
+      if (reflection>0) {
+        c.globalAlpha*=reflection;
+        poly(c,[[gx+side*20,40],[gx+side*28,38],[gx+side*27,55],[gx+side*19,57]],seed+30+side,.12);
+        paint(c,"rgba(189,222,235,.35)",null);
+        inkLine(c,[[gx+side*21,44],[gx+side*26,43]],seed+34+side,.8,"rgba(228,244,243,.65)",.1);
+        inkLine(c,[[gx+side*21,48],[gx+side*25,47]],seed+36+side,.7,"rgba(213,236,239,.45)",.1);
+      }
+      c.restore();
+      inkLine(c,[[gx-28,59],[gx,62],[gx+27,59]],seed+20+side,1.05,"rgba(150,172,174,.55)",.2);
+      oval(c,side*84,29,2,2,seed+22+side,.1);paint(c,"#a2b1ad",null);
+      oval(c,side*15,44,3,5,seed+24+side,.15);paint(c,"rgba(197,190,166,.25)","#918979",.7);
+    }
     // temple arm to the ear
     inkLine(c, [[side * 87, 30], [side * 112, 26]], seed + 5 + side, 3.2, "#1a1a1e");
   }
@@ -224,12 +244,23 @@ function glasses(c: Ctx, seed: number) {
   paint(c, null, "#1a1a1e", 3.4);
 }
 
-function cap(c: Ctx, seed: number) {
+function cap(c: Ctx, seed: number, detail = false) {
   // crown, wider than the head
   shaded(c, () => blob(c, [[-126, -56], [-140, -108], [-104, -158], [0, -176], [104, -158], [140, -108], [126, -56]], seed, 1.1), D.cap, () => {
     blob(c, [[40, -170], [140, -112], [128, -56], [70, -60]], seed + 1, 1);
     paint(c, D.capDk, null);
-    inkLine(c, [[-90, -146], [-30, -166], [30, -168]], seed + 2, 5, "rgba(255,255,255,0.12)");
+    inkLine(c, [[-90, -146], [-30, -166], [30, -168]], seed + 2, detail ? 2.8 : 5, "rgba(255,255,255,0.12)");
+    if(detail) {
+      for(const side of [-1,1]) {
+        inkLine(c,[[side*68,-163],[side*80,-124],[side*90,-83]],seed+31+side,1.9,"rgba(5,14,27,.48)",.25);
+        inkLine(c,[[side*72,-163],[side*84,-124],[side*94,-83]],seed+34+side,.8,"rgba(126,145,158,.22)",.2);
+        for(let i=0;i<3;i++){oval(c,side*(104+i*5),-109+i*8,1.3,1.3,seed+38+side+i,.1);paint(c,"#0d1b2c","#5b6976",.45);}
+      }
+      for(let i=0;i<60;i++) {
+        const x=-125+hash(seed+i*7.3)*250,y=-172+hash(seed+i*3.7)*111;
+        inkLine(c,[[x,y],[x+2.8,y+1]],seed+45+i,.65,"rgba(152,170,184,.10)",.1);
+      }
+    }
   }, C.ink, 5.5);
   // band with the gold cord
   poly(c, [[-124, -80], [124, -80], [122, -54], [-122, -54]], seed + 3, 0.7);
@@ -248,6 +279,22 @@ function cap(c: Ctx, seed: number) {
   paint(c, D.gold, C.ink, 3);
   poly(c, [[0, -122], [5, -110], [17, -110], [7, -103], [11, -91], [0, -98], [-11, -91], [-7, -103], [-17, -110], [-5, -110]], seed + 10, 0.3);
   paint(c, D.goldDk, null);
+  if(detail) {
+    inkLine(c,[[-109,-58],[0,-48],[108,-58]],seed+112,1.2,"rgba(161,155,121,.24)",.2);
+    inkLine(c,[[-99,-31],[0,-21],[98,-31]],seed+113,.9,"rgba(148,157,155,.27)",.2);
+    for(let i=0;i<26;i++) {
+      const x=-104+i*8.1,y=-64-6*Math.pow(x/118,2);
+      inkLine(c,[[x,y-1.4],[x+2,y+1.2]],seed+115+i,.8,i%2?"#bea55d":"#6c612f",.1);
+    }
+    poly(c,[[-17,-123],[17,-123],[15,-103],[0,-92],[-15,-103]],seed+145,.2);paint(c,null,"#ead08a",.9);
+    for(const side of [-1,1]) {
+      for(let j=0;j<4;j++) {
+        const y=-119+j*6,x=side*(13-j*.7);
+        inkLine(c,[[x,y],[x-side*3,y-3]],seed+150+j+side*8,.9,"#f0d695",.1);
+      }
+      oval(c,side*116,-68,3,3,seed+171+side,.1);paint(c,"#f1d68b","#8c793f",.5);
+    }
+  }
 }
 
 function headFront(c: Ctx, p: DadPose, seed: number) {
@@ -274,8 +321,8 @@ function headFront(c: Ctx, p: DadPose, seed: number) {
     paint(c, "rgba(196,140,86,0.32)", null);
     if (!young) {
       // stubble on the jaw and chin
-      c.fillStyle = "rgba(90,86,84,0.32)";
-      for (let i = 0; i < 70; i++) {
+      c.fillStyle = p.frontDetails ? "rgba(87,87,78,0.20)" : "rgba(90,86,84,0.32)";
+      for (let i = 0; i < (p.frontDetails ? 48 : 70); i++) {
         const a = Math.PI * (0.08 + 0.84 * hash(seed + i * 3.3));
         const r = 84 + hash(seed + i * 1.7) * 44;
         const sx = Math.cos(a) * r * 0.95,
@@ -316,7 +363,7 @@ function headFront(c: Ctx, p: DadPose, seed: number) {
     }
     c.restore();
   }
-  if (p.glasses ?? !young) glasses(c, seed + 50);
+  if (p.glasses ?? !young) glasses(c, seed + 50, !!p.frontDetails, p.screenReflection ?? 0);
   if (hasCap) {
     // the brim's shadow on the forehead
     const g = c.createLinearGradient(0, -40, 0, 20);
@@ -333,8 +380,16 @@ function headFront(c: Ctx, p: DadPose, seed: number) {
       blob(c, [[side * 104, -52], [side * 122, -50], [side * 120, 6], [side * 108, 2]], seed + 60 + side, 0.7);
       paint(c, D.hair, C.ink, 3);
       inkLine(c, [[side * 112, -40], [side * 114, -6]], seed + 62 + side, 1.8, D.hairDk);
+      if(p.frontDetails) {
+        c.save();blob(c,[[side*104,-52],[side*122,-50],[side*120,6],[side*108,2]],seed+60+side,.7);c.clip();
+        for(let i=0;i<19;i++) {
+          const x=side*(106+hash(seed+i*3.2)*15),y=-48+hash(seed+i*7.3)*49;
+          inkLine(c,[[x,y],[x-side*1.6,y+6]],seed+200+i+side*22,.8,i%3?"#d0d0c7":"#696f73",.1);
+        }
+        c.restore();
+      }
     }
-    cap(c, seed + 70);
+    cap(c, seed + 70, !!p.frontDetails);
   } else {
     // neat short hair on top
     shaded(c, () => blob(c, [[-118, -30], [-112, -84], [-60, -122], [10, -128], [80, -114], [118, -76], [120, -28], [92, -60], [30, -70], [-40, -66], [-96, -56]], seed + 80, 1.2), hairCol, () => {
@@ -388,7 +443,7 @@ function headBack(c: Ctx, p: DadPose, seed: number) {
 }
 
 // ---------------------------------------------------------------- body
-function roundHand(c: Ctx, x: number, y: number, r: number, skin: string, seed: number) {
+function roundHand(c: Ctx, x: number, y: number, r: number, skin: string, seed: number, detail = false) {
   oval(c, x, y, r, r * 1.05, seed, 0.8);
   paint(c, skin, C.ink, 4.5);
   c.save();
@@ -396,20 +451,38 @@ function roundHand(c: Ctx, x: number, y: number, r: number, skin: string, seed: 
   c.clip();
   oval(c, x + r * 0.5, y + r * 0.5, r * 0.7, r * 0.6, seed + 1, 0.6);
   paint(c, "rgba(180,120,70,0.3)", null);
+  if(detail) {
+    inkLine(c,[[x-r*.36,y+r*.18],[x-r*.04,y+r*.3],[x+r*.23,y+r*.2]],seed+4,1,"rgba(132,96,62,.42)",.15);
+    inkLine(c,[[x-r*.34,y+r*.51],[x-r*.06,y+r*.57]],seed+5,.8,"rgba(136,100,68,.30)",.1);
+    oval(c,x-r*.34,y-r*.31,r*.26,r*.13,seed+6,.15,-.3);paint(c,"rgba(246,214,174,.16)",null);
+  }
   c.restore();
 }
 
-function sleeve(c: Ctx, from: Pt, elbow: Pt, wrist: Pt, color: string, dark: string, seed: number) {
+function sleeve(c: Ctx, from: Pt, elbow: Pt, wrist: Pt, color: string, dark: string, seed: number, detail = false) {
   const spine = [from, lerp2(from, elbow, 0.5), elbow, lerp2(elbow, wrist, 0.5), wrist];
   shaded(c, () => blob(c, tubePts(spine, [70, 64, 58, 54, 50], true, true), seed, 1), color, () => {
     blob(c, tubePts(spine.map(([x, y]) => [x + 14, y + 6]) as Pt[], [40, 36, 32, 30, 28], true, true), seed + 1, 1);
     paint(c, dark, null);
+    if(detail) {
+      const side=from[0]<0?-1:1;
+      inkLine(c,[[elbow[0]-side*15,elbow[1]-32],[elbow[0]+side*14,elbow[1]-11],[elbow[0]+side*19,elbow[1]+8]],seed+20,2,"rgba(10,21,35,.5)",.3);
+      inkLine(c,[[elbow[0]-side*18,elbow[1]-23],[elbow[0]+side*4,elbow[1]-7]],seed+21,1.2,"rgba(123,150,171,.22)",.2);
+      for(let i=0;i<22;i++){
+        const t=hash(seed+i*4.3),q=lerp2(from,elbow,t);
+        inkLine(c,[[q[0]-18+hash(i*3.3)*35,q[1]],[q[0]-16+hash(i*3.3)*35,q[1]+2]],seed+25+i,.65,"rgba(139,163,179,.08)",.1);
+      }
+    }
   }, C.ink, 5);
   // cuff
   const a = Math.atan2(wrist[1] - elbow[1], wrist[0] - elbow[0]);
   const nx = Math.cos(a + Math.PI / 2) * 26,
     ny = Math.sin(a + Math.PI / 2) * 26;
   inkLine(c, [[wrist[0] - nx - Math.cos(a) * 14, wrist[1] - ny - Math.sin(a) * 14], [wrist[0] + nx - Math.cos(a) * 14, wrist[1] + ny - Math.sin(a) * 14]], seed + 2, 3, "rgba(0,0,0,0.35)");
+  if(detail) {
+    inkLine(c,[[wrist[0]-nx-Math.cos(a)*20,wrist[1]-ny-Math.sin(a)*20],[wrist[0]+nx-Math.cos(a)*20,wrist[1]+ny-Math.sin(a)*20]],seed+51,1.1,"rgba(147,167,172,.3)",.2);
+    oval(c,wrist[0]+nx*.65-Math.cos(a)*16,wrist[1]+ny*.65-Math.sin(a)*16,3,3,seed+52,.15);paint(c,"#657b87","#142735",.9);
+  }
 }
 
 function torsoFront(c: Ctx, p: DadPose, seed: number) {
@@ -440,6 +513,20 @@ function torsoFront(c: Ctx, p: DadPose, seed: number) {
   shaded(c, () => blob(c, T, seed + 3, 1.2), D.uni, () => {
     blob(c, [[60, 160], [190, 220], [190, 620], [96, 620], [110, 300]], seed + 4, 1.2);
     paint(c, D.uniDk, null);
+    if(p.frontDetails) {
+      for(let i=0;i<100;i++){
+        const x=-177+hash(seed+i*8.3)*354,y=178+hash(seed+i*4.7)*430;
+        inkLine(c,[[x,y],[x+2.5,y+1]],seed+260+i,.65,"rgba(145,168,188,.09)",.1);
+      }
+      inkLine(c,[[-127,244],[-140,382],[-136,565]],seed+361,1.6,"rgba(8,21,33,.42)",.3);
+      inkLine(c,[[127,244],[140,382],[136,565]],seed+362,1.6,"rgba(8,21,33,.42)",.3);
+      inkLine(c,[[4,272],[4,590]],seed+363,1.2,"rgba(120,144,166,.25)",.2);
+      inkLine(c,[[-149,583],[0,598],[149,583]],seed+364,1.4,"rgba(132,154,165,.22)",.3);
+      for(const side of [-1,1]) {
+        inkLine(c,[[side*93,533],[side*118,562],[side*135,567]],seed+365+side,2,"rgba(9,23,39,.48)",.3);
+        inkLine(c,[[side*92,538],[side*111,562]],seed+368+side,1.1,"rgba(102,139,167,.21)",.2);
+      }
+    }
   }, C.ink, 5.5);
   // shirt and tie in the V, lapels over them
   poly(c, [[-46, 152], [46, 152], [0, 270]], seed + 6, 0.7);
@@ -449,6 +536,10 @@ function torsoFront(c: Ctx, p: DadPose, seed: number) {
   for (const side of [-1, 1]) {
     poly(c, [[side * 74, 148], [side * 12, 162], [0, 272], [side * 46, 236]], seed + 8 + side, 0.8);
     paint(c, D.uni, C.ink, 4);
+    if(p.frontDetails) {
+      inkLine(c,[[side*65,156],[side*53,220],[side*9,259]],seed+375+side,1.1,"rgba(136,159,176,.28)",.25);
+      inkLine(c,[[side*68,160],[side*56,221]],seed+378+side,.8,"rgba(8,20,36,.35)",.2);
+    }
   }
   // buttons, chest badge, epaulettes
   for (let i = 0; i < 3; i++) {
@@ -457,6 +548,12 @@ function torsoFront(c: Ctx, p: DadPose, seed: number) {
   }
   poly(c, [[74, 290], [118, 290], [116, 330], [96, 346], [76, 330]], seed + 16, 0.6);
   paint(c, D.gold, C.ink, 3);
+  if(p.frontDetails) {
+    poly(c,[[80,296],[112,296],[110,327],[96,338],[82,327]],seed+381,.2);paint(c,null,"#cbbb80",1);
+    poly(c,[[96,301],[99,309],[108,309],[101,315],[104,324],[96,319],[89,324],[91,315],[85,309],[93,309]],seed+382,.2);paint(c,"#8b7138",null);
+    inkLine(c,[[-138,319],[-74,319],[-76,342],[-134,342],[-138,319]],seed+383,1.4,"rgba(102,136,157,.30)",.25);
+    inkLine(c,[[-131,348],[-128,380],[-84,380],[-81,348]],seed+384,1.2,"rgba(10,25,42,.45)",.25);
+  }
   inkLine(c, [[-140, 330], [-70, 330]], seed + 17, 3, "rgba(0,0,0,0.35)");
   for (const side of [-1, 1]) {
     poly(c, [[side * 112, 176], [side * 176, 196], [side * 172, 222], [side * 108, 202]], seed + 18 + side, 0.6);
@@ -473,6 +570,16 @@ function torsoFront(c: Ctx, p: DadPose, seed: number) {
           paint(c, D.coatDk, null);
         }
         inkLine(c, [[side * 190, 400], [side * 196, 520]], seed + 26 + side, 2.4, "rgba(0,0,0,0.25)");
+        if(p.frontDetails) {
+          inkLine(c,[[side*205,252],[side*221,351],[side*209,442],[side*219,602]],seed+390+side,2.2,"rgba(30,43,27,.46)",.3);
+          inkLine(c,[[side*174,389],[side*180,478],[side*185,581]],seed+393+side,1.5,"rgba(167,164,112,.25)",.3);
+          inkLine(c,[[side*160,488],[side*190,505],[side*211,493]],seed+396+side,2,"rgba(23,40,27,.48)",.3);
+          inkLine(c,[[side*164,496],[side*185,510],[side*202,508]],seed+399+side,1,"rgba(184,175,126,.23)",.2);
+          for(let i=0;i<50;i++) {
+            const x=side*(136+hash(seed+i*3.8)*104),y=240+hash(seed+i*7.6)*381;
+            inkLine(c,[[x,y],[x+side*2,y+3]],seed+410+i+side*60,.8,"rgba(184,190,143,.13)",.1);
+          }
+        }
       }, C.ink, 5.5);
       // fur lapel along the opening
       const fur: Pt[] = [];
@@ -489,6 +596,14 @@ function torsoFront(c: Ctx, p: DadPose, seed: number) {
       blob(c, fur, seed + 28 + side, 1.6);
       paint(c, D.fur, C.ink, 4);
       for (let k = 0; k < 5; k++) inkLine(c, [[side * (170 - k * 6), 210 + k * 32], [side * (160 - k * 6), 222 + k * 32]], seed + 30 + k + side * 7, 2, D.furDk);
+      if(p.frontDetails) {
+        c.save();blob(c,fur,seed+28+side,1.6);c.clip();
+        for(let i=0;i<41;i++) {
+          const t=hash(seed+i*5.7),x=side*(161-t*30+hash(i*3.9)*24),y=189+t*170;
+          inkLine(c,[[x,y],[x-side*(3+hash(i)*4),y+5+hash(i+4)*5]],seed+550+i+side*45,1.1,i%3?"#e1c79b":"#98815c",.2);
+        }
+        c.restore();
+      }
     }
   }
 }
@@ -563,14 +678,21 @@ function arms(c: Ctx, p: DadPose, seed: number, stage: "sleeves" | "hands") {
   if (a === "phone" || a === "type") {
     // forearms come forward from under the coat to hold the phone at the chest
     const L: [Pt, Pt, Pt] = [[-150, 300], [-156, 470], [-60, 420]];
-    const R: [Pt, Pt, Pt] = a === "type" ? [[150, 300], [150, 460], [52, 372 + 12 * t]] : [[150, 300], [156, 470], [60, 420]];
+    const R: [Pt, Pt, Pt] = a === "type" ? [[150, 300], [150, 460], [p.frontDetails ? 89 : 52, 372 + 12 * t]] : [[150, 300], [156, 470], [60, 420]];
     if (stage === "sleeves") {
-      sleeve(c, L[0], L[1], L[2], col, dk, seed);
-      sleeve(c, R[0], R[1], R[2], col, dk, seed + 5);
+      sleeve(c, L[0], L[1], L[2], col, dk, seed, !!p.frontDetails);
+      sleeve(c, R[0], R[1], R[2], col, dk, seed + 5, !!p.frontDetails);
+      if(p.frontDetails && a==="type") {
+        // Screen faces him: the tapping hand is on the far side of the phone.
+        roundHand(c,94,366+12*t,29,skin,seed+12,true);
+        blob(c,tubePts([[86,344+12*t],[63,318+14*t]],[19,17],true,true),seed+14,.4);paint(c,skin,C.ink,3.4);
+        inkLine(c,[[81,342+12*t],[86,344+12*t]],seed+18,1,"rgba(147,98,63,.35)",.1);
+      }
       p.holding?.(c);
       return;
     }
-    roundHand(c, -62, 430, 34, skin, seed + 10);
+    roundHand(c, p.frontDetails ? -83 : -62, 430, 34, skin, seed + 10, !!p.frontDetails);
+    if (a === "type" && p.frontDetails) return;
     if (a === "type") {
       // a pointing finger pressing the screen
       roundHand(c, 54, 366 + 12 * t, 30, skin, seed + 12);
@@ -621,7 +743,7 @@ export const resources = defineResources({
     kind: "character",
     title: "爸爸（夜班保安）",
     description:
-      "五十多岁的夜班保安爸爸：花白鬓角、老花镜、保安大檐帽、深蓝制服，可以披带毛领的军大衣；正面 / 背影、几种表情和手（捧手机、一根手指打字、捂嘴），young 是年轻时的他（黑发白衬衫，放进旧合照）。手里的手机用 holding 画（在袖子和手之间），例如 holding: (k) => phoneBack(k, -10, 400, 150, 270, -0.08)。夜里被手机照亮的脸：先画他，再用 figureMask + onFigure 叠屏幕光、rimLight 加轮廓光。",
+      "五十多岁的夜班保安爸爸：花白鬓角、老花镜、保安大檐帽、深蓝制服，可以披带毛领的军大衣；正面 / 背影、几种表情和手（捧手机、一根手指打字、捂嘴），young 是年轻时的他（黑发白衬衫，放进旧合照）。手里的手机用 holding 画（在袖子和手之间），例如 holding: (k) => phoneBack(k, -10, 400, 150, 270, -0.08)。frontDetails 开启帽子织纹/帽徽缝线、灰白鬓角、眼镜五金与局部屏幕反射、制服毛领与袖口；打字的手位于手机屏幕一侧，仍用简单圆手。screenReflection 控制镜片里的小块倒影，不盖瞳孔。夜里被手机照亮的脸：先画他，再用 figureMask + onFigure 叠屏幕光、rimLight 加轮廓光。",
     tags: ["爸爸", "父亲", "保安", "门卫", "老人", "中年", "夜班", "军大衣", "老花镜", "人物"],
     usage: "drawDad(ctx, x, y, s, { coat, eyes, mouth, arms, tap, view, young, holding })  // (x, y) 头中心，s = 1 脸宽约 236",
     params: dadPose,
@@ -634,6 +756,7 @@ export const resources = defineResources({
       笑着哭: { coat: true, arms: "phone", eyes: "happy", mouth: "laugh", tears: 0.6 },
       背影: { view: "back" },
       精细值班背影: { view: "back", coat: true, backDetails: true },
+      精细值班近景: { frontDetails: true, screenReflection: .8, coat: true, arms: "type", eyes: "down", brows: "worried", mouth: "press" },
       年轻时: { young: true, eyes: "happy", mouth: "laugh" },
     },
     preview: {
