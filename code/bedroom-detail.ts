@@ -1,5 +1,5 @@
 // Detailed furnishing and practical lighting for places.herRoom. 1080×1920, absolute time.
-import { C, Ctx, F, H, Pt, W, blob, fillBg, glow, hash, inkLine, lightShaft, motes, oval, paint, poly, rbox, rr, text, vgrad } from "./draw";
+import { C, Ctx, H, Pt, W, blob, fillBg, glow, hash, inkLine, lightShaft, motes, oval, paint, poly, rbox, vgrad } from "./draw";
 import { paneLight } from "./sets";
 import { coffee } from "./cafe";
 import { snow } from "./blocked/snow";
@@ -183,6 +183,8 @@ export function detailedBedroom(c: Ctx, abs: number, o: BedroomDetailOptions = {
     inkLine(c,[[-22,-15],[0,-9],[23,-15]],81640+x,2,"rgba(234,204,210,.4)",.4);
     c.restore();
   }
+  windowScene(c,abs,o.winter??false);
+  photos(c,o.photos);
   // A grounded bedside cabinet, with books in its open lower shelf.
   poly(c,[[653,820],[1031,820],[1024,1144],[658,1151]],81700,1);paint(c,"#594556",C.ink,5);
   poly(c,[[1031,820],[1054,800],[1045,1112],[1024,1144]],81701,.6);paint(c,"#3c344a",C.ink,4);
@@ -204,8 +206,6 @@ export function detailedBedroom(c: Ctx, abs: number, o: BedroomDetailOptions = {
   poly(c,[[901,784],[998,781],[1001,787],[904,792]],81752,.5);paint(c,"#897d9e",C.ink,2);
   coffee(c,951,760,.36,abs,false,"#c4b5bd");
   bear(c,720,744);
-  windowScene(c,abs,o.winter??false);
-  photos(c,o.photos);
   // Bed structure, upholstery channels and two pillows stay at the approved pose coordinates.
   oval(c,328,1251,440,77,81800,.5);paint(c,"rgba(5,7,20,0.45)",null);
   poly(c,[[-60,690],[600,700],[607,1010],[-60,1000]],81801,1);paint(c,"#63516f",C.ink,5);

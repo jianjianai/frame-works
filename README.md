@@ -57,3 +57,4 @@
 - `code/blocked/booth.ts`：来源 为作品 work-73c8f9bc《屏蔽》原创绘制；许可 自制
 - `code/social.ts`：来源 为作品 work-73c8f9bc 第一幕手机界面补全编写；许可 自制
 - `code/bedroom-detail.ts`：来源 为作品 work-73c8f9bc 卧室细节与灯光补全编写；由 places.ts 的 herRoom detailed 参数调用；许可 自制
+- `code/bedroom-detail.ts`：来源 原创 Canvas 手绘卧室，由 places.herRoom 的 detailed 参数调用。；许可 原创
