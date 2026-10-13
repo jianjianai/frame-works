@@ -143,6 +143,9 @@ export function detailedFrontDesk(c:Ctx,t:number,o:FrontDeskOptions,props:FrontP
   glow(c,290,y-3,383,"rgba(10,22,27,.3)");
   glow(c,975,y+109,420,"rgba(224,162,96,.10)");
   glow(c,531,y+30,302,"rgba(136,182,197,.09)",o.phoneLight??1);
+  const reflection=c.createLinearGradient(0,y+80,0,1890);
+  reflection.addColorStop(0,"rgba(180,173,133,.055)");reflection.addColorStop(.35,"rgba(158,182,174,.035)");reflection.addColorStop(1,"rgba(136,169,158,0)");
+  poly(c,[[792,y+47],[967,y+40],[666,1960],[349,1960]],91859,.2);paint(c,reflection,null);
   const glare=c.createLinearGradient(0,y,1000,y+430);
   glare.addColorStop(0,"rgba(185,208,197,0)");glare.addColorStop(.6,"rgba(174,202,196,.06)");glare.addColorStop(.67,"rgba(184,204,188,.015)");glare.addColorStop(1,"rgba(185,208,197,0)");
   c.fillStyle=glare;c.fillRect(-80,y,1280,550);
@@ -164,5 +167,8 @@ export function detailedFrontDesk(c:Ctx,t:number,o:FrontDeskOptions,props:FrontP
   for(let i=2;i>=0;i--){poly(c,[[-169,-88+i*2],[181,-87+i*2],[187,94+i*2],[-177,93+i*2]],91901+i,.3);paint(c,i%2?"#899783":"#a9ad95","#5e7769",.7);}
   inkLine(c,[[4,-88],[6,92]],91906,2,"#546b5f",.2);
   for(let j=0;j<5;j++)for(const x of [-151,22])inkLine(c,[[x,-54+j*30],[x+123,-54+j*30]],91910+x+j,.8,"rgba(53,103,110,.35)",.1);
+  text(c,"值班记录",-86,-69,{size:18,font:F.ui,fill:"#3b554d"});
+  ["22:00 巡逻一次","23:30 正常","00:40 正常","01:50 下雪"].forEach((entry,i)=>text(c,entry,-87,-35+i*29,{size:14,font:F.pen,fill:"#3f5b66"}));
+  inkLine(c,[[-148,84],[-32,85]],91921,.7,"rgba(51,85,89,.25)",.1);
   c.restore();
 }
