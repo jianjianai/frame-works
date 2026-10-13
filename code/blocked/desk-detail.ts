@@ -3,7 +3,7 @@
  * Photos and the birthday note are below the glass; the duty book, pen, cup and keys rest above it.
  * All texture seeds are fixed; only the steam depends on absolute time.
  */
-import { C, Ctx, F, H, Pt, W, blob, fillBg, glow, hash, inkLine, oval, paint, poly, rbox, text, vgrad } from "../draw";
+import { Ctx, F, H, Pt, W, blob, fillBg, glow, hash, inkLine, lightShaft, oval, paint, poly, rbox, text, vgrad } from "../draw";
 import { drawKid } from "../kid";
 
 export interface DetailedDeskOptions {
@@ -174,7 +174,7 @@ function logBook(c:Ctx,o:DetailedDeskOptions) {
 
 function pen(c:Ctx) {
   c.save();c.translate(163,955);c.rotate(.13);
-  rbox(c,-7,-109,20,223,7,89800,.2);paint(c,"rgba(12,23,27,.32)",null);
+  rbox(c,-14,-108,20,223,7,89800,.2);paint(c,"rgba(12,23,27,.32)",null);
   rbox(c,-9,-113,15,202,5,89801,.2);paint(c,"#1d3546","#13242c",2);
   inkLine(c,[[-5,-108],[-5,79]],89802,2,"#7e9697",.1);
   rbox(c,-12,-114,22,71,5,89803,.2);paint(c,"#334d58","#142932",1.7);
@@ -290,6 +290,10 @@ export function detailedDeskTop(c:Ctx,abs:number,o:DetailedDeskOptions={}) {
   wood(c);
   keepsakes(c,o);
   glass(c);
+  // Two panes of the same warm window, separated by a soft mullion shadow.
+  // The shallow glow crosses the glass and keepsakes; raised objects are drawn over it.
+  lightShaft(c,[[697,-80],[880,-80],[169,1890],[-124,1740]],829,-80,125,1840,"253,195,119",.105,20,"desk_window_left");
+  lightShaft(c,[[942,-80],[1220,-80],[791,1900],[309,1900]],1045,-80,517,1900,"253,195,119",.135,24,"desk_window_right");
   logBook(c,o);
   pen(c);
   cup(c,abs);
