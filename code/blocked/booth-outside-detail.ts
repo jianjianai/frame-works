@@ -106,9 +106,8 @@ function snowGround(c:Ctx) {
   filtered(c,"blur(12px)",q=>{
     poly(q,[[390,1296],[796,1307],[665,1660],[249,1529]],94460,.5);paint(q,"rgba(22,47,71,.29)",null);
   },"booth_exterior_shadow");
-  const spill=c.createLinearGradient(0,1308,0,1755);
-  spill.addColorStop(0,"rgba(239,186,112,.32)");spill.addColorStop(.35,"rgba(239,185,107,.18)");spill.addColorStop(1,"rgba(237,186,110,0)");
-  poly(c,[[429,1312],[746,1312],[957,1755],[225,1755]],94461,.6);paint(c,spill,null);
+  lightShaft(c,[[429,1312],[746,1312],[957,1755],[225,1755]],590,1312,590,1755,"239,186,112",.17,34,"booth_warm_snow_spill");
+  pool(c,594,1392,306,272,"240,184,109",.17);
   // The window's cross bar makes two subdued lanes in the light on the snow.
   inkLine(c,[[676,1320],[772,1664]],94462,5,"rgba(48,64,78,.10)",.3);
   for(let i=0;i<180;i++){
@@ -167,7 +166,8 @@ function warmWindow(c:Ctx,t:number,inside:(c:Ctx)=>void) {
   c.save();c.beginPath();c.rect(430,830,320,250);c.clip();
   // The same chair, clock, calendar and side window as the previous reverse shot, at the same actor scale.
   c.save();c.translate(438,756);c.scale(.28169,.28169);detailedBoothFront(c,t,{clock:2.9});c.restore();
-  pool(c,677,858,245,246,"246,181,98",.30);
+  pool(c,677,858,245,246,"246,181,98",.35);
+  pool(c,573,951,201,223,"235,174,91",.18);
   // A small interior ceiling light warms the wall; the actor is lit separately by the shot.
   rbox(c,451,838,64,5,2,94804,.2);paint(c,"#cfb67f","#706e53",.6);
   glow(c,483,841,61,"rgba(245,205,134,.15)");
@@ -208,8 +208,8 @@ function roof(c:Ctx) {
   inkLine(c,[[358,790],[830,788]],94901,3,"#8cabae",.3);
   inkLine(c,[[364,797],[828,796]],94902,1,"#bdc7b6",.2);
   const p:Pt[]=[[354,776],[361,756],[379,747],[384,731],[433,720],[505,716],[540,710],[603,715],[638,711],[712,718],[748,726],[791,725],[816,739],[819,756],[833,770],[814,785],[758,786],[680,782],[588,786],[516,782],[425,789],[376,784]];
-  poly(c,p,94903,.7);paint(c,vgrad(c,710,792,[[0,"#ced6d7"],[.44,"#b6c8d4"],[1,"#819eb4"]]),"#354e60",2.5);
-  c.save();poly(c,p,94903,.7);c.clip();
+  blob(c,p,94903,.7);paint(c,vgrad(c,710,792,[[0,"#ced6d7"],[.44,"#b6c8d4"],[1,"#819eb4"]]),"#354e60",2.5);
+  c.save();blob(c,p,94903,.7);c.clip();
   blob(c,[[369,750],[433,733],[551,721],[657,726],[778,737],[808,751],[752,748],[664,739],[571,734],[478,740],[400,757]],94904,.65);paint(c,"rgba(230,237,228,.31)",null);
   inkLine(c,[[378,772],[446,765],[521,768],[616,761],[721,765],[808,763]],94905,1.8,"rgba(74,111,140,.26)",.5);
   inkLine(c,[[397,741],[498,726],[581,725]],94906,1.6,"rgba(243,243,227,.51)",.3);
@@ -284,7 +284,7 @@ function bicycle(c:Ctx) {
 function snowBank(c:Ctx) {
   // Banks gather against the foundation, not as a perfectly oval white sticker.
   const p:Pt[]=[[332,1329],[354,1311],[405,1315],[440,1304],[481,1318],[519,1312],[567,1320],[603,1309],[660,1317],[711,1305],[760,1313],[802,1303],[847,1319],[874,1345],[837,1354],[796,1349],[747,1358],[687,1351],[634,1361],[571,1357],[511,1366],[453,1356],[395,1360],[352,1350]];
-  poly(c,p,95200,.65);paint(c,vgrad(c,1304,1371,[[0,"#b6c6cd"],[1,"#7b98b0"]]),null);
+  blob(c,p,95200,.65);paint(c,vgrad(c,1304,1371,[[0,"#b6c6cd"],[1,"#7b98b0"]]),null);
   inkLine(c,[[351,1324],[405,1328],[448,1319],[495,1326]],95201,1.5,"rgba(223,229,220,.54)",.4);
   inkLine(c,[[633,1330],[716,1323],[788,1323],[838,1335]],95202,1.5,"rgba(225,219,195,.55)",.4);
   inkLine(c,[[360,1353],[453,1360],[509,1369]],95203,1.3,"rgba(53,84,110,.27)",.4);
@@ -301,6 +301,7 @@ export function detailedBoothOutside(c:Ctx,t:number,inside:(c:Ctx)=>void,o:Outsi
   gateFittings(c,t);
   snowGround(c);
   boothBody(c,o.sign??"门卫室");
+  glow(c,590,960,280,"rgba(244,180,93,.12)");
   warmWindow(c,t,inside);roof(c);doorLamp(c,t);
   groundShadow(c,bicycle,[300,1308],166,[170,1420],.30,5,1,"#223d55");
   bicycle(c);snowBank(c);
