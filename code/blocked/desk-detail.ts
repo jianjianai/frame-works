@@ -19,9 +19,11 @@ export interface DetailedDeskOptions {
   logWrite?: number;
   /** false: the pen isn't lying on the desk (it's in his hand — draw it with heldPen). */
   pen?: boolean;
+  /** the lonely grade: cold blue, moonlight from the window on the left, no keys; only her photos stay warm */
+  lonely?: boolean;
 }
 
-function wood(c: Ctx) {
+function wood(c: Ctx, lonely = false) {
   fillBg(c, vgrad(c, -100, 2000, [[0,"#6b523b"],[.32,"#604834"],[.7,"#4b3c31"],[1,"#333c37"]]));
   // Broad veneer ribbons, with fine broken grain rather than a stack of floorboards.
   for (let i=0;i<12;i++) {
@@ -47,6 +49,7 @@ function wood(c: Ctx) {
     const x=hash(i*8.3+1)*W,y=hash(i*5.8+6)*H;
     inkLine(c,[[x,y],[x+9+hash(i)*25,y-2]],89470+i,1,"rgba(223,190,139,.10)",.1);
   }
+  if(lonely){glow(c,60,60,1150,"rgba(140,165,225,.12)");return;}
   // Warm sodium light through the window, cool monitor fill at the left.
   glow(c,1000,110,1130,"rgba(250,188,107,.17)");
   glow(c,-100,520,790,"rgba(134,177,193,.09)");
@@ -96,12 +99,14 @@ function oldPhoto(c:Ctx,x:number,y:number,rot:number,s:number,index:number) {
   c.restore();
 }
 
+/** her three old photos pressed under the glass */
+function herPhotos(c:Ctx) {
+  oldPhoto(c,173,1264,-.115,1.18,0);
+  oldPhoto(c,910,1324,.095,1.18,1);
+  oldPhoto(c,866,226,.145,1.10,2);
+}
 function keepsakes(c:Ctx,o:DetailedDeskOptions) {
-  if(o.photos??true) {
-    oldPhoto(c,173,1264,-.115,1.18,0);
-    oldPhoto(c,910,1324,.095,1.18,1);
-    oldPhoto(c,866,226,.145,1.10,2);
-  }
+  if(o.photos??true) herPhotos(c);
   c.save();c.translate(263,1574);c.rotate(-.05);
   const edge:Pt[]=[[-165,-66],[-96,-68],[-37,-65],[24,-68],[96,-66],[165,-67],[163,68],[95,67],[22,70],[-40,67],[-104,69],[-166,67]];
   poly(c,edge.map(([x,y])=>[x+1,y+3] as Pt),89560,.3);paint(c,"rgba(20,27,25,.36)",null);
@@ -233,12 +238,13 @@ export function heldPen(c:Ctx,tip:Pt,ang:number) {
   c.restore();
 }
 
-function cup(c:Ctx,abs:number) {
+function cup(c:Ctx,abs:number,moonLeft=false) {
   const x=956,y=554;
   c.save();c.translate(x,y);
-  // Mug height gives it a longer, softer shadow than the book or the keys.
+  // Mug height gives it a longer, softer shadow than the book or the keys (away from the window's light).
+  const sx=moonLeft?-1:1;
   for(let j=6;j>=0;j--) {
-    oval(c,-22-j*3,34+j*3,110+j*4,112+j*3,89900,.3);
+    oval(c,sx*(-22-j*3),34+j*3,110+j*4,112+j*3,89900,.3);
     paint(c,"rgba(9,21,22,.026)",null);
   }
   oval(c,0,6,127,126,89901,.45);paint(c,"#5c5140","#383b30",2);
@@ -334,7 +340,45 @@ function phoneContact(c:Ctx,lit:number,resting:boolean) {
   }
 }
 
+/** The lonely desk (用户：周围全是冷色，只有女儿的照片是暖色；物品摆放、光影、月光): the same desk in the cold blue
+ *  of the lonely booth, no keys; the moon from the window on the left lays two pale panes of light across it with
+ *  the window bar's shadow between them; the edges facing it catch a cold light; her photos under the glass, and her
+ *  photo on the phone, are the only warm things. */
+function lonelyDeskTop(c:Ctx,abs:number,o:DetailedDeskOptions) {
+  wood(c,true);
+  keepsakes(c,o);
+  glass(c);
+  logBook(c,o);
+  if(o.pen??true)pen(c);
+  cup(c,abs,true);
+  phoneContact(c,Math.max(0,Math.min(1,o.phoneLight??0)),o.phoneResting??false);
+  c.save();
+  c.globalCompositeOperation="multiply";
+  c.fillStyle="rgb(150,166,206)";c.fillRect(-60,-60,W+120,H+120);
+  c.globalCompositeOperation="color";
+  c.globalAlpha=.3;c.fillStyle="#32466e";c.fillRect(-60,-60,W+120,H+120);
+  c.restore();
+  // her photos keep their warmth
+  if(o.photos??true){c.save();c.globalAlpha=.82;herPhotos(c);c.restore();}
+  // two panes of moonlight from the upper left, the window bar's shadow between them
+  lightShaft(c,[[383,-80],[200,-80],[911,1890],[1204,1740]],251,-80,955,1840,"170,195,245",.11,20,"desk_moon_left");
+  lightShaft(c,[[138,-80],[-140,-80],[289,1900],[771,1900]],35,-80,563,1900,"170,195,245",.14,24,"desk_moon_right");
+  c.save();
+  c.globalCompositeOperation="screen";
+  // the edges that face the moon
+  c.save();c.translate(185,509);c.rotate(-.15);
+  inkLine(c,[[-207,-254],[-111,-260],[-1,-248]],90300,3,"rgba(200,218,255,.5)",.2);
+  inkLine(c,[[-209,-250],[-209,250]],90301,2.5,"rgba(200,218,255,.4)",.2);
+  c.restore();
+  c.beginPath();c.arc(956,554,108,3.25,4.75);c.lineWidth=4;c.strokeStyle="rgba(205,222,255,.55)";c.stroke();
+  c.restore();
+  const v=c.createRadialGradient(584,825,290,540,925,1210);
+  v.addColorStop(0,"rgba(4,8,18,0)");v.addColorStop(.66,"rgba(4,8,18,.08)");v.addColorStop(1,"rgba(4,8,18,.42)");
+  c.fillStyle=v;c.fillRect(-60,-60,1200,2040);
+}
+
 export function detailedDeskTop(c:Ctx,abs:number,o:DetailedDeskOptions={}) {
+  if(o.lonely){lonelyDeskTop(c,abs,o);return;}
   wood(c);
   keepsakes(c,o);
   glass(c);
