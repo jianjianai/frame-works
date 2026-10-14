@@ -1,7 +1,7 @@
 /**
  * 手机（第一支和重置版的界面）：phone(ctx, cx, cy, s, rot, screen) 画机身，screen 回调在 600×1280 的屏幕坐标里画内容。
  * 屏幕：锁屏 lockScreen（黄昏秋千壁纸 wallpaper）、聊天 chatScreen、动态 feedScreen、控制中心 controlCenter（飞行模式/手电）、
- * 横幅通知 notification、未读角标 badge、状态栏 statusBar；机身背面 phoneBack（可开手电）、侧键 phoneButtons、玻璃反光 glassGlare。
+ * 横幅通知 notification、未读角标 badge、状态栏 statusBar；手机周围的屏幕光晕 phoneHalo（在 phone 之前画，贴着机身的柔光 + 大范围淡光，代替一个圆形 glow）、机身背面 phoneBack（可开手电）、侧键 phoneButtons、玻璃反光 glassGlare。
  * 微信风格的聊天（第二版）在 chat.ts，《mirrors》的深色界面在 mirrors/phoneui.ts。
  */
 import { z } from "zod";
