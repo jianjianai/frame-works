@@ -10,6 +10,7 @@
 | `desk-detail.ts` | `deskTop({ detailed: true })` 的精细实现：木纹清漆、玻璃厚边与窗光、玻璃下的旧照片/便条、值班本叠页与书脊、钢笔、茶汤/杯沿/热气、钥匙齿口与皮牌。`phoneLight: 0..1` 控制微弱漏光，`phoneResting: true` 加中央手机接触阴影（机身中心 (540, 880)、scale .92、rot .06）；手机由镜头画，默认基础版不变。正在写值班记录：`logWrite: 0..1` 把最后一行（时间已写好）后面的字从左到右写出来，`pen: false` 把桌上的笔拿走，`heldPen(ctx, logPen(ctx, o), 0.3)` 把同一支笔画在笔尖处（手由镜头画；《屏蔽》11b 用 `camera` 放大到值班本约 3.4 倍，圆手和袖子画在屏幕坐标里）。 |
 | `booth-front-detail.ts` | `boothFront({ detailed: true })` 的正面反打：挂钟刻度、日历叠页、旧蜡笔画、针织围巾、侧窗锁扣与结霜、椅背和取暖器。`boothFrontDesk(ctx, abs, { y: 1495, phoneLight: 1 })` 在人物之后画玻璃桌、左侧茶杯和右侧值班本，遮住半身下沿。精细背景自带夜景光影，近景 blur 约 3.5，不再整幅叠黑。 |
 | `booth-outside-detail.ts` | `boothOutside({ detailed: true })` 的雪夜外景：屋顶积雪与冰挂、墙体板缝/五金/侧门、偏置滑窗/窗台/霜、砖柱与伸缩门、自行车轮辐/挡泥板/链条/后架、雪地压痕和脚印。复用原厂门及正面室内背景，冷蓝雪地承接柔边暖窗光；窗内人物由调用方画，原窗中心保持不变。 |
+| `cctv.ts` | **监控屏的四路画面** `cctvFeeds(ctx, abs, { time, guard })`：01 大门、02 厂区、03 门卫室、04 道路，深夜下雪、空无一人，只有门卫室那一路坐着他（`guard` 在 boothBack 的整幅坐标里画他），道路那一路只有一串脚印。画在 `boothBack({ detailed: true })` 之后、同一套坐标里，盖住原来的简笔画面；特写时 camera 推到 `CCTV_SCREEN` / `feedRect(2)`。《屏蔽》11b 用它表现他一个人守夜。 |
 | `snow.ts` | **下雪** `snow(ctx, abs, { n, seed, speed, size, alpha, drift, x, y, w, h })`：按绝对时间、确定性；远景一层小而密，近景再叠一层 `filtered` blur 4px 的大雪花。 |
 
 人物的夜景打光用 draw.ts 的 `litFigure`（暗部 + 点光 + 轮廓光）：手机照脸 `{ shade: 0.3, lights: [{ x, y, r: 430, rgb: "170,195,255", a: 0.4 }], rim }`。精细岗亭的背影加 `backDetails: true`（帽子拼缝、花白短发、毛领、大衣肩线与半腰带），shade 约 0.38、冷色环境底，手机/监控的点光照在后脑，取暖器暖光落在大衣下方，窗外路灯的内侧轮廓光约 0.38、width 7；各点光坐标跟镜头里真实物件对齐。场景已经处理材质暗部和光池，画完人物后不要再整幅压黑。
