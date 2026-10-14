@@ -773,7 +773,7 @@ export const resources = defineResources({
     kind: "character",
     title: "爸爸（夜班保安）",
     description:
-      "五十多岁的夜班保安爸爸：花白鬓角、老花镜、保安大檐帽、深蓝制服，可以披带毛领的军大衣；正面 / 背影、几种表情和手（捧手机、一根手指打字、捂嘴），young 是年轻时的他（黑发白衬衫，放进旧合照）。手里的手机用 holding 画（在袖子和手之间），例如 holding: (k) => phoneBack(k, -10, 400, 150, 270, -0.08)。frontDetails 开启帽子织纹/帽徽缝线、灰白鬓角、眼镜五金与局部屏幕反射、制服毛领与袖口；打字的手位于手机屏幕一侧，仍用简单圆手；typeHand: "half" 时不画手指，手一半藏在手机后面，逐帧改 handAt 让它在屏幕上滑动（看得出在输入，不用画手指）。从捧手机到捂嘴的动作用 arms: \"mouth\" + mouthK 0→1 连续过渡（0 就是捧手机的姿势），不要两种手势直接切换。screenReflection 控制镜片里的小块倒影，不盖瞳孔。夜里被手机照亮的脸：先画他，再用 figureMask + onFigure 叠屏幕光、rimLight 加轮廓光。",
+      "五十多岁的夜班保安爸爸：花白鬓角、老花镜、保安大檐帽、深蓝制服，可以披带毛领的军大衣；正面 / 背影、几种表情和手（捧手机、一根手指打字、捂嘴），young 是年轻时的他（黑发白衬衫，放进旧合照）。手里的手机用 holding 画（在袖子和手之间），例如 holding: (k) => phoneBack(k, -10, 400, 150, 270, -0.08)。frontDetails 开启帽子织纹/帽徽缝线、灰白鬓角、眼镜五金与局部屏幕反射、制服毛领与袖口；打字的手位于手机屏幕一侧，仍用简单圆手；typeHand: half 时不画手指，手一半藏在手机后面，逐帧改 handAt 让它在屏幕上滑动（看得出在输入，不用画手指）。从捧手机到捂嘴的动作用 arms: \"mouth\" + mouthK 0→1 连续过渡（0 就是捧手机的姿势），不要两种手势直接切换。screenReflection 控制镜片里的小块倒影，不盖瞳孔。夜里被手机照亮的脸：先画他，再用 figureMask + onFigure 叠屏幕光、rimLight 加轮廓光。",
     tags: ["爸爸", "父亲", "保安", "门卫", "老人", "中年", "夜班", "军大衣", "老花镜", "人物"],
     usage: "drawDad(ctx, x, y, s, { coat, eyes, mouth, arms, tap, view, young, holding })  // (x, y) 头中心，s = 1 脸宽约 236",
     params: dadPose,
