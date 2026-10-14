@@ -2,7 +2,7 @@
 // 甩镜的位移、时间卡。
 import { clamp } from "@frame/engine/math";
 import { Ctx, card, hash } from "@materials/s0rrow/code/draw";
-import { phone, SH, SW } from "@materials/s0rrow/code/phone";
+import { phone, phoneHalo, SH, SW } from "@materials/s0rrow/code/phone";
 import { crackedGlass } from "./ui";
 
 export interface Touch {
@@ -56,6 +56,9 @@ export function drawPhone(c: Ctx, abs: number, p: PhoneSpec, screen: (c: Ctx) =>
   }
   c.restore();
 }
+
+/** The screen's light round a phone placed at `p` in a dark room (draw it just before drawPhone). */
+export const halo = (c: Ctx, p: PhoneSpec, a = 1, rgb?: string) => phoneHalo(c, p.cx, p.cy, p.s, p.rot ?? 0, a, rgb);
 
 /** A tap: pressed around time t (0..1..0 over 0.22 s). */
 export const tap = (abs: number, t: number, x: number, y: number, len = 0.22): Touch => ({ x, y, k: abs < t - 0.06 || abs > t + len ? 0 : abs < t ? (abs - (t - 0.06)) / 0.06 : 1 - clamp((abs - t - len * 0.6) / (len * 0.4)) });

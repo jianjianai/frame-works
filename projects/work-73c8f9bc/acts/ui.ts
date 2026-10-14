@@ -2,7 +2,7 @@
 // 关注列表、互动消息、拉黑；微信（浅色）的资料页（朋友圈被屏蔽时只有一条横线）、朋友圈、权限开关、对话框、横幅；
 // 爸爸手机的锁屏（壁纸是他扛着小时候的她）。爸爸的手机字号调到最大（big）、贴膜有裂痕（crackedGlass）。
 import { clamp } from "@frame/engine/math";
-import { C, Ctx, F, Pt, blob, hash, inkLine, measure, oval, paint, poly, rr, text, tubePts } from "@materials/s0rrow/code/draw";
+import { C, Ctx, F, Pt, blob, hash, inkLine, lerp2, measure, oval, paint, poly, rr, shaded, text, tubePts } from "@materials/s0rrow/code/draw";
 import { SH, SW, statusBar } from "@materials/s0rrow/code/phone";
 import { avatar } from "@materials/s0rrow/code/chat";
 import { drawKid } from "@materials/s0rrow/code/kid";
@@ -17,8 +17,13 @@ export { SH, SW };
 export const HER = "小满";
 export const DAD_CALLS_HER = "囡囡";
 export const SHE_CALLS_DAD = "爸爸";
-export const ACC_A = "用户8274615";
-export const ACC_B = "用户3391027";
+/** the stranger's nicknames: the kind of random 「形容词的名词」 name the platform hands out (easy to remember, reads as a
+ *  bot) — never changed, the way a dad leaves it. Both nouns are on his desk in the booth (the red thermos, the radio).
+ *  The new account after she blocks him gets a new random name of the same kind; the grey avatar and the 🌹 say it is him. */
+export const ACC_A = "沉默的保温杯";
+export const ACC_B = "孤独的收音机";
+/** the blocked account's 抖音号 on its profile page */
+export const ACC_ID = "8274615";
 
 // ---------------------------------------------------------------- small pieces
 /** WeChat's built-in rose (中老年人的习惯): (x, y) = left middle, sized like text of `size`. */
@@ -170,6 +175,32 @@ export function pulseBox(c: Ctx, x: number, y: number, w: number, h: number, k: 
     rr(c, x - g, y - g, w + g * 2, h + g * 2, 18 + g);
     c.stroke();
   }
+  c.restore();
+}
+
+/** How a guide box keeps time with the camera: `ring` 0..1 runs the ripple (pulseBox, a pop when the camera lands),
+ *  `a` holds a steady outline `gap` units outside the target (shrink `gap` for a box that closes in), `thump` 0..1
+ *  flares it (on a heartbeat). A plain number is just the ripple. */
+export type Guide = number | { ring?: number; a?: number; gap?: number; thump?: number };
+export function guideBox(c: Ctx, x: number, y: number, w: number, h: number, g: Guide) {
+  if (typeof g === "number") return pulseBox(c, x, y, w, h, g);
+  if (g.ring !== undefined) pulseBox(c, x, y, w, h, g.ring);
+  const a = clamp(g.a ?? 0);
+  if (a <= 0) return;
+  const th = clamp(g.thump ?? 0);
+  const gap = (g.gap ?? 10) - 4 * th;
+  c.save();
+  rr(c, x - gap, y - gap, w + gap * 2, h + gap * 2, 18 + gap);
+  if (th > 0) {
+    c.globalAlpha = a * 0.3 * th;
+    c.strokeStyle = "#ffd84a";
+    c.lineWidth = 20;
+    c.stroke();
+  }
+  c.globalAlpha = a * (0.85 + 0.15 * th);
+  c.strokeStyle = "#ffd84a";
+  c.lineWidth = 6 + 3 * th;
+  c.stroke();
   c.restore();
 }
 
@@ -362,10 +393,58 @@ export const partyPhoto: Photo = (c, x, y, w, h) =>
   });
 
 /** His lock-screen wallpaper: a sunny afternoon in the park twenty years ago — young him (black hair, white shirt,
- *  laughing) with little her (five, the same sunflower clip) riding on his shoulders, her hands in his hair, his hands
- *  holding her shins. His face sits at WALL_FACE (0..1 of the photo) at WALL_S, so his reflection can melt into it. */
-export const WALL_FACE: [number, number] = [0.5, 0.64];
+ *  laughing) kneeling behind little her (five, the same sunflower clip), his arms round her middle and his hands clasped
+ *  in front of her, her hands on his arms. His face sits at WALL_FACE (0..1 of the photo) at WALL_S, so his reflection
+ *  can melt into it: high enough that her face, under his chin, stays clear of the lyrics. */
+export const WALL_FACE: [number, number] = [0.5, 0.44];
 export const WALL_S = 1.15;
+/** the hug, in his head units (his head centre at 0,0): her size next to him and her head centre — the top of her hair
+ *  just under his chin */
+const HUG = { scale: 0.66, head: [10, 245] as Pt };
+const YOUNG_SKIN = "#f1d2a6",
+  SHIRT = "#f4f2ea";
+/** his upper arm hanging from the shoulder to the elbow beside her (his head units) */
+function dadUpperArm(c: Ctx, side: number) {
+  // the top starts inside the shoulder so the sleeve grows out of it instead of sitting on it like a pad
+  const top: Pt = [side * 146, 262],
+    elbow: Pt = [side * 198, side > 0 ? 442 : 458];
+  shaded(c, () => blob(c, tubePts([top, lerp2(top, elbow, 0.5), elbow], [64, 60, 56], true, true), 3740 + side, 1.1), SHIRT, () => {
+    blob(c, tubePts([[top[0] + side * 20, top[1] + 10], [elbow[0] + side * 18, elbow[1]]], [30, 26], true, true), 3742 + side, 1);
+    paint(c, "rgba(150,160,190,0.25)", null);
+  }, C.ink, 5.5);
+  // the fold where the arm hangs from the shoulder
+  inkLine(c, [[side * 126, 252], [side * 150, 240], [side * 176, 248]], 3744 + side, 2.4, "rgba(120,124,140,0.55)");
+}
+/** his bare forearm (sleeve rolled up past the elbow) round her middle, to his hands clasped in front of her — the right
+ *  hand over the left (his head units). Drawn between her body and her arms, so her arms lie over it. */
+function dadForearm(c: Ctx, side: number) {
+  const elbow: Pt = [side * 198, side > 0 ? 442 : 458],
+    hand: Pt = side > 0 ? [12, 450] : [-14, 464];
+  const wrist = lerp2(elbow, hand, 0.86);
+  shaded(c, () => blob(c, tubePts([elbow, lerp2(elbow, wrist, 0.5), wrist], [54, 50, 44], true, false), 3800 + side, 1), YOUNG_SKIN, () => {
+    blob(c, tubePts([[elbow[0], elbow[1] + 14], [wrist[0], wrist[1] + 12]], [20, 16], true, true), 3802 + side, 1);
+    paint(c, "rgba(196,140,86,0.3)", null);
+  }, C.ink, 5);
+  // the rolled-up sleeve round the elbow
+  const r0 = lerp2(elbow, wrist, -0.03),
+    r1 = lerp2(elbow, wrist, 0.1);
+  shaded(c, () => blob(c, tubePts([r0, r1], [64, 60], true, true), 3804 + side, 0.8), SHIRT, () => {
+    blob(c, tubePts([[r0[0], r0[1] + 18], [r1[0], r1[1] + 18]], [32, 28], true, true), 3805 + side, 0.6);
+    paint(c, "rgba(150,160,190,0.25)", null);
+  }, C.ink, 4.5);
+  const mid = lerp2(r0, r1, 0.5);
+  inkLine(c, [[mid[0], mid[1] - 26], [mid[0] + side * 3, mid[1]], [mid[0], mid[1] + 26]], 3806 + side, 2, "rgba(120,124,140,0.6)");
+  // his round hand, knuckles toward us
+  oval(c, hand[0], hand[1], 31, 32, 3807 + side, 0.8);
+  paint(c, YOUNG_SKIN, C.ink, 4.5);
+  c.save();
+  oval(c, hand[0], hand[1], 31, 32, 3807 + side, 0.8);
+  c.clip();
+  oval(c, hand[0] + 14, hand[1] + 16, 22, 18, 3808 + side, 0.6);
+  paint(c, "rgba(180,120,70,0.3)", null);
+  c.restore();
+  for (let k = 0; k < 3; k++) inkLine(c, [[hand[0] - side * 4, hand[1] - 16 + k * 12], [hand[0] - side * 20, hand[1] - 13 + k * 12]], 3809 + side * 4 + k, 2.2, "#a8825a");
+}
 export const wallpaperPhoto: Photo = (c, x, y, w, h) =>
   clipRect(c, x, y, w, h, () => {
     const sw = w / 600;
@@ -397,37 +476,38 @@ export const wallpaperPhoto: Photo = (c, x, y, w, h) =>
     const fx = x + w * WALL_FACE[0],
       fy = y + h * WALL_FACE[1];
     const s = WALL_S * sw;
-    // little her, sitting behind his head (her body hidden by it), legs over his shoulders
-    const kx = fx,
-      ky = fy - 238 * s;
-    drawKid(c, kx, ky, 0.62 * s, { who: "girl", outfit: "pajamas", body: "bust", eyes: "happy", mouth: "laugh", blush: 0.7, arms: "custom", handL: [-60, 300], handR: [60, 300], shapeL: "hidden", shapeR: "hidden", tilt: 0.06, seed: 872 });
-    // him
-    drawDad(c, fx, fy, s, { young: true, eyes: "happy", mouth: "laugh", seed: 871 });
-    // her legs down over his shoulders, her shoes on his chest, his hands round her shins
+    // him kneeling behind her: his trousers below the shirt (the photo crops at his waist), him, his upper arms
     c.save();
     c.translate(fx, fy);
     c.scale(s, s);
-    for (const side of [-1, 1]) {
-      const hip: Pt = [side * 118, 96],
-        knee: Pt = [side * 186, 176],
-        foot: Pt = [side * 172, 330];
-      blob(c, tubePts([hip, knee, foot], [64, 56, 48], true, true), 3720 + side, 1);
-      paint(c, "#f3a7bf", C.ink, 5);
-      oval(c, foot[0] + side * 6, foot[1] + 28, 32, 22, 3722 + side, 0.8);
-      paint(c, "#e8343c", C.ink, 4.5);
-      // his hand round her shin
-      oval(c, side * 178, 262, 38, 40, 3724 + side, 0.8);
-      paint(c, "#f1d2a6", C.ink, 4.5);
-      // his sleeve coming up from below to the hand
-      blob(c, tubePts([[side * 236, 520], [side * 226, 400], [side * 188, 298]], [74, 66, 58], true, true), 3726 + side, 1);
-      paint(c, "#f4f2ea", C.ink, 5);
-    }
+    const him = c.getTransform();
+    blob(c, [[-186, 560], [186, 560], [196, 760], [-196, 760]], 3730, 1);
+    paint(c, "#4c5160", C.ink, 5.5);
     c.restore();
-    // her hands in his hair
-    for (const side of [-1, 1]) {
-      oval(c, fx + side * 66 * s, fy - 118 * s, 28 * s, 28 * s, 3730 + side, 0.8);
-      paint(c, "#f6e1c3", C.ink, 4 * s);
-    }
+    drawDad(c, fx, fy, s, { young: true, eyes: "happy", mouth: "laugh", seed: 871 });
+    c.save();
+    c.setTransform(him);
+    for (const side of [-1, 1]) dadUpperArm(c, side);
+    // her soft shadow on his shirt (the sun is high on the right)
+    oval(c, HUG.head[0] - 14, HUG.head[1] + 12, 104, 100, 3734, 1);
+    paint(c, "rgba(96,104,138,0.16)", null);
+    blob(c, [[HUG.head[0] - 96, 360], [HUG.head[0] + 70, 360], [HUG.head[0] + 76, 640], [HUG.head[0] - 104, 640]], 3735, 1);
+    paint(c, "rgba(96,104,138,0.16)", null);
+    c.restore();
+    // little her standing in front of him, the top of her head under his chin; his forearms go round her middle under
+    // her arms, and her hands rest on them over his clasped hands
+    drawKid(c, fx + HUG.head[0] * s, fy + HUG.head[1] * s, HUG.scale * s, {
+      who: "girl", outfit: "pajamas", body: "full", eyes: "happy", mouth: "laugh", blush: 0.6, tilt: 0.05,
+      arms: "custom", elbowL: [-128, 338], handL: [-64, 316], elbowR: [130, 334], handR: [70, 308], shapeL: "flat", shapeR: "flat",
+      seed: 872,
+      holding: (k) => {
+        k.save();
+        k.setTransform(him);
+        dadForearm(k, -1);
+        dadForearm(k, 1);
+        k.restore();
+      },
+    });
     // the warm photo look
     c.fillStyle = "rgba(255,200,120,0.08)";
     c.fillRect(x, y, w, h);
@@ -443,7 +523,7 @@ export const firstCommentAt = (big = false): [number, number] => [104, 620 + 180
 export const INBOX_AT: [number, number] = [480, 748];
 
 /** The full first-act controls are opt-in, so later scenes keep their matching compositions. */
-export function vidPost(c: Ctx, o: { time: string; photo: Photo; caption: string; ago: string; author?: string; big?: boolean; likes?: number; count?: number; showComments?: boolean; mark?: number; photoH?: number; details?: boolean; comments?: { name: string; text: string; rose?: boolean; ago?: string; pop?: number; gray?: boolean }[]; photoZoom?: { k: number; fx: number; fy: number } }) {
+export function vidPost(c: Ctx, o: { time: string; photo: Photo; caption: string; ago: string; author?: string; big?: boolean; likes?: number; count?: number; showComments?: boolean; mark?: Guide; photoH?: number; details?: boolean; comments?: { name: string; text: string; rose?: boolean; ago?: string; pop?: number; gray?: boolean }[]; photoZoom?: { k: number; fx: number; fy: number } }) {
   const big = o.big ? 1.3 : 1;
   const compact = o.showComments || !!o.comments?.length;
   c.fillStyle = VBG;
@@ -506,7 +586,7 @@ export function vidPost(c: Ctx, o: { time: string; photo: Photo; caption: string
       if (k <= 0) return;
       const e = 1 - Math.pow(1 - k, 3);
       c.save(); c.globalAlpha *= e; c.translate(-36 * (1 - e), 0);
-      if (i === 0 && (o.mark ?? 0) > 0) pulseBox(c, 24, cy - 26, SW - 48, 132 * big, o.mark ?? 0);
+      if (i === 0 && o.mark !== undefined) guideBox(c, 24, cy - 26, SW - 48, 132 * big, o.mark);
       grayAvatar(c, 58, cy + 34 * big, 30 * big);
       say(c, cm.name, 104, cy, 24 * big, { color: GREY });
       say(c, cm.text, 104, cy + 46 * big, 36 * big, { weight: 700, rose: cm.rose });
@@ -592,7 +672,7 @@ export function vidBanner(c: Ctx, k: number, o: { name: string; body: string; ro
 
 /** The unknown account stays anonymous: no location, portrait or biographical clues. */
 export const MENU_AT: [number, number] = [SW - 64, 116];
-export function vidProfile(c: Ctx, o: { name: string; pulse?: number; time: string; menu?: number; blocked?: number }) {
+export function vidProfile(c: Ctx, o: { name: string; pulse?: Guide; time: string; menu?: number; blocked?: number }) {
   c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
   const g = c.createLinearGradient(0, 0, 0, 408);
   g.addColorStop(0, "#3b3c49"); g.addColorStop(1, VBG);
@@ -608,7 +688,7 @@ export function vidProfile(c: Ctx, o: { name: string; pulse?: number; time: stri
   c.strokeStyle = "rgba(255,255,255,0.15)"; c.lineWidth = 3;
   c.beginPath(); c.arc(116, 283, 81, 0, Math.PI * 2); c.stroke();
   say(c, o.name, 220, 246, 36, { weight: 700 });
-  say(c, "抖音号：" + o.name.replace("用户", ""), 220, 300, 22, { color: "#b0b1bd" });
+  say(c, "抖音号：" + ACC_ID, 220, 300, 22, { color: "#b0b1bd" });
   say(c, "这个人很懒，什么都没留下", 40, 390, 24, { color: GREY });
   const stats: [string, string][] = [["0", "获赞"], ["1", "关注"], ["0", "粉丝"]];
   stats.forEach(([n, l], i) => {
@@ -616,7 +696,7 @@ export function vidProfile(c: Ctx, o: { name: string; pulse?: number; time: stri
     say(c, n, x, 450, 44, { weight: 700 });
     say(c, l, x + measure(c, n, 44, F.ui, 700) + 10, 454, 28, { color: GREY });
   });
-  pulseBox(c, 228, 420, 132, 64, o.pulse ?? 0);
+  guideBox(c, 228, 420, 132, 64, o.pulse ?? 0);
   // `blocked` 0 → 1 flips the button row over: 「关注 / 私信」 fold shut about their middle, 「已拉黑」 unfolds
   const blocked = clamp(o.blocked ?? 0);
   const fold = (k: number, draw: () => void) => {
@@ -655,7 +735,7 @@ export function vidProfile(c: Ctx, o: { name: string; pulse?: number; time: stri
 }
 
 /** Only one person is in the list. Search and footer explain the otherwise empty screen. */
-export function vidFollowing(c: Ctx, o: { pulse?: number; time: string }) {
+export function vidFollowing(c: Ctx, o: { pulse?: Guide; time: string }) {
   c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
   statusBar(c, { time: o.time, airplane: false, battery: 0.41 });
   socialIcon(c, "back", 40, 120, 30, "#fff");
@@ -667,7 +747,7 @@ export function vidFollowing(c: Ctx, o: { pulse?: number; time: string }) {
   socialButton(c, 166 + measure(c, HER, 36, F.ui, 700) + 14, 223, 50, 34, "我", { fill: "#fe2c55", size: 22, radius: 7 });
   say(c, "今天也要开心呀", 166, 288, 26, { color: GREY });
   socialIcon(c, "chevron", 550, 260, 23, "#777885");
-  pulseBox(c, 30, 196, SW - 60, 130, o.pulse ?? 0);
+  guideBox(c, 30, 196, SW - 60, 130, o.pulse ?? 0);
   c.fillStyle = VLINE; c.fillRect(166, 336, 398, 1);
   say(c, "已显示全部关注", SW / 2, 398, 22, { color: "#6e6f7d", align: "center" });
   socialHomeBar(c);
@@ -702,7 +782,7 @@ export const ROW_B = HISTORY.findIndex(row => row.date === "2023-06-18");
 const ROW_H = 150;
 // The extra newest row moves the scroll distance equally; the landing row stays at y=500.
 export const HISTORY_END = (HISTORY.length - 6) * ROW_H;
-export function vidComments(c: Ctx, o: { scroll: number; time: string; marks?: [number, number][]; gone?: number; press?: number }) {
+export function vidComments(c: Ctx, o: { scroll: number; time: string; marks?: [number, Guide][]; gone?: number; press?: number }) {
   c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
   c.save(); c.beginPath(); c.rect(0, 176, SW, 1050); c.clip();
   HISTORY.forEach(({ text: body, date, photo }, i) => {
@@ -733,7 +813,7 @@ export function vidComments(c: Ctx, o: { scroll: number; time: string; marks?: [
   });
   for (const [row, k] of o.marks ?? []) {
     const y = 200 + row * ROW_H - o.scroll;
-    pulseBox(c, 20, y - 6, SW - 150, ROW_H - 24, k);
+    guideBox(c, 20, y - 6, SW - 150, ROW_H - 24, k);
   }
   const total = HISTORY.length * ROW_H + 60, view = 1050;
   const barH = Math.max(60, (view * view) / total);
@@ -831,27 +911,158 @@ export function vidCommentBox(c: Ctx, draft: string, caret: boolean, big = false
   keyboard(c, y + 120, true, big);
 }
 
+// his handwriting input: he doesn't type, he writes each character with a finger on the pad
+/** where things are on his handwriting keyboard when its input row starts at `top` (screen coordinates): the pad's
+ *  character box (centre, size) and the delete key */
+export function hwLayout(top = 700) {
+  return { glyph: { x: 300, y: top + 346, size: 250 }, del: [527, top + 537] as Pt };
+}
+/** where his fingertip is while `k` (0..1) of a character is written: zig-zagging down the writing front the way
+ *  strokes go, top left to bottom right */
+export function hwFinger(k: number, top = 700): Pt {
+  const { x, y, size } = hwLayout(top).glyph;
+  const d = 2 * clamp(k);
+  // a point on the front u + v = d inside the box, swinging along it like strokes
+  const s = 0.5 + 0.48 * Math.sin(k * Math.PI * 9);
+  const u0 = Math.max(0, d - 1),
+    u1 = Math.min(1, d);
+  const u = u0 + (u1 - u0) * s,
+    v = d - u;
+  return [x - size / 2 + u * size, y - size / 2 + v * size];
+}
+/** The comment box with his handwriting keyboard up: the draft in the box (his big font), the candidates for the
+ *  character being written, the pad with `ink.ch` written in as far as `ink.k`, and 123 ， 空格 ⌫ under it. `inks`
+ *  are several characters written over each other (连续叠写: the one before fades as the next goes on top), each with
+ *  its own `alpha`. `top` is where the input row starts (his keyboard is set tall; 500 keeps the pad above the lyrics
+ *  when the phone lies on the desk). */
+export function vidHandwriting(c: Ctx, o: { draft: string; caret: boolean; ink?: { ch: string; k: number }; inks?: { ch: string; k: number; alpha: number }[]; cands?: string[]; top?: number }) {
+  const y = o.top ?? 700;
+  c.fillStyle = "#24252d";
+  c.fillRect(0, y, SW, 120);
+  c.fillStyle = "#33343d";
+  rr(c, 24, y + 18, SW - 150, 84, 42);
+  c.fill();
+  const fs = 56;
+  const w = o.draft ? say(c, o.draft, 56, y + 60, fs) : 0;
+  if (!o.draft) say(c, "说点什么…", 56, y + 60, 40, { color: GREY });
+  if (o.caret) {
+    c.fillStyle = "#fe2c55";
+    c.fillRect(56 + w + 4, y + 60 - fs * 0.6, 4, fs * 1.2);
+  }
+  c.fillStyle = o.draft ? "#fe2c55" : "#55565f";
+  rr(c, SW - 110, y + 26, 90, 68, 34);
+  c.fill();
+  say(c, "发送", SW - 65, y + 60, 26, { weight: 700, align: "center" });
+  // the keyboard: candidates, the pad, the bottom row
+  const ky = y + 120;
+  c.fillStyle = "#1f2026";
+  c.fillRect(0, ky, SW, SH - ky);
+  (o.cands ?? []).forEach((s, i) => say(c, s, 60 + i * 108, ky + 34, 38, { color: i === 0 ? "#fe2c55" : "#c9cad2", weight: i === 0 ? 700 : 400, align: "center" }));
+  const { x: gx, y: gy, size } = hwLayout(y).glyph;
+  c.fillStyle = "#2b2c34";
+  rr(c, 16, ky + 72, SW - 32, 306, 18);
+  c.fill();
+  c.save();
+  c.strokeStyle = "rgba(255,255,255,0.07)";
+  c.lineWidth = 2;
+  c.setLineDash([10, 10]);
+  c.beginPath();
+  c.moveTo(gx - size * 0.62, gy);
+  c.lineTo(gx + size * 0.62, gy);
+  c.moveTo(gx, gy - size * 0.55);
+  c.lineTo(gx, gy + size * 0.55);
+  c.stroke();
+  c.restore();
+  say(c, "手写", SW - 36, ky + 352, 24, { color: "#4a4b54", align: "right" });
+  const inks = o.inks ?? (o.ink ? [{ ...o.ink, alpha: 1 }] : []);
+  for (const ink of inks) {
+    if (ink.k <= 0 || ink.alpha <= 0.01) continue;
+    // written in from the top left to the bottom right, like a hand: clip to the front u + v < 2k
+    const d = 2 * clamp(ink.k);
+    const x0 = gx - size / 2 - 20,
+      y0 = gy - size / 2 - 20,
+      s = size + 40;
+    c.save();
+    c.globalAlpha *= clamp(ink.alpha);
+    c.beginPath();
+    if (d <= 1) {
+      c.moveTo(x0, y0);
+      c.lineTo(x0 + d * s, y0);
+      c.lineTo(x0, y0 + d * s);
+    } else {
+      c.moveTo(x0, y0);
+      c.lineTo(x0 + s, y0);
+      c.lineTo(x0 + s, y0 + (d - 1) * s);
+      c.lineTo(x0 + (d - 1) * s, y0 + s);
+      c.lineTo(x0, y0 + s);
+    }
+    c.closePath();
+    c.clip();
+    text(c, ink.ch, gx, gy + 8, { size: size * 1.1, font: F.pen, fill: "#f1f1f4" });
+    c.restore();
+  }
+  const kb = ky + 380;
+  ([["123", 16, 108], ["，", 132, 108], ["空格", 248, 212], ["⌫", 468, 116]] as [string, number, number][]).forEach(([label, x, kw]) => {
+    c.fillStyle = label === "⌫" ? "#55565f" : "#3a3b42";
+    rr(c, x, kb, kw, 74, 12);
+    c.fill();
+    text(c, label, x + kw / 2, kb + 37, { size: label === "⌫" ? 40 : 30, font: F.ui, fill: "#eee" });
+  });
+}
+
 // ---------------------------------------------------------------- WeChat (light)
 const WBG = "#ededed";
 
-/** A contact's page. `blocked`: her Moments show only a line (she hid them from him); `open` 0..1 photos instead. */
-/** `perm` shows the 「朋友圈和状态权限」 row (at PERM_ROW), pulsing by its value. */
-export const PERM_ROW: [number, number] = [300, 900];
-export function wxContact(c: Ctx, o: { time: string; name: string; who: "her" | "dad"; blocked: boolean; open?: number; big?: boolean; tap?: number; perm?: number; empty?: boolean }) {
+/** A contact's page laid out like WeChat's: the header (square avatar, the remark name, 昵称, 微信号, 地区), then
+ *  备注和标签 / 朋友权限, the 朋友圈 row, 更多信息, and 发消息 / 音视频通话. In the 朋友圈 row, `blocked` shows a line
+ *  (she hid her Moments from him), `empty` nothing at all, otherwise thumbnails (`open` 0..1 fades them in over the
+ *  line). `tap` pulses round the whole 朋友圈 row (at MOMENTS_ROW); `perm` pulses round 朋友权限 (at PERM_ROW). */
+export const MOMENTS_ROW: [number, number] = [300, 733];
+export const PERM_ROW: [number, number] = [300, 587];
+export function wxContact(c: Ctx, o: { time: string; name: string; who: "her" | "dad"; blocked: boolean; open?: number; big?: boolean; tap?: Guide; perm?: number; empty?: boolean }) {
   const big = o.big ? 1.3 : 1;
+  const her = o.who === "her";
   c.fillStyle = WBG;
   c.fillRect(0, 0, SW, SH);
+  // the header
   c.fillStyle = "#fff";
-  c.fillRect(0, 0, SW, 470);
+  c.fillRect(0, 0, SW, 420);
   statusBar(c, { time: o.time, airplane: false, battery: 0.4, dark: true });
-  text(c, "‹", 40, 120, { size: 60, font: F.ui, fill: "#111" });
-  if (o.who === "her") herAvatar(c, 120, 300, 70);
-  else dadAvatar(c, 120, 300, 140);
-  say(c, o.name, 220, 270, 44 * big, { color: "#111", weight: 700 });
-  say(c, "微信号：xiaoman_0618", 220, 330, 24 * big, { color: "#888" });
-  c.fillStyle = "#fff";
-  c.fillRect(0, 490, SW, 210);
-  say(c, "朋友圈", 40, 595, 32 * big, { color: "#111" });
+  socialIcon(c, "back", 44, 122, 34, "#111");
+  socialIcon(c, "more", SW - 48, 122, 34, "#111");
+  c.save();
+  rr(c, 52, 206, 136, 136, 18);
+  c.clip();
+  c.fillStyle = "#e6e2da";
+  c.fillRect(52, 206, 136, 136);
+  if (her) avatar(c, 120, 274, "girl", 161);
+  else dadAvatar(c, 120, 274, 136);
+  c.restore();
+  c.strokeStyle = "rgba(0,0,0,0.08)";
+  c.lineWidth = 2;
+  rr(c, 52, 206, 136, 136, 18);
+  c.stroke();
+  say(c, o.name, 220, 232, 44 * big, { color: "#111", weight: 700 });
+  say(c, `昵称：${her ? "小满" : "老陈"}`, 220, 296, 22 * big, { color: "#888" });
+  say(c, `微信号：${her ? "xiaoman_0618" : "chen_1971"}`, 220, 336, 22 * big, { color: "#888" });
+  say(c, `地区：${her ? "上海 徐汇" : "江苏 盐城"}`, 220, 376, 22 * big, { color: "#888" });
+  // a white row with its label, an arrow at the right, and a hairline under it
+  const row = (y: number, h: number, label: string, line = true) => {
+    c.fillStyle = "#fff";
+    c.fillRect(0, y, SW, h);
+    say(c, label, 40, y + h / 2, 30 * big, { color: "#111" });
+    socialIcon(c, "chevron", SW - 40, y + h / 2, 30, "#b2b2b2");
+    if (line) {
+      c.fillStyle = "#e5e5e5";
+      c.fillRect(40, y + h - 1.5, SW - 40, 1.5);
+    }
+  };
+  row(436, 100, "备注和标签");
+  row(536, 101, "朋友权限", false);
+  if (o.perm !== undefined) pulseBox(c, 16, 544, SW - 32, 86, o.perm);
+  // 朋友圈: the label, her latest pictures (or a line, or nothing at all), the arrow
+  const my = MOMENTS_ROW[1];
+  row(653, 160, "朋友圈");
   const open = clamp(o.open ?? 0);
   if (o.blocked && open < 1 && !o.empty) {
     // the line (blocked)
@@ -860,28 +1071,48 @@ export function wxContact(c: Ctx, o: { time: string; name: string; who: "her" | 
     c.strokeStyle = "#c4c4c4";
     c.lineWidth = 5;
     c.beginPath();
-    c.moveTo(220, 595);
-    c.lineTo(SW - 60, 595);
+    c.moveTo(220, my);
+    c.lineTo(SW - 80, my);
     c.stroke();
     c.restore();
   }
   if (!o.blocked || open > 0) {
     c.save();
     c.globalAlpha *= o.blocked ? open : 1;
-    [snowPhoto, couplePhoto(false), gradPhoto].forEach((p, i) => p(c, 210 + i * 125, 540, 112, 112));
+    [snowPhoto, couplePhoto(false), gradPhoto].forEach((p, i) => {
+      c.save();
+      rr(c, 200 + i * 116, my - 53, 106, 106, 6);
+      c.clip();
+      p(c, 200 + i * 116, my - 53, 106, 106);
+      c.restore();
+    });
     c.restore();
   }
-  if ((o.tap ?? 0) > 0) pulseBox(c, 200, 545, SW - 240, 100, o.tap ?? 0);
+  if (o.tap !== undefined) guideBox(c, 16, 663, SW - 32, 140, o.tap);
+  row(814, 100, "更多信息", false);
+  // 发消息 / 音视频通话
   c.fillStyle = "#fff";
-  c.fillRect(0, 720, SW, 120);
-  say(c, "发消息", SW / 2, 780, 34 * big, { color: "#576b95", weight: 700, align: "center" });
-  if (o.perm !== undefined) {
-    c.fillStyle = "#fff";
-    c.fillRect(0, 860, SW, 84);
-    say(c, "朋友圈和状态权限", 40, 902, 32 * big, { color: "#111" });
-    say(c, "›", SW - 40, 900, 40, { color: "#bbb", align: "right" });
-    pulseBox(c, 16, 866, SW - 32, 72, o.perm);
-  }
+  c.fillRect(0, 930, SW, 216);
+  c.fillStyle = "#e5e5e5";
+  c.fillRect(0, 1037, SW, 1.5);
+  const w1 = say(c, "发消息", SW / 2 + 22, 984, 30 * big, { color: "#576b95", weight: 700, align: "center" });
+  bubbleIcon(c, SW / 2 - w1 / 2 - 14, 984, 34, "#576b95");
+  const w2 = say(c, "音视频通话", SW / 2 + 22, 1092, 30 * big, { color: "#576b95", weight: 700, align: "center" });
+  // a little video camera
+  const vx = SW / 2 - w2 / 2 - 34,
+    vy = 1092;
+  c.strokeStyle = "#576b95";
+  c.lineWidth = 3.5;
+  c.lineJoin = "round";
+  rr(c, vx - 14, vy - 12, 28, 24, 5);
+  c.stroke();
+  c.beginPath();
+  c.moveTo(vx + 16, vy - 4);
+  c.lineTo(vx + 26, vy - 10);
+  c.lineTo(vx + 26, vy + 10);
+  c.lineTo(vx + 16, vy + 4);
+  c.closePath();
+  c.stroke();
 }
 
 /** Her Moments post three years ago: the party photo and his comment 「多穿点🌹」 (the memory). */

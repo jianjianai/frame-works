@@ -3,14 +3,14 @@
 // → 关灯 → 又一个灰头像：「那个男生配不上你🌹」→ 锁屏，黑屏里她惊恐的脸。
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase } from "@frame/engine/math";
-import { C, Ctx, H, W, backOut, blob, camera, castShadow, designScene, easeInOut, easeOut, fillBg, filtered, glow, litFigure, paint, smear, smearV } from "@materials/s0rrow/code/draw";
+import { C, Ctx, H, W, backOut, blob, camera, castShadow, designScene, easeInOut, easeOut, fillBg, filtered, glow, litFigure, paint, shake, smear, smearV } from "@materials/s0rrow/code/draw";
 import { SH, SW } from "@materials/s0rrow/code/phone";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { SHOT, WORD, at } from "./timeline";
-import { ACC_A, ACC_B, BLOCK_AT, HISTORY_END, INBOX_AT, MENU_AT, POST_BTN, ROW_B, couplePhoto, pulseBox, say, snowPhoto, vidBanner, vidBlock, vidComments, vidCompose, vidFollowing, vidPost, vidProfile, slide } from "./ui";
-import { LAMP_AT, bedFromAbove, herFace, herFaceBg, herInBed, herPhoneBack, herRoomSnow, lapDuvet, roomBokeh } from "./world";
-import { aim, aimLerp, drawPhone, tap, whip, type PhoneSpec, type Touch } from "./shots";
-import { pullOut } from "./journey";
+import { ACC_A, ACC_B, BLOCK_AT, HISTORY_END, INBOX_AT, MENU_AT, POST_BTN, ROW_B, couplePhoto, guideBox, say, snowPhoto, type Guide, vidBanner, vidBlock, vidComments, vidCompose, vidFollowing, vidPost, vidProfile, slide } from "./ui";
+import { LAMP_AT, SIT, SIT_HANDS, bedFromAbove, herFace, herFaceBg, herInBed, herPhoneBack, herRoomSnow, lapDuvet, roomBokeh } from "./world";
+import { aim, aimLerp, drawPhone, halo, tap, whip, type PhoneSpec, type Touch } from "./shots";
+import { journey } from "./journey";
 
 const TIME = "02:47";
 /** the phone in the opening shots: under the hook, with the post's comment area above the lyrics */
@@ -37,17 +37,17 @@ function draw(c: Ctx, abs: number) {
   else if (abs < s7) shot6(c, abs, s6);
   else if (abs < s8) shot7(c, abs, s7, s8);
   else if (abs < s9) shot8(c, abs, s8);
-  else shot9(c, abs, s9);
+  else shot9(c, abs);
 }
 
 /** her new post: the stranger's comment pops into the comment area on beat 1.5, the banner drops on beat 2 */
 /** the stranger keeps coming (kept to three so it reads as harassment, not a flood): one the moment she posts, a second
- *  as the camera reaches it, a third when she is back on his page — then she blocks him */
+ *  as the camera reaches it, a third while she is looking through her message list */
 const NEW = [
   { text: "这么晚还不睡？", at: () => at(1.5) },
   { text: "窗户关好", at: () => at(3) },
-  // one more the moment she gets back to his page — the last straw before she blocks him
-  { text: "还在看手机？", at: () => at(15.1), hold: 0.45 },
+  // one more while she is in her message list, just as the camera settles on 瘦了 — he knows she is looking
+  { text: "还在看手机？", at: () => at(6.5) },
 ];
 /** the banner for the newest comment that has arrived by `abs` (it drops in, then slides away after a while) */
 function newBanner(p: Ctx, abs: number) {
@@ -74,7 +74,7 @@ function newBanner(p: Ctx, abs: number) {
 }
 /** the phone buzzes on each new comment */
 const newBuzz = (abs: number) => NEW.reduce((m, c) => Math.max(m, abs > c.at() ? 1 - clamp((abs - c.at()) / 0.3) : 0), 0);
-function postWithComment(p: Ctx, abs: number, mark = 0) {
+function postWithComment(p: Ctx, abs: number, mark: Guide = 0) {
   vidPost(p, {
     time: TIME,
     photo: snowPhoto,
@@ -90,18 +90,40 @@ function postWithComment(p: Ctx, abs: number, mark = 0) {
 }
 /** the first comment framed big (the second one drops in just under it as the camera arrives) */
 const ON_COMMENT = () => aim(300, 880, 540, 800, 1.5);
+/** the same comment, leaning in with a small quizzical tilt — she has read 「这么晚还不睡？」 (shot 2 starts from here) */
+const PUZZLED = (): PhoneSpec => ({ ...aim(300, 880, 556, 800, 1.58), rot: 0.055 });
+/** The guide boxes keep time with the camera and her feelings. A heartbeat's flare on the box (0..1, gone in 0.3 s). */
+const thump = (abs: number, t: number) => (abs < t || abs > t + 0.3 ? 0 : 1 - (abs - t) / 0.3);
+/** audio.json: heartThin (stops on 瘦了), heartWatched (还在看手机) */
+const HEART_THIN = 2.713,
+  HEART_WATCHED = 3.42;
+/** the first comment's box: it pops as the camera springs onto it (excited), then stays, dimmer, while she reads it
+ *  (puzzled) */
+function commentGuide(abs: number): Guide {
+  const land = NEW[0].at() + 0.22;
+  return { ring: phase(abs, land, land + 0.42), a: phase(abs, land, land + 0.08) * (1 - 0.45 * easeInOut(phase(abs, 1.25, 1.7))), gap: 10 };
+}
+/** the room's light follows the camera a little (parallax) */
+const roomShift = (P: PhoneSpec): [number, number] => [(P.cx - OPEN.cx) * 0.2, (P.cy - OPEN.cy) * 0.2];
 
-/** 1 · she posts 「下雪了」 (her thumb on 「发布」 in the first frame); the post goes up and the comment is already in
- *  the comment area — then the banner drops and the phone buzzes; the camera moves onto that comment. */
+/** 1 · she posts 「下雪了」 (her thumb on 「发布」 in the first frame); the post goes up and a comment is already in
+ *  the comment area. Excited first: the phone hops up to her, the camera springs onto the comment and the room's
+ *  lights brighten. Then puzzled: it is 「这么晚还不睡？」 from a grey avatar — the light drains back, the camera slows,
+ *  leans in and tilts like a head cocked at it, while 「窗户关好」 drops in under it. */
 function shot1(c: Ctx, abs: number) {
   const press = at(0.4);
-  const e = easeInOut(phase(abs, at(1.9), at(3.0)));
-  const P = aimLerp(OPEN, ON_COMMENT(), e);
-  roomBokeh(c, abs, { shift: [0, -120 * e] });
-  glow(c, P.cx, P.cy - 120 * P.s, 820 * P.s, "rgba(120,150,255,0.26)");
+  const arrive = NEW[0].at();
+  const hop = Math.sin(Math.PI * phase(abs, arrive, arrive + 0.3));
+  const go = backOut(phase(abs, arrive + 0.1, arrive + 0.5));
+  const tilt = easeInOut(phase(abs, 1.25, at(SHOT.s2)));
+  const bright = phase(abs, arrive, arrive + 0.12) * (1 - easeInOut(phase(abs, 1.15, 1.6)));
+  const A = aimLerp(aimLerp(OPEN, ON_COMMENT(), go), PUZZLED(), tilt);
+  const P = { ...A, s: A.s * (1 + 0.05 * hop) };
+  roomBokeh(c, abs, { shift: roomShift(P), bright });
+  halo(c, P, 1 + 0.35 * bright);
   drawPhone(c, abs, P, (p) => {
     const compose = (k: Ctx) => vidCompose(k, { time: TIME, photo: snowPhoto, caption: "下雪了", caret: abs < press, press: phase(abs, press - 0.05, press) });
-    const posted = (k: Ctx) => postWithComment(k, abs, phase(abs, at(3.3), at(3.3) + 0.6));
+    const posted = (k: Ctx) => postWithComment(k, abs, commentGuide(abs));
     // the compose page gives way to the post (pushed up, the way an app returns to the new post)
     const k = phase(abs, press + 0.06, press + 0.3);
     if (k <= 0) compose(p);
@@ -123,24 +145,35 @@ function inboxTouch(abs: number): Touch {
   return { x: INBOX_AT[0], y: INBOX_AT[1], k };
 }
 
-/** 2 · she opens her message list: the camera pulls back off the comment as the list slides in, and she flicks it —
- *  a fast fling through three years of the same grey avatar (motion-blurred) that lands, with a little overshoot, on
- *  「瘦了🌹」 (2023-06-18); the camera pushes onto that row; then whips up to her face. */
+/** 2 · she opens her message list: the camera pulls back off the comment (the tilt rights itself) as the list slides
+ *  in, and she flicks it — a fast fling through three years of the same grey avatar (motion-blurred) that lands, with
+ *  a little overshoot, on 「瘦了🌹」 (2023-06-18). Tense: he knows how her body has changed — the camera creeps in on
+ *  that row while the room goes dark. Watched: a new one drops in, 「还在看手机？🌹」 — the camera snaps onto it, her
+ *  hand starts to shake, the dark closes in; then it whips up to her face. */
 const FLING_LAND = 0.78; // seconds into the shot
-const ON_ROW_B = () => aim(300, 556, 540, 990, 1.3); // low enough that the new banner clears the hook text
+/** 瘦了's row (low enough that the new banner clears the hook text); `s` grows as the camera creeps in */
+const ON_ROW_B = (s = 1.22) => aim(300, 556, 540, 990, s);
+/** the new banner big, under the hook text */
+const ON_WATCH = () => aim(300, 128, 540, 650, 1.75);
 function shot2(c: Ctx, abs: number, t0: number, end: number) {
   const [dy, sm] = whip(abs, end, 900);
+  const u = abs - t0;
+  const watch = NEW[2].at() - t0;
+  const back = easeInOut(phase(u, 0, 0.3));
+  const land = easeOut(phase(u, FLING_LAND - 0.05, FLING_LAND + 0.3));
+  const creep = phase(u, FLING_LAND + 0.15, watch + 0.05);
+  const snap = 1 - Math.pow(1 - phase(u, watch + 0.04, watch + 0.2), 3);
+  const held = aimLerp(aimLerp(aimLerp(PUZZLED(), OPEN, back), ON_ROW_B(1.22 + 0.18 * creep), land), ON_WATCH(), snap);
+  const [jx, jy] = u > watch ? shake(abs, 7 * phase(u, watch, watch + 0.12), 23) : [0, 0];
+  const P = { ...held, cx: held.cx + jx, cy: held.cy + jy, rot: (held.rot ?? 0) + jx * 0.002 };
+  const dark = 0.15 + 0.35 * easeInOut(phase(u, FLING_LAND, watch)) + 0.25 * easeOut(phase(u, watch, watch + 0.3));
   smearV(
     c,
     (k) => {
       k.save();
       k.translate(0, dy);
-      const u = abs - t0;
-      const back = easeInOut(phase(u, 0, 0.3));
-      const push = easeInOut(phase(u, FLING_LAND - 0.05, FLING_LAND + 0.45));
-      const P = aimLerp(aimLerp(ON_COMMENT(), OPEN, back), ON_ROW_B(), push);
-      roomBokeh(k, abs, { dark: 0.15, shift: [0, -120 * (1 - back) + 60 * push] });
-      glow(k, P.cx, P.cy - 120 * P.s, 820 * P.s, "rgba(120,150,255,0.26)");
+      roomBokeh(k, abs, { dark, shift: roomShift(held) });
+      halo(k, P, 1 - 0.35 * phase(u, FLING_LAND, watch + 0.3));
       // the fling: very fast, braking hard onto 瘦了 (2% past it, then back)
       const span = FLING_LAND - 0.2;
       const f = clamp((u - 0.2) / span);
@@ -148,8 +181,15 @@ function shot2(c: Ctx, abs: number, t0: number, end: number) {
       const speed = u > 0.2 && u < FLING_LAND ? (HISTORY_END * 1.02 * 3.2 * Math.pow(1 - f, 2.2)) / span : 0;
       const blur = Math.min(180, speed / 48);
       drawPhone(k, abs, P, (p) => {
-        const inbox = (q: Ctx) => vidComments(q, { scroll: sc, time: TIME, marks: [[ROW_B, phase(u, FLING_LAND, FLING_LAND + 0.6)]] });
-        slide(p, (u - 0.04) / 0.2, (q) => postWithComment(q, abs, 1), (q) => smear(q, inbox, 0, blur, "fling"));
+        // 瘦了's box closes in with the creeping camera (tense), flares on the heartbeat, and lets go when the new one comes
+        const thin: Guide = { a: phase(u, FLING_LAND, FLING_LAND + 0.08) * (1 - phase(u, watch, watch + 0.1)), gap: 8 + 40 * (1 - easeOut(phase(u, FLING_LAND, watch + 0.05))), thump: thump(abs, HEART_THIN) };
+        const inbox = (q: Ctx) => vidComments(q, { scroll: sc, time: TIME, marks: [[ROW_B, thin]] });
+        slide(p, (u - 0.04) / 0.2, (q) => postWithComment(q, abs, commentGuide(abs)), (q) => smear(q, inbox, 0, blur, "fling"));
+        if (abs >= NEW[2].at()) {
+          newBanner(p, abs);
+          // watched: the box clamps onto the banner as the camera lands on it, and flares on the second heartbeat
+          guideBox(p, 18, 84, 564, 172, { a: phase(u, watch + 0.18, watch + 0.22), gap: 6, thump: thump(abs, HEART_WATCHED) });
+        }
       }, { buzz: newBuzz(abs), touches: [inboxTouch(abs), { x: 300, y: 1050 - 600 * clamp((u - 0.14) / 0.12), k: u > 0.1 && u < 0.27 ? 1 : 0 }] });
       k.restore();
     },
@@ -186,21 +226,42 @@ function shot3(c: Ctx, abs: number, t0: number, end: number) {
   );
 }
 
-/** 4 · back on the phone: she taps the grey avatar — 0 works, 0 fans, follows 1 — and the one it follows is her. */
+/** 4 · back on the phone: she taps the grey avatar — 0 works, 0 fans, follows 1. The camera pushes onto 「1 关注」; she
+ *  taps it and the camera rides the page onto the only account it follows: her. It creeps in while the room darkens —
+ *  then on the beat it recoils (a jolt out past the phone, shaking, a heartbeat in audio.json) and settles where shot 5
+ *  takes over, for the block. */
+const HELD: PhoneSpec = { cx: 540, cy: 930, s: 1 };
+/** 「1 关注」 big, the 0 获赞 / 0 粉丝 either side of it */
+const ON_FOLLOWS = () => aim(294, 452, 540, 780, 2.4);
+/** her row in his following list, 「TA 的关注（1）」 above it and 「已显示全部关注」 under it */
+const ON_HER = (s: number) => aim(300, 262, 540, 760, s);
 function shot4(c: Ctx, abs: number, t0: number) {
   const [dy, sm] = whip(abs, t0, -900);
   const u = abs - t0;
+  const end = at(SHOT.s5) - t0;
+  const recoil = at(14) - t0;
+  let P = aimLerp(HELD, ON_FOLLOWS(), easeInOut(phase(u, 0.48, 0.84)));
+  P = aimLerp(P, ON_HER(1.75 + 0.17 * easeInOut(phase(u, 1.55, recoil))), easeInOut(phase(u, 1.2, 1.55)));
+  if (u > recoil) {
+    // the recoil: a hard pull out a little past the held framing, then it eases back onto it for the cut
+    const jolt = 1 - Math.pow(1 - phase(u, recoil, recoil + 0.2), 4);
+    P = aimLerp(aimLerp(ON_HER(1.92), { cx: 540, cy: 955, s: 0.92 }, jolt), HELD, easeInOut(phase(u, recoil + 0.2, end)));
+  }
+  const [sx, sy] = u > recoil ? shake(abs, 11 * (1 - phase(u, recoil, recoil + 0.42)), 41) : [0, 0];
+  // the room sinks into the dark while she stares at her own name, and comes back as the camera pulls out
+  const dark = 0.2 + 0.32 * easeInOut(phase(u, 1.3, recoil)) * (1 - easeInOut(phase(u, recoil + 0.05, end)));
   smearV(
     c,
     (k) => {
       k.save();
-      k.translate(0, abs < t0 + 0.22 ? dy : 0);
-      roomBokeh(k, abs, { dark: 0.2 });
-      glow(k, 540, 860, 900, "rgba(120,150,255,0.26)");
-      drawPhone(k, abs, { cx: 540, cy: 930, s: 1 }, (p) => {
+      k.translate(sx, (abs < t0 + 0.22 ? dy : 0) + sy);
+      roomBokeh(k, abs, { dark, shift: [(P.cx - HELD.cx) * 0.12, (P.cy - HELD.cy) * 0.12] });
+      halo(k, P);
+      drawPhone(k, abs, P, (p) => {
         const inbox = (q: Ctx) => vidComments(q, { scroll: HISTORY_END, time: TIME });
-        const profile = (q: Ctx) => vidProfile(q, { name: ACC_A, time: TIME, pulse: phase(u, 0.55, 1.2) });
-        const following = (q: Ctx) => vidFollowing(q, { time: TIME, pulse: phase(u, 1.45, 2.1) });
+        // 「1 关注」 pops as the camera lands on it; her row's box closes in with the creep and snaps off on the recoil
+        const profile = (q: Ctx) => vidProfile(q, { name: ACC_A, time: TIME, pulse: { ring: phase(u, 0.8, 1.2), a: phase(u, 0.8, 0.86), gap: 10 } });
+        const following = (q: Ctx) => vidFollowing(q, { time: TIME, pulse: { a: phase(u, 1.52, 1.6) * (1 - phase(u, recoil, recoil + 0.06)), gap: 8 + 36 * (1 - easeOut(phase(u, 1.52, recoil))) } });
         if (u < 0.25) inbox(p);
         else if (u < 1.18) slide(p, (u - 0.25) / 0.2, inbox, profile);
         else slide(p, (u - 1.18) / 0.2, profile, following);
@@ -213,13 +274,13 @@ function shot4(c: Ctx, abs: number, t0: number) {
   );
 }
 
-/** 5 · block: back to his page — and another one comes in, 「还在看手机？🌹」; then 「···」, 「拉黑」, confirm, 「已拉黑」. */
+/** 5 · block: back to his page; 「···」, 「拉黑」, confirm, 「已拉黑」. */
 function shot5(c: Ctx, abs: number, t0: number) {
   roomBokeh(c, abs, { dark: 0.2 });
-  glow(c, 540, 860, 900, "rgba(120,150,255,0.26)");
   const u = abs - t0;
   const z = 1 + 0.06 * easeInOut(phase(u, 0, 2.1));
   camera(c, 540, 900, z);
+  halo(c, { cx: 540, cy: 930, s: 1 });
   drawPhone(c, abs, { cx: 540, cy: 930, s: 1 }, (p) => {
     const following = (q: Ctx) => vidFollowing(q, { time: TIME });
     const profile = (q: Ctx) => vidProfile(q, { name: ACC_A, time: TIME, menu: phase(u, 0.56, 0.64) * (1 - phase(u, 0.72, 0.8)), blocked: phase(u, 1.5, 1.7) });
@@ -235,10 +296,8 @@ function shot5(c: Ctx, abs: number, t0: number) {
       following(p);
       p.restore();
     } else profile(p);
-    newBanner(p, abs);
     vidBlock(p, { sheet: phase(u, 0.62, 0.8) * (1 - phase(u, 1.02, 1.1)), hot: phase(u, 0.94, 1.0), confirm: phase(u, 1.08, 1.2), done: phase(u, 1.46, 2.15) });
   }, {
-    buzz: newBuzz(abs),
     touches: [tap(abs, t0 + 0.02, 40, 120), tap(abs, t0 + 0.6, MENU_AT[0], MENU_AT[1]), tap(abs, t0 + 0.98, BLOCK_AT[0], BLOCK_AT[1]), tap(abs, t0 + 1.42, 420, 720)],
   });
 }
@@ -306,25 +365,34 @@ function shot6(c: Ctx, abs: number, t0: number) {
     litFigure(c, her, { shade: 0.5, shadeCol: "rgb(12,14,40)", lights: [{ x: 880, y: 420, r: 760, rgb: "120,150,240", a: 0.22 }], rim: { ux: 0.7, uy: -0.7, rgb: "170,195,255", a: 0.48 } });
   lapDuvet(c, 1 - lamp);
 }
-/** where she sits in shot 6 (head centre, scale) */
-const HX = 470,
-  HY = 640,
-  HS = 0.95;
+/** where she sits in shot 6 (head centre, scale; shared with act3 shot 19, world.ts SIT) */
+const HX = SIT.x,
+  HY = SIT.y,
+  HS = SIT.s;
 type Pt2 = [number, number];
 /** her hands in shot 6 (head units): on the phone; where the phone goes down on the pillow at her left; at rest under
  *  the duvet */
-const HOLD_L: Pt2 = [-58, 330],
-  HOLD_R: Pt2 = [58, 330],
-  ON_PILLOW: Pt2 = [-236, 196],
-  UNDER_L: Pt2 = [-76, 430],
-  UNDER_R: Pt2 = [76, 430];
+const HOLD_L: Pt2 = SIT_HANDS.holdL,
+  HOLD_R: Pt2 = SIT_HANDS.holdR,
+  ON_PILLOW: Pt2 = SIT_HANDS.pillow,
+  UNDER_L: Pt2 = SIT_HANDS.underL,
+  UNDER_R: Pt2 = SIT_HANDS.underR;
 
 /** 7 · the dark, from straight above: her phone face down on the pillow; light leaks out round its edges onto the
  *  pillowcase and it buzzes; it turns over (the screen's light floods the pillow). */
 function shot7(c: Ctx, abs: number, t0: number, end: number) {
   const u = abs - t0;
-  const z = 1 + 0.25 * easeInOut(phase(u, 0, end - t0));
-  camera(c, 540, 900, z);
+  // dread: she thought it was over. Two buzzes (bzz… bzz) in the dark, the camera starting at each like she does, then
+  // creeping in on the phone
+  const kick = BUZZES.reduce((m, [a]) => Math.max(m, u < a ? 0 : Math.exp(-(u - a) / 0.09)), 0);
+  const z = (1 + 0.25 * easeInOut(phase(u, 0, end - t0))) * (1 + 0.03 * kick);
+  // once the banner is in, the camera lifts off the pillow onto the phone and runs straight on into shot 8's push
+  const lift = abs >= end - LIFT_IN ? liftPush(abs, t0, end) : null;
+  const cam = () => (lift ? camera(c, 540, 900, lift.s / 0.55, 0, lift.cx - 540, lift.cy - 900) : camera(c, 540, 900, z));
+  // the pillow sinks into her dark room's bokeh as the phone comes up to the lens
+  const mix = easeInOut(phase(abs, end - 0.3, end));
+  c.save();
+  cam();
   // the bed at the phone's scale: the pillow fills the frame
   c.save();
   c.translate(540, 900);
@@ -334,7 +402,7 @@ function shot7(c: Ctx, abs: number, t0: number, end: number) {
   c.restore();
   const flip = phase(u, 0.75, 1.05);
   const sx = Math.cos(flip * Math.PI);
-  const buzz = u < 0.6 ? 1 - u / 0.6 : 0;
+  const buzz = BUZZES.reduce((m, [a, b]) => Math.max(m, u >= a && u < b ? 1 - 0.4 * (u - a) / (b - a) : 0), 0);
   const jx = buzz > 0 ? Math.sin(abs * 90) * 6 * buzz : 0;
   const rot = -0.25 + 0.25 * flip;
   // Both sides use the same outer shell dimensions, including the screen's frame.
@@ -344,6 +412,14 @@ function shot7(c: Ctx, abs: number, t0: number, end: number) {
   c.globalCompositeOperation = "lighter";
   glow(c, 540 + jx, 900, 430 + 380 * flip, "rgba(110,140,230,0.55)", 0.7 + 0.3 * flip);
   c.restore();
+  c.restore();
+  if (mix > 0) {
+    c.save();
+    c.globalAlpha = mix;
+    roomBokeh(c, abs, { dark: 0.6 });
+    c.restore();
+  }
+  cam();
   c.save();
   c.translate(540 + jx, 900);
   c.rotate(rot);
@@ -352,6 +428,7 @@ function shot7(c: Ctx, abs: number, t0: number, end: number) {
   // A soft cast shadow plus a tight contact edge follows the width of the turning phone.
   c.save();
   c.scale(Math.max(0.1, Math.abs(w)), 1);
+  c.globalAlpha = 1 - mix;
   c.shadowColor = "rgba(3,3,12,0.58)";
   c.shadowBlur = 22 + 12 * edge;
   c.shadowOffsetX = 9 + 8 * edge; c.shadowOffsetY = 14 + 14 * edge;
@@ -407,72 +484,91 @@ function shot7(c: Ctx, abs: number, t0: number, end: number) {
   }
   c.restore();
 }
+/** How long before shot 8 the camera starts lifting off the pillow, and when the push lands on the banner. */
+const LIFT_IN = 0.36;
+/** when the push slams into the banner, after shot 8 starts (audio.json heartNew is on it) */
+const LIFT_OUT = 0.41;
+/** shot 7's two buzzes (shot time) */
+const BUZZES: [number, number][] = [[0, 0.24], [0.34, 0.58]];
+/** One push from the phone lying on the pillow (shot 7, s7–s8) onto the banner's message (shot 8): where the phone is on
+ *  screen. Reluctant, then a rush that slams into the words (a small bump past them and back). */
+function liftPush(abs: number, s7: number, s8: number): PhoneSpec {
+  const from = s8 - LIFT_IN;
+  const z = 1 + 0.25 * easeInOut(phase(from - s7, 0, s8 - s7));
+  const A: PhoneSpec = { cx: 540, cy: 900, s: 0.55 * z };
+  const B = aim(330, 176, 540, 760, 1.9); // the banner's message
+  const P = aimLerp(A, B, Math.pow(phase(abs, from, s8 + LIFT_OUT), 2.4));
+  const bump = Math.sin(Math.PI * phase(abs, s8 + LIFT_OUT, s8 + LIFT_OUT + 0.24));
+  return bump > 0 ? aim(330, 176, 540, 760, 1.9 * (1 + 0.05 * bump)) : P;
+}
+/** audio.json heartFast: four quick beats from here, 0.4 s apart (they run on over her face) */
+const HEART_FAST = 13.1;
 function rrPath(c: Ctx, x: number, y: number, w: number, h: number, r: number) {
   c.beginPath();
   c.roundRect(x, y, w, h, r);
 }
 
-/** 8 · the new message: the grey avatar again, on her photo with her boyfriend — the camera rushes onto the banner
- *  「那个男生配不上你🌹」 (two yellow pulses) and holds while it sinks in. */
+/** 8 · the new message: another grey avatar, a new name, on her photo with her boyfriend — blocking didn't work. The
+ *  camera hesitates, then rushes and slams into 「那个男生配不上你🌹」 (a jolt, a heavy heartbeat, the box clamps on).
+ *  Then it sinks in: the room swells round the phone while the phone eases back a touch (a dolly zoom — the floor
+ *  going), the dark closes in, her hand trembles, the box flares on each quickening heartbeat. */
 function shot8(c: Ctx, abs: number, t0: number) {
-  roomBokeh(c, abs, { dark: 0.6 });
-  const A = { cx: 540, cy: 930, s: 1 };
-  const B = aim(330, 176, 540, 760, 1.9); // the banner's message
-  const e = easeInOut(phase(abs, t0 + 0.12, t0 + 0.62));
-  const P = aimLerp(A, B, e);
-  glow(c, P.cx, P.cy - 120 * P.s, 900 * P.s, "rgba(120,150,255,0.3)");
+  const impact = t0 + LIFT_OUT;
+  const sink = easeInOut(phase(abs, impact + 0.15, at(SHOT.s9)));
+  c.save();
+  camera(c, 540, 900, 1 + 0.35 * sink);
+  roomBokeh(c, abs, { dark: 0.6 + 0.25 * sink });
+  c.restore();
+  const L = liftPush(abs, at(SHOT.s7), t0);
+  const [jx, jy] = abs > impact ? shake(abs, 10 * (1 - phase(abs, impact, impact + 0.35)) + 3 * phase(abs, impact, impact + 0.5), 61) : [0, 0];
+  const P = abs > impact ? aim(330, 176, 540 + jx, 760 + jy, L.s * (1 - 0.06 * sink)) : L;
+  halo(c, P, 1 - 0.3 * sink);
+  const beat = Math.max(thump(abs, impact), ...[0, 0.4, 0.8].map((d) => thump(abs, HEART_FAST + d)));
   drawPhone(c, abs, P, (p) => {
     vidPost(p, { time: "02:49", photo: couplePhoto(false), caption: "周末～", ago: "3小时前", details: true });
     vidBanner(p, 1, { name: ACC_B, body: "那个男生配不上你", rose: true, details: true });
-    pulseBox(p, 18, 84, 564, 172, phase(abs, t0 + 0.55, t0 + 1.25));
+    guideBox(p, 18, 84, 564, 172, { ring: phase(abs, impact, impact + 0.35), a: phase(abs, impact, impact + 0.04), gap: 6, thump: beat });
   });
+  // the dark closing in from the edges, over the phone too, leaving only the words
+  if (sink > 0) {
+    const g = c.createRadialGradient(540, 820, 240, 540, 900, 1250);
+    g.addColorStop(0, "rgba(4,4,12,0)");
+    g.addColorStop(1, `rgba(4,4,12,${(0.72 * sink).toFixed(3)})`);
+    c.fillStyle = g;
+    c.fillRect(-60, -60, W + 120, H + 120);
+  }
 }
 
-/** 9 · her face, not in a reflection: frozen over the duvet in the dark, only the phone lighting her from below; a
- *  slow push; on the song's stop the camera pulls out through her window (journey.ts). */
-function shot9(c: Ctx, abs: number, t0: number) {
-  // on the song's stop the camera pulls out of her face, out of her window — the start of the long flight to him
-  if (abs >= WORD.stop) pullOut(c, abs, WORD.stop, ACT2_AT, (k) => faceScared(k, abs, t0));
-  else faceScared(c, abs, t0);
+/** 9 · (her close-up is gone — user: shot 8's camera already says it; the time goes to the transition) straight on
+ *  into the journey: the camera pulls back off her phone, through her window — her in the dark room, frozen in bed,
+ *  only the phone lighting her — out to the snowy facade, and up into the sky (journey.ts; act2 carries on). */
+function shot9(c: Ctx, abs: number) {
+  journey(c, abs, (k) => throughWindow(k, abs));
 }
-/** the start of act 2 (visual.json) */
-const ACT2_AT = 15.41955;
-export function faceScared(c: Ctx, abs: number, t0: number) {
-  const u = abs - t0;
-  herFaceBg(c, abs, 0);
-  camera(c, 540, 760, 1.04 + 0.1 * easeOut(phase(u, 0, 1.2)));
-  // surprise first (brows up, a jolt back), then fear: brows knit, she shrinks down and trembles
-  const jolt = backOut(phase(u, 0, 0.18)) * (1 - phase(u, 0.18, 0.5));
-  const scared = phase(u, 0.4, 0.6);
-  const tremble = scared * Math.sin(abs * 38) * 3;
-  // her hands snatch the duvet's edge as the fear lands, then haul it a little higher
-  const clutch = easeOut(phase(u, 0.36, 0.5));
-  const haul = easeInOut(phase(u, 0.5, 0.85));
-  herFace(c, abs, {
-    lamp: 0,
-    bg: false,
-    top: 1056 - 34 * haul,
-    grip: clutch,
-    x: 540 + tremble,
-    y: 780 - 26 * jolt + 22 * scared,
-    s: 1.6,
-    pose: { eyes: "wide", mouth: "o", brows: scared > 0.5 ? "worried" : "up", look: [0.15 * Math.sin(u * 7) * scared, 0.45], headY: 10 * scared },
+/** what we see through her window as we pull back out of it: the message on her phone, giving way to her room */
+function throughWindow(k: Ctx, abs: number) {
+  const t0 = at(SHOT.s9);
+  const phone = 1 - easeInOut(phase(abs, t0 + 0.06, t0 + 0.3));
+  if (phone < 1) darkRoom(k, abs);
+  if (phone > 0) filtered(k, "none", (q) => shot8(q, abs, at(SHOT.s8)), "s9phone", phone);
+}
+/** her room after the message: the lamp off, her sitting up in bed, frozen, the phone in her hands lighting her face */
+function darkRoom(c: Ctx, abs: number) {
+  c.save();
+  camera(c, 540, 700, 1.29, 0, 0, 160);
+  herRoomSnow(c, abs, { lamp: 0 });
+  const PH: Pt2 = [432, 886];
+  const her = (q: Ctx) => herInBed(q, HX, HY, HS, { eyes: "wide", mouth: "o", brows: "worried", look: [0, 0.5], headY: 6 });
+  litFigure(c, her, {
+    shade: 0.55,
+    shadeCol: "rgb(12,14,40)",
+    lights: [
+      { x: PH[0], y: PH[1] - 40, r: 420, rgb: "165,195,255", a: 0.5 },
+      { x: 880, y: 420, r: 760, rgb: "120,150,240", a: 0.18 },
+    ],
+    rim: { ux: 0.7, uy: -0.7, rgb: "170,195,255", a: 0.42 },
   });
-  // a bead of cold sweat
-  if (scared > 0) {
-    c.save();
-    c.globalAlpha = scared;
-    c.fillStyle = "#bfe3ff";
-    c.strokeStyle = C.ink;
-    c.lineWidth = 4;
-    c.beginPath();
-    const sx = 690,
-      sy = 770 + 22 * scared + 34 * phase(u, 0.6, 1.2);
-    c.moveTo(sx, sy - 26);
-    c.quadraticCurveTo(sx + 18, sy, sx, sy + 12);
-    c.quadraticCurveTo(sx - 18, sy, sx, sy - 26);
-    c.fill();
-    c.stroke();
-    c.restore();
-  }
+  lapDuvet(c, 1);
+  glow(c, PH[0], PH[1], 260, "rgba(150,180,255,0.35)");
+  c.restore();
 }

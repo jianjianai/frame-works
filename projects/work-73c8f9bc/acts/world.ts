@@ -1,33 +1,47 @@
 // 《屏蔽》她那一边的场景：雪、她的房间（雪夜的窗、串灯、台灯 → 月光）、窗外的街、手机近景后面失焦的房间、
 // 她的特写（被子拉到鼻子）、枕头俯拍、被窝里探头、三年前的宿舍。爸爸在 dad.ts，岗亭在 booth.ts。
 import { clamp } from "@frame/engine/math";
-import { C, Ctx, H, Pt, W, bokehDisc, blob, camera, castShadow, curve, fillBg, filtered, glow, hash, inkLine, litFigure, oval, paint, poly, rbox, rr, text, F, vgrad } from "@materials/s0rrow/code/draw";
+import { C, Ctx, H, Pt, W, bokehDisc, blob, camera, curve, fillBg, filtered, glow, hash, inkLine, litFigure, oval, paint, poly, rbox, rr, text, F, vgrad } from "@materials/s0rrow/code/draw";
 import { snow } from "@materials/s0rrow/code/blocked/snow";
 import { drawKid, type KidPose } from "@materials/s0rrow/code/kid";
-import { drawPerson } from "@materials/s0rrow/code/people";
 import { herBlanket, herRoom } from "@materials/s0rrow/code/places";
 import { streetBelow } from "@materials/s0rrow/code/sets";
 import { phoneBack } from "@materials/s0rrow/code/phone";
-import { dormRoom } from "@materials/s0rrow/code/dorm";
 import { couplePhoto, gradPhoto, nightPhoto } from "./ui";
 
-/** Out-of-focus room behind a phone close-up: warm fairy-light discs, the cold window glow, falling snow beyond. */
-export function roomBokeh(c: Ctx, abs: number, o: { dark?: number; shift?: [number, number] } = {}) {
+const WARM = "255,206,140",
+  PINK = "255,170,200";
+/** The fairy lights out of focus: [x, y, radius, depth (0 far … 1 near), colour]. Only a few, on the diagonals round
+ *  where the phone stands (big top left ↔ small bottom right, middling top right ↔ bottom left), off the hook text's
+ *  band; near ones big, faint and half out of frame, far ones small and brighter. */
+const LIGHTS: [number, number, number, number, string][] = [
+  [20, 190, 132, 1, WARM],
+  [1068, 1310, 138, 1, WARM],
+  [985, 250, 62, 0.55, WARM],
+  [150, 1760, 92, 0.75, PINK],
+  [120, 1120, 30, 0.2, WARM],
+  [905, 1830, 28, 0.2, WARM],
+];
+/** Out-of-focus room behind a phone close-up: warm fairy-light discs, the cold window glow, falling snow beyond.
+ *  `dark` 0..1 closes the room in, `bright` 0..1 lifts it with warm light. */
+export function roomBokeh(c: Ctx, abs: number, o: { dark?: number; shift?: [number, number]; bright?: number } = {}) {
   const dark = o.dark ?? 0;
+  const bright = o.bright ?? 0;
   const [sx, sy] = o.shift ?? [0, 0];
   fillBg(c, vgrad(c, 0, H, [[0, "#1d1834"], [1, "#0d0b18"]]));
   c.save();
   c.translate(sx, sy);
   // the window (cold) on the right
   glow(c, 900, 520, 520, "rgba(120,150,230,0.4)", 1 - dark * 0.6);
-  // fairy lights across the top (warm)
-  for (let i = 0; i < 9; i++) {
-    const x = -40 + i * 150 + Math.sin(i * 1.7) * 20,
-      y = 300 + Math.sin(i * 2.3) * 70;
-    const tw = 0.8 + 0.2 * Math.sin(abs * 2.1 + i);
-    bokehDisc(c, x, y, 58 + hash(i * 3.1) * 30, i % 3 ? "255,206,140" : "255,170,200", 0.4 * tw * (1 - dark * 0.8));
-  }
   c.restore();
+  // fairy lights round the phone; the near ones slide further when the camera moves
+  LIGHTS.forEach(([x, y, r, depth, rgb], i) => {
+    const tw = 0.8 + 0.2 * Math.sin(abs * (1.6 + 0.9 * hash(i * 5.3)) + i * 1.9);
+    const par = 0.4 + 0.8 * depth;
+    bokehDisc(c, x + sx * par, y + sy * par, r, rgb, (0.5 - 0.27 * depth) * tw * (1 - dark * 0.8) * (1 + 0.9 * bright));
+  });
+  // `bright` 0..1: a lift of warm light (her excitement)
+  if (bright > 0) glow(c, 540, 900, 1000, "rgba(255,196,150,0.16)", bright);
   // big soft snowflakes drifting past the lens
   filtered(c, "blur(6px)", (k) => snow(k, abs, { n: 26, seed: 31, speed: 60, size: 9, alpha: 0.35, drift: 40 }), "bokehSnow");
   if (dark > 0) {
@@ -66,6 +80,18 @@ export function herRoomShade(c: Ctx, abs: number, o: { lamp: number; phone?: [nu
 export function herInBed(c: Ctx, x: number, y: number, s: number, p: KidPose = {}) {
   drawKid(c, x, y, s, { who: "girl", outfit: "pajamas", body: "bust", arms: "phone", ...p });
 }
+/** where she sits up in bed in the room shot (act1 shot 6 puts the phone down and switches off the lamp, act3 shot 19
+ *  picks it up again in the dark): head centre and scale; the room's camera; and her hands in head units — on the
+ *  phone, where it lies on the pillow at her left, at rest under the duvet */
+export const SIT = { x: 470, y: 640, s: 0.95 };
+export const SIT_CAM = { cx: 540, cy: 700, z: 1.25, dy: 160 };
+export const SIT_HANDS: Record<"holdL" | "holdR" | "pillow" | "underL" | "underR", [number, number]> = {
+  holdL: [-58, 330],
+  holdR: [58, 330],
+  pillow: [-236, 196],
+  underL: [-76, 430],
+  underR: [76, 430],
+};
 
 // ---------------------------------------------------------------- the street below her window
 export function windowStreet(c: Ctx, abs: number) {
@@ -91,22 +117,52 @@ export function windowStreet(c: Ctx, abs: number) {
   c.fillRect(-60, -60, W + 120, 120);
 }
 
-// ---------------------------------------------------------------- the dorm three years ago
-export function dorm(c: Ctx, abs: number) {
-  dormRoom(c, abs, { lamp: 1, lights: 1, winter: true, month: "12月", circledDay: 9 });
-}
-
-/** The roommates keep their original head positions and laughing gestures; their seated bodies now continue
- *  behind the foreground desk. The warm reading lamp and the cold window light them from opposite sides. */
-export function roommates(c: Ctx, abs: number, k: number) {
-  const lean = 40 * k;
-  const left = (q: Ctx) => drawPerson(q, 230 - lean * 0.3, 760 + lean * 0.2, 0.95, { x: 0, hair: "long", hairColor: "#3a2414", top: "#f2c94c", face: k > 0.5 ? "laugh" : "smile", body: "full", legs: "sit", bottom: "#586e77", tilt: 0.15 * k, arms: k > 0.5 ? "laugh" : "down", seed: 961 });
-  const right = (q: Ctx) => drawPerson(q, 850 + lean * 0.3, 760 + lean * 0.2, 0.95, { x: 0, hair: "bun", hairColor: "#191515", top: "#4f8fbf", face: k > 0.5 ? "laugh" : "smile", body: "full", legs: "sit", bottom: "#536a7c", tilt: -0.15 * k, seed: 962 });
-  const wallOnly = (q: Ctx) => { q.beginPath(); q.rect(-60, 616, 1200, 700); q.clip(); };
-  castShadow(c, [218, 610], 1.09, (q) => { left(q); right(q); }, "#203d43", 17, 0.20, wallOnly);
-  litFigure(c, left, { shade: 0.16, shadeCol: "#263c45", lights: [{ x: 210, y: 635, r: 570, rgb: "252,221,160", a: 0.27 }, { x: 408, y: 756, r: 370, rgb: "153,197,221", a: 0.14 }], rim: { ux: 0.65, uy: -0.8, rgb: "169,206,209", a: 0.28, width: 4 } });
-  litFigure(c, right, { shade: 0.24, shadeCol: "#203c4b", lights: [{ x: 713, y: 690, r: 445, rgb: "153,197,221", a: 0.23 }, { x: 623, y: 882, r: 440, rgb: "247,215,153", a: 0.12 }], rim: { ux: -0.75, uy: -0.8, rgb: "160,207,222", a: 0.38, width: 5 } });
-  void abs;
+// ---------------------------------------------------------------- the dorm three years ago (the shot itself is memory.ts)
+/** a few big soft lights close to the lens, round the edges of the frame: [x, y, r, rgb, alpha] */
+const DORM_NEAR: [number, number, number, string, number][] = [
+  [80, 1740, 160, WARM, 0.3],
+  [1000, 1810, 120, PINK, 0.24],
+];
+/** fairy lights hanging down the bunk posts on either side of the phone, few and of different sizes: [x, y, r, rgb] */
+const DORM_DROPS: [number, number, number, string][] = [
+  [92, 640, 50, WARM],
+  [110, 1200, 78, PINK],
+  [1000, 820, 66, WARM],
+  [984, 1340, 44, WARM],
+];
+/** Behind her old phone in the memory (user: 这个手机的背景优化一下): the dorm that night (21:15), out of focus —
+ *  a string of fairy lights sagging across the top, the desk lamp's warmth low on the left, a little blue from the
+ *  window with the city on the right, all on a deep warm dark (warm, the way that night was; now is cold).
+ *  `zoom` > 1 while the camera is still close in (the lights shrink a little as it pulls back). */
+export function dormBokeh(c: Ctx, abs: number, zoom = 1) {
+  fillBg(c, vgrad(c, 0, H, [[0, "#3b2335"], [0.45, "#2b1b26"], [1, "#160f15"]]));
+  c.save();
+  camera(c, 540, 900, zoom);
+  glow(c, 120, 1350, 760, "rgba(255,178,104,0.30)");
+  glow(c, 960, 420, 520, "rgba(120,150,230,0.22)");
+  glow(c, 540, 260, 700, "rgba(255,190,130,0.12)");
+  // the lights glow (screen), so they stay warm and clear on the dark
+  c.globalCompositeOperation = "screen";
+  const tw = (i: number) => 0.8 + 0.2 * Math.sin(abs * (1.3 + 0.9 * hash(i * 4.7)) + i * 2.1);
+  // the fairy lights: a string sagging across the top, above the phone (bigger toward the near, right end)
+  for (let i = 0; i < 7; i++) {
+    const k = i / 6;
+    const x = 20 + 1040 * k + 40 * (hash(i * 6.1) - 0.5);
+    const y = 80 + 110 * k + 90 * Math.sin(Math.PI * k);
+    const near = 0.3 + 0.7 * k;
+    bokehDisc(c, x, y, 26 + 44 * near + 14 * hash(i * 2.3), i === 3 ? PINK : WARM, (0.62 - 0.16 * near) * tw(i));
+  }
+  // and down the bunk posts either side
+  DORM_DROPS.forEach(([x, y, r, rgb], i) => bokehDisc(c, x, y, r, rgb, 0.5 * tw(i + 20)));
+  DORM_NEAR.forEach(([x, y, r, rgb, a], i) => bokehDisc(c, x, y, r, rgb, a * tw(i + 40)));
+  c.restore();
+  // a darker middle, so the white screen stands off it
+  const v = c.createRadialGradient(540, 900, 200, 540, 900, 1150);
+  v.addColorStop(0, "rgba(14,8,12,0.32)");
+  v.addColorStop(0.5, "rgba(14,8,12,0.1)");
+  v.addColorStop(1, "rgba(10,6,10,0.35)");
+  c.fillStyle = v;
+  c.fillRect(-60, -60, W + 120, H + 120);
 }
 
 // ---------------------------------------------------------------- her close-ups (refined)
