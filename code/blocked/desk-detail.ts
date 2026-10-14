@@ -3,7 +3,7 @@
  * Photos and the birthday note are below the glass; the duty book, pen, cup and keys rest above it.
  * All texture seeds are fixed; only the steam depends on absolute time.
  */
-import { Ctx, F, H, Pt, W, blob, fillBg, glow, hash, inkLine, lightShaft, oval, paint, poly, rbox, text, vgrad } from "../draw";
+import { Ctx, F, H, Pt, W, blob, fillBg, glow, hash, inkLine, lightShaft, measure, oval, paint, poly, rbox, text, vgrad } from "../draw";
 import { drawKid } from "../kid";
 
 export interface DetailedDeskOptions {
@@ -14,6 +14,11 @@ export interface DetailedDeskOptions {
   photos?: boolean;
   phoneLight?: number;
   phoneResting?: boolean;
+  /** The last log entry being written (0..1): its time is down already, the words after it appear left to right.
+   *  Leave it out for a finished page. The pen's tip is at logPen(c, o). */
+  logWrite?: number;
+  /** false: the pen isn't lying on the desk (it's in his hand — draw it with heldPen). */
+  pen?: boolean;
 }
 
 function wood(c: Ctx) {
@@ -164,17 +169,45 @@ function logBook(c:Ctx,o:DetailedDeskOptions) {
     inkLine(c,[[-185,y],[-103,y-2],[-25,y+1]],89720+i,1,"rgba(91,121,116,.37)",.2);
     inkLine(c,[[25,y+1],[108,y-2],[188,y]],89730+i,1,"rgba(91,121,116,.32)",.2);
   }
-  const entries=o.log??["22:00 巡逻一次","23:30 正常","00:40 正常","01:50 下雪","02:40"];
-  entries.slice(0,8).forEach((entry,i)=>text(c,entry,-108,-146+i*44,{size:21,font:F.pen,fill:"#435d74"}));
+  const entries=logEntries(o);
+  entries.forEach((entry,i)=>{
+    // the last entry, still being written: clipped to where the pen has got to
+    const write=i===entries.length-1&&o.logWrite!==undefined&&o.logWrite<1;
+    if(write){
+      const [,from,to]=logSpan(c,entry);
+      c.save();c.beginPath();c.rect(-210,-176+i*44,from+(to-from)*Math.max(0,o.logWrite!)+210,60);c.clip();
+    }
+    text(c,entry,-108,-146+i*44,{size:21,font:F.pen,fill:"#435d74"});
+    if(write)c.restore();
+  });
   text(c,"08",-108,226,{size:13,font:F.pen,fill:"#687164"});
   text(c,"09",108,226,{size:13,font:F.pen,fill:"#687164"});
   poly(c,[[-207,227],[-182,253],[-207,253]],89745,.2);paint(c,"#e6dbc0","#8c927a",1);
   c.restore();
 }
 
-function pen(c:Ctx) {
-  c.save();c.translate(163,955);c.rotate(.13);
-  rbox(c,-14,-108,20,223,7,89800,.2);paint(c,"rgba(12,23,27,.32)",null);
+const LOG=["22:00 巡逻一次","23:30 正常","00:40 正常","01:50 下雪","02:40"];
+const logEntries=(o:DetailedDeskOptions)=>(o.log??LOG).slice(0,8);
+/** An entry's left edge, where its words start (after the time and a space) and its right edge, in book units. */
+function logSpan(c:Ctx,entry:string):[number,number,number] {
+  const w=measure(c,entry,21,F.pen),left=-108-w/2,sp=entry.indexOf(" ");
+  return [left,sp<0?left:left+measure(c,entry.slice(0,sp+1),21,F.pen),left+w];
+}
+/** Where the pen's tip is while the last log entry is written (o.logWrite), in desk coordinates: it bobs up and
+ *  down a little inside each character, the way a hand writes. */
+export function logPen(c:Ctx,o:DetailedDeskOptions):Pt {
+  const entries=logEntries(o),i=entries.length-1,entry=entries[i]??"";
+  const [,from,to]=logSpan(c,entry);
+  const k=Math.max(0,Math.min(1,o.logWrite??1));
+  const n=Math.max(1,Array.from(entry.slice(entry.indexOf(" ")+1)).length);
+  const x=from+(to-from)*k,y=-140+i*44-7*Math.abs(Math.sin(k*n*Math.PI*1.5));
+  // the book lies at (185, 509), turned -0.15
+  const ca=Math.cos(-.15),sa=Math.sin(-.15);
+  return [185+x*ca-y*sa,509+x*sa+y*ca];
+}
+
+/** The pen in its own units: the cap end at y -114, the nib's tip at (-2, 120). */
+function penBody(c:Ctx) {
   rbox(c,-9,-113,15,202,5,89801,.2);paint(c,"#1d3546","#13242c",2);
   inkLine(c,[[-5,-108],[-5,79]],89802,2,"#7e9697",.1);
   rbox(c,-12,-114,22,71,5,89803,.2);paint(c,"#334d58","#142932",1.7);
@@ -182,6 +215,21 @@ function pen(c:Ctx) {
   inkLine(c,[[-11,-41],[9,-41]],89805,3,"#aaa992",.1);
   poly(c,[[-8,87],[6,87],[-1,116]],89806,.1);paint(c,"#b8b6a3","#273c40",1.2);
   inkLine(c,[[-1,110],[-2,120]],89807,2,"#122b3a",.1);
+}
+function pen(c:Ctx) {
+  c.save();c.translate(163,955);c.rotate(.13);
+  rbox(c,-14,-108,20,223,7,89800,.2);paint(c,"rgba(12,23,27,.32)",null);
+  penBody(c);
+  c.restore();
+}
+/** The desk's pen in his hand (deskTop with pen: false): the nib's tip at `tip`, the cap end pointing along `ang`
+ *  (radians), in desk units. */
+export function heldPen(c:Ctx,tip:Pt,ang:number) {
+  const t=Math.PI/2+ang,ct=Math.cos(t),st=Math.sin(t);
+  c.save();
+  c.translate(tip[0]+2*ct+120*st,tip[1]+2*st-120*ct);
+  c.rotate(t);
+  penBody(c);
   c.restore();
 }
 
@@ -295,7 +343,7 @@ export function detailedDeskTop(c:Ctx,abs:number,o:DetailedDeskOptions={}) {
   lightShaft(c,[[697,-80],[880,-80],[169,1890],[-124,1740]],829,-80,125,1840,"253,195,119",.105,20,"desk_window_left");
   lightShaft(c,[[942,-80],[1220,-80],[791,1900],[309,1900]],1045,-80,517,1900,"253,195,119",.135,24,"desk_window_right");
   logBook(c,o);
-  pen(c);
+  if(o.pen??true)pen(c);
   cup(c,abs);
   keys(c);
   phoneContact(c,Math.max(0,Math.min(1,o.phoneLight??0)),o.phoneResting??false);
