@@ -45,6 +45,7 @@ export const kidPose = z.object({
   handR: point.optional().describe("右手腕目标点（头部单位）"),
   shapeL: handShape.optional().describe("左手形状"),
   shapeR: handShape.optional().describe("右手形状"),
+  thumbFlip: z.boolean().default(false).describe("正面时把两只手的大拇指换到另一侧：两手从下面托住手机、手腕朝里时，让拇指朝上搭在手机上（默认朝下）"),
   bendL: z.number().min(-1).max(1).optional().describe("左肘弯向：默认 -1（向外上）；1 让手肘朝下（V 字臂）"),
   bendR: z.number().min(-1).max(1).optional().describe("右肘弯向：默认 1；-1 让手肘朝下"),
   elbowL: point.optional().describe("直接给左手肘（头部单位），跳过 IK：跑步时手肘贴身、手举到脸边时手肘放低"),
@@ -1527,8 +1528,8 @@ export function drawKid(ctx: Ctx, x: number, y: number, s: number, p: KidPose = 
     p.grip?.(ctx);
     const sk = girl ? G.skin : K.skin;
     if (!back) {
-      hand(ctx, al.wrist, al.ang, L.shape, true, seed + 280, false, sk);
-      hand(ctx, ar.wrist, ar.ang, R.shape, false, seed + 290, !!p.bandaids, sk);
+      hand(ctx, al.wrist, al.ang, L.shape, !p.thumbFlip, seed + 280, false, sk);
+      hand(ctx, ar.wrist, ar.ang, R.shape, !!p.thumbFlip, seed + 290, !!p.bandaids, sk);
     } else {
       hand(ctx, al.wrist, al.ang, L.shape === "hidden" ? "hidden" : "relax", false, seed + 280, false, sk);
       hand(ctx, ar.wrist, ar.ang, R.shape === "hidden" ? "hidden" : "relax", true, seed + 290, false, sk);
