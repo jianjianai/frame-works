@@ -678,23 +678,94 @@ export const WALL_S = 1.15;
  *  just under his chin */
 const HUG = { scale: 0.66, head: [10, 245] as Pt };
 const YOUNG_SKIN = "#f1d2a6",
-  SHIRT = "#f4f2ea";
+  SHIRT = "#b9d1ea",
+  SHIRT_SH = "rgba(64,92,140,0.24)";
+/** young him from the neck down (his head units, drawDad draws only the head): a soft chambray shirt open at the
+ *  neck over a white tee, the collar standing a little, shoulder seams and folds, a chest pocket; the afternoon sun is
+ *  behind him on the right, so his right side (screen right) has a warm rim and the left falls into cool shade. */
+function youngBody(c: Ctx) {
+  // neck, shaded under the jaw
+  shaded(c, () => blob(c, [[-44, 96], [44, 96], [50, 176], [-50, 176]], 3850, 1), YOUNG_SKIN, () => {
+    blob(c, [[-60, 90], [60, 90], [60, 132], [-60, 128]], 3851, 1);
+    paint(c, "rgba(176,118,70,0.35)", null);
+  }, C.ink, 5);
+  const T: Pt[] = [[-58, 150], [-118, 174], [-148, 224], [-156, 600], [0, 614], [156, 600], [148, 224], [118, 174], [58, 150], [0, 166]];
+  shaded(c, () => blob(c, T, 3852, 1.1), SHIRT, () => {
+    // cool shade down his left, warm sun on his right edge
+    blob(c, [[-180, 180], [-100, 220], [-90, 640], [-180, 640]], 3853, 1.2);
+    paint(c, SHIRT_SH, null);
+    blob(c, [[124, 172], [176, 220], [176, 620], [140, 620], [134, 300]], 3854, 1.2);
+    paint(c, "rgba(255,226,170,0.45)", null);
+    // the shadow his head throws on his chest
+    oval(c, 10, 196, 120, 40, 3855, 1);
+    paint(c, "rgba(64,92,140,0.22)", null);
+    // folds from the armpits, the shoulder seams
+    for (const side of [-1, 1]) {
+      inkLine(c, [[side * 144, 300], [side * 114, 340], [side * 102, 392]], 3856 + side, 2.2, "rgba(60,84,124,0.45)");
+      inkLine(c, [[side * 140, 420], [side * 112, 452]], 3858 + side, 2, "rgba(60,84,124,0.35)");
+      inkLine(c, [[side * 96, 170], [side * 118, 206], [side * 126, 248]], 3860 + side, 1.8, "rgba(90,116,160,0.55)");
+    }
+    // a little chambray weave
+    for (let i = 0; i < 90; i++) {
+      const x = -150 + hash(i * 5.3) * 300,
+        y = 180 + hash(i * 2.9) * 420;
+      inkLine(c, [[x, y], [x + 3, y + 1.5]], 3870 + i, 0.8, "rgba(255,255,255,0.18)", 0.1);
+    }
+    // the button placket and the chest pocket (mostly behind her; they show at the edges)
+    inkLine(c, [[14, 236], [16, 600]], 3865, 2, "rgba(70,96,140,0.5)");
+    for (let i = 0; i < 4; i++) {
+      oval(c, 0, 280 + i * 90, 6, 6, 3866 + i, 0.3);
+      paint(c, "#f4f1e8", "rgba(60,80,120,0.6)", 1.5);
+    }
+    rr(c, 76, 290, 56, 64, 6);
+    paint(c, null, "rgba(70,96,140,0.55)", 2);
+    inkLine(c, [[76, 304], [132, 304]], 3867, 1.6, "rgba(70,96,140,0.5)");
+  }, C.ink, 5.5);
+  // the white tee in the open neck, then the collar points standing up a little, their undersides in shade
+  poly(c, [[-42, 152], [42, 152], [0, 226]], 3880, 0.6);
+  paint(c, "#f7f4ec", C.ink, 3.5);
+  inkLine(c, [[-30, 160], [0, 176], [30, 160]], 3881, 2, "rgba(150,150,140,0.6)");
+  for (const side of [-1, 1]) {
+    poly(c, [[side * 44, 148], [side * 92, 146], [side * 106, 196], [side * 40, 236]], 3882 + side, 0.6);
+    paint(c, "rgba(64,92,140,0.35)", null);
+    poly(c, [[side * 8, 160], [side * 74, 140], [side * 92, 190], [side * 26, 232]], 3884 + side, 0.6);
+    paint(c, side > 0 ? "#cfe0f1" : SHIRT, C.ink, 4);
+    inkLine(c, [[side * 22, 172], [side * 70, 156]], 3886 + side, 1.4, "rgba(80,104,150,0.5)");
+  }
+}
 /** his upper arm hanging from the shoulder to the elbow beside her (his head units) */
 function dadUpperArm(c: Ctx, side: number) {
   // the top starts inside the shoulder so the sleeve grows out of it instead of sitting on it like a pad
-  const top: Pt = [side * 146, 262],
-    elbow: Pt = [side * 198, side > 0 ? 442 : 458];
-  shaded(c, () => blob(c, tubePts([top, lerp2(top, elbow, 0.5), elbow], [64, 60, 56], true, true), 3740 + side, 1.1), SHIRT, () => {
+  const top: Pt = [side * 124, 254],
+    elbow: Pt = [side * 170, side > 0 ? 442 : 458];
+  const arm = () => blob(c, tubePts([top, lerp2(top, elbow, 0.5), elbow], [56, 52, 50], true, true), 3740 + side, 1.1);
+  shaded(c, arm, SHIRT, () => {
     blob(c, tubePts([[top[0] + side * 20, top[1] + 10], [elbow[0] + side * 18, elbow[1]]], [30, 26], true, true), 3742 + side, 1);
-    paint(c, "rgba(150,160,190,0.25)", null);
-  }, C.ink, 5.5);
+    paint(c, SHIRT_SH, null);
+  }, null);
+  // no ring round the top (it read as a shoulder pad): one unbroken line runs from the top of the shoulder down the
+  // outside of the arm, another from the armpit down the inside, and only the elbow end keeps the tube's own outline
+  const len = Math.hypot(elbow[0] - top[0], elbow[1] - top[1]);
+  const d: Pt = [(elbow[0] - top[0]) / len, (elbow[1] - top[1]) / len];
+  const n: Pt = [d[1] * side, -d[0] * side];
+  const along = (k: number, off: number): Pt => [top[0] + d[0] * len * k + n[0] * off, top[1] + d[1] * len * k + n[1] * off];
+  const cut = top[1] + (elbow[1] - top[1]) * 0.75;
+  inkLine(c, [[side * 128, 186], [side * 146, 216], along(0.12, 27), along(0.45, 26), along(0.78, 25)], 3746 + side, 5.5, C.ink);
+  inkLine(c, [along(0.32, -26), along(0.55, -26), along(0.78, -25)], 3748 + side, 5.5, C.ink);
+  c.save();
+  c.beginPath();
+  c.rect(-400, cut, 800, 600);
+  c.clip();
+  arm();
+  paint(c, null, C.ink, 5.5);
+  c.restore();
   // the fold where the arm hangs from the shoulder
-  inkLine(c, [[side * 126, 252], [side * 150, 240], [side * 176, 248]], 3744 + side, 2.4, "rgba(120,124,140,0.55)");
+  inkLine(c, [[side * 106, 246], [side * 128, 234], [side * 150, 242]], 3744 + side, 2.4, "rgba(120,124,140,0.55)");
 }
 /** his bare forearm (sleeve rolled up past the elbow) round her middle, to his hands clasped in front of her — the right
  *  hand over the left (his head units). Drawn between her body and her arms, so her arms lie over it. */
 function dadForearm(c: Ctx, side: number) {
-  const elbow: Pt = [side * 198, side > 0 ? 442 : 458],
+  const elbow: Pt = [side * 170, side > 0 ? 442 : 458],
     hand: Pt = side > 0 ? [12, 450] : [-14, 464];
   const wrist = lerp2(elbow, hand, 0.86);
   shaded(c, () => blob(c, tubePts([elbow, lerp2(elbow, wrist, 0.5), wrist], [54, 50, 44], true, false), 3800 + side, 1), YOUNG_SKIN, () => {
@@ -844,10 +915,11 @@ export const wallpaperPhoto: Photo = (c, x, y, w, h) =>
     c.translate(fx, fy);
     c.scale(s, s);
     const him = c.getTransform();
-    blob(c, [[-186, 560], [186, 560], [196, 760], [-196, 760]], 3730, 1);
+    blob(c, [[-158, 560], [158, 560], [168, 760], [-168, 760]], 3730, 1);
     paint(c, "#4c5160", C.ink, 5.5);
+    youngBody(c);
     c.restore();
-    drawDad(c, fx, fy, s, { young: true, eyes: "happy", mouth: "laugh", seed: 871 });
+    drawDad(c, fx, fy, s, { young: true, body: "head", eyes: "happy", mouth: "laugh", seed: 871 });
     c.save();
     c.setTransform(him);
     for (const side of [-1, 1]) dadUpperArm(c, side);
