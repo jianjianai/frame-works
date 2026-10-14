@@ -1,7 +1,7 @@
 /** Detailed dressing for boothBack. Reuses the existing gate, thermos and enamel mug through a small drawing bridge. */
 import { C, Ctx, F, H, Pt, W, blob, fillBg, glow, hash, inkLine, lightShaft, motes, oval, paint, poly, rbox, text, vgrad } from "../draw";
-type GateOptions={name?:string;led?:string};
-export interface DetailedBoothOptions extends GateOptions { cctv?:string; }
+type GateOptions={name?:string;led?:string;quiet?:boolean};
+export interface DetailedBoothOptions extends GateOptions { cctv?:string; lonely?:boolean; }
 interface BoothProps {
   gate:(c:Ctx,t:number,ox:number,o:GateOptions)=>void;
   thermos:(c:Ctx,x:number,y:number,s:number,seed:number)=>void;
@@ -28,26 +28,28 @@ function heater(c:Ctx) {
   inkLine(c,[[1000,1650],[1066,1695],[1085,1560],[1030,1450]],87007,3,"#151e23",.4);
 }
 
-function roomShell(c:Ctx) {
-  fillBg(c,vgrad(c,0,H,[[0,"#303644"],[.57,"#262e38"],[1,"#172525"]]));
-  c.fillStyle=vgrad(c,1060,1590,[[0,"#34443e"],[1,"#1d2c2c"]]);c.fillRect(-60,1060,1200,560);
+function roomShell(c:Ctx,lonely=false) {
+  fillBg(c,vgrad(c,0,H,lonely?[[0,"#232a37"],[.57,"#1c2330"],[1,"#121a1e"]]:[[0,"#303644"],[.57,"#262e38"],[1,"#172525"]]));
+  c.fillStyle=vgrad(c,1060,1590,lonely?[[0,"#2a3540"],[1,"#172126"]]:[[0,"#34443e"],[1,"#1d2c2c"]]);c.fillRect(-60,1060,1200,560);
   inkLine(c,[[-60,1102],[1140,1102]],87100,9,"#4e5d50",.3);
   for(let i=0;i<64;i++){
     const x=hash(i*6.7)*W,y=hash(i*2.9)*1550;
     inkLine(c,[[x,y],[x+5+hash(i+12)*13,y+2]],87110+i,1.2,"rgba(172,173,150,.075)",.2);
   }
-  // Exposed conduit, old paint chips and a low electrical socket.
+  // Exposed conduit, old paint chips and a low electrical socket (the lonely room is kept bare).
+  if(!lonely){
   inkLine(c,[[1038,-40],[1038,151],[1054,177],[1054,1360]],87190,6,"#1b2530",.5);
   inkLine(c,[[1036,-40],[1036,151],[1052,177],[1052,1360]],87191,2,"#657073",.3);
   rbox(c,1018,1360,62,80,7,87192,.5);paint(c,"#63675e","#1a242a",3);
   for(const y of [1383,1417])for(const x of [1037,1058])inkLine(c,[[x,y-4],[x,y+4]],87193+x+y,2.5,"#242b2a",.2);
+  }
   for(let i=0;i<16;i++){const y=630+i*45;poly(c,[[18,y],[38,y-4],[34,y+6],[23,y+9]],87200+i,.4);paint(c,"rgba(98,111,107,.13)",null);}
   // A small old fluorescent fitting supplies a weak cool fill.
   oval(c,413,157,300,22,87220,.4);paint(c,"rgba(4,8,15,.25)",null);
   rbox(c,144,128,550,33,5,87221,.4);paint(c,"#4c555c","#141d28",3);
-  rbox(c,169,140,496,12,5,87222,.2);paint(c,"#a4b6bd",null);
+  rbox(c,169,140,496,12,5,87222,.2);paint(c,lonely?"#3b4652":"#a4b6bd",null);
   for(const x of [156,680])inkLine(c,[[x,133],[x,151]],87223+x,2,"#969a99",.2);
-  glow(c,420,158,420,"rgba(149,183,207,.09)");
+  if(!lonely)glow(c,420,158,420,"rgba(149,183,207,.09)");
   // Tile floor, under-desk cabinet, and an actual seat under the heavy coat.
   poly(c,[[-60,1565],[1140,1546],[1140,2000],[-60,2000]],87230,.6);paint(c,"#293236","#111e25",4);
   for(let i=-4;i<8;i++)inkLine(c,[[540+i*90,1555],[540+i*270,2000]],87240+i,2,"rgba(9,17,24,.46)",.4);
@@ -74,7 +76,7 @@ function windowFrame(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
   rbox(c,69,213,945,840,10,87300,.8);paint(c,"#171f2c","#3b4149",5);
   rbox(c,86,237,911,786,6,87301,.4);paint(c,"#777d80","#101823",5);
   c.save();c.beginPath();c.rect(100,250,880,760);c.clip();
-  p.gate(c,abs,-40,o);
+  p.gate(c,abs,-40,{...o,quiet:o.quiet??o.lonely});
   // Glass depth and the indoor tube's faint reflection.
   c.fillStyle="rgba(115,157,179,.035)";c.fillRect(100,250,880,760);
   poly(c,[[210,250],[246,250],[722,1009],[677,1009]],87302,.2);paint(c,"rgba(168,202,228,.025)",null);
@@ -111,7 +113,8 @@ function windowFrame(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
   inkLine(c,[[557,618],[579,628],[579,653]],87431,7,"#a7b0b0",.25);
   poly(c,[[83,1008],[996,1008],[1030,1053],[48,1053]],87432,.5);paint(c,"#6b6d63","#222b31",3);
   inkLine(c,[[76,1038],[1008,1038]],87433,2,"rgba(195,196,166,.3)",.3);
-  // Narrow key rack retains its original wall position.
+  // Narrow key rack retains its original wall position (not in the bare, lonely room).
+  if(o.lonely)return;
   rbox(c,-39,445,115,248,6,87440,.6);paint(c,"#605244",C.ink,3);
   for(let i=0;i<6;i++){
     const x=-21+(i%3)*32,y=468+Math.floor(i/3)*105;
@@ -188,7 +191,7 @@ function desktop(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
   inkLine(c,[[263,1122],[305,1216]],87690,8,"#213344",.2);
   inkLine(c,[[303,1212],[308,1223]],87691,3,"#b8b7a2",.1);
   // Monitor and objects have their own contact shadows.
-  monitor(c,abs,o.cctv??"02:49");
+  if(!o.lonely)monitor(c,abs,o.cctv??"02:49");
   oval(c,931,997,58,11,87700,.4);paint(c,"rgba(7,14,22,.46)",null);
   poly(c,[[917,976],[953,984],[863,1087],[802,1075]],87701,.4);paint(c,"rgba(7,14,22,.13)",null);
   // Retain the shared thermos, adding the handle, rim wear and printed petals.
@@ -217,16 +220,45 @@ function desktop(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
   oval(c,607,992,13,13,87764,.25);paint(c,"#3d4948","#9d9e88",2);
   inkLine(c,[[638,941],[681,860]],87765,2.3,"#b2b5ad",.2);
   // A key ring near the edge.
+  if(o.lonely)return;
   oval(c,1007,1162,19,10,87770,.3);paint(c,null,"#b6b5a0",3);
   for(let i=0;i<3;i++){
     inkLine(c,[[1004+i*6,1166],[988+i*16,1217],[997+i*16,1217]],87771+i,5,["#ae9a64","#929c9d","#ae9a64"][i],.2);
   }
 }
 
+/** The lonely grade (lonely: true): the tube light off; cold light off the snow coming in through the glass; the whole
+ *  room pulled down into a quiet, desaturated blue — and the one lamp out in the snow kept warm, the only warm thing. */
+function lonelyLight(c:Ctx,abs:number) {
+  lightShaft(c,[[110,1010],[970,1010],[1130,1300],[-50,1300]],540,1010,540,1300,"150,182,232",.07,26,"booth-snowlight");
+  lightShaft(c,[[810,695],[972,708],[1130,1300],[340,1300]],875,720,720,1320,"255,181,109",.05,24,"booth-window-shaft");
+  glow(c,979,1530,260,"rgba(240,126,56,.06)");
+  motes(c,abs,870,927,93,119,8,87900,"200,205,225",.1,1.6);
+  c.save();
+  c.globalCompositeOperation="multiply";
+  c.fillStyle="rgb(150,166,206)";c.fillRect(-60,-60,W+120,H+120);
+  c.globalCompositeOperation="color";
+  c.globalAlpha=.3;c.fillStyle="#32466e";c.fillRect(-60,-60,W+120,H+120);
+  c.restore();
+  // the lamp out in the snow stays warm
+  c.save();
+  c.beginPath();c.rect(100,250,880,760);c.clip();
+  c.globalCompositeOperation="screen";
+  glow(c,862,492,150,"rgba(255,186,110,.6)");
+  const cone=c.createLinearGradient(0,498,0,1010);
+  cone.addColorStop(0,"rgba(255,176,96,.22)");cone.addColorStop(1,"rgba(255,176,96,0)");
+  c.fillStyle=cone;c.beginPath();c.moveTo(846,498);c.lineTo(878,498);c.lineTo(1010,1010);c.lineTo(700,1010);c.closePath();c.fill();
+  c.restore();
+  const v=c.createRadialGradient(560,980,380,560,980,1250);
+  v.addColorStop(0,"rgba(3,8,18,0)");v.addColorStop(1,"rgba(3,8,18,.48)");
+  c.fillStyle=v;c.fillRect(-60,-60,W+120,H+120);
+}
+
 export function detailedBoothBack(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
-  roomShell(c);
+  roomShell(c,!!o.lonely);
   windowFrame(c,abs,o,p);
   desktop(c,abs,o,p);
+  if(o.lonely){lonelyLight(c,abs);return;}
   // Warm outside light grazes the desk; blue monitor light stays local.
   lightShaft(c,[[810,695],[972,708],[1130,1300],[340,1300]],875,720,720,1320,"255,181,109",.08,24,"booth-window-shaft");
   glow(c,888,1053,385,"rgba(255,175,100,.14)");
