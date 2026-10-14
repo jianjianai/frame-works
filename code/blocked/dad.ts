@@ -67,6 +67,9 @@ const D = {
   irisHi: "#6b5038",
   eyeWhite: "#f5f0e4",
 };
+/** His colours, for close-ups of a part of him drawn outside drawDad (the hand writing in the duty log: the coat's
+ *  sleeve `coat`, the uniform's cuff `uni`, `skin`). */
+export const DAD_COLORS: Readonly<typeof D> = D;
 
 const FACE: Pt[] = [
   [-62, -104], [-106, -70], [-118, -16], [-117, 40], [-108, 86], [-84, 116], [-46, 132], [0, 137],
