@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "src_00346f16",
+      "kind": "file",
+      "src": "films/work-3d80f743/反乌托邦 - 乌托邦P.flac"
+    }
+  ],
+  "tracks": [
+    {
+      "id": "track_ffd21809",
+      "name": "音轨 1",
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "processors": [],
+      "output": "master",
+      "sends": []
+    }
+  ],
+  "clips": [
+    {
+      "id": "clip_5ac3740f",
+      "track": "track_ffd21809",
+      "source": "src_00346f16",
+      "name": "反乌托邦 - 乌托邦P.flac",
+      "start": 0,
+      "duration": 157.961,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 1,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
+    }
+  ],
+  "buses": [],
+  "master": {
+    "gain": 1,
+    "processors": []
+  },
+  "linkedVideo": true
+}
