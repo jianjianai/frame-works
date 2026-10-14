@@ -1,5 +1,6 @@
 /** Detailed dressing for boothBack. Reuses the existing gate, thermos and enamel mug through a small drawing bridge. */
 import { C, Ctx, F, H, Pt, W, blob, fillBg, glow, hash, inkLine, lightShaft, motes, oval, paint, poly, rbox, text, vgrad } from "../draw";
+import { snow } from "./snow";
 type GateOptions={name?:string;led?:string;quiet?:boolean};
 export interface DetailedBoothOptions extends GateOptions { cctv?:string; lonely?:boolean; }
 interface BoothProps {
@@ -68,7 +69,7 @@ function roomShell(c:Ctx,lonely=false) {
   }
   rbox(c,251,1720,539,155,27,87295,.8);paint(c,"#514535",C.ink,5);
   inkLine(c,[[267,1740],[775,1740]],87296,3,"#8e7452",.5);
-  heater(c);
+  if(!lonely)heater(c);
 }
 
 function windowFrame(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
@@ -164,7 +165,8 @@ function monitor(c:Ctx,abs:number,time:string) {
   inkLine(c,[[173,1000],[161,1081],[71,1070],[-12,1046]],87580,4,"#15212a",.4);
 }
 
-function desktop(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
+/** the desk: wood under a sheet of glass */
+function deskBase(c:Ctx) {
   poly(c,[[-60,1040],[1140,1040],[1140,1323],[-60,1323]],87600,.7);paint(c,"#362f2a",C.ink,5);
   poly(c,[[-60,1010],[1140,1010],[1140,1281],[-60,1281]],87601,.7);paint(c,vgrad(c,1010,1290,[[0,"#6e5844"],[1,"#514336"]]),C.ink,5);
   for(let i=0;i<11;i++){
@@ -178,7 +180,9 @@ function desktop(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
   inkLine(c,[[-40,1281],[1130,1281]],87642,6,"#1d2a29",.3);
   inkLine(c,[[-40,1284],[1130,1284]],87643,2,"#799082",.3);
   for(let i=0;i<13;i++){const x=hash(i+55)*1060,y=1090+hash(i+22)*160;inkLine(c,[[x,y],[x+9,y-2]],87645+i,1,"rgba(193,191,159,.12)",.2);}
-  // Open duty book. Neutral work details keep the identity reveal for the later shot.
+}
+/** the open duty book and its pen. Neutral work details keep the identity reveal for the later shot. */
+function dutyBook(c:Ctx) {
   poly(c,[[43,1100],[280,1081],[337,1197],[91,1225]],87665,.4);paint(c,"#302e2b",C.ink,2.5);
   poly(c,[[46,1097],[159,1084],[206,1200],[91,1219]],87666,.4);paint(c,"#c3bda5","#574d3e",2);
   poly(c,[[159,1084],[279,1079],[328,1192],[206,1200]],87667,.4);paint(c,"#d1c5a9","#574d3e",2);
@@ -190,11 +194,11 @@ function desktop(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
   }
   inkLine(c,[[263,1122],[305,1216]],87690,8,"#213344",.2);
   inkLine(c,[[303,1212],[308,1223]],87691,3,"#b8b7a2",.1);
-  // Monitor and objects have their own contact shadows.
-  if(!o.lonely)monitor(c,abs,o.cctv??"02:49");
+}
+/** the red thermos with its handle, rim wear and printed petals, and its shadow (stands at 930, 995) */
+function thermosSet(c:Ctx,p:BoothProps) {
   oval(c,931,997,58,11,87700,.4);paint(c,"rgba(7,14,22,.46)",null);
   poly(c,[[917,976],[953,984],[863,1087],[802,1075]],87701,.4);paint(c,"rgba(7,14,22,.13)",null);
-  // Retain the shared thermos, adding the handle, rim wear and printed petals.
   blob(c,[[966,808],[1000,812],[1008,909],[971,925]],87702,.6);paint(c,null,"#352e28",8);
   p.thermos(c,930,900,.95,6140);
   inkLine(c,[[910,771],[950,771]],87703,2,"#c3856a",.2);
@@ -205,13 +209,18 @@ function desktop(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
     inkLine(c,[[x,y+13],[x+6,y+23]],87735+i,1.7,"#7f8c5e",.2);
   }
   for(const y of [853,914,977])inkLine(c,[[951,y],[955,y+6]],87740+y,1.5,"#c58c72",.2);
+}
+/** the enamel mug of tea, steaming, and its shadow (stands at 880, 1105) */
+function mugSet(c:Ctx,abs:number,p:BoothProps) {
   oval(c,879,1162,63,15,87750,.5);paint(c,"rgba(6,16,23,.34)",null);
   p.mug(c,880,1105,.78,abs,6150);
   oval(c,880,1061,37,8,87751,.2);paint(c,"#593d27","#a45342",2.5);
   oval(c,880,1062,29,5,87752,.15);paint(c,"#72603d",null);
   inkLine(c,[[853,1060],[873,1057],[901,1060]],87753,1.6,"#dad2b3",.1);
   inkLine(c,[[850,1092],[851,1128]],87754,2,"rgba(243,220,176,.4)",.2);
-  // Radio speaker holes, dial, antenna and a worn edge.
+}
+/** the old radio: speaker holes, dial, antenna and a worn edge (sits at 493–650, 940–1017) */
+function radioSet(c:Ctx) {
   rbox(c,493,940,157,77,9,87760,.5);paint(c,"#737568","#252d30",3.5);
   for(let x=506;x<564;x+=7)for(let y=955;y<1006;y+=7){c.fillStyle="#384343";c.fillRect(x,y,2,2);}
   rbox(c,574,953,60,17,2,87761,.2);paint(c,"#39423c","#adb099",1.2);
@@ -219,46 +228,136 @@ function desktop(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
   inkLine(c,[[612,955],[612,968]],87763,1.5,"#ca8a62",.15);
   oval(c,607,992,13,13,87764,.25);paint(c,"#3d4948","#9d9e88",2);
   inkLine(c,[[638,941],[681,860]],87765,2.3,"#b2b5ad",.2);
+}
+/** draw `f` moved by (dx, dy) */
+function at(c:Ctx,dx:number,dy:number,f:()=>void) {c.save();c.translate(dx,dy);f();c.restore();}
+
+function desktop(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
+  deskBase(c);
+  dutyBook(c);
+  // Monitor and objects have their own contact shadows.
+  monitor(c,abs,o.cctv??"02:49");
+  thermosSet(c,p);
+  mugSet(c,abs,p);
+  radioSet(c);
   // A key ring near the edge.
-  if(o.lonely)return;
   oval(c,1007,1162,19,10,87770,.3);paint(c,null,"#b6b5a0",3);
   for(let i=0;i<3;i++){
     inkLine(c,[[1004+i*6,1166],[988+i*16,1217],[997+i*16,1217]],87771+i,5,["#ae9a64","#929c9d","#ae9a64"][i],.2);
   }
 }
 
-/** The lonely grade (lonely: true): the tube light off; cold light off the snow coming in through the glass; the whole
- *  room pulled down into a quiet, desaturated blue — and the one lamp out in the snow kept warm, the only warm thing. */
-function lonelyLight(c:Ctx,abs:number) {
-  lightShaft(c,[[110,1010],[970,1010],[1130,1300],[-50,1300]],540,1010,540,1300,"150,182,232",.07,26,"booth-snowlight");
-  lightShaft(c,[[810,695],[972,708],[1130,1300],[340,1300]],875,720,720,1320,"255,181,109",.05,24,"booth-window-shaft");
-  glow(c,979,1530,260,"rgba(240,126,56,.06)");
-  motes(c,abs,870,927,93,119,8,87900,"200,205,225",.1,1.6);
+// ---------------------------------------------------------------- lonely (用户：周围全是冷色，只有女儿的照片是暖色；物品摆放、光影、月光是关键)
+/** where the lonely layout puts things: the radio at the back on the left (its antenna up against the window), the
+ *  duty book open in front of it, the thermos and the mug together on the right */
+const L_RADIO:[number,number]=[-433,6],L_BOOK:[number,number]=[36,0],L_THERMOS:[number,number]=[-50,80],L_MUG:[number,number]=[105,45];
+/** the moon, high on the left of the window */
+const MOON:[number,number]=[300,400];
+
+/** Outside the window on a moonlit snow night: a few stars, the moon and its halo, low sheds and a chimney along the
+ *  horizon (one window still lit, cold), the snowy yard with the gate's two pillars and the low sliding gate, their
+ *  shadows thrown long across the snow away from the moon, one line of footprints to the booth, a lamp post whose
+ *  light is small and cold, snow falling. Nothing warm out there. */
+function lonelyGate(c:Ctx,abs:number) {
+  c.fillStyle=vgrad(c,250,880,[[0,"#080d20"],[.65,"#16203e"],[1,"#26324f"]]);c.fillRect(80,240,920,790);
+  for(let i=0;i<30;i++){
+    const x=110+hash(i*3.7)*860,y=262+hash(i*5.1)*430,r=hash(i*9.1)>.85?3:2;
+    if(Math.hypot(x-MOON[0],y-MOON[1])<90)continue;
+    c.fillStyle=`rgba(225,232,255,${(.2+.5*hash(i*2.3)).toFixed(2)})`;c.fillRect(x,y,r,r);
+  }
+  glow(c,MOON[0],MOON[1],260,"rgba(150,172,230,.2)");
+  oval(c,MOON[0],MOON[1],44,44,88001,.25);paint(c,"#e9ecf4",null);
+  for(const [dx,dy,r] of [[-12,-9,10],[13,11,8],[5,-19,5],[-5,17,6]]){oval(c,MOON[0]+dx,MOON[1]+dy,r,r,88010+r+dx,.2);paint(c,"rgba(178,184,204,.55)",null);}
+  // the sheds along the horizon, a chimney and its smoke, one window still lit
+  c.fillStyle="#121931";
+  c.beginPath();c.moveTo(80,885);c.lineTo(80,822);c.lineTo(232,822);c.lineTo(232,792);c.lineTo(420,792);c.lineTo(420,836);
+  c.lineTo(600,836);c.lineTo(640,804);c.lineTo(760,804);c.lineTo(760,832);c.lineTo(1000,832);c.lineTo(1000,885);c.closePath();c.fill();
+  for(let k=0;k<5;k++){poly(c,[[430+k*34,836],[447+k*34,816],[464+k*34,836]],88015+k,.2);paint(c,"#121931",null);}
+  poly(c,[[668,600],[692,600],[700,806],[660,806]],88020,.5);paint(c,"#111830","#0a0e1c",2);
+  for(let k=0;k<3;k++){
+    const t=(abs*.06+k/3)%1;
+    oval(c,680+t*90,592-t*120,22+t*40,14+t*24,88021+k,1.5);paint(c,`rgba(150,160,190,${(.14*(1-t)).toFixed(3)})`,null);
+  }
+  c.fillStyle="rgba(190,208,250,.5)";c.fillRect(318,806,16,11);
+  // the snowy yard
+  c.fillStyle=vgrad(c,870,1012,[[0,"#3b4669"],[1,"#5a6890"]]);c.fillRect(80,872,920,150);
+  // the gate's pillars with snow on their caps, the low sliding gate between them, their long moon shadows
+  for(const px of [250,610]){
+    poly(c,[[px+40,890],[px+40,900],[px+170,1012],[px+110,1012]],88060+px,.4);paint(c,"rgba(18,24,46,.4)",null);
+    rbox(c,px,800,40,92,4,88030+px,.5);paint(c,"#2b3149","#0d1222",3);
+    blob(c,[[px-6,802],[px+20,792],[px+46,802],[px+44,808],[px-4,808]],88032+px,.4);paint(c,"#dfe5f2",null);
+  }
+  poly(c,[[290,880],[610,880],[700,960],[380,960]],88045,.3);paint(c,"rgba(18,24,46,.22)",null);
+  inkLine(c,[[290,872],[610,872]],88040,3,"#8b93ab",.3);
+  for(let k=0;k<12;k++){const gx=292+k*26;inkLine(c,[[gx,872],[gx+13,889],[gx+26,872]],88041+k,2,"#6f7894",.2);}
+  // one line of footprints across the yard to the booth
+  for(let k=0;k<7;k++){oval(c,500+k*30+(k%2)*10,912+k*15,6,9,88080+k,.3,.3);paint(c,"rgba(30,38,64,.42)",null);}
+  // the lamp post on the right: its light small and cold
+  inkLine(c,[[820,1012],[820,562]],88070,9,"#151b33",.3);
+  inkLine(c,[[820,568],[786,556]],88071,6,"#151b33",.2);
+  blob(c,[[770,552],[800,552],[802,563],[768,563]],88072,.3);paint(c,"#dfe8ff","#0d1222",2);
+  snow(c,abs,{n:110,seed:41,speed:80,size:3,alpha:.8,drift:24});
+}
+
+/** the desk in the lonely booth: the same things, laid out to balance round him and the phone */
+function lonelyDesk(c:Ctx,abs:number,p:BoothProps) {
+  deskBase(c);
+  at(c,L_RADIO[0],L_RADIO[1],()=>radioSet(c));
+  at(c,L_BOOK[0],L_BOOK[1],()=>dutyBook(c));
+  at(c,L_THERMOS[0],L_THERMOS[1],()=>thermosSet(c,p));
+  at(c,L_MUG[0],L_MUG[1],()=>mugSet(c,abs,p));
+}
+
+/** The lonely grade: the room pulled down into a quiet, desaturated blue; then the moonlight added back as light — the
+ *  moon and its halo, the snow's sheen, a cold little lamp, moonlight lying across the desk by the window with the
+ *  window bars' shadows in it, a cold edge on each thing on the desk on the side facing the window. */
+function lonelyLight(c:Ctx) {
   c.save();
   c.globalCompositeOperation="multiply";
   c.fillStyle="rgb(150,166,206)";c.fillRect(-60,-60,W+120,H+120);
   c.globalCompositeOperation="color";
   c.globalAlpha=.3;c.fillStyle="#32466e";c.fillRect(-60,-60,W+120,H+120);
   c.restore();
-  // the lamp out in the snow stays warm
   c.save();
-  c.beginPath();c.rect(100,250,880,760);c.clip();
   c.globalCompositeOperation="screen";
-  glow(c,862,492,150,"rgba(255,186,110,.6)");
-  const cone=c.createLinearGradient(0,498,0,1010);
-  cone.addColorStop(0,"rgba(255,176,96,.22)");cone.addColorStop(1,"rgba(255,176,96,0)");
-  c.fillStyle=cone;c.beginPath();c.moveTo(846,498);c.lineTo(878,498);c.lineTo(1010,1010);c.lineTo(700,1010);c.closePath();c.fill();
+  c.save();c.beginPath();c.rect(100,250,880,760);c.clip();
+  glow(c,MOON[0],MOON[1],330,"rgba(140,165,230,.26)");
+  glow(c,MOON[0],MOON[1],95,"rgba(230,236,255,.5)");
+  c.beginPath();c.arc(MOON[0],MOON[1],44,0,Math.PI*2);c.fillStyle="rgba(232,237,250,.8)";c.fill();
+  glow(c,785,560,60,"rgba(220,232,255,.5)");
+  glow(c,790,1000,230,"rgba(190,205,250,.09)");
+  c.fillStyle="rgba(120,140,200,.12)";c.fillRect(100,872,880,140);
   c.restore();
+  const band=c.createLinearGradient(0,1012,0,1281);
+  band.addColorStop(0,"rgba(150,176,240,.28)");band.addColorStop(1,"rgba(150,176,240,0)");
+  c.fillStyle=band;c.beginPath();c.moveTo(100,1012);c.lineTo(980,1012);c.lineTo(1080,1281);c.lineTo(190,1281);c.closePath();c.fill();
+  const [rx,ry]=L_RADIO,[tx,ty]=L_THERMOS,[mx,my]=L_MUG;
+  const rims:[number,number][][]=[
+    [[496+rx,942+ry],[646+rx,942+ry]],[[640+rx,940+ry],[683+rx,859+ry]],
+    [[893+tx,790+ty],[893+tx,985+ty]],[[906+tx,758+ty],[950+tx,758+ty]],
+    [[842+mx,1062+my],[842+mx,1148+my]],[[846+mx,1059+my],[912+mx,1059+my]],
+    [[82,1098],[194,1085]],[[196,1084],[314,1080]],
+  ];
+  rims.forEach((pts,i)=>inkLine(c,pts,88100+i,3.5,"rgba(200,218,255,.55)",.2));
+  c.restore();
+  // the window bars' shadows in the moonlight on the desk
+  for(const x of [95,534,982]){c.fillStyle="rgba(8,12,24,.3)";c.beginPath();c.moveTo(x-8,1012);c.lineTo(x+8,1012);c.lineTo(x+98,1281);c.lineTo(x+80,1281);c.closePath();c.fill();}
   const v=c.createRadialGradient(560,980,380,560,980,1250);
-  v.addColorStop(0,"rgba(3,8,18,0)");v.addColorStop(1,"rgba(3,8,18,.48)");
+  v.addColorStop(0,"rgba(3,8,18,0)");v.addColorStop(1,"rgba(3,8,18,.46)");
   c.fillStyle=v;c.fillRect(-60,-60,W+120,H+120);
 }
 
 export function detailedBoothBack(c:Ctx,abs:number,o:DetailedBoothOptions,p:BoothProps) {
-  roomShell(c,!!o.lonely);
+  if(o.lonely){
+    roomShell(c,true);
+    windowFrame(c,abs,o,{...p,gate:(k,t)=>lonelyGate(k,t)});
+    lonelyDesk(c,abs,p);
+    lonelyLight(c);
+    return;
+  }
+  roomShell(c);
   windowFrame(c,abs,o,p);
   desktop(c,abs,o,p);
-  if(o.lonely){lonelyLight(c,abs);return;}
   // Warm outside light grazes the desk; blue monitor light stays local.
   lightShaft(c,[[810,695],[972,708],[1130,1300],[340,1300]],875,720,720,1320,"255,181,109",.08,24,"booth-window-shaft");
   glow(c,888,1053,385,"rgba(255,175,100,.14)");
