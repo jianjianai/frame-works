@@ -37,7 +37,8 @@ function crop(c: Ctx, scene: (k: Ctx) => void, [sx, sy, sw, sh]: [number, number
 /** The four CCTV pictures over the monitor of a detailed boothBack (same transform as the booth). */
 export function cctvFeeds(c: Ctx, abs: number, o: CctvOptions = {}) {
   const labels = o.labels ?? ["01 大门", "02 厂区", "03 门卫室", "04 道路"];
-  const guard = o.guard ?? ((k: Ctx) => drawDad(k, 510, 1170, 1.12, { view: "back", coat: true }));
+  // backDetails: in grey the back of a plain head reads as a blank face; the hair's texture keeps it a back
+  const guard = o.guard ?? ((k: Ctx) => drawDad(k, 510, 1170, 1.12, { view: "back", coat: true, backDetails: true }));
   // the screen between the feeds (covers the booth's own simple pictures and their time)
   c.fillStyle = "#0d1517";
   c.fillRect(CCTV_SCREEN.x, CCTV_SCREEN.y, CCTV_SCREEN.w, CCTV_SCREEN.h);
@@ -108,7 +109,7 @@ export const resources = defineResources({
     description:
       "门卫室桌上监控屏的四路画面：01 大门、02 厂区、03 门卫室、04 道路，深夜下雪、空无一人，只有门卫室那一路里坐着他（guard 自己画，默认是背影），道路那一路的雪地上只有一串脚印。黑白偏冷绿、扫描线、闪烁噪点、REC 和时间。画在 boothBack({ detailed: true }) 之后、同一套坐标里；表现他一个人守夜时用 camera 推到屏上（CCTV_SCREEN、feedRect(2) 是门卫室那一路）。",
     tags: ["监控", "门卫室", "保安", "孤独", "夜班", "屏幕", "雪夜"],
-    usage: "boothBack(ctx, abs, { detailed: true }); cctvFeeds(ctx, abs, { time: \"02:49:52\", guard: (k) => drawDad(k, 510, 1170, 1.12, { view: \"back\", coat: true }) })",
+    usage: "boothBack(ctx, abs, { detailed: true }); cctvFeeds(ctx, abs, { time: \"02:49:52\", guard: (k) => drawDad(k, 510, 1170, 1.12, { view: \"back\", coat: true, backDetails: true }) })",
     params: cctvOptions,
     preview: {
       width: 1080,
