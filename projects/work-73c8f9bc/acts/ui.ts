@@ -10,7 +10,6 @@ import { drawPerson } from "@materials/s0rrow/code/people";
 import { drawDad } from "@materials/s0rrow/code/blocked/dad";
 import { socialButton, socialHomeBar, socialIcon } from "@materials/s0rrow/code/social";
 import { cafeCouplePhoto } from "@materials/s0rrow/code/couple-photo";
-import { emph, enter, fade } from "./ease";
 
 export { SH, SW };
 
@@ -164,11 +163,10 @@ export function pulseBox(c: Ctx, x: number, y: number, w: number, h: number, k: 
   for (let i = 0; i < 2; i++) {
     const u = clamp(k * 1.6 - i * 0.45);
     if (u <= 0 || u >= 1) continue;
-    // each ring springs out and slows as it grows, fading softly (no constant-speed expansion)
-    c.globalAlpha = 0.9 * Math.pow(1 - u, 1.6) * fade(u / 0.1);
+    c.globalAlpha = 0.9 * (1 - u);
     c.strokeStyle = "#ffd84a";
     c.lineWidth = 6;
-    const g = 10 + enter(u) * 26;
+    const g = 10 + u * 26;
     rr(c, x - g, y - g, w + g * 2, h + g * 2, 18 + g);
     c.stroke();
   }
@@ -197,7 +195,7 @@ export function crackedGlass(c: Ctx) {
 /** Slide between two app pages: the new one comes in from the right, the old one moves 30% left and dims. */
 export function slide(c: Ctx, k: number, drawOld: (c: Ctx) => void, drawNew: (c: Ctx) => void) {
   const u = clamp(k);
-  const e = emph(u);
+  const e = 1 - Math.pow(1 - u, 3);
   if (u < 1) {
     c.save();
     c.translate(-SW * 0.3 * e, 0);
@@ -619,21 +617,28 @@ export function vidProfile(c: Ctx, o: { name: string; pulse?: number; time: stri
     say(c, l, x + measure(c, n, 44, F.ui, 700) + 10, 454, 28, { color: GREY });
   });
   pulseBox(c, 228, 420, 132, 64, o.pulse ?? 0);
-  // the 「关注 / 私信」 buttons cross-fade into 「已拉黑」 (they used to swap in one frame)
-  const blocked = fade(o.blocked ?? 0);
-  if (blocked < 1) {
+  // `blocked` 0 → 1 flips the button row over: 「关注 / 私信」 fold shut about their middle, 「已拉黑」 unfolds
+  const blocked = clamp(o.blocked ?? 0);
+  const fold = (k: number, draw: () => void) => {
     c.save();
-    c.globalAlpha *= 1 - blocked;
-    socialButton(c, 36, 512, 340, 70, "关注", { fill: "#fe2c55", icon: "plus", size: 29 });
-    socialButton(c, 392, 512, 172, 70, "私信", { size: 27 });
+    c.translate(0, 547);
+    c.scale(1, Math.max(0.001, k));
+    c.translate(0, -547);
+    draw();
     c.restore();
-  }
-  if (blocked > 0) {
+  };
+  if (blocked >= 0.5) {
+    const k = 1 - Math.pow(1 - (blocked - 0.5) * 2, 2);
+    fold(k, () => socialButton(c, 36, 512, 528, 70, "已拉黑", { icon: "shield", fill: "#292a34", color: "#b7b8c3", size: 29 }));
     c.save();
-    c.globalAlpha *= blocked;
-    socialButton(c, 36, 512, 528, 70, "已拉黑", { icon: "shield", fill: "#292a34", color: "#b7b8c3", size: 29 });
+    c.globalAlpha *= k;
     say(c, "对方无法再评论你的作品", SW / 2, 616, 21, { color: GREY, align: "center" });
     c.restore();
+  } else {
+    fold(1 - Math.pow(blocked * 2, 2), () => {
+      socialButton(c, 36, 512, 340, 70, "关注", { fill: "#fe2c55", icon: "plus", size: 29 });
+      socialButton(c, 392, 512, 172, 70, "私信", { size: 27 });
+    });
   }
   c.fillStyle = VLINE; c.fillRect(0, 648, SW, 1);
   say(c, "作品 0", 145, 691, 28, { weight: 700, align: "center" });
@@ -778,13 +783,11 @@ export function vidBlock(c: Ctx, o: { sheet: number; confirm: number; done: numb
     say(c, "取消", SW / 2, y + 585, 34, { weight: 700, align: "center" });
     socialHomeBar(c); c.restore();
   }
-  // the dialog fades and shrinks away once she has tapped 「拉黑」 (it used to vanish in a single frame)
-  const gone = clamp(o.done * 6);
-  if (o.confirm > 0 && gone < 1) {
-    const k = enter(o.confirm);
-    c.save(); c.globalAlpha *= k * (1 - gone);
+  if (o.confirm > 0 && o.done <= 0) {
+    const k = clamp(o.confirm);
+    c.save(); c.globalAlpha *= k;
     c.fillStyle = "rgba(0,0,0,0.5)"; c.fillRect(0, 0, SW, SH);
-    c.translate(SW / 2, 620); c.scale(0.9 + 0.1 * k - 0.05 * gone, 0.9 + 0.1 * k - 0.05 * gone);
+    c.translate(SW / 2, 620); c.scale(0.9 + 0.1 * k, 0.9 + 0.1 * k);
     c.fillStyle = "#2c2d36"; rr(c, -250, -156, 500, 312, 24); c.fill();
     c.strokeStyle = "rgba(255,255,255,0.09)"; c.lineWidth = 1; c.stroke();
     say(c, "确定拉黑对方吗？", 0, -78, 35, { weight: 700, align: "center" });
@@ -796,9 +799,7 @@ export function vidBlock(c: Ctx, o: { sheet: number; confirm: number; done: numb
   }
   if (o.done > 0) {
     const k = clamp(o.done);
-    const inK = fade(k / 0.25);
-    c.save(); c.globalAlpha *= inK * (1 - fade((k - 0.8) / 0.2));
-    c.translate(0, 12 * (1 - enter(k / 0.25)));
+    c.save(); c.globalAlpha *= Math.min(1, k * 3) * (1 - clamp((k - 0.8) / 0.2));
     c.fillStyle = "rgba(61,63,74,0.97)"; rr(c, SW / 2 - 130, 596, 260, 80, 18); c.fill();
     socialIcon(c, "check", 225, 636, 29, "#a2e7c1");
     say(c, "已拉黑", 326, 636, 32, { weight: 700, align: "center" });
@@ -931,11 +932,10 @@ export function wxPermission(c: Ctx, on: number, o: { time: string; press?: numb
 }
 export const TOGGLE_AT: [number, number] = [SW - 120, 470];
 function toggle(c: Ctx, x: number, y: number, on: number, press: number) {
-  const k = enter(on);
+  const k = clamp(on);
   c.save();
-  // the track's colour blends from grey to green as the knob slides (no snap at the halfway point)
-  const mixc = (a: number, b: number) => Math.round(a + (b - a) * k);
-  c.fillStyle = `rgb(${mixc(0xe2, 0x07)},${mixc(0xe2, 0xc1)},${mixc(0xe2, 0x60)})`;
+  const col = k > 0.5 ? "#07c160" : "#e2e2e2";
+  c.fillStyle = col;
   rr(c, x - 50, y - 30, 100, 60, 30);
   c.fill();
   c.fillStyle = "#fff";
@@ -969,9 +969,7 @@ export function wxChat(c: Ctx, o: { time: string; title: string; mine: "her" | "
     const bw = tw + 48,
       bh = fs + 44;
     c.save();
-    c.globalAlpha *= fade(pop / 0.5);
-    // a new bubble rises into place and settles
-    c.translate(0, 22 * (1 - enter(pop)));
+    c.globalAlpha *= pop;
     if (it.me) {
       const x = SW - 110 - bw;
       if (o.mine === "her") herAvatar(c, SW - 60, y + bh / 2, 34);

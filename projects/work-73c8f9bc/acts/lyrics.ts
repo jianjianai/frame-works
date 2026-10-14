@@ -3,7 +3,6 @@
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase } from "@frame/engine/math";
 import { C, Ctx, F, W, backOut, easeOut, measure, rr, text } from "@materials/s0rrow/code/draw";
-import { emph, fade } from "./ease";
 import { createLyricsScene, lyricLines } from "@materials/s0rrow/code/lyrics";
 import { LYRIC_WORDS } from "./krc";
 import { CUT1, CUT2, END, at, songTime } from "./timeline";
@@ -34,29 +33,23 @@ const style = (i: number) => ({ bridge: i >= 8 && i <= 14, big: i === 12, outro:
 /** 开头钩子：首帧完整出现，表情特写（第 8 拍）开始时缩成顶部的胶囊，到第一遍副歌唱完消失。 */
 function hook(c: Ctx, _song: number, t: number) {
   const k0 = at(8);
-  // the hook really shrinks up into the pill (it used to just fade out while the pill faded in)
-  const shrink = emph(phase(t, k0, k0 + 0.4));
+  const shrink = easeOut(phase(t, k0, k0 + 0.45));
   if (shrink < 1) {
-    const k = (1.08 - 0.08 * backOut(phase(t, 0, 0.3))) * (1 - 0.62 * shrink);
+    const k = 1.08 - 0.08 * backOut(phase(t, 0, 0.3));
     c.save();
-    c.globalAlpha = 1 - fade((shrink - 0.35) / 0.65);
-    c.translate(W / 2, 262 + (216 - 262) * shrink);
+    c.globalAlpha = 1 - shrink;
+    c.translate(W / 2, 262);
     c.scale(k, k);
     text(c, "一个没头像的陌生号", 0, -58, { size: 82, font: F.cn, fill: "#fff", stroke: C.ink, lw: 14 });
     text(c, "盯了我三年", 0, 58, { size: 92, font: F.cn, fill: "#ffd166", stroke: C.ink, lw: 14 });
     c.restore();
   }
-  const out = fade(phase(t, at(31), at(31) + 0.3));
+  const out = phase(t, at(31), at(31) + 0.3);
   if (shrink > 0 && out < 1) {
     const label = "那个没头像的号";
     const w = measure(c, label, 38, F.cn) + 70;
     c.save();
-    // the pill grows out of the shrinking hook, and later lifts away as it fades
-    const pk = fade((shrink - 0.3) / 0.7);
-    c.globalAlpha = pk * (1 - out);
-    c.translate(W / 2, 214 - 14 * out);
-    c.scale(0.7 + 0.3 * pk, 0.7 + 0.3 * pk);
-    c.translate(-W / 2, -214);
+    c.globalAlpha = shrink * (1 - out);
     c.fillStyle = "rgba(12,12,18,0.62)";
     rr(c, W / 2 - w / 2, 214 - 36, w, 72, 36);
     c.fill();
@@ -109,15 +102,14 @@ function guides(c: Ctx, _song: number, t: number) {
   // the double tap in the middle
   const taps = [0.25, 0.42];
   for (const t0 of taps) {
-    const p = phase(u, t0, t0 + 0.45);
+    const p = phase(u, t0, t0 + 0.5);
     if (p <= 0 || p >= 1) continue;
     c.save();
-    // a tap ripple: bursts out and slows, fading softly
-    c.globalAlpha = 0.8 * Math.pow(1 - p, 1.5);
+    c.globalAlpha = 0.8 * (1 - p);
     c.strokeStyle = "#fff";
     c.lineWidth = 6;
     c.beginPath();
-    c.arc(W / 2, 700, 40 + 120 * (1 - Math.pow(1 - p, 3)), 0, Math.PI * 2);
+    c.arc(W / 2, 700, 40 + 120 * p, 0, Math.PI * 2);
     c.stroke();
     c.restore();
   }

@@ -181,17 +181,22 @@ export function duvetClose(c: Ctx, abs: number, top: number, o: { grip?: number;
   void abs;
 }
 
+/** the out-of-focus room behind herFace (draw it before the shot's camera push to keep it still while she moves in) */
+export function herFaceBg(c: Ctx, abs: number, lamp: number) {
+  filtered(c, `blur(7px) brightness(${(0.9 - 0.12 * (1 - lamp)).toFixed(2)})`, (b) => {
+    camera(b, 540, 620, 1.9, 0, 0, 120);
+    herRoomSnow(b, abs, { lamp });
+  }, "herFaceBg");
+}
+
 /** Her face over the duvet, up close, at night: the blurred room behind (fairy lights, the snowy window), her lit from
  *  below by the phone (cold) with a cold rim from the window; `lamp` 1 = bedside lamp on (warm, lighter). */
-export function herFace(c: Ctx, abs: number, o: { pose: KidPose; lamp: number; top: number; grip?: number; x?: number; y?: number; s?: number }) {
+export function herFace(c: Ctx, abs: number, o: { pose: KidPose; lamp: number; top: number; grip?: number; x?: number; y?: number; s?: number; bg?: boolean }) {
   const x = o.x ?? 540,
     y = o.y ?? 780,
     s = o.s ?? 1.58;
   const dark = 1 - o.lamp;
-  filtered(c, `blur(7px) brightness(${(0.9 - 0.12 * dark).toFixed(2)})`, (b) => {
-    camera(b, 540, 620, 1.9, 0, 0, 120);
-    herRoomSnow(b, abs, { lamp: o.lamp });
-  }, "herFaceBg");
+  if (o.bg !== false) herFaceBg(c, abs, o.lamp);
   litFigure(c, (k) => herInBed(k, x, y, s, { ...o.pose, arms: "down" }), {
     shade: 0.18 + 0.25 * dark,
     shadeCol: "rgb(20,14,40)",
