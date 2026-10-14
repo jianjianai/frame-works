@@ -26,6 +26,7 @@ export const LAMP = "255,168,86";
 export const gateText = z.object({
   name: z.string().default("红星机械厂").describe("厂门上的厂名牌"),
   led: z.string().default("出入平安").describe("伸缩门上的 LED 小屏"),
+  quiet: z.boolean().default(false).describe("安静的厂门：远处亮着的窗只剩一两扇，厂名牌和 LED 不亮（孤独的夜）"),
 });
 export type GateText = z.input<typeof gateText>;
 export const boothBackOptions = z.object({
@@ -33,6 +34,7 @@ export const boothBackOptions = z.object({
   cctv: z.string().default("02:49").describe("监控屏上的时间"),
   name: z.string().default("红星机械厂").describe("窗外厂门上的厂名牌"),
   led: z.string().default("出入平安").describe("伸缩门上的 LED 小屏"),
+  lonely: z.boolean().default(false).describe("孤独的色调（配合 detailed）：整体冷蓝低饱和、顶灯关着，收掉监控屏、钥匙板、钥匙串和墙上的电线，窗外只剩一盏路灯是暖的。人物用 litFigure 配冷蓝的 shadeCol、路灯一侧的暖色 rim"),
 });
 export type BoothBackOptions = z.input<typeof boothBackOptions>;
 export const boothFrontOptions = z.object({
@@ -99,10 +101,10 @@ export function gateNight(c: Ctx, abs: number, ox = 0, o: GateText = {}) {
   inkLine(c, [[1000, 560], [990, 700]], 6006, 6, "#0f1430");
   inkLine(c, [[1080, 560], [1090, 700]], 6007, 6, "#0f1430");
   for (let i = 0; i < 14; i++) {
-    const lit = hash(i * 2.7) > 0.62;
+    const lit = hash(i * 2.7) > (o.quiet ? 0.9 : 0.62);
     c.fillStyle = lit ? "rgba(255,200,120,0.75)" : "rgba(50,58,90,0.7)";
     c.fillRect(-200 + (i % 7) * 70, 660 + Math.floor(i / 7) * 70, 38, 30);
-    c.fillStyle = hash(i * 4.1) > 0.7 ? "rgba(255,200,120,0.7)" : "rgba(50,58,90,0.6)";
+    c.fillStyle = hash(i * 4.1) > (o.quiet ? 0.93 : 0.7) ? "rgba(255,200,120,0.7)" : "rgba(50,58,90,0.6)";
     c.fillRect(640 + (i % 7) * 80, 620 + Math.floor(i / 7) * 80, 40, 34);
   }
   // the gate: two brick pillars with snow caps, the factory's name board between them
@@ -115,7 +117,7 @@ export function gateNight(c: Ctx, abs: number, ox = 0, o: GateText = {}) {
   }
   rbox(c, 230, 700, 620, 90, 8, 6030, 1);
   paint(c, "#1d2440", C.ink, 5);
-  text(c, o.name ?? "红星机械厂", 540, 746, { size: 58, font: F.ui, weight: 700, fill: "#d9443a" });
+  text(c, o.name ?? "红星机械厂", 540, 746, { size: 58, font: F.ui, weight: 700, fill: o.quiet ? "rgba(150,70,66,0.5)" : "#d9443a" });
   blob(c, [[220, 702], [540, 684], [860, 702], [852, 712], [228, 712]], 6031, 1);
   paint(c, "#eef1f7", null);
   // the retractable gate across the drive, its little LED board
@@ -126,7 +128,7 @@ export function gateNight(c: Ctx, abs: number, ox = 0, o: GateText = {}) {
   inkLine(c, [[260, 1058], [836, 1058]], 6060, 5, "#c4cbd8");
   rbox(c, 780, 1020, 70, 40, 4, 6061, 0.6);
   paint(c, "#111", C.ink, 3);
-  text(c, o.led ?? "出入平安", 815, 1040, { size: 13, font: F.ui, weight: 700, fill: "#ff5b4a" });
+  if (!o.quiet) text(c, o.led ?? "出入平安", 815, 1040, { size: 13, font: F.ui, weight: 700, fill: "#ff5b4a" });
   // the lamp post and its cone of light
   c.fillStyle = "#1b2036";
   c.fillRect(960, 500, 16, 700);
@@ -580,7 +582,7 @@ export const resources = defineResources({
     tags: ["门卫室", "岗亭", "保安", "值班", "室内", "窗", "雪夜", "监控", "搪瓷杯", "暖水瓶"],
     usage: 'boothBack(ctx, abs, { cctv, name, led }); drawDad(ctx, 510, 1170, 1.12, { view: "back", coat: true })',
     params: boothBackOptions,
-    presets: { 精细值班岗亭: { detailed: true } },
+    presets: { 精细值班岗亭: { detailed: true }, 孤独的值班岗亭: { detailed: true, lonely: true } },
     preview: {
       width: 1080,
       height: 1920,
