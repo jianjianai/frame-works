@@ -62,6 +62,7 @@ export const deskOptions = z.object({
   photos: z.boolean().default(true).describe("玻璃板下压着女儿从小到大的照片"),
   logWrite: z.number().min(0).max(1).optional().describe("最后一行记录正在写（0..1）：时间已经写好，后面的字从左到右写出来；不给就是写完的。笔尖位置 logPen(ctx, o)（仅精细版）"),
   pen: z.boolean().default(true).describe("桌上的钢笔；false 时笔在他手里，用 heldPen(ctx, 笔尖, 笔杆方向) 画（仅精细版）"),
+  lonely: z.boolean().default(false).describe("孤独的色调（配合 detailed，和 boothBack 的 lonely 一套）：冷蓝低饱和，月光从左上方的窗户斜着铺两道、中间是窗框的影子，收掉钥匙；只有玻璃板下她的照片保持暖色"),
 });
 export type DeskOptions = z.input<typeof deskOptions>;
 export const boothOutsideOptions = z.object({
