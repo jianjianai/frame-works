@@ -44,11 +44,13 @@ export const boothFrontOptions = z.object({
   month: z.string().default("一月").describe("挂历的月份"),
   day: z.string().default("14").describe("挂历的日子"),
   drawing: z.string().default("爸爸").describe("墙上蜡笔画写的字"),
+  lonely: z.boolean().default(false).describe("孤独的色调（配合 detailed，和 boothBack 的 lonely 同一套）：整体冷蓝低饱和、取暖器关着，侧窗里一轮月亮、路灯冷白，月光斜着铺在墙上；只有女儿的蜡笔画还是暖的。人物用 litFigure：冷蓝 shadeCol、手机在下巴下的暖光、窗一侧的冷 rim"),
 });
 export type BoothFrontOptions = z.input<typeof boothFrontOptions>;
 export const frontDeskOptions = z.object({
   y: z.number().min(1100).max(1800).default(1495).describe("前景桌面后沿，放在人物腰部之前遮住半身下沿"),
   phoneLight: z.number().min(0).max(1).default(1).describe("桌面微弱的手机冷光"),
+  lonely: z.boolean().default(false).describe("孤独的色调：桌面压成冷蓝，只留手机在玻璃上的一小片暖光（屏幕上是她）"),
 });
 export type FrontDeskOptions = z.input<typeof frontDeskOptions>;
 export const deskOptions = z.object({
