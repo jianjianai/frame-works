@@ -38,6 +38,9 @@ function crop(c: Ctx, scene: (k: Ctx) => void, [sx, sy, sw, sh]: [number, number
 export function cctvFeeds(c: Ctx, abs: number, o: CctvOptions = {}) {
   const labels = o.labels ?? ["01 大门", "02 厂区", "03 门卫室", "04 道路"];
   const guard = o.guard ?? ((k: Ctx) => drawDad(k, 510, 1170, 1.12, { view: "back", coat: true }));
+  // the screen between the feeds (covers the booth's own simple pictures and their time)
+  c.fillStyle = "#0d1517";
+  c.fillRect(CCTV_SCREEN.x, CCTV_SCREEN.y, CCTV_SCREEN.w, CCTV_SCREEN.h);
   for (let i = 0; i < 4; i++) {
     const r = feedRect(i);
     c.save();
@@ -48,12 +51,12 @@ export function cctvFeeds(c: Ctx, abs: number, o: CctvOptions = {}) {
     c.fillStyle = "#26353a";
     c.fillRect(0, 0, r.w, r.h);
     if (i === 0) crop(c, (k) => gateNight(k, abs, 0), [0, 430, 1080, 758]);
-    else if (i === 1) crop(c, (k) => gateNight(k, abs, -170), [0, 40, 1080, 758]);
+    else if (i === 1) crop(c, (k) => gateNight(k, abs, -170), [60, -30, 975, 684]);
     else if (i === 2)
       crop(c, (k) => {
         boothBack(k, abs);
         guard(k);
-      }, [0, 600, 1080, 758]);
+      }, [-40, 640, 1160, 812]);
     else crop(c, (k) => gateNight(k, abs, 130), [0, 1080, 1080, 758]);
     // the CCTV look: no colour, a cold green-grey cast, lifted blacks
     c.globalCompositeOperation = "saturation";
