@@ -4,13 +4,13 @@
     {
       "id": "src_00346f16",
       "kind": "file",
-      "src": "films/work-3d80f743/反乌托邦 - 乌托邦P.flac"
+      "src": "films/work-3d80f743/反乌托邦-乌托邦P.flac"
     }
   ],
   "tracks": [
     {
       "id": "track_ffd21809",
-      "name": "音轨 1",
+      "name": "配乐",
       "gain": 1,
       "pan": 0,
       "muted": false,
@@ -24,9 +24,9 @@
       "id": "clip_5ac3740f",
       "track": "track_ffd21809",
       "source": "src_00346f16",
-      "name": "反乌托邦 - 乌托邦P.flac",
+      "name": "反乌托邦（整首）",
       "start": 0,
-      "duration": 157.961,
+      "duration": 152,
       "offset": 0,
       "phase": 0,
       "rate": 1,

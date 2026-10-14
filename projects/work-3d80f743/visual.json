@@ -11,7 +11,12 @@
         "engine": "canvas"
       },
       "start": 0,
-      "duration": 120
+      "duration": 152,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     }
   ]
 }
