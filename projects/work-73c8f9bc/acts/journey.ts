@@ -2,7 +2,9 @@
 // 一路拉出她的窗户（整栋楼只有几扇亮着）→ 甩上夜空 → 低空掠过城市灯海、高速公路的车灯、田野和远山，越飞越快
 // → 远处一盏暖灯越来越近、镜头压低 → 冲进那盏灯 → 他的手机屏幕。
 import { clamp, phase } from "@frame/engine/math";
-import { Ctx, H, W, easeIn, easeInOut, fillBg, glow, hash, vgrad, zoomBlur } from "@materials/s0rrow/code/draw";
+import { Ctx, H, W, easeIn, easeInOut, fillBg, glow, hash, vgrad } from "@materials/s0rrow/code/draw";
+import { emph, fade } from "./ease";
+import { moveBlur, type Xf } from "./shots";
 import { snow } from "@materials/s0rrow/code/blocked/snow";
 
 /** her window in the facade: centre and scale of the picture inside it */
@@ -184,35 +186,30 @@ function facade(c: Ctx, abs: number, inside: (c: Ctx) => void) {
   c.stroke();
 }
 
-/** 1 · pulled out of her face into her window, faster and faster (t0 → t1). */
-export function pullOut(c: Ctx, abs: number, t0: number, t1: number, inside: (c: Ctx) => void) {
-  const e = easeIn(phase(abs, t0, t1));
+/** The pull out of her face, out through her window, on the song's stop: one fast yank (most of it in the first tenth
+ *  of a second) that lands on the whole facade just as the music comes back and the whip up into the sky (act2.ts)
+ *  takes over. 0 = her face, 1 = the whole facade. */
+export const PULL_START = 15.15;
+const PULL_END = 15.45;
+const pullK = (abs: number) => emph(phase(abs, PULL_START, PULL_END));
+/** the facade's map to the frame at the pull's progress e */
+function pullXf(e: number): Xf {
   const Z = Math.pow(1 / WK, 1 - e);
-  const sx = 540,
-    sy = 960 + (WIN[1] - 960) * e;
-  zoomBlur(
-    c,
-    (k) => {
-      k.save();
-      k.translate(sx, sy);
-      k.scale(Z, Z);
-      k.translate(-WIN[0], -WIN[1]);
-      facade(k, abs, inside);
-      k.restore();
-    },
-    sx,
-    sy,
-    0.22 * e * e,
-    "pull",
-  );
-  // snow in front of the lens, coming in as the window falls away
-  snow(c, abs, { n: 120, seed: 61, speed: 180, size: 4.5, alpha: 0.85 * e, drift: 20 });
+  return { x: 540 - Z * WIN[0], y: 960 + (WIN[1] - 960) * e - Z * WIN[1], z: Z };
 }
-
-/** the facade at the end of the pull (for the whip up out of it) */
-export function facadeWide(c: Ctx, abs: number, inside: (c: Ctx) => void) {
-  facade(c, abs, inside);
-  snow(c, abs, { n: 120, seed: 61, speed: 180, size: 4.5, alpha: 0.85, drift: 20 });
+/** 1 · pulled out of her face into her window (drawn by act 1 from the stop, and by act 2 under its whip). */
+export function pullOut(c: Ctx, abs: number, inside: (c: Ctx) => void) {
+  const e = pullK(abs);
+  const X = pullXf(e);
+  moveBlur(c, pullXf(pullK(abs - 1 / 60)), X, (k) => {
+    k.save();
+    k.translate(X.x, X.y);
+    k.scale(X.z, X.z);
+    facade(k, abs, inside);
+    k.restore();
+  }, "pull");
+  // snow in front of the lens, coming in as the window falls away
+  snow(c, abs, { n: 120, seed: 61, speed: 180, size: 4.5, alpha: 0.85 * fade(e), drift: 20 });
 }
 
 // ---------------------------------------------------------------- the flight
@@ -258,11 +255,14 @@ function lights(): Light[] {
 /** 2 · the flight at progress p (0..1): camera z, height and speed follow p. */
 export function flight(c: Ctx, abs: number, p: number) {
   const s = clamp(p);
-  // smootherstep distance: slow off the roofs, very fast in the middle, braking onto the town
-  const zf = (u: number) => u * u * u * (u * (u * 6 - 15) + 10);
+  // the distance flown: already fast off the roofs and gathering speed all the way into the light (no braking before
+  // the crash — that's the climax of the move)
+  const zf = (u: number) => 0.4 * u + 0.6 * u * u * u;
   const camZ = END_Z * zf(s);
-  const speed = END_Z * 30 * s * s * (1 - s) * (1 - s); // d(camZ)/dp
+  const speed = END_Z * (0.4 + 1.8 * s * s); // d(camZ)/dp
   const camH = 700 * (1 - 0.95 * easeIn(s));
+  // everything that slides past (moon, clouds, ranges, snow streaks) moves with the camera's own travel
+  const travel = zf(s);
   const F = 900,
     HZ = 640;
   // sky: stars, the moon, long thin clouds catching its light
@@ -273,7 +273,7 @@ export function flight(c: Ctx, abs: number, p: number) {
     const r = hash(i * 2.2) > 0.85 ? 3.5 : 2.2;
     c.fillRect(hash(i * 3.7) * W, hash(i * 5.3) * (HZ - 40), r, r);
   }
-  const mx = 820 - 40 * s,
+  const mx = 820 - 40 * travel,
     my = 250;
   glow(c, mx, my, 420, "rgba(150,170,255,0.22)");
   glow(c, mx, my, 120, "rgba(230,236,255,0.5)");
@@ -289,7 +289,8 @@ export function flight(c: Ctx, abs: number, p: number) {
   }
   for (let i = 0; i < 5; i++) {
     const cy = 380 + i * 48 + hash(i * 3.3) * 20;
-    const cx = ((((hash(i * 7.9) * 1700 - 260 * s * (1 + i * 0.4)) % 1700) + 1700) % 1700) - 400;
+    // wraps round only where a whole cloud (up to 800 long) is out of the frame
+    const cx = ((((hash(i * 7.9) * 2080 - 260 * travel * (1 + i * 0.4)) % 2080) + 2080) % 2080) - 900;
     const len = 380 + hash(i * 1.9) * 420;
     c.fillStyle = "rgba(40,46,86,0.75)";
     c.beginPath();
@@ -302,7 +303,7 @@ export function flight(c: Ctx, abs: number, p: number) {
   }
   glow(c, 540, HZ, 900, "rgba(120,110,200,0.25)");
   // the ground: dark in the city, then snow-covered fields faintly lit by the moon, field edges rushing at us
-  const mk = clamp((s - 0.25) / 0.2) * (1 - clamp((s - 0.92) / 0.08));
+  const mk = fade((s - 0.25) / 0.2) * (1 - fade((s - 0.92) / 0.08));
   if (mk > 0) {
     c.save();
     c.globalAlpha = mk;
@@ -336,12 +337,12 @@ export function flight(c: Ctx, abs: number, p: number) {
     c.restore();
     // far snowy mountains: two ranges, the moonlit snow on their crests
     for (const [layer, col, top, amp0, seed] of [[0, "#1b2244", 40, 200, 3], [1, "#121831", 8, 120, 9]] as const) {
-      const amp = amp0 * (0.75 + 0.5 * s);
+      const amp = amp0 * (0.75 + 0.5 * travel);
       c.save();
       c.globalAlpha = mk;
       const pts: [number, number][] = [];
       for (let i = 0; i <= 30; i++) {
-        const x = -80 + i * 42 - (layer ? 30 * s : 12 * s);
+        const x = -80 + i * 42 - (layer ? 30 : 12) * travel;
         const h = amp * Math.abs(Math.sin(i * (layer ? 0.9 : 0.6) + seed)) * (0.5 + 0.5 * hash(i + seed * 10));
         pts.push([x, HZ - top - h]);
       }
@@ -367,7 +368,7 @@ export function flight(c: Ctx, abs: number, p: number) {
       c.restore();
     }
   }
-  const haze = 1 - clamp((s - 0.15) / 0.2);
+  const haze = 1 - fade((s - 0.15) / 0.2);
   if (haze > 0) glow(c, 540, HZ + 260, 1100, "rgba(255,170,90,0.28)", haze);
   // ground lights, streaked by speed
   c.save();
@@ -398,17 +399,17 @@ export function flight(c: Ctx, abs: number, p: number) {
   const bdz = BOOTH_Z - camZ;
   const by = HZ + (camH * F) / bdz;
   const br = Math.min(320, 26000 / bdz);
-  glow(c, 540, by, br * 2.4, "rgba(255,190,110,0.55)", clamp((s - 0.55) / 0.3));
-  glow(c, 540, by, br * 0.6, "rgba(255,236,190,0.9)", clamp((s - 0.55) / 0.3));
+  glow(c, 540, by, br * 2.4, "rgba(255,190,110,0.55)", fade((s - 0.55) / 0.3));
+  glow(c, 540, by, br * 0.6, "rgba(255,236,190,0.9)", fade((s - 0.55) / 0.3));
   // speed lines (snow flying past the lens)
-  const sl = Math.min(1, speed / 60000);
+  const sl = Math.min(1, speed / 100000); // the streaks grow as the flight gathers speed
   if (sl > 0.05) {
     c.save();
     c.strokeStyle = `rgba(230,240,255,${(0.35 * sl).toFixed(3)})`;
     c.lineWidth = 3;
     for (let i = 0; i < 60; i++) {
       const a = hash(i * 4.3) * Math.PI * 2;
-      const d0 = 120 + ((hash(i * 2.9) + abs * (2 + 3 * hash(i))) % 1) * 1100;
+      const d0 = 120 + ((hash(i * 2.9) + travel * 0.9 * (2 + 3 * hash(i))) % 1) * 1100;
       const len = 40 + 260 * sl;
       c.beginPath();
       c.moveTo(540 + Math.cos(a) * d0, HZ + Math.sin(a) * d0);
