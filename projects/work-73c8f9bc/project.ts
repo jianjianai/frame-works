@@ -2,7 +2,7 @@ import type { AnimationProject } from "@frame/engine/types";
 
 const project: AnimationProject = {
   id: "work-73c8f9bc",
-  title: "屏蔽",
+  title: "屏蔽 stalk-ur-socials-s0rrow",
   subtitle: "stalk ur socials · s0rrow",
   description: "",
   renderer: "composition",
@@ -22,5 +22,6 @@ const project: AnimationProject = {
   experiences: ["剧情音乐短片","s0rrow","情绪运镜"],
   loadAudioDocument: () => import("./audio.json"),
   tempo: {"bpm":124.59,"firstBeat":0.009,"beatsPerBar":4},
+  publishedAt: "2026-10-14T12:08:03.018Z",
 };
 export default project;
