@@ -151,7 +151,7 @@ export function detailedBoothFront(c:Ctx,t:number,o:FrontDetailOptions={}) {
  *  the side window laying a pale pane of light across the back wall toward the lower left, everything graded cold;
  *  only her crayon drawing of the two of them keeps its warmth. */
 function lonelyFront(c:Ctx,o:FrontDetailOptions) {
-  lightShaft(c,[[918,349],[1000,393],[788,1170],[123,927]],963,362,408,1033,"185,205,250",.1,30,"booth_front_moon");
+  lightShaft(c,[[918,349],[1000,393],[788,1170],[123,927]],963,362,408,1033,"185,205,250",.17,30,"booth_front_moon");
   glow(c,900,420,470,"rgba(150,175,230,.08)");
   lonelyGrade(c);
   c.save();c.globalAlpha=.78;drawing(c,o.drawing??"爸爸");c.restore();
