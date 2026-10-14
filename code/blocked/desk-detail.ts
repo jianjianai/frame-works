@@ -344,12 +344,12 @@ function phoneContact(c:Ctx,lit:number,resting:boolean,warm=false) {
   }
 }
 
-/** The lonely desk (用户：周围全是冷色，只有女儿的照片是暖色；物品摆放、光影、月光): the same desk in the cold blue
- *  of the lonely booth, no keys; the moon from the window on the left lays two pale panes of light across it with
- *  the window bar's shadow between them; the edges facing it catch a cold light; her photos under the glass, and her
- *  photo on the phone, are the only warm things. */
-/** the lonely desk's few things (用户：桌面也很乱): her oldest photo under the glass at the lower left with the birthday
- *  note tucked against it, the tea mug at the upper right, the phone in the middle; nothing else */
+/** The lonely desk (用户：周围全是冷色，只有女儿的照片是暖色；物品摆放、光影、月光；桌面也很乱): the same desk in the
+ *  cold blue of the lonely booth with only a few things on it — her oldest photo under the glass at the lower left
+ *  with the birthday note tucked against it, the tea mug at the upper right, the phone in the middle, wide empty
+ *  glass around it. The moon from the window on the left lays two pale panes of light across it with the window
+ *  bar's shadow between them. Her photo under the glass and the light off her photo on the phone are the only warm
+ *  things. */
 const L_PHOTO:[number,number,number]=[178,1598,-.12],L_NOTE:[number,number,number]=[330,1762,.05];
 function lonelyDeskTop(c:Ctx,abs:number,o:DetailedDeskOptions) {
   wood(c,true);
