@@ -242,9 +242,8 @@ export function heldPen(c:Ctx,tip:Pt,ang:number) {
   c.restore();
 }
 
-function cup(c:Ctx,abs:number,moonLeft=false) {
-  const x=956,y=554;
-  c.save();c.translate(x,y);
+function cup(c:Ctx,abs:number,moonLeft=false,x=956,y=554,s=1) {
+  c.save();c.translate(x,y);c.scale(s,s);
   // Mug height gives it a longer, softer shadow than the book or the keys (away from the window's light).
   const sx=moonLeft?-1:1;
   for(let j=6;j>=0;j--) {
@@ -351,12 +350,14 @@ function phoneContact(c:Ctx,lit:number,resting:boolean,warm=false) {
  *  bar's shadow between them. Her photo under the glass and the light off her photo on the phone are the only warm
  *  things. */
 const L_PHOTO:[number,number,number]=[178,1598,-.12],L_NOTE:[number,number,number]=[330,1762,.05];
+/** the mug in the top right corner, clear of the phone: x, y, scale */
+const L_CUP:[number,number,number]=[935,185,.74];
 function lonelyDeskTop(c:Ctx,abs:number,o:DetailedDeskOptions) {
   wood(c,true);
   if(o.photos??true)oldPhoto(c,L_PHOTO[0],L_PHOTO[1],L_PHOTO[2],1.18,0);
   note(c,o,L_NOTE[0],L_NOTE[1],L_NOTE[2]);
   glass(c);
-  cup(c,abs,true);
+  cup(c,abs,true,L_CUP[0],L_CUP[1],L_CUP[2]);
   c.save();
   c.globalCompositeOperation="multiply";
   c.fillStyle="rgb(150,166,206)";c.fillRect(-60,-60,W+120,H+120);
@@ -372,7 +373,7 @@ function lonelyDeskTop(c:Ctx,abs:number,o:DetailedDeskOptions) {
   c.save();
   c.globalCompositeOperation="screen";
   // the edge that faces the moon
-  c.beginPath();c.arc(956,554,108,3.25,4.75);c.lineWidth=4;c.strokeStyle="rgba(205,222,255,.55)";c.stroke();
+  c.beginPath();c.arc(L_CUP[0],L_CUP[1],108*L_CUP[2],3.25,4.75);c.lineWidth=4;c.strokeStyle="rgba(205,222,255,.55)";c.stroke();
   c.restore();
   const v=c.createRadialGradient(584,825,290,540,925,1210);
   v.addColorStop(0,"rgba(4,8,18,0)");v.addColorStop(.66,"rgba(4,8,18,.08)");v.addColorStop(1,"rgba(4,8,18,.42)");
