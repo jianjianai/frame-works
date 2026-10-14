@@ -15,7 +15,8 @@ import { phoneBack } from "../phone";
 import { drawDad } from "./dad";
 import { snow } from "./snow";
 import { detailedBoothBack } from "./booth-detail";
-import { detailedDeskTop } from "./desk-detail";
+import { detailedDeskTop, heldPen, logPen } from "./desk-detail";
+export { heldPen, logPen } from "./desk-detail";
 import { detailedBoothFront, detailedFrontDesk } from "./booth-front-detail";
 import { detailedBoothOutside } from "./booth-outside-detail";
 
@@ -57,6 +58,8 @@ export const deskOptions = z.object({
   logTitle: z.string().default("值班记录").describe("值班本的标题"),
   log: z.array(z.string()).max(8).default(["22:00 巡逻一次", "23:30 正常", "00:40 正常", "01:50 下雪", "02:40"]).describe("值班本里的记录（最多 8 行）"),
   photos: z.boolean().default(true).describe("玻璃板下压着女儿从小到大的照片"),
+  logWrite: z.number().min(0).max(1).optional().describe("最后一行记录正在写（0..1）：时间已经写好，后面的字从左到右写出来；不给就是写完的。笔尖位置 logPen(ctx, o)（仅精细版）"),
+  pen: z.boolean().default(true).describe("桌上的钢笔；false 时笔在他手里，用 heldPen(ctx, 笔尖, 笔杆方向) 画（仅精细版）"),
 });
 export type DeskOptions = z.input<typeof deskOptions>;
 export const boothOutsideOptions = z.object({
@@ -634,9 +637,9 @@ export const resources = defineResources({
     description:
       "俯拍门卫室的值班桌：木桌上压着一块玻璃板，玻璃下是女儿的照片（photos）和手写便条（note、note2）；上面摊着值班本（logTitle、log）、一支笔、一杯茶、一串钥匙。detailed 开启木纹清漆、厚玻璃与窗光反射、旧相纸、书脊与叠页、钢笔、搪瓷杯茶汤与热气、钥匙齿口和一致的投影。精细版用窗外暖光和监控冷光；phoneLight 控制中央手机的微弱漏光，phoneResting 加接触阴影。桌子中间 (540, 880) 留给手机，由镜头自己画。",
     tags: ["桌面", "俯拍", "值班", "门卫室", "照片", "便条", "玻璃板", "父亲", "茶杯", "钥匙"],
-    usage: "deskTop(ctx, abs, { detailed: true, phoneLight: 1, phoneResting: true, note, note2, logTitle, log, photos }); /* 手机放在 (540, 880)、scale .92、rot .06 */",
+    usage: "deskTop(ctx, abs, { detailed: true, phoneLight: 1, phoneResting: true, note, note2, logTitle, log, photos }); /* 手机放在 (540, 880)、scale .92、rot .06 */ 写值班记录的特写：deskTop(ctx, abs, { detailed: true, log, logWrite: k, pen: false }); heldPen(ctx, logPen(ctx, o), 0.3)，镜头 camera 推到值班本（中心约 (83, 555)，3–4 倍），手画在笔上面",
     params: deskOptions,
-    presets: { 精细值班桌: { detailed: true } },
+    presets: { 精细值班桌: { detailed: true }, 正在写值班记录: { detailed: true, pen: false, logWrite: 0.6, log: ["22:00 巡逻一次", "23:30 正常", "00:40 正常", "01:50 下雪", "02:47 她还没睡"] } },
     preview: {
       width: 1080,
       height: 1920,
@@ -645,6 +648,7 @@ export const resources = defineResources({
       draw(ctx, t, p) {
         beginFrame(ctx, t);
         deskTop(ctx, t, p);
+        if (p.detailed && p.pen === false) heldPen(ctx, logPen(ctx, p), 0.3);
       },
     },
   }),
