@@ -1,8 +1,18 @@
 /** Detailed reverse angle of the same night guard booth, plus a separately composited foreground desk. */
 import { Ctx, F, H, Pt, W, blob, fillBg, glow, hash, inkLine, lightShaft, oval, paint, poly, rbox, text, vgrad } from "../draw";
 import { snow } from "./snow";
-export interface FrontDetailOptions { clock?:number;month?:string;day?:string;drawing?:string; }
-export interface FrontDeskOptions { y?:number;phoneLight?:number; }
+export interface FrontDetailOptions { clock?:number;month?:string;day?:string;drawing?:string;lonely?:boolean; }
+export interface FrontDeskOptions { y?:number;phoneLight?:number;lonely?:boolean; }
+
+/** the lonely booth's grade (same as booth-detail.ts lonelyLight): cold blue, colour drained */
+function lonelyGrade(c:Ctx) {
+  c.save();
+  c.globalCompositeOperation="multiply";
+  c.fillStyle="rgb(150,166,206)";c.fillRect(-60,-60,W+120,H+120);
+  c.globalCompositeOperation="color";
+  c.globalAlpha=.3;c.fillStyle="#32466e";c.fillRect(-60,-60,W+120,H+120);
+  c.restore();
+}
 export interface FrontProps { mug:(c:Ctx,x:number,y:number,s:number,t:number,seed:number)=>void; }
 
 function clock(c:Ctx,hours:number) {
@@ -52,19 +62,26 @@ function drawing(c:Ctx,label:string) {
   for(const x of [-99,101]){oval(c,x,-83,4,4,91275+x,.15);paint(c,"#aaa377","#596b5d",1);}
   c.restore();
 }
-function window(c:Ctx,t:number) {
+function window(c:Ctx,t:number,lonely=false) {
   rbox(c,685,243,330,455,7,91300,.5);paint(c,"#101e2a","#142631",3);
   c.save();c.beginPath();c.rect(710,268,280,401);c.clip();
   fillBg(c,vgrad(c,260,680,[[0,"#182536"],[1,"#0e1f2b"]]));
+  if(lonely) {
+    // the moon over the factory roofs (the same moon as the back view's window)
+    glow(c,785,335,190,"rgba(190,210,250,.24)");
+    oval(c,785,335,25,25,91318,.3);paint(c,"#e3e9f4",null);
+    oval(c,779,330,7,6,91319,.3);paint(c,"rgba(160,175,200,.35)",null);
+  }
   for(let i=0;i<5;i++) {
     const x=695+i*78,y=464+hash(i*5.7)*72;
     c.fillStyle=i%2?"#172b35":"#13232f";c.fillRect(x,y,60,240);
     for(let j=0;j<2;j++){c.fillStyle="rgba(155,148,97,.16)";c.fillRect(x+12+j*20,y+21,7,11);}
   }
-  glow(c,936,354,180,"rgba(224,155,83,.3)");
+  // the lamp by the gate (lonely: a cold white one)
+  glow(c,936,354,lonely?140:180,lonely?"rgba(205,218,240,.16)":"rgba(224,155,83,.3)");
   inkLine(c,[[941,327],[941,666]],91315,3,"#344342",.2);
-  oval(c,936,341,16,4,91316,.3);paint(c,"#d6ab69",null);
-  lightShaft(c,[[926,345],[946,345],[1020,670],[825,670]],936,345,925,680,"237,177,105",.13,9,"booth_front_outside");
+  oval(c,936,341,16,4,91316,.3);paint(c,lonely?"#c9d3e2":"#d6ab69",null);
+  lightShaft(c,[[926,345],[946,345],[1020,670],[825,670]],936,345,925,680,lonely?"205,218,240":"237,177,105",lonely?.07:.13,9,"booth_front_outside");
   snow(c,t,{x:700,y:250,w:310,h:440,n:27,seed:71,speed:80,size:2.7,alpha:.5,drift:16});
   glow(c,716,663,138,"rgba(157,187,189,.13)");glow(c,985,666,145,"rgba(167,187,179,.12)");
   for(let i=0;i<16;i++){const x=718+hash(i*8.2)*267,y=552+hash(i*3.8)*108;inkLine(c,[[x,y],[x+1,y+12+hash(i)*26]],91330+i,.8,"rgba(167,193,190,.18)",.1);}
@@ -91,13 +108,13 @@ function scarf(c:Ctx) {
   for(let i=0;i<19;i++)inkLine(c,[[966,876+i*12],[1004,867+i*12]],91410+i,1.3,"rgba(173,121,113,.20)",.2);
   for(let i=0;i<6;i++)inkLine(c,[[969+i*5,1114],[967+i*5,1134+hash(i)*13]],91440+i,1.9,"#97615e",.3);
 }
-function heater(c:Ctx) {
-  glow(c,125,1420,390,"rgba(223,133,62,.16)");
+function heater(c:Ctx,on=true) {
+  if(on)glow(c,125,1420,390,"rgba(223,133,62,.16)");
   rbox(c,56,1321,172,202,23,91500,.5);paint(c,"#44463a","#162c2c",3);
-  rbox(c,68,1334,148,170,15,91501,.4);paint(c,"#563f30","#837253",2);
+  rbox(c,68,1334,148,170,15,91501,.4);paint(c,on?"#563f30":"#3a3a36",on?"#837253":"#5d6058",2);
   for(let i=0;i<5;i++){
-    inkLine(c,[[82,1356+i*28],[203,1356+i*28]],91510+i,5,"rgba(206,113,51,.32)",.2);
-    inkLine(c,[[85,1356+i*28],[200,1356+i*28]],91520+i,1.7,"#c98d59",.2);
+    if(on)inkLine(c,[[82,1356+i*28],[203,1356+i*28]],91510+i,5,"rgba(206,113,51,.32)",.2);
+    inkLine(c,[[85,1356+i*28],[200,1356+i*28]],91520+i,1.7,on?"#c98d59":"#6b6c62",.2);
   }
   for(let i=0;i<6;i++)inkLine(c,[[82+i*23,1344],[82+i*23,1494]],91530+i,2.8,"#293a35",.2);
 }
@@ -114,19 +131,38 @@ export function detailedBoothFront(c:Ctx,t:number,o:FrontDetailOptions={}) {
   inkLine(c,[[51,-60],[51,840],[65,863],[65,1120]],91693,1.5,"#566866",.3);
   rbox(c,39,1120,48,66,6,91694,.3);paint(c,"#556358","#213c3b",2);
   for(const x of [54,74])inkLine(c,[[x,1141],[x,1153]],91695+x,2,"#243b3c",.1);
-  clock(c,o.clock??2.8833);calendar(c,o);drawing(c,o.drawing??"爸爸");window(c,t);scarf(c);
+  clock(c,o.clock??2.8833);calendar(c,o);drawing(c,o.drawing??"爸爸");window(c,t,o.lonely);scarf(c);
   // A wooden chair behind the coat anchors the seated silhouette.
   for(const x of [186,892]){inkLine(c,[[x,1030],[x,1600]],91700+x,25,"#28332c",.4);inkLine(c,[[x+3,1030],[x+3,1580]],91701+x,4,"#586048",.3);}
   rbox(c,193,926,693,253,52,91710,.6);paint(c,"#303c33","#142b2b",4);
   inkLine(c,[[229,969],[540,953],[851,969]],91711,4,"#63674b",.4);
   for(const x of [264,822])inkLine(c,[[x,972],[x,1136]],91712+x,10,"#4b5240",.3);
-  heater(c);
+  heater(c,!o.lonely);
+  if(o.lonely){lonelyFront(c,o);return;}
   lightShaft(c,[[918,349],[1000,393],[788,1170],[123,927]],963,362,408,1033,"231,171,100",.09,30,"booth_front_room");
   glow(c,990,415,465,"rgba(219,153,91,.10)");
   glow(c,44,976,470,"rgba(133,169,183,.07)");
   const vignette=c.createRadialGradient(560,781,341,540,840,1170);
   vignette.addColorStop(0,"rgba(7,20,30,0)");vignette.addColorStop(1,"rgba(6,18,27,.32)");
   c.fillStyle=vignette;c.fillRect(-60,-60,1200,2040);
+}
+
+/** The lonely reverse angle (the same booth as boothBack lonely, seen from the other side): heater off, the moon in
+ *  the side window laying a pale pane of light across the back wall toward the lower left, everything graded cold;
+ *  only her crayon drawing of the two of them keeps its warmth. */
+function lonelyFront(c:Ctx,o:FrontDetailOptions) {
+  lightShaft(c,[[918,349],[1000,393],[788,1170],[123,927]],963,362,408,1033,"185,205,250",.1,30,"booth_front_moon");
+  glow(c,900,420,470,"rgba(150,175,230,.08)");
+  lonelyGrade(c);
+  c.save();c.globalAlpha=.78;drawing(c,o.drawing??"爸爸");c.restore();
+  c.save();c.globalCompositeOperation="screen";
+  // the moon stays bright through the grade, and the window frame's edge facing it catches a little of it
+  glow(c,785,335,110,"rgba(205,222,255,.3)");
+  inkLine(c,[[697,262],[697,676]],91390,2,"rgba(190,210,250,.35)",.15);
+  c.restore();
+  const v=c.createRadialGradient(560,760,300,540,840,1150);
+  v.addColorStop(0,"rgba(4,8,18,0)");v.addColorStop(.6,"rgba(4,8,18,.12)");v.addColorStop(1,"rgba(4,8,18,.5)");
+  c.fillStyle=v;c.fillRect(-60,-60,1200,2040);
 }
 
 /** Draw after the figure, under the lyrics. The original mug is reused, from the reverse camera side. */
@@ -171,4 +207,20 @@ export function detailedFrontDesk(c:Ctx,t:number,o:FrontDeskOptions,props:FrontP
   ["22:00 巡逻一次","23:30 正常","00:40 正常","01:50 下雪"].forEach((entry,i)=>text(c,entry,-87,-35+i*29,{size:14,font:F.pen,fill:"#3f5b66"}));
   inkLine(c,[[-148,84],[-32,85]],91921,.7,"rgba(51,85,89,.25)",.1);
   c.restore();
+  if(o.lonely) {
+    // the desk in the same cold blue; the only warm thing on it is the phone's light on the glass (she's on the screen)
+    c.save();
+    poly(c,[[-80,y+5],[1130,y-4],[1190,2010],[-120,2010]],91800,.5);c.clip();
+    lonelyGrade(c);
+    c.globalCompositeOperation="screen";
+    c.save();c.translate(531,y+40);c.scale(1.6,1);glow(c,0,0,260,"rgba(255,172,104,.2)",o.phoneLight??1);c.restore();
+    c.restore();
+    // the moon from the side window on the desk's back edge and the mug's rim
+    c.save();c.globalCompositeOperation="screen";
+    inkLine(c,[[560,y+5],[1135,y+1]],91864,3,"rgba(185,205,250,.35)",.3);
+    c.restore();
+    const v=c.createLinearGradient(0,y,0,2000);
+    v.addColorStop(0,"rgba(4,8,18,0)");v.addColorStop(1,"rgba(4,8,18,.4)");
+    c.fillStyle=v;c.fillRect(-60,y-10,1200,2040-y);
+  }
 }
