@@ -31,6 +31,8 @@ export const dadPose = z.object({
   young: z.boolean().default(false).describe("年轻版：黑发、光滑的脸、白衬衫、不戴帽子和眼镜（旧合照里）"),
   arms: z.enum(["down", "phone", "type", "mouth", "none"]).default("down").describe("手：垂着（不画）/ 两手捧手机 / 一根手指打字 / 右手捂嘴、左手低低拿着手机"),
   tap: z.number().min(0).max(1).default(0).describe("打字的手指按下去（arms: type）"),
+  typeHand: z.enum(["finger", "half"]).default("finger").describe("arms: type 时打字的手：finger 伸出一根手指 / half 手一半藏在手机后面（屏幕朝他，手搭在屏幕上），不画手指，用 handAt 让它在屏幕上滑动"),
+  handAt: point.optional().describe("typeHand: half 时手的中心（头部坐标，默认 [62, 430]：手机右缘、屏幕下半）；逐帧改它就是手在屏幕上滑动、写字"),
   mouthK: z.number().min(0).max(1).default(1).describe("arms: mouth 时右手从手机抬到嘴边的进度（0 还捧着手机，1 捂住嘴）：做抬手、放下的动画，不要在两种手势之间直接切换"),
   seed: z.number().int().default(4100).describe("抖动线条的种子"),
 });
@@ -682,11 +684,16 @@ function arms(c: Ctx, p: DadPose, seed: number, stage: "sleeves" | "hands") {
   if (a === "phone" || a === "type") {
     // forearms come forward from under the coat to hold the phone at the chest
     const L: [Pt, Pt, Pt] = [[-150, 300], [-156, 470], [-60, 420]];
-    const R: [Pt, Pt, Pt] = a === "type" ? [[150, 300], [150, 460], [p.frontDetails ? 89 : 52, 372 + 12 * t]] : [[150, 300], [156, 470], [60, 420]];
+    const half = a === "type" && p.typeHand === "half";
+    const H: Pt = p.handAt ?? [62, 430];
+    const R: [Pt, Pt, Pt] = a === "type" ? [[150, 300], [150, 460], half ? [H[0] + 18, H[1] + 14 + 6 * t] : [p.frontDetails ? 89 : 52, 372 + 12 * t]] : [[150, 300], [156, 470], [60, 420]];
     if (stage === "sleeves") {
       sleeve(c, L[0], L[1], L[2], col, dk, seed, !!p.frontDetails);
       sleeve(c, R[0], R[1], R[2], col, dk, seed + 5, !!p.frontDetails);
-      if(p.frontDetails && a==="type") {
+      if (half) {
+        // Screen faces him: the hand rests on the screen behind the phone, half of it showing past the edge.
+        roundHand(c, H[0], H[1] + 6 * t, 31, skin, seed + 12, !!p.frontDetails);
+      } else if(p.frontDetails && a==="type") {
         // Screen faces him: the tapping hand is on the far side of the phone.
         roundHand(c,94,366+12*t,29,skin,seed+12,true);
         blob(c,tubePts([[86,344+12*t],[63,318+14*t]],[19,17],true,true),seed+14,.4);paint(c,skin,C.ink,3.4);
@@ -696,7 +703,7 @@ function arms(c: Ctx, p: DadPose, seed: number, stage: "sleeves" | "hands") {
       return;
     }
     roundHand(c, p.frontDetails ? -83 : -62, 430, 34, skin, seed + 10, !!p.frontDetails);
-    if (a === "type" && p.frontDetails) return;
+    if (a === "type" && (p.frontDetails || half)) return;
     if (a === "type") {
       // a pointing finger pressing the screen
       roundHand(c, 54, 366 + 12 * t, 30, skin, seed + 12);
@@ -766,7 +773,7 @@ export const resources = defineResources({
     kind: "character",
     title: "爸爸（夜班保安）",
     description:
-      "五十多岁的夜班保安爸爸：花白鬓角、老花镜、保安大檐帽、深蓝制服，可以披带毛领的军大衣；正面 / 背影、几种表情和手（捧手机、一根手指打字、捂嘴），young 是年轻时的他（黑发白衬衫，放进旧合照）。手里的手机用 holding 画（在袖子和手之间），例如 holding: (k) => phoneBack(k, -10, 400, 150, 270, -0.08)。frontDetails 开启帽子织纹/帽徽缝线、灰白鬓角、眼镜五金与局部屏幕反射、制服毛领与袖口；打字的手位于手机屏幕一侧，仍用简单圆手。从捧手机到捂嘴的动作用 arms: \"mouth\" + mouthK 0→1 连续过渡（0 就是捧手机的姿势），不要两种手势直接切换。screenReflection 控制镜片里的小块倒影，不盖瞳孔。夜里被手机照亮的脸：先画他，再用 figureMask + onFigure 叠屏幕光、rimLight 加轮廓光。",
+      "五十多岁的夜班保安爸爸：花白鬓角、老花镜、保安大檐帽、深蓝制服，可以披带毛领的军大衣；正面 / 背影、几种表情和手（捧手机、一根手指打字、捂嘴），young 是年轻时的他（黑发白衬衫，放进旧合照）。手里的手机用 holding 画（在袖子和手之间），例如 holding: (k) => phoneBack(k, -10, 400, 150, 270, -0.08)。frontDetails 开启帽子织纹/帽徽缝线、灰白鬓角、眼镜五金与局部屏幕反射、制服毛领与袖口；打字的手位于手机屏幕一侧，仍用简单圆手；typeHand: "half" 时不画手指，手一半藏在手机后面，逐帧改 handAt 让它在屏幕上滑动（看得出在输入，不用画手指）。从捧手机到捂嘴的动作用 arms: \"mouth\" + mouthK 0→1 连续过渡（0 就是捧手机的姿势），不要两种手势直接切换。screenReflection 控制镜片里的小块倒影，不盖瞳孔。夜里被手机照亮的脸：先画他，再用 figureMask + onFigure 叠屏幕光、rimLight 加轮廓光。",
     tags: ["爸爸", "父亲", "保安", "门卫", "老人", "中年", "夜班", "军大衣", "老花镜", "人物"],
     usage: "drawDad(ctx, x, y, s, { coat, eyes, mouth, arms, tap, view, young, holding })  // (x, y) 头中心，s = 1 脸宽约 236",
     params: dadPose,
@@ -780,6 +787,7 @@ export const resources = defineResources({
       背影: { view: "back" },
       精细值班背影: { view: "back", coat: true, backDetails: true },
       精细值班近景: { frontDetails: true, screenReflection: .8, coat: true, arms: "type", eyes: "down", brows: "worried", mouth: "press" },
+      手在屏幕上滑动: { frontDetails: true, screenReflection: .8, coat: true, arms: "type", typeHand: "half", eyes: "down", brows: "worried", mouth: "press" },
       年轻时: { young: true, eyes: "happy", mouth: "laugh" },
     },
     preview: {
@@ -794,6 +802,7 @@ export const resources = defineResources({
         drawDad(ctx, 350, 300, 1, {
           ...p,
           tap: p.arms === "type" ? 0.5 + 0.5 * Math.sin(t * 9) : p.tap,
+          handAt: p.typeHand === "half" ? [62 + 9 * Math.sin(t * 13), 430 + 16 * Math.sin(t * 9.5 + 1)] : p.handAt,
           holding: hands ? (k) => (p.arms === "mouth" ? phoneBack(k, -70, 470, 130, 240, 0.1, 0, { detailed: p.frontDetails, caseColor: "#252d35", cameraColor: "#343e47" }) : phoneBack(k, -10, 400, 150, 270, -0.08, 0, { detailed: p.frontDetails, caseColor: "#252d35", cameraColor: "#343e47" })) : undefined,
         });
       },
