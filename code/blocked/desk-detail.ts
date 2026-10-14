@@ -107,7 +107,11 @@ function herPhotos(c:Ctx) {
 }
 function keepsakes(c:Ctx,o:DetailedDeskOptions) {
   if(o.photos??true) herPhotos(c);
-  c.save();c.translate(263,1574);c.rotate(-.05);
+  note(c,o,263,1574,-.05);
+}
+/** the birthday note under the glass, at (x, y) turned `rot` */
+function note(c:Ctx,o:DetailedDeskOptions,x:number,y:number,rot:number) {
+  c.save();c.translate(x,y);c.rotate(rot);
   const edge:Pt[]=[[-165,-66],[-96,-68],[-37,-65],[24,-68],[96,-66],[165,-67],[163,68],[95,67],[22,70],[-40,67],[-104,69],[-166,67]];
   poly(c,edge.map(([x,y])=>[x+1,y+3] as Pt),89560,.3);paint(c,"rgba(20,27,25,.36)",null);
   poly(c,edge,89561,.3);paint(c,vgrad(c,-68,70,[[0,"#eadbb3"],[1,"#c8c1a4"]]),"#7c7a63",1.2);
@@ -319,14 +323,14 @@ function keys(c:Ctx) {
   c.restore();
 }
 
-function phoneContact(c:Ctx,lit:number,resting:boolean) {
+function phoneContact(c:Ctx,lit:number,resting:boolean,warm=false) {
   if(lit>0) {
     c.save();c.globalCompositeOperation="screen";
-    // The vertical phone edge spills a small amount onto the glass, never a large blue wash.
+    // The vertical phone edge spills a small amount onto the glass, never a large blue wash (warm: her photo's light).
     c.save();c.translate(540,897);c.rotate(.06);c.scale(1,1.8);
-    glow(c,0,0,362,"rgba(136,173,196,.085)",lit);c.restore();
-    glow(c,225,943,194,"rgba(143,176,193,.10)",lit);
-    glow(c,846,994,176,"rgba(157,184,192,.09)",lit);
+    glow(c,0,0,362,warm?"rgba(255,186,120,.16)":"rgba(136,173,196,.085)",lit);c.restore();
+    glow(c,225,943,194,warm?"rgba(255,190,130,.14)":"rgba(143,176,193,.10)",lit);
+    glow(c,846,994,176,warm?"rgba(255,190,130,.12)":"rgba(157,184,192,.09)",lit);
     c.restore();
   }
   if(resting) {
@@ -344,32 +348,30 @@ function phoneContact(c:Ctx,lit:number,resting:boolean) {
  *  of the lonely booth, no keys; the moon from the window on the left lays two pale panes of light across it with
  *  the window bar's shadow between them; the edges facing it catch a cold light; her photos under the glass, and her
  *  photo on the phone, are the only warm things. */
+/** the lonely desk's few things (用户：桌面也很乱): her oldest photo under the glass at the lower left with the birthday
+ *  note tucked against it, the tea mug at the upper right, the phone in the middle; nothing else */
+const L_PHOTO:[number,number,number]=[178,1598,-.12],L_NOTE:[number,number,number]=[330,1762,.05];
 function lonelyDeskTop(c:Ctx,abs:number,o:DetailedDeskOptions) {
   wood(c,true);
-  keepsakes(c,o);
+  if(o.photos??true)oldPhoto(c,L_PHOTO[0],L_PHOTO[1],L_PHOTO[2],1.18,0);
+  note(c,o,L_NOTE[0],L_NOTE[1],L_NOTE[2]);
   glass(c);
-  logBook(c,o);
-  if(o.pen??true)pen(c);
   cup(c,abs,true);
-  phoneContact(c,Math.max(0,Math.min(1,o.phoneLight??0)),o.phoneResting??false);
   c.save();
   c.globalCompositeOperation="multiply";
   c.fillStyle="rgb(150,166,206)";c.fillRect(-60,-60,W+120,H+120);
   c.globalCompositeOperation="color";
   c.globalAlpha=.3;c.fillStyle="#32466e";c.fillRect(-60,-60,W+120,H+120);
   c.restore();
-  // her photos keep their warmth
-  if(o.photos??true){c.save();c.globalAlpha=.82;herPhotos(c);c.restore();}
+  // her photo keeps its warmth, and so does the light off her photo on the phone
+  if(o.photos??true){c.save();c.globalAlpha=.82;oldPhoto(c,L_PHOTO[0],L_PHOTO[1],L_PHOTO[2],1.18,0);c.restore();}
+  phoneContact(c,Math.max(0,Math.min(1,o.phoneLight??0)),o.phoneResting??false,true);
   // two panes of moonlight from the upper left, the window bar's shadow between them
   lightShaft(c,[[383,-80],[200,-80],[911,1890],[1204,1740]],251,-80,955,1840,"170,195,245",.22,20,"desk_moon_left");
   lightShaft(c,[[138,-80],[-140,-80],[289,1900],[771,1900]],35,-80,563,1900,"170,195,245",.27,24,"desk_moon_right");
   c.save();
   c.globalCompositeOperation="screen";
-  // the edges that face the moon
-  c.save();c.translate(185,509);c.rotate(-.15);
-  inkLine(c,[[-207,-254],[-111,-260],[-1,-248]],90300,3,"rgba(200,218,255,.5)",.2);
-  inkLine(c,[[-209,-250],[-209,250]],90301,2.5,"rgba(200,218,255,.4)",.2);
-  c.restore();
+  // the edge that faces the moon
   c.beginPath();c.arc(956,554,108,3.25,4.75);c.lineWidth=4;c.strokeStyle="rgba(205,222,255,.55)";c.stroke();
   c.restore();
   const v=c.createRadialGradient(584,825,290,540,925,1210);
