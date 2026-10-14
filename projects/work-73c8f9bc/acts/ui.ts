@@ -279,49 +279,231 @@ function clipRect(c: Ctx, x: number, y: number, w: number, h: number, draw: () =
   c.restore();
 }
 
-/** 「下雪了」: the snow outside her window at night (her post). */
+/** 「下雪了」: the snow outside her window at night (her post), taken from her bed through the window — moon behind
+ *  thin cloud, snowy rooftops and warm windows across the street, a street lamp with the flakes lit in its cone, and
+ *  the frosted window frame, the snow on its sill and a bit of her pink curtain in the shot. Still (a photo). */
 export const snowPhoto: Photo = (c, x, y, w, h) =>
   clipRect(c, x, y, w, h, () => {
-    const g = c.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, "#151b3a");
-    g.addColorStop(1, "#3a3564");
-    c.fillStyle = g;
+    const s = w / 360;
+    const X = (u: number) => x + u * w,
+      Y = (v: number) => y + v * h;
+    const glowAt = (gx: number, gy: number, r: number, col: string, a: number) => {
+      const g = c.createRadialGradient(gx, gy, 0, gx, gy, r);
+      g.addColorStop(0, `rgba(${col},${a})`);
+      g.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = g;
+      c.fillRect(gx - r, gy - r, 2 * r, 2 * r);
+    };
+    // sky: deep blue at the top, the city's warm violet haze at the horizon
+    const sky = c.createLinearGradient(0, y, 0, y + h);
+    sky.addColorStop(0, "#0b1030");
+    sky.addColorStop(0.45, "#232a5e");
+    sky.addColorStop(0.7, "#4a3f75");
+    sky.addColorStop(1, "#2a2650");
+    c.fillStyle = sky;
     c.fillRect(x, y, w, h);
-    // the block opposite, lit windows
-    c.fillStyle = "#1d2244";
-    c.fillRect(x + w * 0.08, y + h * 0.38, w * 0.5, h * 0.7);
-    c.fillRect(x + w * 0.62, y + h * 0.5, w * 0.34, h * 0.6);
-    for (let i = 0; i < 18; i++) {
-      const cx = x + w * (0.12 + (i % 5) * 0.09),
-        cy = y + h * (0.43 + Math.floor(i / 5) * 0.1);
-      if (hash(i * 3.3) > 0.45) {
-        c.fillStyle = "rgba(255,206,130,0.85)";
-        c.fillRect(cx, cy, w * 0.05, h * 0.05);
-      }
-    }
-    // a street lamp and its cone
-    const lx = x + w * 0.78,
-      ly = y + h * 0.42;
-    const lg = c.createRadialGradient(lx, ly, 0, lx, ly, w * 0.45);
-    lg.addColorStop(0, "rgba(255,200,120,0.55)");
-    lg.addColorStop(1, "rgba(255,200,120,0)");
-    c.fillStyle = lg;
-    c.fillRect(x, y, w, h);
-    c.fillStyle = "#ffe2a6";
+    // the moon behind thin cloud
+    glowAt(X(0.3), Y(0.13), 120 * s, "190,205,255", 0.35);
+    c.fillStyle = "#f4f1df";
     c.beginPath();
-    c.arc(lx, ly, 7, 0, Math.PI * 2);
+    c.arc(X(0.3), Y(0.13), 17 * s, 0, Math.PI * 2);
     c.fill();
-    // flakes (still: a photo)
-    c.fillStyle = "rgba(255,255,255,0.9)";
-    for (let i = 0; i < 70; i++) {
+    c.fillStyle = "rgba(60,66,120,0.55)";
+    for (const [u, v, rw, rh] of [[0.22, 0.15, 0.32, 0.025], [0.5, 0.2, 0.4, 0.02], [0.75, 0.09, 0.3, 0.018]]) {
       c.beginPath();
-      c.arc(x + hash(i * 7.7) * w, y + hash(i * 3.1) * h, 1.5 + hash(i * 1.3) * 3.5, 0, Math.PI * 2);
+      c.ellipse(X(u), Y(v), rw * w, rh * h, 0, 0, Math.PI * 2);
       c.fill();
     }
-    // the window frame in the corner
+    // far rooftops in the haze, a thin line of snow on each
+    c.fillStyle = "#34346a";
+    c.beginPath();
+    c.moveTo(x, y + h);
+    let fx0 = x;
+    for (let i = 0; fx0 < x + w; i++) {
+      const bw = (34 + 30 * hash(i * 5.1)) * s,
+        top = Y(0.33 + 0.08 * hash(i * 2.3));
+      c.lineTo(fx0, top);
+      c.lineTo(fx0 + bw, top);
+      fx0 += bw;
+    }
+    c.lineTo(x + w, y + h);
+    c.fill();
+    fx0 = x;
+    for (let i = 0; fx0 < x + w; i++) {
+      const bw = (34 + 30 * hash(i * 5.1)) * s,
+        top = Y(0.33 + 0.08 * hash(i * 2.3));
+      c.fillStyle = "rgba(220,226,255,0.45)";
+      c.fillRect(fx0, top - 1.5 * s, bw, 3 * s);
+      for (let k = 0; k < 6; k++)
+        if (hash(i * 13 + k * 2.7) > 0.72) {
+          c.fillStyle = "rgba(255,210,150,0.45)";
+          c.fillRect(fx0 + (5 + (k % 2) * 14) * s, top + (10 + Math.floor(k / 2) * 14) * s, 5 * s, 6 * s);
+        }
+      fx0 += bw;
+    }
+    // haze between the far and the near blocks
+    const haze = c.createLinearGradient(0, Y(0.33), 0, Y(0.6));
+    haze.addColorStop(0, "rgba(130,118,180,0)");
+    haze.addColorStop(1, "rgba(130,118,180,0.4)");
+    c.fillStyle = haze;
+    c.fillRect(x, Y(0.33), w, 0.27 * h);
+    // the old block across the street: a snowy pitched roof, warm windows of different rooms, snow on the ledges
+    const near: [number, number, number, number][] = [[0.1, 0.5, 0.44, 4], [0.56, 0.58, 0.3, 3]];
+    near.forEach(([u, v, bw, cols], b) => {
+      const bx = X(u),
+        by = Y(v),
+        bwp = bw * w;
+      c.fillStyle = b ? "#202350" : "#1b1e46";
+      c.fillRect(bx, by, bwp, h);
+      // roof
+      c.fillStyle = "#15183a";
+      c.beginPath();
+      c.moveTo(bx - 6 * s, by);
+      c.lineTo(bx + bwp * 0.5, by - 26 * s);
+      c.lineTo(bx + bwp + 6 * s, by);
+      c.fill();
+      c.fillStyle = "#eef2ff";
+      c.beginPath();
+      c.moveTo(bx - 8 * s, by + 2 * s);
+      c.lineTo(bx + bwp * 0.5, by - 30 * s);
+      c.lineTo(bx + bwp + 8 * s, by + 2 * s);
+      c.quadraticCurveTo(bx + bwp * 0.8, by - 4 * s, bx + bwp * 0.5, by - 18 * s);
+      c.quadraticCurveTo(bx + bwp * 0.2, by - 4 * s, bx - 8 * s, by + 2 * s);
+      c.fill();
+      const ww = bwp / cols;
+      for (let r = 0; r < 5; r++)
+        for (let k = 0; k < cols; k++) {
+          const lit = hash(b * 50 + r * 7 + k * 1.9);
+          const wx = bx + k * ww + ww * 0.22,
+            wy = by + (18 + r * 38) * s,
+            wwid = ww * 0.56,
+            wh = 24 * s;
+          if (lit > 0.4) {
+            glowAt(wx + wwid / 2, wy + wh / 2, 30 * s, "255,180,100", 0.22);
+            const wg = c.createLinearGradient(0, wy, 0, wy + wh);
+            wg.addColorStop(0, lit > 0.75 ? "#ffd998" : "#f6b768");
+            wg.addColorStop(1, lit > 0.75 ? "#f4b467" : "#d98b4f");
+            c.fillStyle = wg;
+          } else c.fillStyle = "#2a2d5a";
+          c.fillRect(wx, wy, wwid, wh);
+          // the window's cross bars
+          c.fillStyle = "rgba(20,22,50,0.7)";
+          c.fillRect(wx + wwid / 2 - 1 * s, wy, 2 * s, wh);
+          c.fillRect(wx, wy + wh * 0.45, wwid, 2 * s);
+          if (lit > 0.62 && lit < 0.85) {
+            // a curtain half drawn
+            c.fillStyle = "rgba(180,95,80,0.6)";
+            c.fillRect(wx, wy, wwid * 0.35, wh);
+          }
+          // snow on the ledge
+          c.fillStyle = "rgba(238,242,255,0.9)";
+          rr(c, wx - 3 * s, wy + wh, wwid + 6 * s, 3.5 * s, 1.5 * s);
+          c.fill();
+        }
+    });
+    // the street, white with snow, tyre tracks, and the lamp's pool of light
+    const ground = c.createLinearGradient(0, Y(0.8), 0, y + h);
+    ground.addColorStop(0, "#8e93c4");
+    ground.addColorStop(1, "#5d6196");
+    c.fillStyle = ground;
+    c.fillRect(x, Y(0.8), w, 0.2 * h);
+    c.strokeStyle = "rgba(60,62,110,0.45)";
+    c.lineWidth = 3 * s;
+    for (const d of [-0.06, 0.06]) {
+      c.beginPath();
+      c.moveTo(X(0.45 + d), Y(0.8));
+      c.quadraticCurveTo(X(0.5 + d * 2), Y(0.9), X(0.42 + d * 4), y + h);
+      c.stroke();
+    }
+    // the street lamp: a warm cone and the flakes caught in it
+    const lx = X(0.8),
+      ly = Y(0.5);
+    c.strokeStyle = "#141633";
+    c.lineWidth = 5 * s;
+    c.beginPath();
+    c.moveTo(lx + 14 * s, Y(0.84));
+    c.lineTo(lx + 14 * s, ly + 4 * s);
+    c.quadraticCurveTo(lx + 14 * s, ly - 6 * s, lx + 2 * s, ly - 4 * s);
+    c.stroke();
+    c.save();
+    c.globalCompositeOperation = "lighter";
+    const cone = c.createLinearGradient(0, ly, 0, Y(0.86));
+    cone.addColorStop(0, "rgba(255,196,120,0.45)");
+    cone.addColorStop(1, "rgba(255,196,120,0.04)");
+    c.fillStyle = cone;
+    c.beginPath();
+    c.moveTo(lx - 6 * s, ly);
+    c.lineTo(lx + 6 * s, ly);
+    c.lineTo(lx + 70 * s, Y(0.86));
+    c.lineTo(lx - 80 * s, Y(0.86));
+    c.closePath();
+    c.fill();
+    glowAt(lx, ly, 90 * s, "255,200,130", 0.5);
+    glowAt(lx - 5 * s, Y(0.85), 90 * s, "255,200,140", 0.35);
+    c.restore();
+    c.fillStyle = "#fff0c8";
+    c.beginPath();
+    c.ellipse(lx, ly, 8 * s, 4 * s, 0, 0, Math.PI * 2);
+    c.fill();
+    // a bare tree in the front yard, every branch carrying a line of snow
+    const branch = (bx: number, by: number, ang: number, len: number, wid: number, d: number, sd: number) => {
+      const ex = bx + Math.cos(ang) * len,
+        ey = by + Math.sin(ang) * len;
+      c.strokeStyle = "#121433";
+      c.lineCap = "round";
+      c.lineWidth = wid;
+      c.beginPath();
+      c.moveTo(bx, by);
+      c.lineTo(ex, ey);
+      c.stroke();
+      c.strokeStyle = "rgba(240,244,255,0.92)";
+      c.lineWidth = Math.max(1.2 * s, wid * 0.45);
+      c.beginPath();
+      c.moveTo(bx, by - wid * 0.45);
+      c.lineTo(ex, ey - wid * 0.45);
+      c.stroke();
+      if (d <= 0) return;
+      for (const side of [-1, 1]) branch(ex, ey, ang + side * (0.35 + 0.3 * hash(sd + side)), len * (0.62 + 0.15 * hash(sd * 2 + side)), wid * 0.62, d - 1, sd * 3 + side + 7);
+    };
+    branch(X(0.3), Y(0.97), -Math.PI / 2 + 0.06, 0.2 * h, 9 * s, 5, 11);
+    // flakes: far small and dense, near big and soft; the ones in the lamp's light are warm
+    const inCone = (fx: number, fy: number) => fy > ly && Math.abs(fx - lx) < 10 * s + ((fy - ly) / (Y(0.86) - ly)) * 75 * s;
+    for (let i = 0; i < 130; i++) {
+      const fx = X(hash(i * 7.7)),
+        fy = Y(hash(i * 3.1));
+      const r = (0.8 + hash(i * 1.3) * 2.2) * s;
+      c.fillStyle = inCone(fx, fy) ? "rgba(255,236,196,0.95)" : "rgba(235,240,255,0.8)";
+      c.beginPath();
+      c.arc(fx, fy, r, 0, Math.PI * 2);
+      c.fill();
+    }
+    for (let i = 0; i < 14; i++) glowAt(X(hash(i * 9.3 + 2)), Y(hash(i * 4.9 + 1)), (6 + 8 * hash(i * 2.2)) * s, "240,244,255", 0.55);
+    // her window: the frame, frost in the corners, the snow piled on the sill, the edge of her pink curtain
     c.fillStyle = "#e9e2d6";
-    c.fillRect(x, y, w * 0.05, h);
-    c.fillRect(x, y + h * 0.95, w, h * 0.05);
+    c.fillRect(x, y, w * 0.045, h);
+    c.fillRect(x, Y(0.93), w, 0.07 * h);
+    c.fillStyle = "rgba(0,0,0,0.18)";
+    c.fillRect(X(0.045), y, 3 * s, Y(0.93) - y);
+    c.fillStyle = "#f7f9ff";
+    c.beginPath();
+    c.moveTo(X(0.045), Y(0.93));
+    for (let i = 0; i <= 12; i++) c.lineTo(X(0.045 + (i / 12) * 0.955), Y(0.93) - (4 + 9 * Math.sin(i * 0.9) ** 2 + 6 * hash(i * 3.7)) * s);
+    c.lineTo(x + w, Y(0.93));
+    c.closePath();
+    c.fill();
+    glowAt(X(0.05), Y(0.92), 70 * s, "235,242,255", 0.5);
+    glowAt(x + w, y, 80 * s, "235,242,255", 0.4);
+    const cur = c.createLinearGradient(x, 0, X(0.09), 0);
+    cur.addColorStop(0, "rgba(150,70,110,0.95)");
+    cur.addColorStop(1, "rgba(150,70,110,0)");
+    c.fillStyle = cur;
+    c.fillRect(x, y, 0.09 * w, h);
+    // the phone camera's look: a warm lift and a soft vignette
+    const vg = c.createRadialGradient(X(0.55), Y(0.5), 0.2 * w, X(0.55), Y(0.5), 0.85 * h);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(5,6,25,0.45)");
+    c.fillStyle = vg;
+    c.fillRect(x, y, w, h);
   });
 
 /** The same two detailed café photos in her post, his viewer and the room's polaroid. */
@@ -369,27 +551,121 @@ export const nightPhoto: Photo = (c, x, y, w, h) =>
     drawKid(c, x + w * 0.5, y + h * 0.55, 0.95 * s, { who: "girl", outfit: "cardigan", body: "bust", eyes: "happy", mouth: "laugh", seed: 851 });
   });
 
-/** The party photo she posted in her first winter away (the memory). */
+/** The party photo she posted in her first winter away (the memory): a selfie with her two roommates out on a winter
+ *  night — a street of string lights and a big glowing tree behind them, the shop lights melted into bokeh, snow
+ *  falling, and the phone's flash warm on their laughing faces. */
 export const partyPhoto: Photo = (c, x, y, w, h) =>
   clipRect(c, x, y, w, h, () => {
-    const g = c.createLinearGradient(x, y, x + w, y + h);
-    g.addColorStop(0, "#5a2d82");
-    g.addColorStop(1, "#c2457a");
+    const s = w / 600;
+    const X = (u: number) => x + u * w,
+      Y = (v: number) => y + v * h;
+    const glowAt = (gx: number, gy: number, r: number, col: string, a: number) => {
+      const gg = c.createRadialGradient(gx, gy, 0, gx, gy, r);
+      gg.addColorStop(0, `rgba(${col},${a})`);
+      gg.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = gg;
+      c.fillRect(gx - r, gy - r, 2 * r, 2 * r);
+    };
+    // the night: deep blue at the top, the street's warm plum glow lower down
+    const g = c.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, "#1a1840");
+    g.addColorStop(0.55, "#4a2a62");
+    g.addColorStop(1, "#7a3a5e");
     c.fillStyle = g;
     c.fillRect(x, y, w, h);
-    for (let i = 0; i < 9; i++) {
-      const bx = x + hash(i * 3.7) * w,
-        by = y + hash(i * 1.9) * h * 0.5;
-      const bg = c.createRadialGradient(bx, by, 0, bx, by, w * 0.1);
-      bg.addColorStop(0, ["rgba(255,220,120,0.8)", "rgba(120,220,255,0.7)", "rgba(255,140,200,0.7)"][i % 3]);
-      bg.addColorStop(1, "rgba(0,0,0,0)");
-      c.fillStyle = bg;
-      c.fillRect(bx - w * 0.1, by - w * 0.1, w * 0.2, w * 0.2);
+    // shop windows down the street, out of focus
+    for (let i = 0; i < 7; i++) {
+      const bx = X(-0.05 + i * 0.17),
+        by = Y(0.42 + 0.06 * hash(i * 2.2));
+      c.fillStyle = `rgba(${i % 2 ? "255,190,120" : "255,150,170"},0.18)`;
+      rr(c, bx, by, 70 * s, 110 * s, 10 * s);
+      c.fill();
     }
-    const s = w / 600;
-    drawPerson(c, x + w * 0.2, y + h * 0.5, 0.75 * s, { x: 0, hair: "long", hairColor: "#3a2414", top: "#f2c94c", face: "laugh", body: "bust", seed: 861 });
-    drawPerson(c, x + w * 0.8, y + h * 0.5, 0.75 * s, { x: 0, hair: "bun", hairColor: "#191515", top: "#4f8fbf", face: "smile", body: "bust", seed: 862 });
-    drawKid(c, x + w * 0.5, y + h * 0.5, 0.86 * s, { who: "girl", outfit: "uniform", body: "bust", eyes: "happy", mouth: "grin", tilt: 0.08, seed: 863 });
+    // the big tree behind her, glowing, strung with lights, a star on top
+    const tx = X(0.72),
+      ty = Y(0.08);
+    glowAt(tx, Y(0.35), 220 * s, "255,200,120", 0.35);
+    c.fillStyle = "rgba(30,80,60,0.85)";
+    c.beginPath();
+    c.moveTo(tx, ty + 20 * s);
+    c.lineTo(tx + 150 * s, Y(0.7));
+    c.lineTo(tx - 150 * s, Y(0.7));
+    c.closePath();
+    c.fill();
+    for (let i = 0; i < 26; i++) {
+      const v = hash(i * 3.9),
+        hw = (20 + 130 * v) * s;
+      const lx = tx + (hash(i * 6.1) * 2 - 1) * hw,
+        ly = ty + 20 * s + v * (Y(0.7) - ty - 20 * s);
+      glowAt(lx, ly, 14 * s, ["255,214,120", "255,140,160", "160,220,255"][i % 3], 0.9);
+    }
+    c.save();
+    c.translate(tx, ty + 14 * s);
+    c.fillStyle = "#ffe08a";
+    c.beginPath();
+    for (let k = 0; k < 10; k++) {
+      const r = (k % 2 ? 8 : 20) * s,
+        a = -Math.PI / 2 + (k * Math.PI) / 5;
+      c.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    c.closePath();
+    c.fill();
+    c.restore();
+    glowAt(tx, ty + 14 * s, 50 * s, "255,230,150", 0.7);
+    // big soft bokeh of the street lights
+    for (let i = 0; i < 14; i++) {
+      const bx = X(hash(i * 3.7)),
+        by = Y(0.05 + 0.6 * hash(i * 1.9));
+      const r = (26 + 40 * hash(i * 5.3)) * s;
+      glowAt(bx, by, r, ["255,206,120", "140,200,255", "255,140,200", "255,170,110"][i % 4], 0.35);
+      c.strokeStyle = "rgba(255,240,220,0.12)";
+      c.lineWidth = 2 * s;
+      c.beginPath();
+      c.arc(bx, by, r * 0.7, 0, Math.PI * 2);
+      c.stroke();
+    }
+    // a string of lights swinging across the top
+    const bulbs: [number, number][] = [];
+    c.strokeStyle = "rgba(20,16,30,0.8)";
+    c.lineWidth = 2.5 * s;
+    c.beginPath();
+    for (let i = 0; i <= 20; i++) {
+      const u = i / 20;
+      const py = Y(0.12 + 0.12 * Math.sin(Math.PI * ((u * 2) % 1)));
+      if (i === 0) c.moveTo(X(u), py);
+      else c.lineTo(X(u), py);
+      if (i % 2) bulbs.push([X(u), py + 8 * s]);
+    }
+    c.stroke();
+    bulbs.forEach(([bx, by], i) => {
+      glowAt(bx, by, 22 * s, i % 2 ? "255,214,140" : "255,160,180", 0.75);
+      c.fillStyle = i % 2 ? "#fff1c4" : "#ffd0dc";
+      c.beginPath();
+      c.ellipse(bx, by, 5 * s, 7 * s, 0, 0, Math.PI * 2);
+      c.fill();
+    });
+    // the three of them, close together for the selfie
+    drawPerson(c, X(0.2), Y(0.52), 0.75 * s, { x: 0, hair: "pony", hairColor: "#3a2414", top: "#f2c94c", face: "laugh", body: "bust", seed: 861 });
+    drawPerson(c, X(0.8), Y(0.52), 0.75 * s, { x: 0, hair: "bun", hairColor: "#191515", top: "#4f8fbf", face: "smile", body: "bust", seed: 862 });
+    drawKid(c, X(0.5), Y(0.5), 0.86 * s, { who: "girl", outfit: "uniform", body: "bust", eyes: "happy", mouth: "grin", tilt: 0.08, seed: 863 });
+    // snow falling in front of them, a few big soft flakes close to the lens
+    c.fillStyle = "rgba(255,255,255,0.85)";
+    for (let i = 0; i < 50; i++) {
+      c.beginPath();
+      c.arc(X(hash(i * 7.3)), Y(hash(i * 2.7)), (1.5 + 3 * hash(i * 1.1)) * s, 0, Math.PI * 2);
+      c.fill();
+    }
+    for (let i = 0; i < 6; i++) glowAt(X(hash(i * 9.1 + 3)), Y(hash(i * 4.4 + 2)), (10 + 10 * hash(i)) * s, "255,255,255", 0.5);
+    // the phone's flash: warm on their faces, falling off to the edges
+    c.save();
+    c.globalCompositeOperation = "lighter";
+    glowAt(X(0.5), Y(0.5), 0.5 * w, "255,210,170", 0.14);
+    c.restore();
+    const vg = c.createRadialGradient(X(0.5), Y(0.5), 0.3 * w, X(0.5), Y(0.5), 0.75 * w);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(20,8,30,0.4)");
+    c.fillStyle = vg;
+    c.fillRect(x, y, w, h);
   });
 
 /** His lock-screen wallpaper: a sunny afternoon in the park twenty years ago — young him (black hair, white shirt,
@@ -448,31 +724,118 @@ function dadForearm(c: Ctx, side: number) {
 export const wallpaperPhoto: Photo = (c, x, y, w, h) =>
   clipRect(c, x, y, w, h, () => {
     const sw = w / 600;
-    // sky, a soft sun, round trees, a grassy hill
+    const X = (u: number) => x + u * w,
+      Y = (v: number) => y + v * h;
+    const glowAt = (gx: number, gy: number, r: number, col: string, a: number) => {
+      const gg = c.createRadialGradient(gx, gy, 0, gx, gy, r);
+      gg.addColorStop(0, `rgba(${col},${a})`);
+      gg.addColorStop(1, `rgba(${col},0)`);
+      c.fillStyle = gg;
+      c.fillRect(gx - r, gy - r, 2 * r, 2 * r);
+    };
+    // a late golden afternoon: blue overhead, warm haze down at the trees
     const g = c.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, "#7cc3ef");
-    g.addColorStop(0.55, "#cfeaf9");
-    g.addColorStop(1, "#f6e7b8");
+    g.addColorStop(0, "#6fb6ea");
+    g.addColorStop(0.4, "#b9def4");
+    g.addColorStop(0.62, "#ffe6bd");
+    g.addColorStop(1, "#f3d9a0");
     c.fillStyle = g;
     c.fillRect(x, y, w, h);
-    const sun = c.createRadialGradient(x + w * 0.82, y + h * 0.16, 0, x + w * 0.82, y + h * 0.16, w * 0.5);
-    sun.addColorStop(0, "rgba(255,250,215,0.95)");
-    sun.addColorStop(0.2, "rgba(255,240,190,0.55)");
-    sun.addColorStop(1, "rgba(255,240,190,0)");
-    c.fillStyle = sun;
-    c.fillRect(x, y, w, h);
-    for (let i = 0; i < 6; i++) {
-      const tx = x + w * (0.05 + i * 0.19),
-        ty = y + h * (0.6 + (i % 2) * 0.03);
-      oval(c, tx, ty, 70 * sw, 80 * sw, 3700 + i, 1.2);
-      paint(c, i % 2 ? "#7fc06a" : "#69ad5c", "rgba(30,60,30,0.6)", 3 * sw);
-      c.fillStyle = "#6b4a2b";
-      c.fillRect(tx - 6 * sw, ty + 70 * sw, 12 * sw, 60 * sw);
+    // soft clouds lit from the sun's side
+    for (const [u, v, k] of [[0.18, 0.12, 1], [0.7, 0.32, 0.8], [0.12, 0.42, 0.6]]) {
+      for (let j = 0; j < 4; j++) {
+        oval(c, X(u) + (j - 1.5) * 46 * sw * k, Y(v) - (j % 2) * 16 * sw * k, (44 + 14 * (j % 2)) * sw * k, (26 + 8 * (j % 2)) * sw * k, 3760 + j, 1);
+        paint(c, "rgba(255,255,255,0.55)", null);
+      }
+      oval(c, X(u) + 30 * sw * k, Y(v) + 6 * sw * k, 70 * sw * k, 12 * sw * k, 3765, 1);
+      paint(c, "rgba(255,226,190,0.5)", null);
     }
-    c.fillStyle = "#86c56e";
+    // the sun, low on the right, and its rays
+    const sx = X(0.84),
+      sy = Y(0.3);
+    glowAt(sx, sy, w * 0.75, "255,226,160", 0.5);
+    glowAt(sx, sy, w * 0.18, "255,250,225", 0.95);
+    c.save();
+    c.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 9; i++) {
+      const a = 1.9 + i * 0.18 + 0.05 * hash(i * 3.3);
+      c.fillStyle = `rgba(255,236,190,${(0.05 + 0.04 * hash(i * 1.7)).toFixed(3)})`;
+      c.beginPath();
+      c.moveTo(sx, sy);
+      c.lineTo(sx + Math.cos(a - 0.03) * w * 1.4, sy + Math.sin(a - 0.03) * w * 1.4);
+      c.lineTo(sx + Math.cos(a + 0.03) * w * 1.4, sy + Math.sin(a + 0.03) * w * 1.4);
+      c.closePath();
+      c.fill();
+    }
+    c.restore();
+    // a red kite up on the left, its tail curling in the wind
+    c.save();
+    c.translate(X(0.16), Y(0.3));
+    c.rotate(-0.25);
+    poly(c, [[0, -34 * sw], [22 * sw, 0], [0, 40 * sw], [-22 * sw, 0]], 3769, 1);
+    paint(c, "#e8574f", C.ink, 3 * sw);
+    inkLine(c, [[0, -34 * sw], [0, 40 * sw]], 3770, 1.5 * sw, "rgba(60,20,20,0.6)");
+    inkLine(c, [[0, 40 * sw], [10 * sw, 70 * sw], [-6 * sw, 100 * sw], [8 * sw, 130 * sw]], 3771, 2 * sw, C.ink);
+    for (const [bx, by] of [[8, 66], [-4, 98], [6, 126]]) {
+      oval(c, bx * sw, by * sw, 6 * sw, 4 * sw, 3772 + by, 1);
+      paint(c, "#ffd25a", null);
+    }
+    c.restore();
+    inkLine(c, [[X(0.16) + 8 * sw, Y(0.3) + 30 * sw], [X(0.3), Y(0.5)], [X(0.4), Y(0.62)]], 3775, 1 * sw, "rgba(80,80,90,0.35)");
+    // far trees in the haze, then the near ones: lit on the sun's side, cool in the shade
+    for (let i = 0; i < 9; i++) {
+      const tx = X(-0.04 + i * 0.13),
+        ty = Y(0.57 + 0.02 * hash(i * 2.1));
+      oval(c, tx, ty, 60 * sw, 50 * sw, 3780 + i, 1.2);
+      paint(c, "rgba(150,186,140,0.85)", null);
+    }
+    const tree = (tx: number, ty: number, r: number, i: number) => {
+      c.fillStyle = "#6a4a2c";
+      c.fillRect(tx - 7 * sw, ty + r * 0.6, 14 * sw, r * 1.1);
+      // one bumpy round canopy (a single outline, no circles inside it)
+      const crown: Pt[] = [];
+      for (let j = 0; j < 22; j++) {
+        const a = (j / 22) * Math.PI * 2;
+        const rr2 = r * (0.92 + 0.1 * Math.abs(Math.sin(a * 3.5 + i)) + 0.04 * hash(i * 9 + j));
+        crown.push([tx + Math.cos(a) * rr2, ty + Math.sin(a) * rr2 * 0.92]);
+      }
+      shaded(c, () => blob(c, crown, 3784 + i, 0.8),  i % 2 ? "#78b866" : "#68aa5c", () => {
+        // the shade on the side away from the sun, and the warm light on the sunny side
+        c.fillStyle = "rgba(40,90,70,0.35)";
+        c.beginPath();
+        c.arc(tx - r * 0.55, ty + r * 0.45, r * 0.85, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = "rgba(255,230,140,0.4)";
+        c.beginPath();
+        c.arc(tx + r * 0.45, ty - r * 0.4, r * 0.55, 0, Math.PI * 2);
+        c.fill();
+      }, "rgba(30,60,30,0.65)", 3 * sw);
+    };
+    [[0.02, 0.6, 82], [0.24, 0.63, 70], [0.76, 0.62, 74], [0.98, 0.6, 86]].forEach(([u, v, r], i) => tree(X(u), Y(v), r * sw, i));
+    // the grass: a rolling lawn, long warm light across it, little flowers
+    const lawn = c.createLinearGradient(0, Y(0.7), 0, y + h);
+    lawn.addColorStop(0, "#a8d47a");
+    lawn.addColorStop(1, "#6fae58");
+    c.fillStyle = lawn;
     c.beginPath();
-    c.ellipse(x + w * 0.5, y + h * 1.08, w * 0.95, h * 0.3, 0, 0, Math.PI * 2);
+    c.moveTo(x, Y(0.67));
+    c.quadraticCurveTo(X(0.35), Y(0.63), X(0.6), Y(0.66));
+    c.quadraticCurveTo(X(0.85), Y(0.68), x + w, Y(0.64));
+    c.lineTo(x + w, y + h);
+    c.lineTo(x, y + h);
+    c.closePath();
     c.fill();
+    for (let i = 0; i < 60; i++) {
+      const gx = X(hash(i * 4.1)),
+        gy = Y(0.69 + 0.31 * hash(i * 2.9));
+      inkLine(c, [[gx, gy], [gx + 3 * sw, gy - 10 * sw]], 3790 + i, 1.4 * sw, "rgba(60,110,50,0.5)");
+      if (hash(i * 7.3) > 0.6) {
+        c.fillStyle = hash(i * 5.5) > 0.5 ? "#fff6e0" : "#ffd74f";
+        c.beginPath();
+        c.arc(gx + 6 * sw, gy - 4 * sw, 3.5 * sw, 0, Math.PI * 2);
+        c.fill();
+      }
+    }
     const fx = x + w * WALL_FACE[0],
       fy = y + h * WALL_FACE[1];
     const s = WALL_S * sw;
@@ -508,8 +871,25 @@ export const wallpaperPhoto: Photo = (c, x, y, w, h) =>
         k.restore();
       },
     });
-    // the warm photo look
-    c.fillStyle = "rgba(255,200,120,0.08)";
+    // the sun behind them on the right: a warm rim of light round them, a little flare and bokeh, the old photo look
+    c.save();
+    c.globalCompositeOperation = "lighter";
+    glowAt(X(0.78), Y(0.42), w * 0.45, "255,200,120", 0.16);
+    for (const [u, v, r, a] of [[0.9, 0.42, 22, 0.16], [0.12, 0.58, 30, 0.1], [0.95, 0.62, 16, 0.14]]) {
+      glowAt(X(u), Y(v), r * sw, "255,230,180", a);
+      c.strokeStyle = `rgba(255,236,200,${(a * 0.8).toFixed(3)})`;
+      c.lineWidth = 1.2 * sw;
+      c.beginPath();
+      c.arc(X(u), Y(v), r * sw * 0.8, 0, Math.PI * 2);
+      c.stroke();
+    }
+    c.restore();
+    c.fillStyle = "rgba(255,200,120,0.1)";
+    c.fillRect(x, y, w, h);
+    const vg = c.createRadialGradient(X(0.55), Y(0.45), 0.3 * w, X(0.55), Y(0.45), 0.85 * h);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(90,50,20,0.28)");
+    c.fillStyle = vg;
     c.fillRect(x, y, w, h);
   });
 
@@ -1273,13 +1653,61 @@ export function wxBanner(c: Ctx, k: number, title: string, body: string, big = f
 }
 
 // ---------------------------------------------------------------- his lock screen
-/** His lock screen (old-people mode: a huge clock) over the wallpaper photo. `k` 0..1 = lit. */
+/** His lock screen (old-people mode: a huge clock) over the wallpaper photo, with a small padlock over the clock and
+ *  the home bar at the bottom. */
 export function dadLock(c: Ctx, o: { time: string; date: string }) {
   wallpaperPhoto(c, 0, 0, SW, SH);
   c.fillStyle = "rgba(0,0,0,0.12)";
   c.fillRect(0, 0, SW, SH);
+  dadLockText(c, o);
+}
+/** The lock screen's own layer (the wallpaper is under it): padlock, clock, date and home bar. Unlocking: `open` 0..1
+ *  the padlock's shackle springs open (Face ID knows him); `lift` 0..1 the swipe — the clock and date ride up after
+ *  his thumb and fade, the home bar goes with them. */
+export function dadLockText(c: Ctx, o: { time: string; date: string; open?: number; lift?: number }) {
+  const open = clamp(o.open ?? 0),
+    lift = clamp(o.lift ?? 0);
+  const a = 1 - clamp(lift / 0.75);
+  if (a <= 0) return;
+  c.save();
+  c.globalAlpha *= a;
+  // the clock moves up a little faster than it fades, shrinking a touch, like iOS
+  const dy = -260 * lift;
+  c.translate(SW / 2, 250 + dy);
+  c.scale(1 - 0.08 * lift, 1 - 0.08 * lift);
+  c.translate(-SW / 2, -250);
+  // the padlock: a little shadowed white lock; its shackle lifts and swings open
+  c.save();
+  c.translate(SW / 2, 140);
+  c.shadowColor = "rgba(0,0,0,0.35)";
+  c.shadowBlur = 8;
+  c.fillStyle = "#fff";
+  rr(c, -15, -4, 30, 24, 6);
+  c.fill();
+  c.strokeStyle = "#fff";
+  c.lineWidth = 5;
+  c.lineCap = "round";
+  c.beginPath();
+  const up = 7 * open;
+  c.translate(9, 0);
+  c.rotate(0.55 * open);
+  c.translate(-9, 0);
+  c.moveTo(-9, -4 - up);
+  c.lineTo(-9, -12 - up);
+  c.arc(0, -12 - up, 9, Math.PI, 0);
+  c.lineTo(9, -4 - up);
+  c.stroke();
+  c.restore();
   text(c, o.time, SW / 2, 250, { size: 150, font: F.ui, weight: 700, fill: "#fff", shadow: 10 });
   text(c, o.date, SW / 2, 360, { size: 40, font: F.ui, weight: 700, fill: "#fff", shadow: 8 });
+  c.restore();
+  // the home bar stays at the bottom, fading out as the home screen comes up
+  c.save();
+  c.globalAlpha *= a;
+  c.fillStyle = "rgba(255,255,255,0.9)";
+  rr(c, SW / 2 - 70, SH - 26 - 40 * lift, 140, 8, 4);
+  c.fill();
+  c.restore();
 }
 
 /** 「囡囡」's Moments page as he sees it: her cover and name, and under them only a grey line — she hid her Moments

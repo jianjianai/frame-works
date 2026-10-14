@@ -8,7 +8,7 @@ import { Ctx, F, camera, castShadow, designScene, easeInOut, easeOut, filtered, 
 import { SW, SH, phoneBack, statusBar } from "@materials/s0rrow/code/phone";
 import { WECHAT_AT, appWindow, homeScreen } from "@materials/s0rrow/code/chat";
 import { SHOT, WORD, at } from "./timeline";
-import { ACC_B, DAD_CALLS_HER, MOMENTS_ROW, WALL_FACE, WALL_S, couplePhoto, dadLock, hwFinger, slide, vidHandwriting, wallpaperPhoto, wxContact, wxMomentsBlocked, type Guide } from "./ui";
+import { ACC_B, DAD_CALLS_HER, MOMENTS_ROW, WALL_FACE, WALL_S, couplePhoto, dadLock, dadLockText, hwFinger, slide, vidHandwriting, wallpaperPhoto, wxContact, wxMomentsBlocked, type Guide } from "./ui";
 import { boothBack, boothFront, boothFrontDesk, deskTop } from "@materials/s0rrow/code/blocked/booth";
 import { drawDad } from "@materials/s0rrow/code/blocked/dad";
 import { drawPhone, halo, tap, timeCard, whip, type Touch } from "./shots";
@@ -522,8 +522,10 @@ const HIGH_NOTE = 29.87;
  *  her cover, and on the high note a single grey line draws across: she hid her Moments from him.
  *  Sounds (audio.json): swipeUnlock, tapWechat, tap7. */
 function shot14(c: Ctx, abs: number, t0: number) {
+  // Face ID knows him (the padlock springs open), then his slow thumb swipes up
   const unlock = t0 + 0.04;
-  const up = easeInOut(phase(abs, unlock, unlock + 0.62));
+  const lockOpen = easeOut(phase(abs, t0 + 0.06, t0 + 0.24));
+  const up = easeInOut(phase(abs, unlock + 0.18, unlock + 0.8));
   const wechatAt = at(59);
   const tapAt = HIGH_NOTE - 0.32;
   const open = (abs - tapAt - 0.02) / 0.22;
@@ -539,13 +541,30 @@ function shot14(c: Ctx, abs: number, t0: number) {
   halo(c, { cx: 540, cy: 900, s: 1 }, 1 + 0.35 * hope - 0.55 * fall, lerpRgb([150, 180, 255], WARM, hope * (1 - fall)));
   drawPhone(c, abs, { cx: 540, cy: 900, s: 1 }, (p) => {
     if (app < 1) {
-      hisHome(p, abs, phase(abs, wechatAt - 0.06, wechatAt) * (1 - phase(abs, wechatAt + 0.04, wechatAt + 0.12)));
+      const press = phase(abs, wechatAt - 0.06, wechatAt) * (1 - phase(abs, wechatAt + 0.04, wechatAt + 0.12));
       if (up < 1) {
+        // the modern unlock: the wallpaper stays, softening a little; the lock layer rides up after his thumb and
+        // fades; the home screen comes in from a touch larger, its icons settling into place
         p.save();
-        p.translate(0, -1280 * up);
-        dadLock(p, { time: "02:51", date: "1月14日 星期二" });
+        p.filter = `blur(${(6 * Math.sin(Math.PI * Math.min(1, up * 1.3))).toFixed(1)}px)`;
+        wallpaperPhoto(p, 0, 0, SW, SH);
+        p.filter = "none";
+        p.fillStyle = `rgba(0,0,0,${(0.12 + 0.1 * up).toFixed(3)})`;
+        p.fillRect(0, 0, SW, SH);
         p.restore();
-      }
+        const homeIn = easeOut(phase(up, 0.25, 1));
+        if (homeIn > 0) {
+          p.save();
+          p.globalAlpha *= homeIn;
+          const hs = 1.12 - 0.12 * homeIn;
+          p.translate(SW / 2, SH / 2);
+          p.scale(hs, hs);
+          p.translate(-SW / 2, -SH / 2);
+          hisHome(p, abs, press);
+          p.restore();
+        }
+        dadLockText(p, { time: "02:51", date: "1月14日 星期二", open: lockOpen, lift: up });
+      } else hisHome(p, abs, press);
     }
     appWindow(p, app, WECHAT_AT, (q) =>
       slide(q, open,
@@ -555,7 +574,7 @@ function shot14(c: Ctx, abs: number, t0: number) {
     old: true,
     touches: [
       // a slow swipe up from the bottom
-      { x: 300, y: 1180 - 620 * easeInOut(phase(abs, unlock - 0.02, unlock + 0.56)), k: abs > unlock - 0.06 && abs < unlock + 0.6 ? 1 : 0 },
+      { x: 300, y: 1230 - 620 * easeInOut(phase(abs, unlock + 0.16, unlock + 0.74)), k: abs > unlock + 0.12 && abs < unlock + 0.78 ? 1 : 0 },
       tap(abs, wechatAt, WECHAT_AT[0], WECHAT_AT[1]),
       tap(abs, tapAt, ...MOMENTS_ROW),
     ],

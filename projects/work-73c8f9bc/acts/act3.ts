@@ -219,7 +219,7 @@ type P2 = [number, number];
 const lerpArc = (a: P2, b: P2, e: number, lift = 0): P2 => [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e - lift * Math.sin(Math.PI * e)];
 /** her phone in head units, `up` 0 lying face up on the pillow → 1 upright in her hands with its screen to her: seen
  *  from the camera (a little above) it shows its lit screen squashed flat, goes edge-on, then shows its back */
-function pickedPhone(q: Ctx, p: P2, up: number) {
+function pickedPhone(q: Ctx, p: P2, up: number, straight = 0) {
   const tilt = up * Math.PI / 2,
     el = 0.47;
   const face = Math.sin(el - tilt); // > 0: we see the screen
@@ -227,7 +227,7 @@ function pickedPhone(q: Ctx, p: P2, up: number) {
   q.translate(p[0] + 26 * (1 - up), p[1] - 14 * (1 - up));
   // squashed on the screen's vertical (the camera looks down on it a little), then turned in its own plane
   q.scale(1, Math.max(0.04, Math.abs(face)));
-  q.rotate(-0.08 + 1.62 * (1 - up));
+  q.rotate(-0.08 * (1 - straight) + 1.62 * (1 - up));
   if (face > 0) {
     q.beginPath();
     q.roundRect(-46, -88, 92, 176, 16);
@@ -268,7 +268,9 @@ function picksUp(c: Ctx, abs: number, u: number, len: number) {
   const handL = up > 0 ? lerpArc(pillow, holdL, up, 40) : lerpArc(underL, pillow, reach, 30);
   const handR = lerpArc(underR, holdR, right, 10);
   const held = up > 0;
-  const phoneAt: P2 = held ? handL : pillow;
+  // once the right hand meets it, the phone settles upright between her two hands, a little up out of the duvet
+  const between: P2 = [handL[0] + ((handR[0] - handL[0]) / 2) * right, handL[1] + ((handR[1] - handL[1]) / 2) * right - 24 * right];
+  const phoneAt: P2 = held ? between : pillow;
   // where the phone's light is (design units): on the pillow, then under her chin
   const lx = SIT.x + phoneAt[0] * SIT.s,
     ly = SIT.y + phoneAt[1] * SIT.s;
@@ -298,7 +300,7 @@ function picksUp(c: Ctx, abs: number, u: number, len: number) {
       handR,
       shapeL: reach > 0.8 || held ? "hold" : "relax",
       shapeR: right > 0.5 ? "hold" : "relax",
-      grip: (q2) => held && pickedPhone(q2, handL, up),
+      grip: (q2) => held && pickedPhone(q2, between, up, right),
     });
   litFigure(c, her, {
     shade: 0.5,
@@ -435,8 +437,8 @@ function shot21b(c: Ctx, abs: number, t0: number) {
   // down to the phone as the laugh breaks through
   const cover = easeOut(phase(u, 0.62, 0.9)) * (1 - easeInOut(phase(u, 1.42, 1.7)));
   const phoneFinish = { detailed: true, caseColor: "#252d35", cameraColor: "#343e47" };
-  // the phone goes low in his left hand while the right is up
-  const phoneHeld = (q: Ctx) => phoneBack(q, -70 * cover, 420 + 80 * cover, 150 - 10 * cover, 270 - 10 * cover, 0.2 * cover, 0, phoneFinish);
+  // the phone goes a little lower, still upright, in his left hand (gripping its left edge) while the right is up
+  const phoneHeld = (q: Ctx) => phoneBack(q, -10 + 12 * cover, 420 + 60 * cover, 150 - 10 * cover, 270 - 10 * cover, 0, 0, phoneFinish);
   // the laugh shakes him in little bounces (shoulders and head up together)
   const laugh = phase(u, 1.5, 1.62);
   const bounce = -7 * laugh * Math.abs(Math.sin((u - 1.5) * 13));
@@ -473,7 +475,7 @@ function shot22(c: Ctx, abs: number, t0: number) {
   const hx = 540 + (590 - 540) * e,
     hy = FACE_AT[1] + (600 - FACE_AT[1]) * zEnd + (1055 - FACE_AT[1] - (600 - FACE_AT[1]) * zEnd) * e;
   camera(c, 590, 925, z, 0, hx - 590, hy - 925);
-  // his reply, one finger, one key on each beat: a quick press, a slower lift
+  // his reply, one key on each beat (his hand on the screen, half behind the phone): a quick press, a slower lift
   const tapK = [92.5, 93.5, 94.5, 95.5].reduce((m, b) => {
     const d = abs - at(b);
     return Math.max(m, d < -0.05 || d > 0.16 ? 0 : d < 0 ? 1 + d / 0.05 : 1 - d / 0.16);
@@ -481,7 +483,7 @@ function shot22(c: Ctx, abs: number, t0: number) {
   // he is still laughing through his tears as we leave him (as 21b ended), then settles into a smile over his reply
   const settle = phase(abs, t0, t0 + 0.6);
   boothOutside(c, abs, (k) => {
-    litFigure(k, (q) => drawDad(q, 590, 925, 0.4, { coat: true, frontDetails: true, screenReflection: 0.5, eyes: "happy", mouth: settle < 0.6 ? "laugh" : "smile", tears: 1 - phase(abs, t0 + 0.2, t0 + 1.0), tilt: -0.05 * (1 - settle), arms: "type", tap: tapK, holding: (r) => phoneBack(r, -10, 400, 150, 270, -0.08, 0, { detailed: true, caseColor: "#252d35", cameraColor: "#343e47" }) }), {
+    litFigure(k, (q) => drawDad(q, 590, 925, 0.4, { coat: true, frontDetails: true, screenReflection: 0.5, eyes: "happy", mouth: settle < 0.6 ? "laugh" : "smile", tears: 1 - phase(abs, t0 + 0.2, t0 + 1.0), tilt: -0.05 * (1 - settle), arms: "type", typeHand: "half", handAt: [80, 352 + 12 * tapK], tap: tapK, holding: (r) => phoneBack(r, -10, 400, 150, 270, -0.08, 0, { detailed: true, caseColor: "#252d35", cameraColor: "#343e47" }) }), {
       shade: 0.24,
       shadeCol: "#1c3443",
       lights: [

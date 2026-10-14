@@ -152,7 +152,8 @@ export function dormLaugh(c: Ctx, abs: number, t0: number) {
       arms: "custom",
       elbowL: mix(READ_EL, HUG_EL, k), handL: mix(READ_L, HUG_L, k), shapeL: sw < 0.5 ? "hold" : "fist",
       elbowR: mix(READ_ER, HUG_ER, k), handR: mix(READ_R, HUG_R, k), shapeR: sw < 0.5 ? "hold" : "fist",
-      ...(sw < 0.5 ? { grip: phone } : { holding: phone }),
+      // holding it up from below, thumbs up on the phone
+      ...(sw < 0.5 ? { grip: phone, thumbFlip: true } : { holding: phone }),
     });
   litFigure(c, girl, {
     shade: 0.34,
