@@ -7,7 +7,7 @@
 import { z } from "zod";
 import { clamp } from "@frame/engine/math";
 import { defineResources, resource } from "@frame/engine/resources";
-import { C, Ctx, F, beginFrame, blob, loadFonts, measure, paint, poly, rr, rrectPts, text } from "./draw";
+import { C, Ctx, F, beginFrame, devScale, loadFonts, measure, paint, poly, rr, text } from "./draw";
 import { CAST, drawPerson, Person, xMark } from "./people";
 
 /** Phone screen design size. */
@@ -21,7 +21,9 @@ export function phone(ctx: Ctx, cx: number, cy: number, s: number, rot: number, 
   ctx.rotate(rot);
   ctx.scale(s, s);
   ctx.translate(-SW / 2, -SH / 2);
-  blob(ctx, rrectPts(-26, -26, SW + 52, SH + 52, 92), seed, 1.6);
+  // a clean outline concentric with the rim and the screen (a jittered outline poked little spikes out at the corners)
+  void seed;
+  rr(ctx, -26, -26, SW + 52, SH + 52, 96);
   paint(ctx, "#121214", C.ink, 7);
   // 光影: the metal frame catches the light — warm down the left side, cold down the right — so the phone reads
   // against a dark room
@@ -43,6 +45,41 @@ export function phone(ctx: Ctx, cx: number, cy: number, s: number, rot: number, 
   ctx.fillStyle = "#000";
   rr(ctx, SW / 2 - 90, 18, 180, 50, 25);
   ctx.fill();
+  ctx.restore();
+}
+
+/** The screen's light round a phone in a dark room; draw it just before phone() with the same placement. A soft bloom
+ *  hugs the outline (brightest at the frame, gone about 250 screen units out), a tighter one lights the edge, and a
+ *  wide faint wash sits a little above the middle. Screen-blended, so it lifts the dark instead of greying it; blur
+ *  sizes follow the canvas scale (devScale), so preview and export match. `rgb` is the light's colour. */
+export function phoneHalo(ctx: Ctx, cx: number, cy: number, s: number, rot = 0, a = 1, rgb = "120,150,255") {
+  if (a <= 0) return;
+  const col = (k: number) => `rgba(${rgb},${(k * a).toFixed(3)})`;
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(s, s);
+  // the wide wash
+  const R = 1000,
+    wy = -160;
+  const w = ctx.createRadialGradient(0, wy, 0, 0, wy, R);
+  w.addColorStop(0, col(0.15));
+  w.addColorStop(0.28, col(0.09));
+  w.addColorStop(0.55, col(0.035));
+  w.addColorStop(0.8, col(0.01));
+  w.addColorStop(1, col(0));
+  ctx.fillStyle = w;
+  ctx.fillRect(-R, wy - R, 2 * R, 2 * R);
+  // the blooms: the shadow of a shape the phone body covers (inset, so a buzzing phone still hides it)
+  const d = devScale(ctx);
+  for (const [blur, k] of [[190, 0.62], [46, 0.4]] as const) {
+    ctx.shadowColor = col(k);
+    ctx.shadowBlur = blur * d;
+    ctx.fillStyle = col(k);
+    rr(ctx, -SW / 2 + 24, -SH / 2 + 24, SW - 48, SH - 48, 70);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
