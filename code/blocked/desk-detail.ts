@@ -330,6 +330,8 @@ function phoneContact(c:Ctx,lit:number,resting:boolean,warm=false) {
     glow(c,0,0,362,warm?"rgba(255,186,120,.16)":"rgba(136,173,196,.085)",lit);c.restore();
     glow(c,225,943,194,warm?"rgba(255,190,130,.14)":"rgba(143,176,193,.10)",lit);
     glow(c,846,994,176,warm?"rgba(255,190,130,.12)":"rgba(157,184,192,.09)",lit);
+    // warm: the photo is on the top half of the screen, so most of its light falls round the top of the phone
+    if(warm){c.save();c.translate(540,520);c.scale(1.25,1);glow(c,0,0,400,"rgba(255,165,95,.13)",lit);c.restore();}
     c.restore();
   }
   if(resting) {
