@@ -361,8 +361,8 @@ function lonelyDeskTop(c:Ctx,abs:number,o:DetailedDeskOptions) {
   // her photos keep their warmth
   if(o.photos??true){c.save();c.globalAlpha=.82;herPhotos(c);c.restore();}
   // two panes of moonlight from the upper left, the window bar's shadow between them
-  lightShaft(c,[[383,-80],[200,-80],[911,1890],[1204,1740]],251,-80,955,1840,"170,195,245",.11,20,"desk_moon_left");
-  lightShaft(c,[[138,-80],[-140,-80],[289,1900],[771,1900]],35,-80,563,1900,"170,195,245",.14,24,"desk_moon_right");
+  lightShaft(c,[[383,-80],[200,-80],[911,1890],[1204,1740]],251,-80,955,1840,"170,195,245",.22,20,"desk_moon_left");
+  lightShaft(c,[[138,-80],[-140,-80],[289,1900],[771,1900]],35,-80,563,1900,"170,195,245",.27,24,"desk_moon_right");
   c.save();
   c.globalCompositeOperation="screen";
   // the edges that face the moon
