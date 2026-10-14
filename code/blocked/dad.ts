@@ -465,9 +465,10 @@ function roundHand(c: Ctx, x: number, y: number, r: number, skin: string, seed: 
   c.restore();
 }
 
-function sleeve(c: Ctx, from: Pt, elbow: Pt, wrist: Pt, color: string, dark: string, seed: number, detail = false) {
+function sleeve(c: Ctx, from: Pt, elbow: Pt, wrist: Pt, color: string, dark: string, seed: number, detail = false, tucked = false) {
   const spine = [from, lerp2(from, elbow, 0.5), elbow, lerp2(elbow, wrist, 0.5), wrist];
-  shaded(c, () => blob(c, tubePts(spine, [70, 64, 58, 54, 50], true, true), seed, 1), color, () => {
+  // tucked: the top goes in under the coat's fur lapel (narrow there, so the lapel drawn over it hides it)
+  shaded(c, () => blob(c, tubePts(spine, [tucked ? 44 : 70, tucked ? 60 : 64, 58, 54, 50], true, true), seed, 1), color, () => {
     blob(c, tubePts(spine.map(([x, y]) => [x + 14, y + 6]) as Pt[], [40, 36, 32, 30, 28], true, true), seed + 1, 1);
     paint(c, dark, null);
     if(detail) {
@@ -587,7 +588,16 @@ function torsoFront(c: Ctx, p: DadPose, seed: number) {
           }
         }
       }, C.ink, 5.5);
-      // fur lapel along the opening
+      furLapel(c, p, seed, side);
+    }
+  }
+}
+
+/** The fur lapel down one side of the coat's opening (torsoFront's seed). Drawn again over the sleeves, so his arms
+ *  come out from under the coat instead of sitting on top of it. */
+function furLapel(c: Ctx, p: DadPose, seed: number, side: number) {
+  {
+    {
       const fur: Pt[] = [];
       for (let k = 0; k <= 8; k++) {
         const u = k / 8;
@@ -674,7 +684,11 @@ function torsoBack(c: Ctx, p: DadPose, seed: number) {
   }
 }
 
+/** front view in the coat, arms forward: the sleeves start up under the fur lapels */
+const coatTuck = (p: DadPose) => !!p.coat && !p.young && p.view !== "back" && (p.arms === "phone" || p.arms === "type" || p.arms === "mouth");
 function arms(c: Ctx, p: DadPose, seed: number, stage: "sleeves" | "hands") {
+  const tk = coatTuck(p);
+  const top = (side: number): Pt => (tk ? [side * 150, 286] : [side * 150, 300]);
   const a = p.arms ?? "down";
   if (a === "down" || a === "none") return;
   const skin = p.young ? D.youngSkin : D.skin;
@@ -683,13 +697,13 @@ function arms(c: Ctx, p: DadPose, seed: number, stage: "sleeves" | "hands") {
   const t = p.tap ?? 0;
   if (a === "phone" || a === "type") {
     // forearms come forward from under the coat to hold the phone at the chest
-    const L: [Pt, Pt, Pt] = [[-150, 300], [-156, 470], [-60, 420]];
+    const L: [Pt, Pt, Pt] = [top(-1), [-156, 470], [-60, 420]];
     const half = a === "type" && p.typeHand === "half";
     const H: Pt = p.handAt ?? [62, 430];
-    const R: [Pt, Pt, Pt] = a === "type" ? [[150, 300], [150, 460], half ? [H[0] + 18, H[1] + 14 + 6 * t] : [p.frontDetails ? 89 : 52, 372 + 12 * t]] : [[150, 300], [156, 470], [60, 420]];
+    const R: [Pt, Pt, Pt] = a === "type" ? [top(1), [150, 460], half ? [H[0] + 18, H[1] + 14 + 6 * t] : [p.frontDetails ? 89 : 52, 372 + 12 * t]] : [top(1), [156, 470], [60, 420]];
     if (stage === "sleeves") {
-      sleeve(c, L[0], L[1], L[2], col, dk, seed, !!p.frontDetails);
-      sleeve(c, R[0], R[1], R[2], col, dk, seed + 5, !!p.frontDetails);
+      sleeve(c, L[0], L[1], L[2], col, dk, seed, !!p.frontDetails, tk);
+      sleeve(c, R[0], R[1], R[2], col, dk, seed + 5, !!p.frontDetails, tk);
       if (half) {
         // Screen faces him: the hand rests on the screen behind the phone, half of it showing past the edge.
         roundHand(c, H[0], H[1] + 6 * t, 31, skin, seed + 12, !!p.frontDetails);
@@ -720,13 +734,13 @@ function arms(c: Ctx, p: DadPose, seed: number, stage: "sleeves" | "hands") {
     const mix = (a0: Pt, a1: Pt): Pt => [a0[0] + (a1[0] - a0[0]) * k, a0[1] + (a1[1] - a0[1]) * k];
     // the right forearm swings up in an arc (its elbow drops out a little on the way) instead of sliding straight
     const lift = Math.sin(k * Math.PI);
-    const L: [Pt, Pt, Pt] = [[-150, 300], mix([-156, 470], [-156, 480]), mix([-60, 420], [-60, 470])];
-    const R: [Pt, Pt, Pt] = [mix([150, 300], [150, 320]), [156 + (190 - 156) * k + 26 * lift, 470 + 14 * lift], [60 + (44 - 60) * k + 34 * lift, 420 + (150 - 420) * k]];
+    const L: [Pt, Pt, Pt] = [top(-1), mix([-156, 470], [-156, 480]), mix([-60, 420], [-60, 470])];
+    const R: [Pt, Pt, Pt] = [mix(top(1), [150, 320]), [156 + (190 - 156) * k + 26 * lift, 470 + 14 * lift], [60 + (44 - 60) * k + 34 * lift, 420 + (150 - 420) * k]];
     if (stage === "sleeves") {
-      sleeve(c, L[0], L[1], L[2], col, dk, seed, det);
+      sleeve(c, L[0], L[1], L[2], col, dk, seed, det, tk);
       // the right arm is behind the phone while it still holds it, in front of it once the hand has come away
       if (k < 0.12) {
-        sleeve(c, R[0], R[1], R[2], col, dk, seed + 5, det);
+        sleeve(c, R[0], R[1], R[2], col, dk, seed + 5, det, tk);
         p.holding?.(c);
       } else {
         p.holding?.(c);
@@ -757,7 +771,13 @@ export function drawDad(c: Ctx, x: number, y: number, s: number, p: DadPose = {}
     if (back) torsoBack(c, p, seed + 200);
     else torsoFront(c, p, seed + 200);
   }
-  if (!back && body === "bust") arms(c, p, seed + 300, "sleeves");
+  if (!back && body === "bust") {
+    arms(c, p, seed + 300, "sleeves");
+    // the fur lapels back over the tops of the sleeves (not over his right arm once it's up at his mouth)
+    const a = p.arms ?? "down";
+    if (coatTuck(p))
+      for (const side of [-1, 1]) if (!(a === "mouth" && side > 0 && (p.mouthK ?? 1) >= 0.12)) furLapel(c, p, seed + 200, side);
+  }
   c.save();
   c.translate(0, p.headY ?? 0);
   c.rotate(p.tilt ?? 0);
