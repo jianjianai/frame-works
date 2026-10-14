@@ -399,7 +399,12 @@ function deskPhone(abs: number, t0: number): Spot {
   const go = easeInOut(phase(abs, t.think, t.think + 0.75));
   const back = easeInOut(phase(abs, t.think + 0.95, WORD.mirror - 0.15));
   const ponder = easeInOut(phase(abs, WORD.mirror, WORD.all));
-  return between(between(rest, SEND_SPOT, 0.9 * go), NEAR(1.6 * (1 + 0.09 * ponder)), back);
+  // 怀念 (whole-film camera pass): once the old face has melted into the wallpaper (young him holding little her) the
+  // camera doesn't stop dead — it drifts down the photo from his face to hers, the way his eyes would go, and brings
+  // her face up clear of the lyrics (at this size it sat right under them); the sudden thought then pulls it back
+  const fond = easeInOut(phase(abs, WORD.all + 0.25, pullAt() + 0.15));
+  const N = NEAR(1.6 * (1 + 0.09 * ponder) * (1 + 0.03 * fond));
+  return between(between(rest, SEND_SPOT, 0.9 * go), { ...N, cy: N.cy - 170 * fond }, back);
 }
 /** once the wallpaper is up he wants to see her Moments (user: 「表达突然想看看女儿朋友圈了」): on beat 55 the camera
  *  comes back out of the close-in to the phone held up in front of him — quicker than a drift, but not a snap (user:
@@ -570,9 +575,12 @@ function shot15(c: Ctx, abs: number, t0: number) {
   const wait = phase(u, SEND + 0.12, 1.7);
   const flare = u < SEND ? 0 : Math.exp(-(u - SEND) / 0.2);
   const sent = u >= SEND + 0.04;
-  const z = 1 + 0.085 * lean + 0.035 * wait;
+  // it opens still sunk in shot 14's 失望 (a little back and low, the dark round him), and lifts out of it as he
+  // starts to write — he won't give up on her
+  const sunk = 1 - easeOut(phase(u, 0, 0.45));
+  const z = (1 + 0.085 * lean + 0.035 * wait) * (1 - 0.03 * sunk);
   // the push is about his face; the wall behind moves less (it's further away)
-  const cam = (k: Ctx, depth = 1) => camera(k, 540, 620, 1 + (z - 1) * depth);
+  const cam = (k: Ctx, depth = 1) => camera(k, 540, 620, 1 + (z - 1) * depth, 0, 0, 40 * sunk * depth);
   // the same lonely booth from the other side: cold blue, the moon in the side window; the one warm light in the room
   // is the phone under his chin (she's on it), on his face and hands
   c.save();
@@ -583,7 +591,7 @@ function shot15(c: Ctx, abs: number, t0: number) {
   cam(c);
   const phoneAt: [number, number] = [540 - 10 * 1.42, 600 + 400 * 1.42];
   const [hand, press] = handOnScreen(u);
-  const dad = (k: Ctx) => drawDad(k, 540, 600, 1.42, { coat: true, frontDetails: true, screenReflection: 0.85, eyes: "down", brows: sent ? "up" : "worried", mouth: sent ? "flat" : "press", tilt: 0.04, arms: "type", typeHand: "half", handAt: hand, tap: press, holding: (q) => phoneBack(q, -10, 400, 150, 270, -0.08, 0, { detailed: true, caseColor: "#252d35", cameraColor: "#343e47" }) });
+  const dad = (k: Ctx) => drawDad(k, 540, 600, 1.42, { coat: true, frontDetails: true, screenReflection: 0.85, eyes: "down", brows: sent ? "up" : u < WRITE[0][0] ? "sad" : "worried", mouth: sent ? "flat" : "press", tilt: 0.04, arms: "type", typeHand: "half", handAt: hand, tap: press, holding: (q) => phoneBack(q, -10, 400, 150, 270, -0.08, 0, { detailed: true, caseColor: "#252d35", cameraColor: "#343e47" }) });
   // his shadow thrown on the wall by the moon through the window on the right
   castShadow(c, [960, 400], 1.13, dad, "#050a18", 25, 0.26, (k) => { k.beginPath(); k.rect(-60, -60, 745, 2040); k.clip(); });
   litFigure(c, dad, {
@@ -601,6 +609,7 @@ function shot15(c: Ctx, abs: number, t0: number) {
   });
   filtered(c, "blur(0.7px)", (k) => boothFrontDesk(k, abs, { lonely: true }), "s15desk");
   c.restore();
+  phoneVignette(c, 0.45 * sunk, 540, 760);
 }
 /** shot 15's writing: 多 · 穿 · 点 each start on a touch (the taps in audio.json), then 发送 */
 const WRITE: [number, number][] = [[0.12, 0.42], [0.47, 0.68], [0.72, 0.9]];

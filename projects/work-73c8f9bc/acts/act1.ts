@@ -8,7 +8,7 @@ import { SH, SW } from "@materials/s0rrow/code/phone";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { SHOT, WORD, at } from "./timeline";
 import { ACC_A, ACC_B, BLOCK_AT, HISTORY_END, INBOX_AT, MENU_AT, POST_BTN, ROW_B, couplePhoto, guideBox, say, snowPhoto, type Guide, vidBanner, vidBlock, vidComments, vidCompose, vidFollowing, vidPost, vidProfile, slide } from "./ui";
-import { LAMP_AT, SIT, SIT_HANDS, bedFromAbove, herFace, herFaceBg, herInBed, herPhoneBack, herRoomSnow, lapDuvet, roomBokeh } from "./world";
+import { LAMP_AT, SIT, SIT_CAM, SIT_HANDS, bedFromAbove, herFace, herFaceBg, herInBed, herPhoneBack, herRoomSnow, lapDuvet, roomBokeh } from "./world";
 import { aim, aimLerp, drawPhone, halo, tap, whip, type PhoneSpec, type Touch } from "./shots";
 import { journey } from "./journey";
 
@@ -212,13 +212,18 @@ function shot3(c: Ctx, abs: number, t0: number, end: number) {
       k.translate(0, dy);
       // the room, out of focus behind her (still while she is pushed in)
       herFaceBg(k, abs, 1);
+      // 被监视: 「还在看手机？」— someone can see her. On the push her eyes snap to the window (the one he told her to
+      // shut; it's the window the camera leaves through in shot 9), her head turning after them and the camera leaning
+      // that way; then back to the phone before the whip
+      const glance = easeOut(phase(abs, t0 + 0.3, t0 + 0.42)) * (1 - easeInOut(phase(abs, t0 + 0.68, t0 + 0.82)));
       const push = 1 + 0.08 * backOut(phase(abs, t0 + 0.3, t0 + 0.5));
-      camera(k, 540, 760, push);
+      camera(k, 540, 760, push, 0, -22 * glance, 0);
       // she clutches the duvet and pulls it up to her nose, eyes darting
       const up = easeOut(phase(abs, t0 + 0.1, t0 + 0.55));
       // her hands come up and grab the edge first, then haul it up
       const grab = easeOut(phase(abs, t0 + 0.02, t0 + 0.16));
-      herFace(k, abs, { lamp: 1, bg: false, top: 1030 - 140 * up, grip: grab, pose: { eyes: "wide", mouth: "o", brows: "up", look: [0.25 * Math.sin((abs - t0) * 9), 0.55], blush: 0 } });
+      const dart = 0.25 * Math.sin((abs - t0) * 9);
+      herFace(k, abs, { lamp: 1, bg: false, top: 1030 - 140 * up, grip: grab, pose: { eyes: "wide", mouth: "o", brows: "up", look: [dart * (1 - glance) + 0.85 * glance, 0.55 - 0.8 * glance], turn: 0.22 * glance, blush: 0 } });
       k.restore();
     },
     sm,
@@ -274,14 +279,34 @@ function shot4(c: Ctx, abs: number, t0: number) {
   );
 }
 
+/** 5's camera, as where the phone sits on screen (whole-film camera pass, user: 「把全片都优化一下」). 害怕 → 决绝 →
+ *  松一口气: it starts where shot 4's recoil settled; when the sheet comes up it goes straight and firm onto 「拉黑」
+ *  (no creeping: she has made up her mind), the tap lands with a dead stop; it moves up onto 「确定拉黑对方吗？」 and holds
+ *  it, leaning in a hair; the confirm lands with another stop — and then it breathes out onto 「已拉黑」 (shot 6 opens on
+ *  her sigh). */
+function blockPlacement(u: number): PhoneSpec {
+  const toSheet = easeInOut(phase(u, 0.62, 0.9));
+  const toDialog = easeInOut(phase(u, 1.04, 1.24));
+  const lean = phase(u, 1.24, 1.42);
+  const breathe = easeOut(phase(u, 1.48, 2.17));
+  const stop = (t: number) => (u < t ? 0 : Math.exp(-(u - t) / 0.07));
+  // (his name stays under the title capsule's band)
+  let P = aimLerp(HELD, aim(300, 746, 540, 900, 1.2), toSheet);
+  P = aimLerp(P, aim(300, 640, 540, 820, 1.3), toDialog);
+  P = { ...P, s: P.s * (1 + 0.03 * lean) };
+  P = aimLerp(P, aim(300, 560, 540, 880, 1.1), breathe);
+  return { ...P, s: P.s * (1 + 0.012 * (stop(0.98) + stop(1.42))) };
+}
 /** 5 · block: back to his page; 「···」, 「拉黑」, confirm, 「已拉黑」. */
 function shot5(c: Ctx, abs: number, t0: number) {
-  roomBokeh(c, abs, { dark: 0.2 });
   const u = abs - t0;
-  const z = 1 + 0.06 * easeInOut(phase(u, 0, 2.1));
-  camera(c, 540, 900, z);
-  halo(c, { cx: 540, cy: 930, s: 1 });
-  drawPhone(c, abs, { cx: 540, cy: 930, s: 1 }, (p) => {
+  const P = blockPlacement(u);
+  // the room closes in while she does it, and lets go once it's done
+  const doing = easeInOut(phase(u, 0.6, 1.42));
+  const relief = easeOut(phase(u, 1.46, 2.1));
+  roomBokeh(c, abs, { dark: 0.2 + 0.2 * doing - 0.3 * relief, bright: 0.25 * relief, shift: [(P.cx - HELD.cx) * 0.12, (P.cy - HELD.cy) * 0.12] });
+  halo(c, P, 1 - 0.2 * doing + 0.3 * relief);
+  drawPhone(c, abs, P, (p) => {
     const following = (q: Ctx) => vidFollowing(q, { time: TIME });
     const profile = (q: Ctx) => vidProfile(q, { name: ACC_A, time: TIME, menu: phase(u, 0.56, 0.64) * (1 - phase(u, 0.72, 0.8)), blocked: phase(u, 1.5, 1.7) });
     // back: the profile slides back in from the left
@@ -302,13 +327,21 @@ function shot5(c: Ctx, abs: number, t0: number) {
   });
 }
 
-/** 6 · she lets out a breath, puts the phone face down, the lamp goes off. */
+/** 6 · she lets out a breath, puts the phone face down, the lamp goes off.
+ *  松一口气 → 以为结束了: the camera breathes out with her sigh (settling back a touch, carrying on shot 5's breath);
+ *  when the lamp goes off it starts to creep, slow and straight, toward the phone she laid face down on the pillow,
+ *  the dark closing in round it — it isn't over (shot 7 is that phone from above, buzzing). */
 function shot6(c: Ctx, abs: number, t0: number) {
   const off = at(21); // lamp off on the beat (the switch's click is in audio.json)
   const lamp = abs < off ? 1 : 0;
   const u = abs - t0;
   const k = off - t0; // when the lamp goes off, in shot time
-  camera(c, 540, 700, 1.25 + 0.04 * phase(u, 0, 1.4), 0, 0, 160);
+  const exhale = easeOut(phase(u, 0, 0.5));
+  const creep = phase(u, k + 0.1, at(SHOT.s7) - t0);
+  c.save();
+  // zoomed about the phone on the pillow (design 246, 826 — on screen at 172.5, 1017.5 in the room shot's framing),
+  // drawing it in toward the middle as the camera creeps
+  camera(c, 246, 826, SIT_CAM.z * (1 + 0.025 * (1 - exhale)) * (1 + 0.12 * creep), 0, -73.5 + 70 * creep, 191.5 - 40 * creep);
   herRoomSnow(c, abs, { lamp });
   // the bulb's filament dies a moment after the click
   if (!lamp) glow(c, LAMP_AT[0], LAMP_AT[1] + 20, 70, "rgba(255,170,90,0.65)", Math.exp(-(abs - off) / 0.1));
@@ -364,6 +397,14 @@ function shot6(c: Ctx, abs: number, t0: number) {
   else
     litFigure(c, her, { shade: 0.5, shadeCol: "rgb(12,14,40)", lights: [{ x: 880, y: 420, r: 760, rgb: "120,150,240", a: 0.22 }], rim: { ux: 0.7, uy: -0.7, rgb: "170,195,255", a: 0.48 } });
   lapDuvet(c, 1 - lamp);
+  c.restore();
+  if (creep > 0) {
+    const v = c.createRadialGradient(240 + 70 * creep, 980, 260, 400, 900, 1250);
+    v.addColorStop(0, "rgba(4,4,14,0)");
+    v.addColorStop(1, `rgba(4,4,14,${(0.45 * creep).toFixed(3)})`);
+    c.fillStyle = v;
+    c.fillRect(-60, -60, W + 120, H + 120);
+  }
 }
 /** where she sits in shot 6 (head centre, scale; shared with act3 shot 19, world.ts SIT) */
 const HX = SIT.x,
