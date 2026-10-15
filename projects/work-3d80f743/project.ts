@@ -2,7 +2,7 @@ import type { AnimationProject } from "@frame/engine/types";
 
 const project: AnimationProject = {
   id: "work-3d80f743",
-  title: "反乌托邦 - 乌托邦P",
+  title: "[第2版]反乌托邦 - 乌托邦P",
   subtitle: "",
   description: "",
   renderer: "composition",
