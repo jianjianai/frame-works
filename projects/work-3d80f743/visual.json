@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "background": "#0b0d11",
+  "clips": [
+    {
+      "id": "film",
+      "name": "草稿：341个字",
+      "source": {
+        "kind": "scene",
+        "module": "film",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 152,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    }
+  ]
+}
