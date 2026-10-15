@@ -4,61 +4,24 @@ import { figure, pose, rope, stone, type Fig, type Pt, walk } from "./figure";
 import { ash, door, shoes, tower, crack, FLOOR, TOWER_TOP } from "./world";
 import { street } from "./sets";
 import { PAL } from "./palette";
-import { dumbbell, dumbbellShop, padlock, chain, hand } from "./props";
-import { beat, INTRO_END, qinWalking, introStreetLife } from "./intro";
+import { dumbbell, padlock, chain, hand } from "./props";
+import { beat, cityCam, T_SHOP, qinWalking, introStreetLife } from "./intro";
+import { SHOP, BIG_S, BIG_X, shopScene } from "./shop";
 
 
 // ---------- S05 15.9–17.82：哑铃店开着门，很多人在买；穿紫衣服的女人（千斤的妈妈）买走了最大的那只 ----------
-const SHOP = -1950; // 哑铃店门脸中心（她住的那栋最高的楼脚下）
-const BIG_S = 2.0; // 店门口展台上最大的那只
-const BIG_X = SHOP + 150;
-const PLINTH = 22; // 展台高
-const BIG_REST: Pt = [BIG_X, -PLINTH - 17 * BIG_S];
+// 前奏结尾的全城接过来：镜头越扎越快，16.013（第 9 小节）扎到她住的那栋楼脚下的店门口，冲过一点再稳住
+const DOOR: Cam = { x: SHOP + 20, y: -330, z: 1.6 };
 const camS05 = (t: number) =>
-  kcam(t, [
-    [15.9, INTRO_END],
-    [16.5, { x: SHOP + 20, y: -330, z: 1.6 }, E.io], // 往左摇到店门口：一店的人
-    [17.0, { x: BIG_X - 60, y: -230, z: 2.0 }, E.io], // 落到她和那只最大的哑铃
-    [17.82, { x: BIG_X + 10, y: -120, z: 3.0 }, E.out], // 她抱起来：越推越慢，推到怀里的哑铃上（下一镜在同一个位置接上，换了地方）
-  ]);
-/** 买哑铃的人（都低着头）：x0 → x1 走，hold 是手里哑铃的大小（0 = 空手） */
-const BUYERS = [
-  { x0: SHOP - 90, x1: SHOP - 470, a: 15.9, b: 17.82, hold: 0.8, kind: "man" as const, look: { top: "#8fa7c9", bottom: "#5d6a8a" } },
-  { x0: SHOP - 110, x1: SHOP - 110, a: 0, b: 0, hold: 0, kind: "plain" as const, look: { top: "#c9a27a", bottom: "#6e5a4a" }, face: -1 as const }, // 在柜台前排队
-  { x0: SHOP - 40, x1: SHOP - 40, a: 0, b: 0, hold: 0, kind: "worker" as const, look: { top: "#9cc4a8", bottom: "#5e7466" }, face: -1 as const },
-  { x0: SHOP + 20, x1: SHOP + 560, a: 16.0, b: 17.6, hold: 0.6, kind: "plain" as const, look: { top: "#d9c9a8", bottom: "#7a6f62" } },
-  { x0: SHOP + 760, x1: SHOP + 460, a: 15.9, b: 17.2, hold: 0, kind: "man" as const, look: { top: "#a9b8c4", bottom: "#5b6670" } }, // 赶来买的人
-  { x0: SHOP - 200, x1: SHOP - 560, a: 16.4, b: 17.82, hold: 1.0, kind: "worker" as const, look: { top: "#c48f86", bottom: "#6a5050" } },
-];
-/** 千斤的妈妈：走到展台前，指着最大的那只；蹲下去抱起来（很沉，膝盖一直弯着），抱在怀里一步一步往外挪 */
-function momBuy(t: number): { f: Fig; d: Pt; rot: number } {
-  const arrive = E.out(ph(t, 16.2, 16.8));
-  const crouch = E.io(ph(t, 16.95, 17.15)) * (1 - E.io(ph(t, 17.15, 17.45)) * 0.6);
-  const lift = E.io(ph(t, 17.12, 17.45));
-  const shuffle = ph(t, 17.45, 17.82);
-  const x = mix(BIG_X - 330, BIG_X - 62, arrive) + 34 * shuffle;
-  const w = walk(t * 1.5, 0.32 * (1 - arrive) + 0.12 * (shuffle > 0 ? 1 : 0));
-  const point = Math.sin(Math.PI * ph(t, 16.6, 16.98));
-  const hug: Pt = [x + 52, -78]; // 抱在胸口下面，脸露出来
-  const d: Pt = lift > 0 ? [mix(BIG_REST[0], hug[0], lift), mix(BIG_REST[1], hug[1], lift) + 3 * Math.sin(t * 20) * lift] : BIG_REST;
-  const f: Fig = {
-    x,
-    y: 20,
-    kind: "woman",
-    facing: 1,
-    lean: 0.45 * crouch - 0.14 * lift,
-    head: -0.35 + 0.35 * point - 0.2 * crouch,
-    legL: w.legL,
-    legR: w.legR,
-    kneeL: w.kneeL + 1.0 * crouch + 0.35 * lift,
-    kneeR: w.kneeR + 0.8 * crouch + 0.3 * lift,
-    hR: crouch > 0.05 || lift > 0 ? [d[0] - 12, d[1] + 2] : point > 0.02 ? [mix(x + 20, x + 62, point), mix(-90, -150, point)] : undefined,
-    hL: crouch > 0.05 || lift > 0 ? [d[0] - 26, d[1] + 5] : undefined,
-    rim: 0.6,
-    eyes: lift > 0.4 ? "open" : undefined,
-  };
-  return { f, d, rot: 0.04 * lift * Math.sin(t * 9) };
-}
+  t < T_SHOP
+    ? cityCam(t)
+    : kcam(t, [
+        [T_SHOP, cityCam(T_SHOP), E.out],
+        [16.3, DOOR], // 一店的人
+        [16.5, DOOR],
+        [17.0, { x: BIG_X - 60, y: -230, z: 2.0 }, E.io], // 落到她和那只最大的哑铃
+        [17.82, { x: BIG_X + 10, y: -120, z: 3.0 }, E.out], // 她抱起来：越推越慢，推到怀里的哑铃上（下一镜在同一个位置接上，换了地方）
+      ]);
 const s05: Shot = {
   a: 15.9,
   b: 17.82,
@@ -71,34 +34,12 @@ const s05: Shot = {
     c.translate(-2050, 0);
     tower(c, {});
     c.restore();
-    dumbbellShop(c, SHOP);
-    // 店主在柜台后面
-    figure(c, { x: SHOP - 200, y: -10, kind: "worker", facing: 1, head: -0.1, aR: 0.9, bendR: -1.2, tone: 0.1, rim: 0.4, look: { top: "#e2a94f", bottom: "#6b5a48" }, eyes: "smile" }, t);
-    // 前奏的街接过来：街上的人还在，她接着往前走；镜头往左摇走，把他们留在画外
+    shopScene(c, t);
+    // 前奏的街接过来：街上的人还在，她接着往前走；镜头扎进店门口以后他们都在画外，不再画
     if (t < 16.6) {
-      // 镜头摇走以后他们都在画外，不再画（免得打伞的路人又走进最后的近景）
       introStreetLife(c, t);
       figure(c, qinWalking(t), t);
     }
-    // 买哑铃的人
-    BUYERS.forEach((b, i) => {
-      const moving = b.b > b.a;
-      const p = moving ? ph(t, b.a, b.b) : 0;
-      const x = mix(b.x0, b.x1, p);
-      const face = b.face ?? (b.x1 < b.x0 ? -1 : 1);
-      const w = walk(t * 1.5 + i * 0.37, moving && p > 0 && p < 1 ? 0.34 : 0);
-      const hand: Pt = [x + face * 12, -66];
-      figure(c, { x, y: 0, kind: b.kind, facing: face, lean: b.hold ? -face * 0.06 : 0, head: -0.6, legL: w.legL, legR: w.legR, kneeL: w.kneeL, kneeR: w.kneeR, hR: b.hold ? hand : undefined, aL: w.aL, tone: 0.12 + (i % 3) * 0.08, rim: 0.35, look: b.look }, t);
-      if (b.hold) dumbbell(c, hand[0], hand[1] + 4, b.hold);
-    });
-    // 展台和最大的那只
-    c.fillStyle = "#8c6a8f";
-    c.fillRect(BIG_X - 95, -PLINTH, 190, PLINTH);
-    c.fillStyle = "#e45f6a";
-    c.fillRect(BIG_X - 95, -PLINTH, 190, 5);
-    const m = momBuy(t);
-    figure(c, m.f, t);
-    dumbbell(c, m.d[0], m.d[1], BIG_S, m.rot);
     c.restore();
     ash(c, t, k, { n: 0.5 });
     vignette(c, 0.4);

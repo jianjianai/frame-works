@@ -103,6 +103,8 @@ export interface QinRoomOpt {
   boots?: number; // 地上那双靴子塞了多满；undefined = 不在地上（穿在脚上）
   doorOpen?: number;
   doorLit?: number;
+  kidBed?: boolean; // 天花板上再钉一张小床（小石头搬来以后，两个人都倒着睡在天花板上）
+  coatOnChair?: boolean; // 他妈妈那件橘色外套叠在椅子上（他夜里脱了它才飘得上去）
 }
 export function qinRoom(c: C, t: number, o: QinRoomOpt = {}) {
   room(c, { night: o.night ?? 0.8, glare: o.glare ?? 0.85, bars: true, lamp: o.lamp, t });
@@ -114,7 +116,25 @@ export function qinRoom(c: C, t: number, o: QinRoomOpt = {}) {
   c.translate(0, -600);
   c.scale(1, -1);
   bed(c, o.night ?? 0.8);
+  if (o.kidBed) {
+    const n = o.night ?? 0.8;
+    c.fillStyle = blend(PAL.wood, "#4b3c62", n);
+    c.fillRect(6, -84, 14, 84);
+    c.fillRect(204, -66, 12, 66);
+    c.fillStyle = blend("#b9d9b0", "#5f7a8e", n);
+    c.fillRect(14, -58, 196, 24);
+    c.fillStyle = blend("#fff7ef", "#a69bc6", n);
+    c.fillRect(150, -72, 52, 16);
+  }
   c.restore();
+  if (o.coatOnChair) {
+    const n = o.night ?? 0.8;
+    c.fillStyle = blend("#f39a5f", "#7a5a7a", n * 0.7);
+    c.fillRect(-262, -78, 66, 16);
+    c.fillRect(-200, -78, 12, 40);
+    c.fillStyle = "#6b6a80";
+    for (let i = 0; i < 4; i++) c.fillRect(-256 + i * 15, -64, 8, 4);
+  }
   doorShape(c, 540, 0, { open: o.doorOpen ?? 0, lit: o.doorLit, w: 120, h: 250 });
   if (o.boots !== undefined) bootsPair(c, -20, 0, 1, o.boots);
 }

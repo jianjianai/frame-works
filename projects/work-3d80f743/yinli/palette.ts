@@ -51,6 +51,8 @@ export const LOOKS: Record<string, Look> = {
 /** 路人的衣服和伞：按种子挑 */
 const TOPS = ["#e7a3a0", "#9fc1df", "#b6d3ae", "#f0c99a", "#c9b2df", "#f2b6c6", "#a3cdc6", "#e8d39f", "#d7a9cf"];
 const BOTTOMS = ["#6f7898", "#7d6a8e", "#5f6c8c", "#8a7766", "#6b7b7a"];
+/** 小石头的妈妈：杏色外套（千斤的妈妈穿紫色，不能撞色） */
+export const KID_MOM_LOOK = { top: "#f2b28c", bottom: "#c98b6c", legs: "#7d6266" };
 export const UMBRELLAS = ["#e65a4f", "#f0b44a", "#5fa8a0", "#7d8fd6", "#e88fb0", "#8fc16f", "#f28c5a", "#b38ad6"];
 export function crowdLook(seed: number): Partial<Look> {
   const r = (k: number) => Math.abs(Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453) % 1;

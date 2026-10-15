@@ -143,11 +143,11 @@ export function webCam(t: number): Cam {
   return camLerp(k, K3, E.io(ph(t, 43.0, WEB_B)));
 }
 
-function buildings(c: C, k: Cam) {
-  c.fillStyle = "#4a4f86";
+function buildings(c: C, k: Cam, night = 0.8) {
+  c.fillStyle = blend("#b9aac4", "#4a4f86", night / 0.8);
   c.fillRect(-12000, 0, 24000, 6000);
   for (const b of BLDS) {
-    c.fillStyle = blend(b.col, "#3a4180", 0.72);
+    c.fillStyle = blend(b.col, "#3a4180", 0.9 * night);
     c.fillRect(b.x - b.w / 2, -b.h, b.w, b.h);
     // 亮着的窗（夜里很少）
     c.fillStyle = PAL.lit;
@@ -158,9 +158,9 @@ function buildings(c: C, k: Cam) {
     }
   }
 }
-function sleeperBody(c: C, s: Sleeper, q: Pt, t: number, k: Cam, alpha: number) {
+function sleeperBody(c: C, s: Sleeper, q: Pt, t: number, k: Cam, alpha: number, awake = false) {
   if (k.z > 0.55) {
-    figure(c, { x: q[0], y: q[1], grounded: false, kind: "plain", facing: s.face, lean: -1.5 * s.face, float: 0.9, legL: 1.6 * s.face, legR: 1.5 * s.face, kneeL: 0.2, kneeR: 0.3, aL: (Math.PI - 0.6) * s.face, aR: (Math.PI - 0.3) * s.face, head: 0.2, eyes: "closed", look: crowdLook(s.seed), tone: 0.15, rim: 0.7, alpha }, t);
+    figure(c, { x: q[0], y: q[1], grounded: false, kind: "plain", facing: s.face, lean: -1.5 * s.face, float: 0.9, legL: 1.6 * s.face, legR: 1.5 * s.face, kneeL: 0.2, kneeR: 0.3, aL: (Math.PI - 0.6) * s.face, aR: (Math.PI - 0.3) * s.face, head: awake ? 0.9 : 0.2, eyes: awake ? "wide" : "closed", look: crowdLook(s.seed), tone: 0.15, rim: 0.7, alpha }, t);
     return;
   }
   // 远了：一个横着的、发着光的小人影（屏幕上至少几个像素，看得见）
@@ -188,26 +188,37 @@ function sleeperBody(c: C, s: Sleeper, q: Pt, t: number, k: Cam, alpha: number) 
   c.restore();
 }
 
-export function webDraw(c: C, t: number) {
-  const k0 = webCam(t);
+/** dawn：0 夜里；1 天亮（网上的人都把自己拽回楼里了，天褪成早晨）。cam 不给就用这一镜自己的镜头。
+ *  noQin：窗里不画睡着的她（副歌二她已经出去了）；wake：网上离 (wake.x, wake.y) 不远的人睁开眼看着（她从他们中间飞过去） */
+export function webDraw(c: C, t: number, o: { cam?: Cam; dawn?: number; noQin?: boolean; wake?: { x: number; y: number; r: number } } = {}) {
+  const dawn = o.dawn ?? 0;
+  const night = mix(0.8, 0.12, dawn);
+  const k0 = o.cam ?? webCam(t);
   const k = jolt(k0, shake(t, 16 * kick(t, T_SNAP, 0.12), 4));
-  sky(c, k, { night: 0.8 });
+  sky(c, k, { night });
   whiteBand(c, k, t, 1.15);
   c.save();
   applyCam(c, k);
-  buildings(c, k);
+  buildings(c, k, night);
   // 她那栋楼，顶层是她的窗：防飘栏后面，她贴着天花板睡着
-  tower(c, { night: 0.8, qinWindow: 1, lights: 0.12 });
-  c.save();
-  c.beginPath();
-  c.rect(-140, TOWER_TOP + 70, 280, 170);
-  c.clip();
-  figure(c, { ...qinFloatSleep(t, 1), x: 15, y: TOWER_TOP + 96, s: 0.55, rim: 0, tone: 0.1 }, t);
-  c.restore();
-  c.fillStyle = "#6b5a6e";
-  for (let i = 0; i <= 6; i++) c.fillRect(-140 + i * 46, TOWER_TOP + 70, 6, 170);
+  tower(c, { night, qinWindow: 1, lights: 0.12 * (1 - dawn) });
+  if (!o.noQin) {
+    c.save();
+    c.beginPath();
+    c.rect(-140, TOWER_TOP + 70, 280, 170);
+    c.clip();
+    figure(c, { ...qinFloatSleep(t, 1), x: 15, y: TOWER_TOP + 96, s: 0.55, rim: 0, tone: 0.1 }, t);
+    c.restore();
+    c.fillStyle = "#6b5a6e";
+    for (let i = 0; i <= 6; i++) c.fillRect(-140 + i * 46, TOWER_TOP + 70, 6, 170);
+  }
 
-  const pos = SL.map((s) => sleeperAt(s, t));
+  // 天亮：网上的人一个个顺着绳子把自己拽回楼里
+  const back = SL.map((s, i) => E.io(clamp(dawn * 1.6 - (i % 9) * 0.07)));
+  const pos = SL.map((s, i) => {
+    const q = sleeperAt(s, t);
+    return [mix(q[0], s.a[0], back[i]), mix(q[1], s.a[1], back[i])] as Pt;
+  });
   const lw = Math.max(2.4, 2.1 / k.z) * (1 + 0.6 * kick(t, T_NET, 0.35));
   const red = blend("#d65a4c", "#ff8a6a", 0.6 * kick(t, T_NET, 0.5));
   c.lineCap = "round";
@@ -217,7 +228,7 @@ export function webDraw(c: C, t: number) {
   SL.forEach((s, i) => {
     if (t < s.t0) return;
     const an = ankleOf(s, pos[i]);
-    c.globalAlpha = 0.9 * clamp((t - s.t0) * 4);
+    c.globalAlpha = 0.9 * clamp((t - s.t0) * 4) * (1 - back[i]);
     c.beginPath();
     c.moveTo(s.a[0], s.a[1]);
     c.quadraticCurveTo((s.a[0] + an[0]) / 2 + 20, (s.a[1] + an[1]) / 2, an[0], an[1]);
@@ -228,7 +239,7 @@ export function webDraw(c: C, t: number) {
   for (const [i, j, d] of LINKS) {
     const s = SL[i];
     const o = SL[j];
-    const on = clamp((t - Math.max(s.t0, o.t0) - 0.7) / 0.6);
+    const on = clamp((t - Math.max(s.t0, o.t0) - 0.7) / 0.6) * (1 - Math.max(back[i], back[j]));
     if (on <= 0) continue;
     const ai = ankleOf(s, pos[i]);
     const aj = ankleOf(o, pos[j]);
@@ -253,10 +264,11 @@ export function webDraw(c: C, t: number) {
   // 睡着的人
   SL.forEach((s, i) => {
     if (t < s.t0) return;
-    sleeperBody(c, s, pos[i], t, k, clamp((t - s.t0) * 3));
+    const awake = !!o.wake && Math.hypot(pos[i][0] - o.wake.x, pos[i][1] - o.wake.y) < o.wake.r;
+    if (back[i] < 0.98) sleeperBody(c, s, pos[i], t, k, clamp((t - s.t0) * 3) * (1 - back[i]), awake);
   });
   // 他：脚绳从窗里一直拉到他脚踝；绷直以前是松的
-  if (t >= T_RISE0 - 0.2) {
+  if (t >= T_RISE0 - 0.2 && t < 50 && dawn < 0.5) {
     const hf = heroFig(t);
     const hj = figure(c, hf, t);
     const taut = t > T_SNAP;
@@ -300,7 +312,7 @@ export function webDraw(c: C, t: number) {
     c.fillStyle = g;
     c.fillRect(0, 0, W, H);
   }
-  vignette(c, 0.35);
+  vignette(c, 0.35 * (1 - dawn));
 }
 
 /** 第一幕里的那一截（39.36–39.99） */

@@ -591,7 +591,9 @@ export function room(c: C, o: RoomOpt = {}) {
   c.closePath();
   c.fill();
   c.restore();
-  // 地板
+  // 地板（再往下是楼里一层一层的黑：镜头往楼梯下面看时露出来）
+  c.fillStyle = blend("#4a3f63", "#2c2950", n);
+  c.fillRect(-3400, 600, 6800, 9000);
   c.fillStyle = blend("#c49a7c", "#5d4c72", n);
   c.fillRect(-1400, 0, 2800, 600);
   c.fillStyle = blend("#a87e63", "#4d3f63", n);
