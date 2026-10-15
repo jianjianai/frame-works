@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "background": "#101418",
+  "background": "#0b0d11",
   "clips": [
     {
-      "id": "title",
-      "name": "标题",
+      "id": "film",
+      "name": "草稿：341个字",
       "source": {
         "kind": "scene",
-        "module": "title",
+        "module": "film",
         "engine": "canvas"
       },
       "start": 0,
