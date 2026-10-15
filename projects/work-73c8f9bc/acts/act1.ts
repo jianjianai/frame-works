@@ -310,7 +310,7 @@ function shot3(c: Ctx, abs: number, t0: number, end: number) {
   );
 }
 
-/** 4 · back on the phone: she taps the grey avatar — 0 works, 0 fans, follows 1. The camera pushes onto 「1 关注」; she
+/** 4 · back on the phone, already on his page (the whip lands right on 「1 关注」): 0 works, 0 fans, follows 1; she
  *  taps it and the camera rides the page onto the only account it follows: her. It creeps in while the room darkens —
  *  then on the beat it recoils (a jolt out past the phone, shaking, a heartbeat in audio.json) and settles where shot 5
  *  takes over, for the block. */
@@ -324,8 +324,10 @@ function shot4(c: Ctx, abs: number, t0: number) {
   const u = abs - t0;
   const end = at(SHOT.s5) - t0;
   const recoil = at(14) - t0;
-  let P = aimLerp(HELD, ON_FOLLOWS(), easeInOut(phase(u, 0.48, 0.84)));
-  P = aimLerp(P, ON_HER(1.75 + 0.17 * easeInOut(phase(u, 1.55, recoil))), easeInOut(phase(u, 1.2, 1.55)));
+  // the whip lands straight on 「1 关注」 (no whole-phone frame first: re-release data, that second lost 1.37× peers),
+  // settling in a touch as it lands
+  let P = { ...ON_FOLLOWS(), s: ON_FOLLOWS().s * (0.94 + 0.06 * easeOut(phase(u, 0.05, 0.4))) };
+  P = aimLerp(P, ON_HER(1.75 + 0.17 * easeInOut(phase(u, 1.17, recoil))), easeInOut(phase(u, 0.82, 1.17)));
   if (u > recoil) {
     // the recoil: a hard pull out a little past the held framing, then it eases back onto it for the cut
     const jolt = 1 - Math.pow(1 - phase(u, recoil, recoil + 0.2), 4);
@@ -333,7 +335,7 @@ function shot4(c: Ctx, abs: number, t0: number) {
   }
   const [sx, sy] = u > recoil ? shake(abs, 11 * (1 - phase(u, recoil, recoil + 0.42)), 41) : [0, 0];
   // the room sinks into the dark while she stares at her own name, and comes back as the camera pulls out
-  const dark = 0.2 + 0.32 * easeInOut(phase(u, 1.3, recoil)) * (1 - easeInOut(phase(u, recoil + 0.05, end)));
+  const dark = 0.2 + 0.32 * easeInOut(phase(u, 0.95, recoil)) * (1 - easeInOut(phase(u, recoil + 0.05, end)));
   smearV(
     c,
     (k) => {
@@ -342,15 +344,13 @@ function shot4(c: Ctx, abs: number, t0: number) {
       roomBokeh(k, abs, { dark, shift: [(P.cx - HELD.cx) * 0.12, (P.cy - HELD.cy) * 0.12] });
       halo(k, P);
       drawPhone(k, abs, P, (p) => {
-        const inbox = (q: Ctx) => vidComments(q, { scroll: HISTORY_END, time: TIME });
         // 「1 关注」 pops as the camera lands on it; her row's box closes in with the creep and snaps off on the recoil
-        const profile = (q: Ctx) => vidProfile(q, { name: ACC_A, time: TIME, pulse: { ring: phase(u, 0.8, 1.2), a: phase(u, 0.8, 0.86), gap: 10 } });
-        const following = (q: Ctx) => vidFollowing(q, { time: TIME, pulse: { a: phase(u, 1.52, 1.6) * (1 - phase(u, recoil, recoil + 0.06)), gap: 8 + 36 * (1 - easeOut(phase(u, 1.52, recoil))) } });
-        if (u < 0.25) inbox(p);
-        else if (u < 1.18) slide(p, (u - 0.25) / 0.2, inbox, profile);
-        else slide(p, (u - 1.18) / 0.2, profile, following);
+        const profile = (q: Ctx) => vidProfile(q, { name: ACC_A, time: TIME, pulse: { ring: phase(u, 0.18, 0.55), a: phase(u, 0.18, 0.24), gap: 10 } });
+        const following = (q: Ctx) => vidFollowing(q, { time: TIME, pulse: { a: phase(u, 1.14, 1.22) * (1 - phase(u, recoil, recoil + 0.06)), gap: 8 + 36 * (1 - easeOut(phase(u, 1.14, recoil))) } });
+        if (u < 0.8) profile(p);
+        else slide(p, (u - 0.8) / 0.2, profile, following);
       }, {
-        buzz: newBuzz(abs), touches: [tap(abs, t0 + 0.23, 64, 246), tap(abs, t0 + 1.16, 294, 452)] });
+        buzz: newBuzz(abs), touches: [tap(abs, t0 + 0.78, 294, 452)] });
       k.restore();
     },
     abs < t0 + 0.22 ? sm : 0,
