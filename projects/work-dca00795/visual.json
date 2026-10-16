@@ -3,15 +3,20 @@
   "background": "#101418",
   "clips": [
     {
-      "id": "title",
-      "name": "标题",
+      "id": "sheet",
+      "name": "人物设定（三维）· 秤砣 / 小石头",
       "source": {
         "kind": "scene",
-        "module": "title",
-        "engine": "canvas"
+        "module": "people",
+        "engine": "three"
       },
       "start": 0,
-      "duration": 15
+      "duration": 22,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     }
   ]
 }

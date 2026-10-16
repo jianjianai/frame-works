@@ -1,0 +1,3 @@
+- public/audio/反乌托邦-乌托邦P.flac: 歌曲《反乌托邦》乌托邦P（星尘 Infinity / 诗岸），用户提供，从草稿作品复制
+- public/audio/反乌托邦-乌托邦P.lrc: 歌词，用户提供
+- public/fonts/serif.woff2: 从草稿作品复制的字体子集
