@@ -2,7 +2,7 @@ import type { AnimationProject } from "@frame/engine/types";
 
 const project: AnimationProject = {
   id: "work-3d80f743",
-  title: "反乌托邦 - 乌托邦P 1",
+  title: "【被否】反乌托邦 - 乌托邦P 1",
   subtitle: "",
   description: "",
   renderer: "composition",
@@ -22,5 +22,6 @@ const project: AnimationProject = {
   loadAudio: () => import("./audio"),
   experiences: ["情绪运镜","剧情音乐短片"],
   tempo: {"bpm":119.99,"firstBeat":0.013,"beatsPerBar":4},
+  publishedAt: "2026-10-16T12:02:19.944Z",
 };
 export default project;
