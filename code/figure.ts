@@ -1952,16 +1952,6 @@ export const resources = defineResources({
     usage:
       "figure(ctx, x, y, s, { face, expression, shoulderL, … }, t, look)  // (x, y) 两脚之间的地面，s = 1 全身约 590 高；做新角色：写一个 Look（colors、backHair / frontHair 发型、overTorso 外衣、shoe / overLeg 鞋…），drawFigure(ctx, pose, look)",
     params: figureOptions,
-    presets: {
-      "3/4 朝左": { face: -1, hipL: 7, kneeL: -9, ankleL: 2, hipR: -4, kneeR: -2, ankleR: 6, shoulderL: -5, elbowL: 14, wristL: 8, shoulderR: 7, elbowR: 16, wristR: -4, lean: 2 },
-      "3/4 朝右": { face: 1, hipL: 7, kneeL: -9, ankleL: 2, hipR: -4, kneeR: -2, ankleR: 6, shoulderL: -5, elbowL: 14, wristL: 8, shoulderR: 7, elbowR: 16, wristR: -4, lean: 2 },
-      笑: { expression: "笑" },
-      哭着笑: { expression: "哭着笑" },
-      抱臂: { face: 0, shoulderL: -17, elbowL: 115, wristL: -14, shoulderR: 17, elbowR: -99, wristR: 6 },
-      坐: { face: -1, hipL: 86, kneeL: -76, ankleL: -6, hipR: 80, kneeR: -96, ankleR: 20, lean: 8, neck: -4, shoulderL: 34, elbowL: 40, wristL: 10, shoulderR: 30, elbowR: 44, lookX: -0.4, lookY: 0.2 },
-      呼吸眨眼: { idle: true },
-    },
-
     preview: {
       width: 640,
       height: 960,
