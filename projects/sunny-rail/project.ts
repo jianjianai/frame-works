@@ -13,7 +13,6 @@ const project: AnimationProject = {
   poster: "films/sunny-rail/poster.webp",
   posterTime: 10.5,
     tags: ["3D 微缩场景", "轨道摄影机", "光照与阴影"],
-    status: "demo",
     beats: [
       {
         at: 0,
