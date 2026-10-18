@@ -279,7 +279,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       // （飘出去时朝风向那边的边在上：往右吹 s = 1 在上，往左吹 s = 0 在上；两种都是 -fan 让上面几缕弯得更多）
       // 失重时中间几缕往中间偏：从头后面往上飘、在头顶上方露出来，是背后的头发（用户 2026-10-18）；外面几缕还是往两边翻
       // （相邻两缕的方向差得小，越往发梢分得不太开，缝和大风时一样细）
-      phi + fan * (up * 0.22 - gust * 0.2) - Math.sign(fan) * up * 0.1 * (1 - Math.abs(fan)) ** 2,
+      // （失重又有风时：风的散开顺着失重往外张的方向加上去。两套方向相反，直接相加会抵消、发梢挤成一束，用户 2026-10-18）
+      phi + fan * (up * (0.22 + gust * 0.2) - (1 - up) * gust * 0.2) - Math.sign(fan) * up * 0.1 * (1 - Math.abs(fan)) ** 2,
       N,
       (i) => {
         const y = (i - 0.5) * HAIR_DY;
@@ -326,7 +327,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   /** 发梢那一线（风大时中间几绺拉长、两边的短） */
   // 失重时中间几缕（往头顶上飘的）长一些，从头后面出来以后还有一段
   const endY = (s: number) =>
-    hairEnd(s) + gust * (34 * (1 - (2 * s - 1) ** 2) - 14 + 14 * hairWisp(s)) + up * up * 50 * (1 - (2 * s - 1) ** 2) - up * 0.4 * hairTip(s);
+    hairEnd(s) + gust * (34 * (1 - (2 * s - 1) ** 2) - 14 + 14 * hairWisp(s)) + up * up * 50 * (1 - (2 * s - 1) ** 2) - up * (1 - gust) * 0.4 * hairTip(s);
   /**
    * 风大时每缕往发梢越来越细（绕自己的中线 sc 收），相邻几缕之间拉开空隙、一缕一缕的；发根那一半不动。
    * 失重时不收：头顶上方排着一圈发梢，收细了相邻两缕之间就裂开一道道 V，是一排尖刺（用户 2026-10-18：
