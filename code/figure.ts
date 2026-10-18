@@ -313,6 +313,9 @@ export function bodyFns(th: number) {
   };
 }
 
+/** 头转到 3/4 时往后挪多少（正面 0，3/4 时脸的中线比身子靠前约 10） */
+const HEAD_SIDE_BACK = 8;
+
 export function figureRig(pIn: PoseIn | Pose, look: Look = BASE_LOOK): Rig {
   const pose = resolvePose(pIn as PoseIn, look);
   const mir = pose.face > 0;
@@ -327,7 +330,8 @@ export function figureRig(pIn: PoseIn | Pose, look: Look = BASE_LOOK): Rig {
   const chest = new Frame(pose.hip[0], pose.hip[1], pose.rot - pose.lean);
   const neck = chest.p(fx(0, 0, 10), BODY.neckY - br);
   const headBase = new Frame(neck[0], neck[1], chest.a + pose.neck);
-  const hc = headBase.p(0, -BODY.headUp);
+  // 3/4 的头线稿脸往前伸：整个头往后（朝左时画面右）挪一点，脸的中线不跑到身子前面去（用户 2026-10-18）
+  const hc = headBase.p(HEAD_SIDE_BACK * uh, -BODY.headUp);
   const head = new Frame(hc[0], hc[1], headBase.a);
   const cth = Math.cos(th);
 
