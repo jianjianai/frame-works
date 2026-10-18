@@ -282,15 +282,20 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
 
   // 每绺一块：右边往下 → 发梢 → 左边往上
   const NV = 24;
-  const PER = 8;
-  const pieces = locks.map(({ s0, s1, at }) => {
+  const PER = 12;
+  // 每缕按自己的节奏抖，和旁边那缕的分界会裂开一道细缝、露出描边（风里看着像几道细线，用户 2026-10-18）：
+  // 里面的边往旁边那缕里多画一点，叠在一起，外轮廓不变
+  const OVER = 0.3 / n;
+  const pieces = locks.map(({ s0, s1, at }, k) => {
+    const a0 = k === 0 ? s0 : s0 - OVER;
+    const a1 = k === n - 1 ? s1 : s1 + OVER;
     const pts: V2[] = [];
-    for (let i = 0; i <= NV; i++) pts.push(H(at(s1, lerp(P, endY(s1), i / NV))));
+    for (let i = 0; i <= NV; i++) pts.push(H(at(a1, lerp(P, endY(a1), i / NV))));
     for (let j = PER - 1; j >= 1; j--) {
-      const s = lerp(s0, s1, j / PER);
+      const s = lerp(a0, a1, j / PER);
       pts.push(H(at(s, endY(s))));
     }
-    for (let i = NV; i >= 0; i--) pts.push(H(at(s0, lerp(P, endY(s0), i / NV))));
+    for (let i = NV; i >= 0; i--) pts.push(H(at(a0, lerp(P, endY(a0), i / NV))));
     return polylinePath(pts);
   });
   // 头顶：线稿耳朵以上那部分
