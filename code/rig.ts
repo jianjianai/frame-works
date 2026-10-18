@@ -309,3 +309,133 @@ export function blinkAt(t: number, seed = 0): number {
   }
   return v;
 }
+
+// ——— 轮廓变形：两张线稿（正面 ↔ 侧面）的同一块逐点对应，转身时按比例混合 ———
+
+/** 三次贝塞尔点列 [起点, 控制点1, 控制点2, 终点, …] 采样成折线，每段 n 个点（闭合的不重复起点） */
+export function bezierPolyline(pts: V2[], n = 16, closed = true): V2[] {
+  const out: V2[] = [pts[0]];
+  for (let i = 1; i + 2 < pts.length; i += 3) {
+    const [p0, p1, p2, p3] = [pts[i - 1], pts[i], pts[i + 1], pts[i + 2]];
+    for (let k = 1; k <= n; k++) {
+      const t = k / n;
+      const a = 1 - t;
+      out.push([
+        a * a * a * p0[0] + 3 * a * a * t * p1[0] + 3 * a * t * t * p2[0] + t * t * t * p3[0],
+        a * a * a * p0[1] + 3 * a * a * t * p1[1] + 3 * a * t * t * p2[1] + t * t * t * p3[1],
+      ]);
+    }
+  }
+  // 去掉重合的点（线稿里零长的小段）
+  const clean = out.filter((p, i) => i === 0 || len(sub(p, out[i - 1])) > 1e-3);
+  if (closed && clean.length > 1 && len(sub(clean[0], clean[clean.length - 1])) < 1e-3) clean.pop();
+  return clean;
+}
+
+/** 统一成画面上顺时针（y 朝下）的绕向 */
+export function clockwisePoly(pts: V2[]): V2[] {
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % pts.length];
+    area += x0 * y1 - x1 * y0;
+  }
+  return area < 0 ? [...pts].reverse() : pts;
+}
+
+/** 轮廓上离 p 最近的点的下标 */
+export function nearestIndex(poly: V2[], p: V2): number {
+  let best = 0;
+  let bd = Infinity;
+  poly.forEach((q, i) => {
+    const d = (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2;
+    if (d < bd) {
+      bd = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
+/** 闭合折线从下标 a 走到 b（绕回），按弧长均匀取 count 个点（含 a，不含 b） */
+export function arcSlice(poly: V2[], a: number, b: number, count: number): V2[] {
+  const n = poly.length;
+  const path: V2[] = [];
+  for (let i = a; ; i = (i + 1) % n) {
+    path.push(poly[i]);
+    if (i === b && path.length > 1) break;
+    if (path.length > n + 1) break;
+  }
+  return resampleOpen(path, count + 1).slice(0, count);
+}
+
+/** 开放折线按弧长均匀取 count 个点（含两端） */
+export function resampleOpen(path: V2[], count: number): V2[] {
+  const acc = [0];
+  for (let i = 1; i < path.length; i++) acc.push(acc[i - 1] + len(sub(path[i], path[i - 1])));
+  const total = acc[acc.length - 1] || 1;
+  const out: V2[] = [];
+  let j = 1;
+  for (let k = 0; k < count; k++) {
+    const s = (total * k) / Math.max(1, count - 1);
+    while (j < path.length - 1 && acc[j] < s) j++;
+    const seg = acc[j] - acc[j - 1] || 1;
+    out.push(lerpV(path[j - 1], path[j], clamp01((s - acc[j - 1]) / seg)));
+  }
+  return out;
+}
+
+/**
+ * 两条闭合轮廓逐点对应：各自在几个标志点（按顺时针的顺序，轮廓上的下标）切成同样多段，
+ * 每段按弧长取 perSeg 个点。返回点数相同的两组点，混合用 lerpPts。
+ */
+export function matchOutlines(a: V2[], marksA: number[], b: V2[], marksB: number[], perSeg: number): [V2[], V2[]] {
+  const outA: V2[] = [];
+  const outB: V2[] = [];
+  for (let k = 0; k < marksA.length; k++) {
+    const k1 = (k + 1) % marksA.length;
+    outA.push(...arcSlice(a, marksA[k], marksA[k1], perSeg));
+    outB.push(...arcSlice(b, marksB[k], marksB[k1], perSeg));
+  }
+  return [outA, outB];
+}
+
+/** 按包围盒找标志点：guesses 是包围盒里的比例位置（0..1），取轮廓上离它最近的点 */
+export function marksByBox(poly: V2[], guesses: V2[]): number[] {
+  const xs = poly.map((p) => p[0]);
+  const ys = poly.map((p) => p[1]);
+  const x0 = Math.min(...xs);
+  const x1 = Math.max(...xs);
+  const y0 = Math.min(...ys);
+  const y1 = Math.max(...ys);
+  return guesses.map(([gx, gy]) => nearestIndex(poly, [lerp(x0, x1, gx), lerp(y0, y1, gy)]));
+}
+
+export const lerpPts = (a: V2[], b: V2[], t: number): V2[] => (t <= 0 ? a : t >= 1 ? b : a.map((p, i) => lerpV(p, b[i], t)));
+
+/** 闭合折线在高度 y 处最左、最右的 x（没有交点时返回 null） */
+export function rowSpan(poly: V2[], y: number): [number, number] | null {
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const [x0, y0] = poly[i];
+    const [x1, y1] = poly[(i + 1) % poly.length];
+    if ((y0 <= y && y1 > y) || (y1 <= y && y0 > y)) {
+      const x = x0 + ((y - y0) / (y1 - y0)) * (x1 - x0);
+      lo = Math.min(lo, x);
+      hi = Math.max(hi, x);
+    }
+  }
+  return lo <= hi ? [lo, hi] : null;
+}
+
+/** 折线画成路径（闭合） */
+export function polylinePath(pts: V2[], map: (p: V2) => V2 = (p) => p, path = new Path2D()): Path2D {
+  pts.forEach((q, i) => {
+    const m = map(q);
+    if (i) path.lineTo(m[0], m[1]);
+    else path.moveTo(m[0], m[1]);
+  });
+  path.closePath();
+  return path;
+}
