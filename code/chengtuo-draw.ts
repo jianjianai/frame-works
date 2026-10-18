@@ -341,7 +341,20 @@ function lockBack(h: HeadView, pts: V2[]): Path2D {
   const k = (to[1] - to[0]) / (from[1] - from[0]);
   const [top, tip] = [LOCK_R[0], LOCK_R[3]];
   const shear = ((top[0] - tip[0]) / (tip[1] - top[1])) * k * uh;
-  return cubicPath(pts, ([x, y]) => H(to[0] + (x - from[0]) * k + shear * (y - BANGS_BOTTOM_Y) - EAR_SIDE_IN * uh, y));
+  const face = faceOf(rig);
+  return cubicPath(pts, ([x, y]) => {
+    let nx = to[0] + (x - from[0]) * k + shear * (y - BANGS_BOTTOM_Y) - EAR_SIDE_IN * uh;
+    // 耳朵以上那段的外沿（压在后脑勺上，深色压深色看不见）不往里收，还是一行一行贴着脸的后沿：
+    // 不然刘海下面、耳朵上面露出一道头皮的细缝（两条线）
+    const w = 1 - smooth01(-8, 0, y);
+    const fr = rowSpan(FACE_TURN[0], y);
+    const tr = rowSpan(face, y);
+    if (w > 0 && x > faceHW(y) && fr && tr) {
+      const r = tr[0] + ((x - fr[0]) * (tr[1] - tr[0])) / (fr[1] - fr[0]);
+      if (r > nx) nx += (r - nx) * w;
+    }
+    return H(nx, y);
+  });
 }
 
 /** 远侧那缕（画面左边，正面线稿的坐标）压在脸上的部分往脸的左边上收：k = 1 不动，0 收到边上 */
