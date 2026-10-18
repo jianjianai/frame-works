@@ -519,6 +519,10 @@ export interface Look {
   overLeg?(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink): void;
   /** 穿着鞋的脚能着地的点（画面坐标，鞋底和鞋面一圈）：脚踩地按它算；不写按光脚 */
   soles?(rig: Rig, side: "L" | "R"): V2[];
+  /** 人物特点：头相对身子放大多少（小孩头大，1.25 左右），以脖子为中心 */
+  headScale?: number;
+  /** 人物特点：体型宽窄（横向缩放，壮的人 1.1–1.2） */
+  width?: number;
 }
 
 /** 基础模型本身：素色上衣、下装，光头、光手、光脚 */
@@ -543,10 +547,16 @@ export interface HeadView {
 export function drawFigure(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, look: Look = BASE_LOOK, opts: DrawOptions = {}) {
   const prev = K;
   K = { ...BASE_COLORS, ...look.colors };
+  const w = look.width ?? 1;
+  if (w !== 1) {
+    ctx.save();
+    ctx.scale(w, 1);
+  }
   try {
     render(ctx, figureRig(pIn, look), opts);
   } finally {
     K = prev;
+    if (w !== 1) ctx.restore();
   }
 }
 
@@ -570,7 +580,19 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
 
   // 头往身体的反方向转时：头（和后面的头发）沿头的中线镜像着画，光的方向、风在头上的方向跟着换回来
   const headView = (fn: (r: Rig, k: Ink) => void) => {
-    if (!rig.headMir) return fn(rig, ink);
+    const hs = look.headScale ?? 1;
+    if (hs !== 1) {
+      // 头以脖子为中心放大（小孩头大）
+      ctx.save();
+      ctx.translate(rig.neck[0], rig.neck[1]);
+      ctx.scale(hs, hs);
+      ctx.translate(-rig.neck[0], -rig.neck[1]);
+    }
+    if (!rig.headMir) {
+      fn(rig, ink);
+      if (hs !== 1) ctx.restore();
+      return;
+    }
     const { head } = rig;
     ctx.save();
     ctx.translate(head.x, head.y);
@@ -580,6 +602,7 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     ctx.translate(-head.x, -head.y);
     fn({ ...rig, field: reflectOnHead(rig, rig.field) }, { ...ink, shade: [-ink.shade[0], ink.shade[1]] });
     ctx.restore();
+    if (hs !== 1) ctx.restore();
   };
 
   scoped(() => {
