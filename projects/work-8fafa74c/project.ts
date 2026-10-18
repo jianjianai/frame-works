@@ -12,7 +12,6 @@ const project: AnimationProject = {
   fps: 30,
   accent: "#7aa2f7",
   tags: [],
-  status: "draft",
   beats: [],
   subtitles: [],
   credits: [],
