@@ -274,7 +274,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     const ang = bendAlong(
       // （飘出去时朝风向那边的边在上：往右吹 s = 1 在上，往左吹 s = 0 在上；两种都是 -fan 让上面几缕弯得更多）
       // 失重时中间几缕往中间偏：从头后面往上飘、在头顶上方露出来，是背后的头发（用户 2026-10-18）；外面几缕还是往两边翻
-      phi + fan * (up * 0.7 - gust * 0.2) - Math.sign(fan) * up * 0.45 * (1 - Math.abs(fan)) ** 2,
+      phi + fan * (up * 0.7 - gust * 0.2) - Math.sign(fan) * up * 0.28 * (1 - Math.abs(fan)) ** 2,
       N,
       (i) => {
         const y = (i - 0.5) * HAIR_DY;
