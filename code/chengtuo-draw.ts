@@ -296,6 +296,8 @@ export interface Rig {
   arms: { L: Limb; R: Limb };
   legs: { L: Limb; R: Limb };
   field: V2;
+  /** 3/4 时两腿整体沿胯往前挪了多少（跟着侧面线稿的毛衣下摆） */
+  hipShift: number;
 }
 
 /** 两个角度之间走近路插值。 */
@@ -349,8 +351,12 @@ export function rigOf(pIn: PoseIn | Pose): Rig {
     const end = add(mid, mul(dirOf(a2), BODY.foreArm));
     return { root, mid, end, a1, a2, tip: new Frame(end[0], end[1], a2 + ap.h) };
   };
+  // 3/4：两腿整体挪到侧面线稿毛衣下摆的下面（下摆往前多出一块，腿不挪的话下摆前面底下是空的、后面露出腿的一角）；
+  // 用 IK 的脚的目标点跟着一起挪，腿还是原来的样子
+  const hipShift = u * HIP_SIDE_SHIFT;
+  const shiftV = rotateV([hipShift, 0], pelvis.a);
   const leg = (side: 1 | -1, lp: LegPose): Limb => {
-    const root = pelvis.p(side * BODY.hipW * cth, 0);
+    const root = pelvis.p(side * BODY.hipW * cth + hipShift, 0);
     const k = lp.thighK ?? 1;
     const thigh = BODY.thigh * k;
     let a1 = pelvis.a + lp.a;
@@ -358,7 +364,7 @@ export function rigOf(pIn: PoseIn | Pose): Rig {
     let fa = a2 + lp.f;
     const w = lp.to ? (lp.ik ?? 1) : 0;
     if (lp.to && w > 0) {
-      const r = ik2(root, lp.to, thigh, BODY.shin, lp.bend ?? 1);
+      const r = ik2(root, add(lp.to, shiftV), thigh, BODY.shin, lp.bend ?? 1);
       a1 = mixAngle(a1, r.a1, w);
       a2 = mixAngle(a2, r.a2, w);
       fa = mixAngle(fa, lp.f, w);
@@ -380,6 +386,7 @@ export function rigOf(pIn: PoseIn | Pose): Rig {
     arms: { L: arm(1, pose.armL), R: arm(-1, pose.armR) },
     legs: { L: leg(1, pose.legL), R: leg(-1, pose.legR) },
     field: add(pose.gravity, pose.drag),
+    hipShift,
   };
 }
 
@@ -907,6 +914,11 @@ const TORSO_TURN = turnPair(TORSO, SIDE_TORSO, [[0.5, 0], [1, 0.1], [1, 0.55], [
 /** 脖子：四个角 */
 const NECK_TURN = turnPair(NECK, SIDE_NECK, [[0, 0], [1, 0], [1, 1], [0, 1]], 8);
 /** 肩关节转到 3/4 时的位置：跟着身子轮廓上离它最近的那一点挪 */
+/** 3/4 时两腿往前（画面左）挪多少：跟着毛衣下摆中间那一点走 */
+const HIP_SIDE_SHIFT = (() => {
+  const i = nearestIndex(TORSO_TURN[0], [0, -5.4]);
+  return TORSO_TURN[1][i][0] - TORSO_TURN[0][i][0];
+})();
 const SHOULDER_SIDE = (() => {
   const follow = (p: V2): V2 => {
     const i = nearestIndex(TORSO_TURN[0], p);
@@ -1106,7 +1118,7 @@ function pelvisPath(rig: Rig): Path2D {
     [0, -16],
   ];
   // 和腿的几块统一绕向，拼成一个形状填色时重叠处才不会变成洞
-  return smoothPath(clockwise(pts.map(([x, y]) => rig.pelvis.p(x * Math.cos(rig.th), y))) as P[]);
+  return smoothPath(clockwise(pts.map(([x, y]) => rig.pelvis.p(x * Math.cos(rig.th) + rig.hipShift, y))) as P[]);
 }
 
 /**
