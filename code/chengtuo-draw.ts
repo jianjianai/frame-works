@@ -329,7 +329,8 @@ const BANGS_BOTTOM_Y = -6.64;
 
 /**
  * 3/4 时后面那缕鬓发（盖着耳根）：直直地垂下来（用户 2026-10-18）——整缕按刘海下沿那一行横向映射，
- * 不像耳朵那样一行一行贴着脸边走（下颌往里收，贴着走就斜了）；再跟耳朵一起往脸这边收。
+ * 不像耳朵那样一行一行贴着脸边走（下颌往里收，贴着走就斜了）；线稿里这缕的尖往里收，再横向错切一点，
+ * 压在脸上的内侧边（看得见的那条线）竖直；再跟耳朵一起往脸这边收。
  */
 function lockBack(h: HeadView): Path2D {
   const { rig, H, uh, place } = h;
@@ -337,7 +338,9 @@ function lockBack(h: HeadView): Path2D {
   const to = rowSpan(faceOf(rig), BANGS_BOTTOM_Y);
   if (uh <= 0 || !from || !to) return cubicPath(LOCK_R, place);
   const k = (to[1] - to[0]) / (from[1] - from[0]);
-  return cubicPath(LOCK_R, ([x, y]) => H(to[0] + (x - from[0]) * k - EAR_SIDE_IN * uh, y));
+  const [top, tip] = [LOCK_R[0], LOCK_R[3]];
+  const shear = ((top[0] - tip[0]) / (tip[1] - top[1])) * k * uh;
+  return cubicPath(LOCK_R, ([x, y]) => H(to[0] + (x - from[0]) * k + shear * (y - BANGS_BOTTOM_Y) - EAR_SIDE_IN * uh, y));
 }
 
 /** 刘海和两边的头发（Look.frontHair）：盖住脸边和耳根，跟着脸走；先填色、后描边，头发压在头发上的边不描（用户 2026-10-17），只描压在脸和耳朵上的边 */
