@@ -43,6 +43,7 @@ import {
   sub,
 } from "./rig";
 import { SIDE_BANGS, SIDE_FACE, SIDE_IRIS, SIDE_MOUTH, SIDE_NECK, SIDE_NOSE, SIDE_TORSO } from "./chengtuo-side";
+import { BAND, BOOT, COAT_FRONT, COAT_SIDE, CUFF, SHOULDER_RIVET } from "./chengtuo-costume";
 
 export const COLORS = {
   // 配色取自用户给的参考图（2026-10-17）：炭黑头发、灰调藏青外套、哑光芥末黄围巾、砖红袖标
@@ -185,18 +186,24 @@ export interface Pose {
   float: number;
   /** 时间（秒）：摆动、眼泪用 */
   t: number;
-  /** 靴筒里露出几块砖（0..2） */
+  /** 靴筒里插着几块砖（0..2：1 是画面左边那只靴子，2 是两只都有） */
   bricks: number;
   /** 身上的物品：显示或隐藏 */
   items: Items;
 }
 
-/** 身上的物品（外套、铁靴、袖标画好后也放在这里） */
+/** 身上的物品：显示或隐藏（全关掉就是基础模型） */
 export interface Items {
   /** 围巾（摘了露出脖子） */
   scarf: boolean;
   /** 手套（摘了是光着的手） */
   gloves: boolean;
+  /** 外套：两片前襟、口袋、翻领，袖子卷到小臂中间（下面露出手臂），肩头一颗铆钉 */
+  coat: boolean;
+  /** 红袖标（她的左上臂） */
+  band: boolean;
+  /** 铁靴（靴筒里插几块砖见 bricks；单只脱掉用 legL / legR 的 boot） */
+  boots: boolean;
 }
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? (T[K] extends unknown[] ? T[K] : DeepPartial<T[K]>) : T[K] };
@@ -207,7 +214,7 @@ export const BODY = {
   // 按用户线稿量的（2026-10-17）：胯关节连线是原点
   thigh: 125,
   shin: 91.9,
-  /** 穿靴时脚踝离地（靴子还没画，先和光脚一样） */
+  /** 穿靴时脚踝离地（靴底就在光脚的脚底下，骨架不变） */
   ankleBoot: 65.1,
   /** 光脚时脚踝离地（正面看脚背高） */
   ankleBare: 65.1,
@@ -256,7 +263,7 @@ export const DEFAULT_POSE: Pose = {
   float: 0,
   t: 0,
   bricks: 2,
-  items: { scarf: true, gloves: true },
+  items: { scarf: true, gloves: true, coat: true, band: true, boots: true },
 };
 
 export function resolvePose(p: PoseIn): Pose {
@@ -271,6 +278,9 @@ export const hipAt = (y: number) => -BODY.ankleBare + (y + 34) * LEG_K;
 export const footAt = (x: number, y: number): V2 => [x * LEG_K, -BODY.ankleBare + (y + 34) * LEG_K];
 
 // ——— 骨架 ———
+/** 穿外套时正面两个肩关节各往外挪多少 */
+const COAT_SHOULDER_OUT = 6;
+
 export interface Limb {
   root: V2;
   mid: V2;
@@ -343,7 +353,9 @@ export function rigOf(pIn: PoseIn | Pose): Rig {
   const arm = (side: 1 | -1, ap: ArmPose): Limb => {
     // 肩关节：正面在线稿的位置，3/4 跟着侧面线稿的身子走
     const sh = lerpV(side === 1 ? REST.shoulder : [-REST.shoulder[0], REST.shoulder[1]], SHOULDER_SIDE[side === 1 ? "L" : "R"], u);
-    const root = chest.p(sh[0], sh[1] - br);
+    // 穿外套时袖子接在外套的肩线上（照拆件图，比毛衣的肩宽一点），正面往外挪，转到 3/4 挪回来
+    const out = pose.items.coat ? side * COAT_SHOULDER_OUT * (1 - u) : 0;
+    const root = chest.p(sh[0] + out, sh[1] - br);
     let a1 = chest.a + ap.a;
     let a2 = a1 + ap.b;
     const w = ap.to ? (ap.ik ?? 1) : 0;
@@ -479,13 +491,18 @@ export function drawChengtuo(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, 
     if (farBack("L")) drawArm(ctx, rig, "L", ink, opts);
     drawLegs(ctx, rig, ink);
     const behind = front ? (["R", "L"] as const).filter((side) => !farBack(side)) : [];
-    for (const side of behind) drawUpperArm(ctx, rig, side, ink);
+    if (!pose.items.coat) for (const side of behind) drawUpperArm(ctx, rig, side, ink);
     // 身子在这些手臂的肩膀圈里不描边：正面时画在身子后面的上臂，加上 3/4 时整只在身子后面的远侧手臂
     // （用户 2026-10-18：远侧肩膀的线要和参考图一样，从腋下才开始，不一直连到肩头）
     const merged = [...behind, ...(["R", "L"] as const).filter(farBack)];
     // 围脖：绕到脖子后面的半圈在脖子后面，前面的半圈压在脖子前面
     if (pose.items.scarf) drawScarfWrap(ctx, rig, ink, "back");
     drawTorso(ctx, rig, ink, merged);
+    if (pose.items.coat) {
+      drawCoat(ctx, rig, ink, merged);
+      // 穿外套的正面：上臂压在前襟上（照拆件图：袖子盖着前襟的边，袖标整个露出来）
+      for (const side of behind) drawUpperArmOver(ctx, rig, side, ink);
+    }
     if (pose.items.scarf) drawScarfWrap(ctx, rig, ink, "front");
     headView((r, k) => drawHead(ctx, r, k));
   });
@@ -1032,30 +1049,55 @@ function armPaths(rig: Rig, side: "L" | "R") {
 function drawArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, opts: DrawOptions) {
   const { limb, sx, upper, lower } = armPaths(rig, side);
   const ap = side === "L" ? rig.pose.armL : rig.pose.armR;
-  // 合并描边（两倍宽的边再盖上填色），但肩膀那一圈里压在身子上的边不描：身子外面一遍、肩膀圈外面一遍
-  const torso = torsoPaths(rig).torso;
+  const [base, shade] = sleeveColors(rig);
+  strokeOverBody(ctx, rig, side, ink, [upper, lower]);
+  fillShaded(ctx, upper, base, shade, ink);
+  fillForearm(ctx, rig, side, lower, ink);
+  unshadeShoulder(ctx, rig, side, upper, base);
+  drawBand(ctx, rig, side, upper, ink);
+  drawShoulderRivet(ctx, rig, side, ink);
+  drawCuff(ctx, rig, side, ink);
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), !rig.pose.items.gloves);
+}
+
+/** 压在身子上的手臂合并描边（两倍宽的边再盖上填色），但肩膀那一圈里压在身子上的边不描：身子（连外套）外面一遍、肩膀圈外面一遍 */
+function strokeOverBody(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, paths: Path2D[]) {
   ctx.strokeStyle = K.line;
   ctx.lineWidth = ink.lw * 2;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  for (const keep of [outside(torso), outside(shoulderZone(rig, side))]) {
+  for (const keep of [bodyPieces(rig).map(outside), [outside(shoulderZone(rig, side))]]) {
     ctx.save();
-    ctx.clip(keep, "evenodd");
-    ctx.stroke(upper);
-    ctx.stroke(lower);
+    for (const k of keep) ctx.clip(k, "evenodd");
+    for (const p of paths) ctx.stroke(p);
     ctx.restore();
   }
-  fillShaded(ctx, upper, K.sweater, K.sweaterShade, ink);
-  fillShaded(ctx, lower, K.sweater, K.sweaterShade, ink);
-  // 肩膀那一圈里袖子压在身子上的那段也不要右下的阴影月牙（用户 2026-10-18）：那里没有描线，月牙会变成一道像光照轮廓的深色边
-  // （朝右时光的方向跟着镜像，月牙正好落在近侧手臂贴着身子的那条边上）
-  ctx.save();
-  ctx.clip(torso);
-  ctx.clip(shoulderZone(rig, side));
-  ctx.fillStyle = K.sweater;
-  ctx.fill(upper);
-  ctx.restore();
-  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), !rig.pose.items.gloves);
+}
+
+/**
+ * 肩膀那一圈里袖子压在身子上的那段不要右下的阴影月牙（用户 2026-10-18）：那里没有描线，月牙会变成一道像光照轮廓的深色边
+ * （朝右时光的方向跟着镜像，月牙正好落在近侧手臂贴着身子的那条边上）
+ */
+function unshadeShoulder(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", upper: Path2D, base: string) {
+  for (const b of bodyPieces(rig)) {
+    ctx.save();
+    ctx.clip(b);
+    ctx.clip(shoulderZone(rig, side));
+    ctx.fillStyle = base;
+    ctx.fill(upper);
+    ctx.restore();
+  }
+}
+
+/** 穿外套的正面：上臂压在外套前襟上，肩膀那一圈和身子接成一块（同 3/4 的手臂）；前臂、手套之后另画（drawForearm） */
+function drawUpperArmOver(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
+  const { upper } = armPaths(rig, side);
+  const [base, shade] = sleeveColors(rig);
+  strokeOverBody(ctx, rig, side, ink, [upper]);
+  fillShaded(ctx, upper, base, shade, ink);
+  unshadeShoulder(ctx, rig, side, upper, base);
+  drawBand(ctx, rig, side, upper, ink);
+  drawShoulderRivet(ctx, rig, side, ink);
 }
 
 /**
@@ -1063,14 +1105,16 @@ function drawArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: 
  * 前臂和手套照样画在前面（抱臂、捂嘴这些动作要压在身子、脸前面）。
  */
 function drawUpperArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
-  drawPart(ctx, armPaths(rig, side).upper, K.sweater, K.sweaterShade, ink);
+  const { upper } = armPaths(rig, side);
+  drawPart(ctx, upper, ...sleeveColors(rig), ink);
+  drawBand(ctx, rig, side, upper, ink);
 }
 
-/** 前臂 + 手套（正面，上臂已经画在身子后面）：前臂和露出来的上臂接的地方不描线；上臂藏在身子后面的那段，前臂照常描 */
+/** 前臂 + 手套（正面，上臂已经画在身子后面）：前臂和露出来的上臂接的地方不描线；上臂藏在身子（连外套）后面的那段，前臂照常描 */
 function drawForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, opts: DrawOptions) {
   const { limb, sx, upper, lower } = armPaths(rig, side);
   const ap = side === "L" ? rig.pose.armL : rig.pose.armR;
-  fillShaded(ctx, lower, K.sweater, K.sweaterShade, ink);
+  fillForearm(ctx, rig, side, lower, ink);
   ctx.strokeStyle = K.line;
   ctx.lineWidth = ink.lw;
   ctx.lineJoin = "round";
@@ -1083,10 +1127,15 @@ function drawForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", i
   ctx.clip(out, "evenodd");
   ctx.stroke(lower);
   ctx.restore();
-  ctx.save();
-  ctx.clip(torsoPaths(rig).torso);
-  ctx.stroke(lower);
-  ctx.restore();
+  // 穿外套时上臂压在前襟上（drawUpperArmOver），没有藏起来的那段
+  if (!rig.pose.items.coat)
+    for (const b of bodyPieces(rig)) {
+      ctx.save();
+      ctx.clip(b);
+      ctx.stroke(lower);
+      ctx.restore();
+    }
+  drawCuff(ctx, rig, side, ink);
   drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), !rig.pose.items.gloves);
 }
 
@@ -1209,12 +1258,15 @@ function pelvisPath(rig: Rig): Path2D {
  * 到裆下才分开（和参考图一样）；转到 3/4 两条腿前后叠着，要各描各的。
  */
 function drawLegs(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
-  drawFoot(ctx, rig, "R", ink);
-  drawFoot(ctx, rig, "L", ink);
+  const boot = (side: "L" | "R") => rig.pose.items.boots && (side === "L" ? rig.pose.legL : rig.pose.legR).boot;
+  for (const side of ["R", "L"] as const) if (!boot(side)) drawFoot(ctx, rig, side, ink);
   const pelvis = pelvisPath(rig);
   if (rig.u >= 0.25) {
     drawPart(ctx, pelvis, K.tights, null, ink);
-    for (const side of ["R", "L"] as const) drawMerged(ctx, legPaths(rig, side), K.tights, K.tightsShade, ink);
+    for (const side of ["R", "L"] as const) {
+      drawMerged(ctx, legPaths(rig, side), K.tights, K.tightsShade, ink);
+      if (boot(side)) drawBoot(ctx, rig, side, ink);
+    }
     return;
   }
   const [thR, shR] = legPaths(rig, "R");
@@ -1232,6 +1284,201 @@ function drawLegs(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   fillShaded(ctx, thighs, K.tights, K.tightsShade, ink);
   fillShaded(ctx, shR, K.tights, K.tightsShade, ink);
   fillShaded(ctx, shL, K.tights, K.tightsShade, ink);
+  for (const side of ["R", "L"] as const) if (boot(side)) drawBoot(ctx, rig, side, ink);
+}
+
+// ——— 外套、袖标、铁靴（用户和 AI 一起画的服装线稿 `秤砣-服装线稿.svg`、`秤砣-服装侧面线稿.svg`，换算在 chengtuo-costume.ts） ———
+/** 外套的一块：正面和 3/4 两张线稿按包围盒里的几个标志点逐点对应（两张的标志点位置不同时各给一组） */
+function coatPair(front: V2[], side: V2[], boxF: V2[], boxS: V2[] = boxF, perSeg = 12): [V2[], V2[]] {
+  const a = clockwisePoly(bezierPolyline(front));
+  const b = clockwisePoly(bezierPolyline(side));
+  return matchOutlines(a, marksByBox(a, boxF), b, marksByBox(b, boxS), perSeg);
+}
+const CORNERS: V2[] = [[0, 0], [1, 0], [1, 1], [0, 1]];
+/**
+ * 前襟：l 是正面画面左边那片（3/4 朝左时远的那片），r 是右边那片（近的那片，连着后背多出来的一块）。
+ * 标志点：肩头、领口那头、门襟下角、下摆外角；翻领：领口那头、翻领的缺口、下面的尖。
+ */
+const COAT_TURN = {
+  l: coatPair(COAT_FRONT.l, COAT_SIDE.l, CORNERS),
+  r: coatPair(COAT_FRONT.r, COAT_SIDE.r, CORNERS),
+  lapelL: coatPair(COAT_FRONT.lapelL, COAT_SIDE.lapelL, [[1, 0], [1, 1], [0, 0.2]], [[1, 0], [0, 1], [0.4, 0.25]], 8),
+  lapelR: coatPair(COAT_FRONT.lapelR, COAT_SIDE.lapelR, [[0, 0], [1, 0.25], [0, 1]], undefined, 8),
+  pocketL: coatPair(COAT_FRONT.pocketL, COAT_SIDE.pocketL, CORNERS, CORNERS, 6),
+  pocketR: coatPair(COAT_FRONT.pocketR, COAT_SIDE.pocketR, CORNERS, CORNERS, 6),
+};
+
+/** 外套放到现在的姿势上（跟着胸口走，和身子一样呼吸） */
+function coatOf(rig: Rig) {
+  const { chest, u, pose } = rig;
+  const br = pose.breath * 1.6;
+  const on = ([x, y]: V2): V2 => chest.p(x, y - br * clamp01(-y / 140));
+  const get = (k: keyof typeof COAT_TURN) => polylinePath(lerpPts(...COAT_TURN[k], u), on);
+  return { l: get("l"), r: get("r"), lapelL: get("lapelL"), lapelR: get("lapelR"), pocketL: get("pocketL"), pocketR: get("pocketR") };
+}
+
+/** 身子在画面里占的几块（穿外套时连两片前襟）：手臂描边、阴影按它们裁 */
+function bodyPieces(rig: Rig): Path2D[] {
+  const { torso } = torsoPaths(rig);
+  if (!rig.pose.items.coat) return [torso];
+  const c = coatOf(rig);
+  return [torso, c.l, c.r];
+}
+
+/** 外套：两片前襟（口袋、翻领压在上面），肩膀那一圈和上臂接成一块，和毛衣身子同样处理 */
+function drawCoat(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L" | "R")[]) {
+  const c = coatOf(rig);
+  const lw = ink.lw * 0.8;
+  for (const [panel, lapel, pocket] of [
+    [c.l, c.lapelL, c.pocketL],
+    [c.r, c.lapelR, c.pocketR],
+  ]) {
+    fillBodyPart(ctx, rig, panel, K.coat, K.coatShade, ink, sides);
+    ctx.save();
+    ctx.clip(panel);
+    drawPart(ctx, pocket, K.coat, K.coatShade, ink, lw);
+    drawPart(ctx, lapel, K.coat, K.coatShade, ink, lw);
+    ctx.restore();
+    strokeBodyPart(ctx, rig, panel, ink, sides);
+  }
+}
+
+/** 袖子的颜色：穿外套时是外套的 */
+function sleeveColors(rig: Rig): [string, string] {
+  return rig.pose.items.coat ? [K.coat, K.coatShade] : [K.sweater, K.sweaterShade];
+}
+
+const UPPER_A = angleOf(sub(REST.elbow, REST.shoulder));
+/** 袖口翻边在前臂的局部坐标里（肘原点，+y 指向手腕）；它中间往下露出手臂 */
+const CUFF_L = toLocal(CUFF, REST.elbow, HAND_A);
+const CUFF_Y = (Math.min(...CUFF_L.map((p) => p[1])) + Math.max(...CUFF_L.map((p) => p[1]))) / 2;
+/** 袖标、肩头铆钉在上臂的局部坐标里 */
+const BAND_L = toLocal(BAND, REST.shoulder, UPPER_A);
+const RIVET_L = toLocal([SHOULDER_RIVET.c], REST.shoulder, UPPER_A)[0];
+
+/** 前臂填色：穿外套时袖口往下是光着的手臂（照拆件图，外套袖子卷到小臂中间） */
+function fillForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", lower: Path2D, ink: Ink) {
+  const [base, shade] = sleeveColors(rig);
+  fillShaded(ctx, lower, base, shade, ink);
+  if (!rig.pose.items.coat) return;
+  const limb = rig.arms[side];
+  const f = new Frame(limb.mid[0], limb.mid[1], limb.a2);
+  ctx.save();
+  ctx.clip(lower);
+  ctx.clip(polyPath([[-80, CUFF_Y], [80, CUFF_Y], [80, 200], [-80, 200]], ([x, y]) => f.p(x, y)));
+  fillShaded(ctx, lower, K.skin, K.skinShade, ink);
+  ctx.restore();
+}
+
+function drawCuff(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
+  if (!rig.pose.items.coat) return;
+  const limb = rig.arms[side];
+  const sx = side === "L" ? 1 : -1;
+  const f = new Frame(limb.mid[0], limb.mid[1], limb.a2);
+  drawPart(ctx, cubicPath(CUFF_L, ([x, y]) => f.p(x * sx, y)), K.coat, K.coatShade, ink, ink.lw * 0.8);
+}
+
+/** 袖标在她的左臂上：正面是画面右边那只（L）；朝右时整套镜像，她的左臂成了远的那只（R） */
+function drawBand(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", upper: Path2D, ink: Ink) {
+  if (!rig.pose.items.band || side !== (rig.mir ? "R" : "L")) return;
+  const limb = rig.arms[side];
+  const sx = side === "L" ? 1 : -1;
+  const f = new Frame(limb.root[0], limb.root[1], limb.a1);
+  ctx.save();
+  ctx.clip(upper);
+  drawPart(ctx, cubicPath(BAND_L, ([x, y]) => f.p(x * sx, y)), K.band, K.bandShade, ink, ink.lw * 0.8);
+  ctx.restore();
+}
+
+function drawDot(ctx: CanvasRenderingContext2D, [x, y]: V2, r: number, ink: Ink) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = K.rivet;
+  ctx.fill();
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw * 0.4;
+  ctx.stroke();
+}
+
+function drawShoulderRivet(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
+  if (!rig.pose.items.coat) return;
+  const limb = rig.arms[side];
+  const sx = side === "L" ? 1 : -1;
+  const f = new Frame(limb.root[0], limb.root[1], limb.a1);
+  drawDot(ctx, f.p(RIVET_L[0] * sx, RIVET_L[1]), SHOULDER_RIVET.r, ink);
+}
+
+/** 铁靴在脚踝的局部坐标里（画的是画面左边那只，另一只镜像，同光脚） */
+const BOOT_L = {
+  body: toLocal(BOOT.body, REST.ankleR, 0),
+  sole: toLocal(BOOT.sole, REST.ankleR, 0),
+  rim: toLocal(BOOT.rim, REST.ankleR, 0),
+  brick: toLocal(BOOT.brick, REST.ankleR, 0),
+  ropes: BOOT.ropes.map((r) => toLocal(r, REST.ankleR, 0)),
+  rust: BOOT.rust.map((r) => toLocal(r, REST.ankleR, 0)),
+  rivets: BOOT.rivets.map((d) => ({ c: toLocal([d.c], REST.ankleR, 0)[0], r: d.r })),
+  frontRivet: { c: toLocal([BOOT.frontRivet.c], REST.ankleR, 0)[0], r: BOOT.frontRivet.r },
+};
+/** 靴口上沿最低的地方（局部 y）：上沿往上、靴筒轮廓以内是靴口里面 */
+const BOOT_RIM_TOP = Math.max(...BOOT_L.rim.slice(0, 4).map((p) => p[1]));
+/** 站着时（默认姿势）画面左边那条腿小腿的角度：线稿里的靴筒就是这个角度，弯腿时靴筒跟着小腿转 */
+const SHIN_STAND = angleOf([-46.6 + BODY.hipW, -65.1 + 280.5]);
+
+/** 铁靴的脚踝能弯的最大角度（弧度）：脚再勾、再绷，靴子整只跟着小腿转（跪着时鞋尖朝下抵着地） */
+const BOOT_FLEX = 0.3;
+
+/**
+ * 靴子上的点放到现在的姿势上：往上（靴筒）跟着小腿，脚踝往下（鞋头、鞋底）跟着脚，中间平滑过渡；
+ * 铁的靴子弯不了多少，脚相对小腿的角度按 BOOT_FLEX 软限制
+ */
+function bootMap(rig: Rig, side: "L" | "R") {
+  const limb = rig.legs[side];
+  const fx = side === "R" || rig.u >= 0.25 ? 1 : -1;
+  const shinA = limb.a2 - (side === "R" ? SHIN_STAND : -SHIN_STAND);
+  const d = limb.tip.a - shinA;
+  const bend = Math.atan2(Math.sin(d), Math.cos(d));
+  const shin = new Frame(limb.end[0], limb.end[1], shinA);
+  const foot = new Frame(limb.end[0], limb.end[1], shinA + BOOT_FLEX * Math.tanh(bend / BOOT_FLEX));
+  return ([x, y]: V2): V2 => lerpV(foot.p(x * fx, y), shin.p(x * fx, y), smooth01(15, -25, y));
+}
+
+/** 铁靴：靴筒（锈斑、两道麻绳、正面一颗大铆钉）→ 插着的砖 → 靴口翻边一圈铆钉 → 鞋底 */
+function drawBoot(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
+  const m = bootMap(rig, side);
+  const lw = ink.lw * 0.8;
+  const body = cubicPath(BOOT_L.body, m);
+  const rim = cubicPath(BOOT_L.rim, m);
+  fillShaded(ctx, body, K.boot, K.bootShade, ink);
+  ctx.save();
+  ctx.clip(body);
+  // 靴口里面：靴筒上沿和翻边上沿之间那一小条（后面那圈靴口的里侧）
+  ctx.save();
+  ctx.clip(outside(rim), "evenodd");
+  ctx.fillStyle = K.bootInside;
+  ctx.fill(polyPath([[-120, -300], [120, -300], [120, BOOT_RIM_TOP], [-120, BOOT_RIM_TOP]], m));
+  ctx.restore();
+  ctx.fillStyle = K.rust;
+  for (const r of BOOT_L.rust) ctx.fill(cubicPath(r, m));
+  ctx.lineCap = "round";
+  for (const r of BOOT_L.ropes) {
+    const rope = cubicPath(r, m, false);
+    ctx.strokeStyle = K.line;
+    ctx.lineWidth = ink.lw * 1.7;
+    ctx.stroke(rope);
+    ctx.strokeStyle = K.rope;
+    ctx.lineWidth = ink.lw * 0.95;
+    ctx.stroke(rope);
+  }
+  drawDot(ctx, m(BOOT_L.frontRivet.c), BOOT_L.frontRivet.r, ink);
+  ctx.restore();
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = lw;
+  ctx.lineJoin = "round";
+  ctx.stroke(body);
+  if (rig.pose.bricks >= (side === "R" ? 1 : 2)) drawPart(ctx, cubicPath(BOOT_L.brick, m), K.brick, K.brickShade, ink, lw);
+  drawPart(ctx, rim, K.bootRim, K.bootShade, ink, lw);
+  for (const d of BOOT_L.rivets) drawDot(ctx, m(d.c), d.r, ink);
+  drawPart(ctx, cubicPath(BOOT_L.sole, m), K.sole, null, ink, lw);
 }
 
 // ——— 身子、脖子 ———
@@ -1268,20 +1515,25 @@ function drawTorso(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L
 }
 
 function drawTorsoBody(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, torso: Path2D, sides: ("L" | "R")[]) {
-  if (!sides.length) {
-    drawPart(ctx, torso, K.sweater, K.sweaterShade, ink);
-    return;
-  }
-  fillShaded(ctx, torso, K.sweater, K.sweaterShade, ink);
-  // 肩膀那一圈里身子的边不描，也不要右下的阴影月牙（用户 2026-10-18）：没有描线的地方剩一道月牙，像光照轮廓
+  fillBodyPart(ctx, rig, torso, K.sweater, K.sweaterShade, ink, sides);
+  strokeBodyPart(ctx, rig, torso, ink, sides);
+}
+
+/** 身子上的一块（毛衣身子、外套前襟）填色：肩膀那一圈里不要右下的阴影月牙（用户 2026-10-18）：没有描线的地方剩一道月牙，像光照轮廓 */
+function fillBodyPart(ctx: CanvasRenderingContext2D, rig: Rig, path: Path2D, base: string, shade: string, ink: Ink, sides: ("L" | "R")[]) {
+  fillShaded(ctx, path, base, shade, ink);
   for (const side of sides) {
     ctx.save();
-    ctx.clip(torso);
+    ctx.clip(path);
     ctx.clip(shoulderZone(rig, side));
-    ctx.fillStyle = K.sweater;
-    ctx.fill(torso);
+    ctx.fillStyle = base;
+    ctx.fill(path);
     ctx.restore();
   }
+}
+
+/** 身子上的一块描边：sides 的上臂在肩膀圈里压着的边不描（袖子和身子在肩膀是一块） */
+function strokeBodyPart(ctx: CanvasRenderingContext2D, rig: Rig, path: Path2D, ink: Ink, sides: ("L" | "R")[]) {
   ctx.strokeStyle = K.line;
   ctx.lineWidth = ink.lw;
   ctx.lineJoin = "round";
@@ -1292,7 +1544,7 @@ function drawTorsoBody(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, torso:
   for (const combo of combos) {
     ctx.save();
     for (const p of combo) ctx.clip(p, "evenodd");
-    ctx.stroke(torso);
+    ctx.stroke(path);
     ctx.restore();
   }
 }
