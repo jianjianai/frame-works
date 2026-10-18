@@ -275,8 +275,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     // 发根附近还并在一起，越往发梢分得越开
     const ang = bendAlong(
       // （飘出去时朝风向那边的边在上：往右吹 s = 1 在上，往左吹 s = 0 在上；两种都是 -fan 让上面几缕弯得更多）
-      // 失重时从头后面散成一个扇形：中间往上、两边往外（最外面一缕约 55°）
-      phi + fan * (up * 1.1 - gust * 0.2),
+      // 失重时从头后面散成一圈：中间往上、两边往外（最外面一缕约 75°），围住头的上半
+      phi + fan * (up * 1.5 - gust * 0.2),
       N,
       (i) => {
         const y = (i - 0.5) * HAIR_DY;
@@ -296,7 +296,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     });
     // 失重时发根挪到头后面：往上、往中间收（被脸和刘海挡住），看着是从后脑勺长出来、往上漂，
     // 不是从脖子长出来；中间几缕藏在头后面的那截也短了，头顶上方有头发（用户 2026-10-18）
-    const C: V2[] = [[restX(sc, P) * (1 - 0.5 * rise), P - 45 * rise]];
+    const C: V2[] = [[restX(sc, P) * (1 - 0.2 * rise), P - 45 * rise]];
     for (let i = 1; i <= N; i++) {
       const y0 = P + (i - 1) * HAIR_DY;
       C.push(add(C[i - 1], rotateV([restX(sc, y0 + HAIR_DY) - restX(sc, y0), HAIR_DY], (a[i - 1] + a[i]) / 2)));
@@ -343,7 +343,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const pieces = piecePts.map((pts) => polylinePath(pts));
   // 头顶：线稿耳朵以上那部分。失重时下沿跟着发根往上收到 Pd，两边贴着脸的那截往里收到脸后面（不留一个平的断口）
   const Pd = P - 45 * rise;
-  const tuck = (x: number, y: number) => Math.sign(x) * lerp(Math.abs(x), Math.min(Math.abs(x), 30), rise * smooth01(Pd - 30, Pd, y));
+  const tuck = (x: number, y: number) => Math.sign(x) * lerp(Math.abs(x), Math.min(Math.abs(x), 38), rise * smooth01(Pd - 30, Pd, y));
   const firstBelow = HAIR_POLY.findIndex((q) => q[1] > Pd);
   let lastBelow = HAIR_POLY.length - 1;
   while (HAIR_POLY[lastBelow][1] <= Pd) lastBelow--;
