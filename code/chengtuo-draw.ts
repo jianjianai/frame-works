@@ -343,9 +343,10 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     return pts;
   });
   const pieces = piecePts.map((pts) => polylinePath(pts));
-  // 头顶：线稿耳朵以上那部分。失重时下沿跟着发根往上收到 Pd，两边贴着脸的那截往里收到脸后面（不留一个平的断口）
-  const Pd = P - 45 * rise;
-  const tuck = (x: number, y: number) => Math.sign(x) * lerp(Math.abs(x), Math.min(Math.abs(x), 38), rise * smooth01(Pd - 30, Pd, y));
+  // 头顶：线稿耳朵以上那部分。失重时下沿往上收到耳朵上沿（Pd），两边贴着脸的那截往里收到脸后面（不留一个平的断口）：
+  // 还像短发一样包住太阳穴，往上漂的几缕从它后面更高的地方出来（发根那一排被它挡住）
+  const Pd = P - 15 * rise;
+  const tuck = (x: number, y: number) => Math.sign(x) * lerp(Math.abs(x), Math.min(Math.abs(x), 38), rise * smooth01(Pd - 25, Pd, y));
   const firstBelow = HAIR_POLY.findIndex((q) => q[1] > Pd);
   let lastBelow = HAIR_POLY.length - 1;
   while (HAIR_POLY[lastBelow][1] <= Pd) lastBelow--;
