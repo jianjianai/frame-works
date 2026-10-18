@@ -31,7 +31,8 @@ ctx.save(); ctx.translate(x, y); drawChengtuo(ctx, { ...pose, neck: -0.2 }); ctx
 
 ## 文件
 
-- `code/rig.ts`：通用的二维骨架工具（关节坐标系、两节 IK、平滑路径、合并描边、右下阴影、受力的链、关键帧混合、呼吸和眨眼），别的剪纸角色也用它。
+- `code/rig.ts`：通用的二维骨架工具（关节坐标系、两节 IK、平滑路径、合并描边、右下阴影、受力的链、关键帧混合、呼吸和眨眼、两张线稿之间的轮廓变形 `matchOutlines` / `lerpPts`），别的剪纸角色也用它。
 - `code/chengtuo-draw.ts`：秤砣的画法、尺寸、配色、姿势类型。头和身体的轮廓是用户亲手画的线稿（作品 5b227852 的 `public/ref/秤砣-线稿.svg`）换算出来的贝塞尔常量。
+- `code/chengtuo-side.ts`：3/4 侧面（朝左）的线稿常量（用户画的，作品 5b227852 的 `public/ref/秤砣-侧面线稿.svg`，换算脚本在那个作品的 `production/侧面线稿换算.cjs`）：脸、刘海外轮廓、眼珠、鼻子、嘴、脖子、身子。转身时和正面的同一块逐点对应、平滑过渡。
 - `code/chengtuo-moves.ts`：动作、`POSES`、`EXPRESSIONS`。
 - `code/chengtuo.ts`：入口，导出上面全部，加上按关节角度摆姿势的参数和资源声明。
