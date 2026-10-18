@@ -58,6 +58,8 @@ export const COLORS = {
   coatLight: "#424d66",
   sweater: "#f8f1e2",
   sweaterShade: "#e8dfca",
+  /** 毛衣上的细缝线（罗纹领的下沿） */
+  sweaterSeam: "#b4aa94",
   scarf: "#e2b856",
   scarfShade: "#c99c40",
   band: "#bd5349",
@@ -1179,13 +1181,25 @@ function torsoPaths(rig: Rig): { neck: Path2D; torso: Path2D } {
   const { chest, u, pose } = rig;
   const br = pose.breath * 1.6;
   const on = ([x, y]: V2): V2 => chest.p(x, y - br * clamp01(-y / 140));
-  return { neck: polylinePath(lerpPts(...NECK_TURN, u), on), torso: polylinePath(lerpPts(...TORSO_TURN, u), on) };
+  // 脖子往下多画一截（藏在身子后面）：领口往下弯露出来的那块还是脖子，下沿的阴影也藏在身子后面
+  const neck = lerpPts(...NECK_TURN, u).map(([x, y]): V2 => [x, y > -164 ? y + 12 : y]);
+  return { neck: polylinePath(neck, on), torso: polylinePath(lerpPts(...TORSO_TURN, u), on) };
 }
 
 /** sides：正面时画在身子后面的上臂。身子的边在这些上臂的肩膀圈里不描（袖子和身子在肩膀是一块），腋下往下照常描 */
 function drawTorso(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L" | "R")[] = []) {
   const { neck, torso } = torsoPaths(rig);
   drawPart(ctx, neck, K.skin, K.skinShade, ink, ink.lw * 0.6);
+  const collar = collarOf(rig);
+  // 领口往下弯的那块挖掉，后面的脖子露出来
+  ctx.save();
+  ctx.clip(outside(collar.opening), "evenodd");
+  drawTorsoBody(ctx, rig, ink, torso, sides);
+  ctx.restore();
+  drawCollar(ctx, ink, collar);
+}
+
+function drawTorsoBody(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, torso: Path2D, sides: ("L" | "R")[]) {
   if (!sides.length) {
     drawPart(ctx, torso, K.sweater, K.sweaterShade, ink);
     return;
@@ -1213,6 +1227,66 @@ function drawTorso(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L
     ctx.stroke(torso);
     ctx.restore();
   }
+}
+
+/** 闭合折线在竖线 x 处最上面的 y（没有交点时返回 null） */
+function colTop(poly: V2[], x: number): number | null {
+  let top: number | null = null;
+  for (let i = 0; i < poly.length; i++) {
+    const [x0, y0] = poly[i];
+    const [x1, y1] = poly[(i + 1) % poly.length];
+    if ((x0 <= x && x1 > x) || (x1 <= x && x0 > x)) {
+      const y = y0 + ((x - x0) / (x1 - x0)) * (y1 - y0);
+      top = top === null ? y : Math.min(top, y);
+    }
+  }
+  return top;
+}
+
+/**
+ * 圆领（照三视图，用户 2026-10-18）：领口前面往下弯成一道 U，露出一点脖子根；下面一圈罗纹领的下沿是一道浅色细线，
+ * 往两边接到肩膀。领子是圆的，转身时不压窄，宽度和位置跟着脖子根那一行走。戴着围巾时被围脖挡住。
+ * opening：身子上要挖掉的那块（U 往上到身子上沿外面）；front：领口那道 U；seam：罗纹领的下沿。
+ */
+function collarOf(rig: Rig) {
+  const { chest, u, pose } = rig;
+  const br = pose.breath * 1.6;
+  const on = ([x, y]: V2): V2 => chest.p(x, y - br * clamp01(-y / 140));
+  const neck = lerpPts(...NECK_TURN, u);
+  const torso = lerpPts(...TORSO_TURN, u);
+  const [l, r] = rowSpan(neck, -163) ?? [-11.2, 11.2];
+  const cx = (l + r) / 2;
+  const rx = (r - l) / 2;
+  const top = (x: number) => colTop(torso, x) ?? -161;
+  /** 从身子上沿往下弯的一道 U：半宽 w，正中往下 d */
+  const arc = (w: number, d: number): V2[] =>
+    Array.from({ length: 21 }, (_, i) => {
+      const t = i / 20;
+      const x = cx + (t * 2 - 1) * w;
+      return [x, top(x) + d * (1 - (2 * t - 1) ** 2)];
+    });
+  const open = (pts: V2[]) => {
+    const p = new Path2D();
+    pts.map(on).forEach(([x, y], i) => (i ? p.lineTo(x, y) : p.moveTo(x, y)));
+    return p;
+  };
+  const front = arc(rx, 6.5);
+  return {
+    opening: polylinePath([...front, [cx + rx, top(cx + rx) - 20], [cx - rx, top(cx - rx) - 20]], on),
+    front: open(front),
+    seam: open(arc(rx + 9, 11.5)),
+  };
+}
+
+function drawCollar(ctx: CanvasRenderingContext2D, ink: Ink, collar: ReturnType<typeof collarOf>) {
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = K.sweaterSeam;
+  ctx.lineWidth = ink.lw * 0.55;
+  ctx.stroke(collar.seam);
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw;
+  ctx.stroke(collar.front);
 }
 
 // ——— 围巾 ———
