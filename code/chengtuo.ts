@@ -65,8 +65,8 @@ export const chengtuoOptions = z.object({
 
   ground: z.boolean().default(true).describe("脚踩地：按腿的角度把低的那只脚放到地面上（关掉时胯停在站着的高度）"),
   lift: z.number().min(-300).max(600).default(0).describe("再往上抬多高（跳起来、飘着；全身约 590 高）"),
-  float: z.boolean().default(false).describe("飘起来：头发、围巾往上漂，像在水里"),
-  wind: z.number().min(-2).max(2).default(0).describe("风 / 惯性：头发、围巾往画面左（−）或右（+）甩"),
+  float: z.number().min(0).max(1).default(0).describe("失重：0 垂着 → 0.5 没有重量 → 1 头发、刘海、围巾都往上漂，像在水里（连续过渡，和风一起算）"),
+  wind: z.number().min(-2).max(2).default(0).describe("风：大小和方向，往画面左（−）或右（+）吹；头发、刘海、围巾跟着一阵一阵地飘（4 秒一个循环）"),
   idle: z.boolean().default(false).describe("呼吸和眨眼（按时间动）"),
   line: z.number().min(0.4).max(2).default(1).describe("描边粗细倍数（特写时调细）"),
 });
@@ -96,8 +96,8 @@ export function chengtuoPose(options: ChengtuoOptions = {}, t = 0): PoseIn {
     legL: { a: o.hipL * RAD, b: o.kneeL * RAD, f: o.ankleL * RAD, thighK: o.thighL, to: undefined },
     legR: { a: o.hipR * RAD, b: o.kneeR * RAD, f: o.ankleR * RAD, thighK: o.thighR, to: undefined },
     expr,
-    float: o.float ? 1 : 0,
-    gravity: o.float ? [0, -1] : [0, 1],
+    float: o.float,
+    gravity: [0, 1 - 2 * o.float],
     // 风按画面方向给：朝右时整套镜像，这里先反过来
     drag: [o.face > 0 ? -o.wind : o.wind, 0],
     items: { scarf: o.scarf, gloves: o.gloves },
@@ -132,7 +132,7 @@ export const resources = defineResources({
     kind: "character",
     title: "秤砣",
     description:
-      "《引力》的女主秤砣：19 岁，黑色齐刘海长直发，米白毛衣、深灰裤袜、光脚，芥末黄围巾、藏青手套。二维骨架剪纸画风（深色描边、平涂、右下一道阴影）。正面和 3/4 连续转身；表情 10 种并可细调眼皮、眉毛、嘴；围巾、手套可以摘，手里可以拿砖；姿势按每个关节的角度摆，脚自动踩地；头发、围巾跟着风和失重飘。外套、铁靴、红袖标还没画。",
+      "《引力》的女主秤砣：19 岁，黑色齐刘海长直发，米白毛衣、深灰裤袜、光脚，芥末黄围巾、藏青手套。二维骨架剪纸画风（深色描边、平涂、右下一道阴影）。正面和 3/4 连续转身；表情 10 种并可细调眼皮、眉毛、嘴；围巾、手套可以摘，手里可以拿砖；姿势按每个关节的角度摆，脚自动踩地；头发、刘海、围巾随风一阵一阵地飘（4 秒循环），失重从垂着到漂起来连续过渡、和风联动。外套、铁靴、红袖标还没画。",
     tags: ["秤砣", "女主", "少女", "长发", "围巾", "剪纸", "骨架", "引力"],
     usage:
       "chengtuo(ctx, x, y, s, { face, expression, shoulderL, elbowL, …, scarf, gloves }, t)  // (x, y) 两脚之间的地面，s = 1 全身约 590 高；动作用 drawChengtuo(ctx, pose) + walk / jumpGrab / kneelGive / float",
@@ -146,9 +146,11 @@ export const resources = defineResources({
       坐: { face: -1, neck: -3, lean: 5, shoulderL: 20, elbowL: 34, wristL: 15, shoulderR: 26, elbowR: 37, wristR: -15, hipL: 88, kneeL: -95, ankleL: 7, hipR: 88, kneeR: -99, ankleR: 12, lookX: -0.4, lookY: 0.3 },
       单膝跪递砖: { face: -1, neck: 10, lean: 11, shoulderL: 84, elbowL: 1, wristL: -14, handL: "flat", brickL: true, shoulderR: 40, elbowR: 63, wristR: 0, hipL: -16, kneeL: -110, ankleL: 62, hipR: 77, kneeR: -115, ankleR: 38, happy: 0.35, smile: 0.75, blush: 0.6, lookX: -0.6, lookY: -0.3 },
       跳起来抓: { face: -1, expression: "使劲", neck: 29, lean: -5, lift: 187, shoulderL: 52, elbowL: 34, wristL: 0, handL: "open", shoulderR: 158, elbowR: -1, wristR: 11, handR: "grip", hipL: 25, kneeL: -55, ankleL: 30, hipR: 23, kneeR: -54, ankleR: 30, open: 0.3, lookX: -0.2, lookY: -1 },
-      飘: { face: -0.55, expression: "闭眼", float: true, lift: 60, neck: 8, lean: 5, rot: 3, shoulderL: -47, elbowL: 37, wristL: 11, handL: "open", shoulderR: 42, elbowR: 25, wristR: -6, handR: "open", hipL: -8, kneeL: -36, ankleL: 29, hipR: 4, kneeR: -17, ankleR: 26, blush: 0.4 },
+      飘: { face: -0.55, expression: "闭眼", float: 1, lift: 60, neck: 8, lean: 5, rot: 3, shoulderL: -47, elbowL: 37, wristL: 11, handL: "open", shoulderR: 42, elbowR: 25, wristR: -6, handR: "open", hipL: -8, kneeL: -36, ankleL: 29, hipR: 4, kneeR: -17, ankleR: 26, blush: 0.4 },
       摘了围巾和手套: { scarf: false, gloves: false },
       呼吸眨眼: { idle: true },
+      风里: { face: -1, wind: 1.6, idle: true, neck: 4, shoulderL: -5, elbowL: 16, wristL: 15, shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
+      水里漂: { face: -0.55, expression: "闭眼", float: 1, wind: 0.6, lift: 60, neck: 8, lean: 5, rot: 3, shoulderL: -47, elbowL: 37, wristL: 11, handL: "open", shoulderR: 42, elbowR: 25, wristR: -6, handR: "open", hipL: -8, kneeL: -36, ankleL: 29, hipR: 4, kneeR: -17, ankleR: 26, blush: 0.4 },
     },
     preview: {
       width: 640,
