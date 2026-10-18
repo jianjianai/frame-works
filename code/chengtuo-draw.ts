@@ -558,10 +558,19 @@ const COAT_TURN = {
 };
 
 /** 外套放到现在的姿势上（跟着胸口走，和身子一样呼吸） */
-function coatOf(rig: Rig) {
+/**
+ * 外套（前襟、翻领、口袋）放到现在的姿势上。别的角色也能穿（cast.ts）：size 整件放大（以领口为中心，大一号的外套），
+ * long 下摆往下多长多少（身体坐标）。
+ */
+export function coatOf(rig: Rig, size = 1, long = 0) {
   const { chest, u, pose } = rig;
   const br = pose.breath * 1.6;
-  const on = ([x, y]: V2): V2 => chest.p(x, y - br * clamp01(-y / 140));
+  const NECK_Y = -156;
+  const on = ([x0, y0]: V2): V2 => {
+    const x = x0 * size;
+    const y = NECK_Y + (y0 - NECK_Y) * size + long * clamp01((y0 + 60) / 100);
+    return chest.p(x, y - br * clamp01(-y / 140));
+  };
   const get = (k: keyof typeof COAT_TURN) => polylinePath(lerpPts(...COAT_TURN[k], u), on);
   return { l: get("l"), r: get("r"), lapelL: get("lapelL"), lapelR: get("lapelR"), pocketL: get("pocketL"), pocketR: get("pocketR") };
 }
@@ -576,19 +585,34 @@ function coatPieces(rig: Rig): Path2D[] {
   return [c.l, c.r];
 }
 
+/** 别的角色穿外套用：前襟两片（压在身上的手臂按它们裁描边） */
+export function coatPanels(rig: Rig, size = 1, long = 0): Path2D[] {
+  const c = coatOf(rig, size, long);
+  return [c.l, c.r];
+}
+
 /** 外套：两片前襟（口袋、翻领压在上面），肩膀那一圈和上臂接成一块，和毛衣身子同样处理 */
-function drawCoat(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L" | "R")[]) {
-  const c = coatOf(rig);
+export function drawCoat(
+  ctx: CanvasRenderingContext2D,
+  rig: Rig,
+  ink: Ink,
+  sides: ("L" | "R")[],
+  fill: string = K.coat,
+  shade: string = K.coatShade,
+  size = 1,
+  long = 0,
+) {
+  const c = coatOf(rig, size, long);
   const lw = ink.lw * 0.8;
   for (const [panel, lapel, pocket] of [
     [c.l, c.lapelL, c.pocketL],
     [c.r, c.lapelR, c.pocketR],
   ]) {
-    fillBodyPart(ctx, rig, panel, K.coat, K.coatShade, ink, sides);
+    fillBodyPart(ctx, rig, panel, fill, shade, ink, sides);
     ctx.save();
     ctx.clip(panel);
-    drawPart(ctx, pocket, K.coat, K.coatShade, ink, lw);
-    drawPart(ctx, lapel, K.coat, K.coatShade, ink, lw);
+    drawPart(ctx, pocket, fill, shade, ink, lw);
+    drawPart(ctx, lapel, fill, shade, ink, lw);
     ctx.restore();
     strokeBodyPart(ctx, rig, panel, ink, sides);
   }
@@ -659,6 +683,13 @@ function drawShoulderRivet(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | 
   drawDot(ctx, f.p(RIVET_L[0] * sx, RIVET_L[1]), SHOULDER_RIVET.r, ink);
 }
 
+/** 铁靴着地：鞋底和靴筒一圈（跪着时靴筒前面贴着地） */
+export function bootSoles(rig: Rig, side: "L" | "R"): V2[] {
+  const m = bootMap(rig, side);
+  const anchors = (pts: V2[]) => pts.filter((_, i) => i % 3 === 0);
+  return [...anchors(BOOT_L.sole), ...anchors(BOOT_L.body)].map(m);
+}
+
 /** 铁靴在脚踝的局部坐标里（画的是画面左边那只，另一只镜像，同光脚） */
 const BOOT_L = {
   body: toLocal(BOOT.body, REST.ankleR, 0),
@@ -682,7 +713,7 @@ const BOOT_FLEX = 0.3;
  * 靴子上的点放到现在的姿势上：往上（靴筒）跟着小腿，脚踝往下（鞋头、鞋底）跟着脚，中间平滑过渡；
  * 铁的靴子弯不了多少，脚相对小腿的角度按 BOOT_FLEX 软限制
  */
-function bootMap(rig: Rig, side: "L" | "R") {
+export function bootMap(rig: Rig, side: "L" | "R") {
   const limb = rig.legs[side];
   const fx = side === "R" || rig.u >= 0.25 ? 1 : -1;
   const shinA = limb.a2 - (side === "R" ? SHIN_STAND : -SHIN_STAND);
@@ -694,7 +725,7 @@ function bootMap(rig: Rig, side: "L" | "R") {
 }
 
 /** 铁靴：靴筒（锈斑、两道麻绳、正面一颗大铆钉）→ 插着的砖 → 靴口翻边一圈铆钉 → 鞋底 */
-function drawBoot(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
+export function drawBoot(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
   const m = bootMap(rig, side);
   const lw = ink.lw * 0.8;
   const body = cubicPath(BOOT_L.body, m);
@@ -781,11 +812,7 @@ export const CHENGTUO: Look = {
   onForearm: drawCuff,
   shoe: (rig) => !!items(rig).boots,
   // 铁靴着地：鞋底和靴筒一圈（跪着时靴筒前面贴着地）
-  soles: (rig, side) => {
-    const m = bootMap(rig, side);
-    const anchors = (pts: V2[]) => pts.filter((_, i) => i % 3 === 0);
-    return [...anchors(BOOT_L.sole), ...anchors(BOOT_L.body)].map(m);
-  },
+  soles: bootSoles,
   overLeg: (ctx, rig, side, ink) => {
     if (items(rig).boots && (side === "L" ? rig.pose.legL : rig.pose.legR).boot) drawBoot(ctx, rig, side, ink);
   },
