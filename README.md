@@ -27,6 +27,7 @@
 | `code/screens.ts` | 《unhappy》的相册、存钱、外卖接单、便利贴、小狗照片 |
 | `code/sets.ts`、`code/shared.ts` | 《i have no friends》的场景和道具，生日书桌镜头 |
 | `code/places.ts` | 《unhappy》的场景（家、雨夜、宠物医院、学校、便利店）、雨、道具；herRoom 可选精细雪夜房间 |
+| `code/his-room.ts` | 他的卧室精细版 `hisRoom`（台灯开关、关灯后的月光、第二天早上、闹钟时间传进来）、坐在床上的他按房间的光打光 `hisInBed`、腿上的星星被子 `hisDuvet`、蒙在被子里 `hisRoomCurled`、手机近景后面失焦的他的房间 `hisBokeh` |
 | `code/bedroom-detail.ts` | herRoom 的精细卧室实现：家具、照片、窗帘、雪夜楼影、木地板、地毯和拖鞋；台灯与月光，人物另画 |
 | `code/dorm.ts` | 学生宿舍夜景：双侧高床、床帘、阅读灯、雪夜窗与串灯；背景 `dormRoom` 在人物前，带笔记/泡面/小镜子的 `dormDesk` 在人物后 |
 | `code/couple-photo.ts` | 主角与女主的咖啡馆合照：依偎/亲脸颊、完整服装与搭肩手、窗景灯光、桌面与双杯；照片按固定画幅裁切 |
