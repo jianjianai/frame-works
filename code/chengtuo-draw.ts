@@ -421,11 +421,21 @@ export function jointsOf(pIn: PoseIn | Pose) {
 }
 
 // ——— 画 ———
+export interface HoldInfo {
+  layer: "back" | "front";
+  shape: HandShape;
+  sx: number;
+}
+export type HoldFn = (ctx: CanvasRenderingContext2D, hand: Frame, mir: boolean, info: HoldInfo) => void;
+
 export interface DrawOptions {
   /** 描边粗细倍数（特写时可以调细） */
   line?: number;
-  /** 手里拿的东西：在手掌和手指之间画，参数是手的坐标系（局部 +y 指向指尖）和是否镜像 */
-  hold?: { L?: (ctx: CanvasRenderingContext2D, hand: Frame, mir: boolean) => void; R?: (ctx: CanvasRenderingContext2D, hand: Frame, mir: boolean) => void };
+  /**
+   * 手里拿的东西：每只手调用两次，info.layer 为 back（整只手后面）和 front（手掌和大拇指之间），在其中一层画；
+   * 参数是手的坐标系（局部 +y 指向指尖）、是否镜像、手形和左右（sx：这只手局部 x 的朝向，大拇指在 −x·sx 那边）。砖用 holdBrick。
+   */
+  hold?: { L?: HoldFn; R?: HoldFn };
   /** 在前面的手臂之前画（被抱的人等） */
   beforeFrontArms?: (ctx: CanvasRenderingContext2D) => void;
 }
@@ -1045,7 +1055,7 @@ function drawArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: 
   ctx.fillStyle = K.sweater;
   ctx.fill(upper);
   ctx.restore();
-  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c) => opts.hold?.[side]?.(c, limb.tip, rig.mir), !rig.pose.items.gloves);
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), !rig.pose.items.gloves);
 }
 
 /**
@@ -1077,7 +1087,7 @@ function drawForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", i
   ctx.clip(torsoPaths(rig).torso);
   ctx.stroke(lower);
   ctx.restore();
-  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c) => opts.hold?.[side]?.(c, limb.tip, rig.mir), !rig.pose.items.gloves);
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), !rig.pose.items.gloves);
 }
 
 /**
@@ -1085,8 +1095,17 @@ function drawForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", i
  * 手掌和手指、大拇指接的地方不描线（同一块手套，和刘海一个道理），手指之间的线留着。
  * bare：摘了手套，同样的手形画成皮肤色（和脸一样细线、手指不加阴影）。
  */
-function drawGlove(ctx: CanvasRenderingContext2D, f: Frame, sx: number, shape: HandShape, ink: Ink, hold: (ctx: CanvasRenderingContext2D) => void, bare = false) {
+function drawGlove(
+  ctx: CanvasRenderingContext2D,
+  f: Frame,
+  sx: number,
+  shape: HandShape,
+  ink: Ink,
+  hold: (ctx: CanvasRenderingContext2D, layer: HoldInfo["layer"]) => void,
+  bare = false,
+) {
   const on = ([x, y]: V2) => f.p(x * sx, y);
+  hold(ctx, "back");
   const fingers = (shape === "fist" || shape === "grip" ? [] : shape === "point" || shape === "pinky" ? [HAND.fingers[1]] : HAND.fingers).map(
     (fi) => cubicPath(fi, on),
   );
@@ -1109,7 +1128,7 @@ function drawGlove(ctx: CanvasRenderingContext2D, f: Frame, sx: number, shape: H
   ctx.lineCap = "round";
   ctx.stroke(palm);
   ctx.restore();
-  hold(ctx);
+  hold(ctx, "front");
   // 大拇指压在手掌上：只填色，描边扣掉手掌——和手掌接的地方也不描（用户 2026-10-17）
   const thumb = cubicPath(HAND.thumb, on);
   fillShaded(ctx, thumb, base, null, ink);
@@ -1118,6 +1137,11 @@ function drawGlove(ctx: CanvasRenderingContext2D, f: Frame, sx: number, shape: H
   out.rect(-1e4, -1e4, 2e4, 2e4);
   out.addPath(palm);
   ctx.clip(out, "evenodd");
+  // 重新设一遍描边：拿着的东西（砖顶的白色亮边）会改掉画笔，不设的话大拇指描成一圈浅色
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = lw;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
   ctx.stroke(thumb);
   ctx.restore();
 }
@@ -1949,8 +1973,17 @@ function rotateV(v: V2, a: number): V2 {
   return [v[0] * c - v[1] * s, v[0] * s + v[1] * c];
 }
 
-/** 手里拿着一块砖（给 DrawOptions.hold 用）：砖横在手掌上。 */
-export function holdBrick(ctx: CanvasRenderingContext2D, hand: Frame) {
+/**
+ * 手里拿着一块砖（给 DrawOptions.hold 用：hold: { L: holdBrick }）。按手形分两种拿法（用户 2026-10-18：原来砖压在整个手掌上、手指从砖底下伸出来，别扭）：
+ * - 托着（flat，递砖）：砖平放在掌心那一侧，底边贴着手掌的边，大拇指扶在砖边上（画在手掌和大拇指之间）；
+ * - 提着（其他手形）：砖横着挂在手底下，整块在手后面，手掌和手指压在砖的上半截，像握着上沿拎着。
+ * 不给 info（老写法）时按托着画。
+ */
+export function holdBrick(ctx: CanvasRenderingContext2D, hand: Frame, _mir = false, info: HoldInfo = { layer: "front", shape: "flat", sx: 1 }) {
+  const present = info.shape === "flat";
+  if (present !== (info.layer === "front")) return;
   const ink: Ink = { line: K.line, lw: 3, shade: [3, 3] };
-  drawBrickShape(ctx, hand.child(0, 33, 0), 36, 27, ink);
+  const { sx } = info;
+  if (present) drawBrickShape(ctx, hand.child(-9.5 * sx, 30, (-Math.PI / 2) * sx), 36, 27, ink);
+  else drawBrickShape(ctx, hand.child(2.5 * sx, 56, 0), 36, 27, ink);
 }
