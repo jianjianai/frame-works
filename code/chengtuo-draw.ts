@@ -470,9 +470,12 @@ export function drawChengtuo(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, 
     drawLegs(ctx, rig, ink);
     const behind = front ? (["R", "L"] as const).filter((side) => !farBack(side)) : [];
     for (const side of behind) drawUpperArm(ctx, rig, side, ink);
+    // 身子在这些手臂的肩膀圈里不描边：正面时画在身子后面的上臂，加上 3/4 时整只在身子后面的远侧手臂
+    // （用户 2026-10-18：远侧肩膀的线要和参考图一样，从腋下才开始，不一直连到肩头）
+    const merged = [...behind, ...(["R", "L"] as const).filter(farBack)];
     // 围脖：绕到脖子后面的半圈在脖子后面，前面的半圈压在脖子前面
     if (pose.items.scarf) drawScarfWrap(ctx, rig, ink, "back");
-    drawTorso(ctx, rig, ink, behind);
+    drawTorso(ctx, rig, ink, merged);
     if (pose.items.scarf) drawScarfWrap(ctx, rig, ink, "front");
     headView((r, k) => drawHead(ctx, r, k));
   });
