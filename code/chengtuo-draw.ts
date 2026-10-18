@@ -290,8 +290,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       },
       // （中间几缕一开始就偏得多：在发根附近就翻上来、藏在头后面往上飘，不先垂一段再绕到头的两侧；
       // 从中间到两边慢慢变，相邻几缕翻得差不多快，不会一个先翻、一个后翻岔开一道缝；
-      // 两侧几缕也偏得多：在耳朵后面就往外、往上扫，不先垂到下巴那么低、底下绕出一条平平的底边（用户 2026-10-18））
-      (i) => -Math.sign(fan) * up * (0.75 + 0.2 * Math.abs(fan) + 1.1 * (1 - Math.abs(fan)) ** 1.5) * smooth01(0, 20, i * HAIR_DY),
+      // 失重时这一偏在发根附近更短的一段里完成，少往下垂一段）
+      (i) => -Math.sign(fan) * up * (0.25 + 0.2 * Math.abs(fan) + 1.1 * (1 - Math.abs(fan)) ** 1.5) * smooth01(0, 20 - 12 * up, i * HAIR_DY),
     );
     // 抖：风里一绺一绺地抖，失重时像在水里慢慢漾；越往发梢越大
     const a = ang.map((v, i) => {
@@ -304,7 +304,9 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       const drift = 0.16 * loopSin(t, 1, k * 1.3 - i * 0.15) + 0.08 * loopSin(t, 2, k * 2.1 - i * 0.1);
       return v + gust * flap * r ** 1.5 + pose.float * drift * Math.min(r, 1) ** 1.5;
     });
-    const C: V2[] = [[restX(sc, P), P]];
+    // 失重时两侧几缕的发根往上挪（越靠外挪得越多，最外面一缕到耳朵上沿，藏在头顶那块后面）：
+    // 两侧底下是一条从脸旁往外、往上扫的斜弧，不垂到下巴、绕出一条平底加一个方角（用户 2026-10-18：「这里边再更自然一点」）
+    const C: V2[] = [[restX(sc, P), P - up * 26 * Math.abs(fan) ** 1.5]];
     for (let i = 1; i <= N; i++) {
       const y0 = P + (i - 1) * HAIR_DY;
       C.push(add(C[i - 1], rotateV([restX(sc, y0 + HAIR_DY) - restX(sc, y0), HAIR_DY], (a[i - 1] + a[i]) / 2)));
