@@ -7,7 +7,7 @@
 //  F 12.34–16.43 手机：打一大段 → 全删 →「以后不打扰你了」→ 发送；他把手机扣下，伸手关灯
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase, smooth } from "@frame/engine/math";
-import { C, Ctx, H, Pt, W, backOut, blob, bloom, camera, designScene, easeOut, fillBg, filtered, glow, inkLine, lightShaft, motes, oldFilm, oldScreenCut, oval, paint, poly, rimFigure, shake, shaded, smearV, text, F, tubePts } from "@materials/s0rrow/code/draw";
+import { C, Ctx, H, Pt, W, backOut, blob, bloom, camera, designScene, easeOut, fillBg, filtered, glow, inkLine, lightShaft, motes, oldFilm, oldScreenCut, oval, paint, poly, rimFigure, rr, shake, shaded, smearV, text, F, tubePts } from "@materials/s0rrow/code/draw";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { CAST, drawPerson } from "@materials/s0rrow/code/people";
 import { bookFingers, classroomBoard, deskFront, strawberryMilk, textbook } from "@materials/s0rrow/code/places";
@@ -382,49 +382,59 @@ function hisClassFace(c: Ctx, abs: number, t0: number, mood: "sad" | "smile") {
   c.restore();
 }
 
-/** E3 · 10.30 → 11.83 after class, at her desk (no wide shot: she is big in the frame). The bell; his arm comes in
- *  from the right holding out the strawberry milk; she looks up, startled and red; 小美 grabs her wrist and pulls her
- *  out of frame to the left; his hand is left holding the milk out in the empty sun, and slowly sinks. */
+/** E3 · 10.30 → 11.83 after class, over his shoulder (two layers of depth, no wide shot): his back big in the right
+ *  foreground, a little soft; she's at her desk in the middle, packing up; 小美 waits behind her, smaller and soft.
+ *  The bell; his hand comes up holding out the strawberry milk; she looks up, startled and red; 小美 grabs her wrist and
+ *  pulls her out of frame to the left; his hand is left holding the milk out over the empty desk, and slowly sinks. */
 function shotMilk(c: Ctx, abs: number) {
-  const offer = smooth(phase(abs, EV.milkOffer - 0.2, EV.milkOffer + 0.12));
+  const offer = smooth(phase(abs, EV.milkOffer - 0.22, EV.milkOffer + 0.1));
   const flee = easeOut(phase(abs, EV.flee, EV.flee + 0.34));
-  const sink = smooth(phase(abs, EV.flee + 0.35, EV.milkLeft));
+  const grab = smooth(phase(abs, EV.flee - 0.22, EV.flee));
+  const sink = smooth(phase(abs, EV.flee + 0.4, EV.milkLeft));
   const push = smooth(phase(abs, BAR(5), EV.milkLeft));
-  classBack(c, abs, 1.25, 600, 760, 4, -60, 40);
+  classBack(c, abs, 1.3, 560, 760, 5, 0, 60);
   classSun(c, abs, 0.9);
   c.save();
-  camera(c, 520, 1000, 1 + 0.06 * push);
-  // 小美, standing beside the desk (mid-ground, a little soft)
-  const mx = lerp(150, -520, flee);
-  filtered(c, "blur(1.2px)", (k) => drawPerson(k, mx, 760, 0.92, { ...CAST.mei, face: abs >= EV.flee ? "o" : "smile", arms: "down", body: "full", legs: flee > 0 && flee < 1 ? "walk" : "stand", walk: abs * 14 }), "mei");
-  // her: packing her bag, then startled, then pulled away left
+  camera(c, 520, 980, 1 + 0.05 * push);
+  // 小美 behind her (further back: smaller, soft), stepping in to grab her wrist, then running off left
+  const mx = lerp(lerp(250, 330, grab), -560, flee);
+  filtered(c, "blur(2px)", (k) =>
+    drawPerson(k, mx, 640, 0.78, { ...CAST.mei, x: 0, face: abs >= EV.flee - 0.2 ? "o" : "smile", body: "bust", arms: grab > 0.2 ? "handR" : "down", tilt: flee > 0 ? -0.15 : 0.05 }), "mei");
+  // her: packing up, then startled by the milk, then pulled away left
   if (abs < EV.flee) {
     const startled = abs > EV.milkOffer;
-    rimFigure(c, (k) => drawKid(k, 440, 960, 1.18, { who: "girl", outfit: "cardigan", body: "bust", eyes: startled ? "wide" : "open", mouth: startled ? "o" : "flat", look: startled ? [0.9, -0.2] : [0.1, 0.9], arms: "down", blush: startled ? 0.95 : 0.35 }), -1, -0.4, "rgb(255,236,200)", 0.5, 6);
+    rimFigure(c, (k) => drawKid(k, 440, 960, 1.16, { who: "girl", outfit: "cardigan", body: "bust", eyes: startled ? "wide" : "open", mouth: startled ? "o" : "flat", look: startled ? [0.7, -0.15] : [0.1, 0.9], arms: "down", blush: startled ? 1 : 0.35, headY: startled ? -6 : 4 }), -1, -0.4, "rgb(255,236,200)", 0.5, 6);
   } else {
-    const x = lerp(440, -420, flee);
+    const x = lerp(440, -460, flee);
     c.save();
     c.translate(x, 960);
-    c.rotate(-0.14 * (1 - flee * 0.3));
-    drawKid(c, 0, 0, 1.12, { who: "girl", outfit: "cardigan", body: "bust", eyes: "shut", mouth: "bite", blush: 1, arms: "custom", handL: [-260, 150], handR: [80, 340], shapeL: "open", shapeR: "fist" });
+    c.rotate(-0.16 * (1 - flee * 0.3));
+    drawKid(c, 0, 0, 1.1, { who: "girl", outfit: "cardigan", body: "bust", eyes: "shut", mouth: "bite", blush: 1, arms: "custom", handL: [-260, 150], handR: [80, 340], shapeL: "open", shapeR: "fist" });
     c.restore();
     c.save();
-    c.globalAlpha = 1 - phase(abs, EV.flee + 0.2, EV.flee + 0.42);
+    c.globalAlpha = 1 - phase(abs, EV.flee + 0.2, EV.flee + 0.45);
     for (let k = 0; k < 4; k++) inkLine(c, [[x + 260 + k * 20, 760 + k * 120], [x + 420 + k * 30, 770 + k * 120]], 3760 + k, 5);
     c.restore();
   }
   deskFront(c, 440, 1460, 1.2, 3573);
-  // his arm, in from the right, holding out the milk (the upper arm off frame)
-  if (offer > 0) {
-    const hand: Pt = [lerp(1300, 820, offer), lerp(1060, 980, offer) + 120 * sink];
-    blob(c, tubePts([[1300, 1380], [1080, 1180], hand], [150, 136, 120], false, true), 3780, 1.2);
-    paint(c, "#f1f1ee", C.ink, 6);
-    inkLine(c, [[1240, 1320], [1100, 1190]], 3781, 22, "rgba(46,111,150,0.85)");
-    strawberryMilk(c, hand[0] - 60, hand[1] - 90, 0.9, -0.08 + 0.1 * sink, 3590);
-    roundHand(c, hand[0] - 10, hand[1] + 6, 54, 3782);
-  }
   c.restore();
-  // the bell
+  // him, in the foreground right, seen from behind (closer: moves more, a little soft); his left arm comes up and
+  // out towards her with the milk — then, after she's gone, sinks
+  c.save();
+  camera(c, 520, 980, 1 + 0.08 * push);
+  const hx = 1010,
+    hy = 820,
+    hs = 1.85;
+  const hand: Pt = [lerp(720, 600, offer), lerp(1500, 1010, offer) + 150 * sink];
+  const lh: Pt = [(hand[0] - hx) / hs, (hand[1] - hy) / hs];
+  filtered(c, "blur(1.4px)", (k) => {
+    drawKid(k, hx, hy, hs, { view: "back", outfit: "uniform", body: "bust", arms: "custom", handL: lh, handR: [110, 430], shapeL: "hidden", headY: 6 * sink, tilt: -0.04 - 0.05 * sink });
+    if (offer > 0.02) {
+      strawberryMilk(k, hand[0] - 10, hand[1] - 95, 0.95, -0.1 + 0.12 * sink, 3590);
+      roundHand(k, hand[0] + 8, hand[1] + 2, 56, 3782);
+    }
+  }, "himFg");
+  c.restore();
   const bell = 1 - phase(abs, 10.85, 11.05);
   if (abs >= BAR(5) && bell > 0) text(c, "叮铃铃～", 250, 360, { size: 60, font: F.cn, fill: "#fff", stroke: C.ink, lw: 10, alpha: bell * clamp((abs - BAR(5)) / 0.08) });
 }
@@ -511,6 +521,10 @@ function shotLampOff(c: Ctx, abs: number) {
   const down = smooth(phase(abs, EV.room + 0.02, EV.room + 0.32));
   const reach = smooth(phase(abs, EV.lampOff - 0.34, EV.lampOff - 0.03));
   const back = smooth(phase(abs, EV.lampOff + 0.05, EV.lampOff + 0.3));
+  // in the dark he can't leave it: his right hand goes back to the phone and lifts it, its light comes up on his face
+  // — the move carries on into the next shot, where the phone rises into frame
+  const grab = smooth(phase(abs, EV.lampOff + 0.02, EV.lampOff + 0.14));
+  const lift = smooth(phase(abs, EV.lampOff + 0.13, BAR(8)));
   const settle = softStart(phase(abs, EV.room, BAR(8)));
   const sx = 420,
     sy = 640,
@@ -519,28 +533,64 @@ function shotLampOff(c: Ctx, abs: number) {
   camera(c, 420, 760, 1.32 - 0.04 * settle, 0, 120, 60);
   hisRoom(c, abs, { lamp: on, lights: on ? 0.7 : 0.25 });
   const hand: Pt = reach > 0 && back < 1 ? [lerp(lerp(-58, -40, down), (ROOM.lamp[0] - sx) / ss + 10, reach * (1 - back)), lerp(lerp(330, 460, down), (ROOM.lamp[1] + 40 - sy) / ss, reach * (1 - back))] : [lerp(-58, -40, down), lerp(330, 460, down)];
+  // where the phone lies on the duvet (design) and in his head units
+  const lying: Pt = [sx + 120, 1040];
+  const lyingH: Pt = [(lying[0] - sx) / ss, (lying[1] - sy) / ss];
+  const rest: Pt = [lerp(58, 40, down), lerp(330, 460, down)];
+  const handR: Pt = abs < EV.lampOff ? rest : lift > 0 ? [lerp(lyingH[0], 52, lift), lerp(lyingH[1], 300, lift)] : [lerp(rest[0], lyingH[0], grab), lerp(rest[1], lyingH[1], grab)];
   hisInBed(c, {
     arms: "custom",
     handL: hand,
-    handR: [lerp(58, 40, down), lerp(330, 460, down)],
+    handR,
     shapeL: reach > 0.5 && back < 0.5 ? "open" : "hold",
     shapeR: "hold",
-    eyes: "sad",
+    eyes: lift > 0.5 ? "open" : "sad",
+    brows: "sad",
     mouth: "flat",
-    look: reach > 0.3 ? [-0.8, 0.2] : [-0.2, 0.8],
+    look: lift > 0.2 ? [0, 0.7] : reach > 0.3 && back < 0.6 ? [-0.8, 0.2] : [-0.2, 0.8],
     tilt: 0.05,
-  }, { lamp: on, phone: 0, x: sx, y: sy, s: ss });
+  }, { lamp: on, phone: lift > 0.5 ? (lift - 0.5) * 2 : 0, x: sx, y: sy, s: ss, phoneAt: [sx + handR[0] * ss, sy + (handR[1] - 50) * ss] });
   hisDuvet(c, 1 - on);
-  // the phone, face down on the duvet
+  // the phone: put down face down on the duvet (upright in his hands → a flat dark slab); then lifted again
   c.save();
-  c.translate(sx + 60, lerp(sy + 330 * ss, 1010, down));
-  c.rotate(0.15 * down);
-  hisPhoneBack(c, 0, 0, 150 * (1 - 0.5 * down), 70 + 60 * (1 - down), Math.PI / 2 * down);
+  if (lift > 0) {
+    const hx = sx + handR[0] * ss,
+      hy = sy + (handR[1] - 60) * ss;
+    if (lift < 0.35) {
+      c.translate(hx, hy);
+      c.rotate(0.12 * (1 - lift / 0.35));
+      rr(c, -80, -22 - 30 * lift, 160, 44 + 90 * lift, 14);
+      paint(c, "#1d2333", C.ink, 5);
+    } else {
+      hisPhoneBack(c, hx, hy, 92 * ss, 176 * ss * Math.min(1, (lift - 0.2) / 0.5), 0);
+      // the screen's light spilling over the top edge, onto his face
+      c.save();
+      c.globalCompositeOperation = "screen";
+      glow(c, hx, hy - 90 * ss, 260, `rgba(160,190,255,${(0.45 * (lift - 0.35) / 0.65).toFixed(3)})`);
+      c.restore();
+    }
+  } else {
+    const px = lerp(sx, lying[0], down),
+      py = lerp(sy + 236 * ss, lying[1], down);
+    if (down < 0.6) hisPhoneBack(c, px, py, 92 * ss, 176 * ss * (1 - (0.6 * down) / 0.6), 0.2 * down);
+    else {
+      c.translate(px, py);
+      c.rotate(0.12);
+      rr(c, -80, -22, 160, 44, 14);
+      paint(c, "#1d2333", C.ink, 5);
+      inkLine(c, [[-66, -12], [60, -14]], 3796, 2, "rgba(170,190,230,0.35)", 0.3);
+    }
+  }
   c.restore();
   c.restore();
   if (!on) {
-    // after the click: a cold, dark room; the moon through the window
-    vignette(c, 0.6, 540, 900, 300, 1200);
+    // after the click: a cold, dark room — only the moon through the window
+    c.save();
+    c.globalCompositeOperation = "multiply";
+    c.fillStyle = "rgba(120,140,200,0.55)";
+    c.fillRect(-60, -60, W + 120, H + 120);
+    c.restore();
+    vignette(c, 0.75, 540, 900, 260, 1150);
   } else vignette(c, 0.35, 540, 900, 380, 1250);
 }
 

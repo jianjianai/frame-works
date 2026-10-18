@@ -7,7 +7,7 @@
 //  F 29.72–32.79 她的手机：整段话；拇指按住「发送」不松 → 划回主页（草莓牛奶壁纸）
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase, smooth } from "@frame/engine/math";
-import { C, Ctx, H, Pt, W, blob, bloom, camera, card, designScene, fillBg, filtered, glow, hash, inkLine, litFigure, oval, paint, pulse, rr, sinceBeat, vgrad } from "@materials/s0rrow/code/draw";
+import { C, Ctx, H, Pt, W, blob, bloom, camera, card, designScene, easeOut, fillBg, filtered, glow, hash, inkLine, litFigure, oval, paint, pulse, rr, sinceBeat, vgrad } from "@materials/s0rrow/code/draw";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { WECHAT_AT, appWindow, chatScreen2, powerOffScreen, profileScreen, sendButtonAt } from "@materials/s0rrow/code/chat";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
@@ -15,7 +15,7 @@ import { SH, SW } from "@materials/s0rrow/code/phone";
 import { GIVE_UP, HER_NIGHT_DRAFT, HER_PHOTOS, HIM, HISTORY, REST_R, fromHer, herHome, hisNightChat, inWin } from "./story";
 import { BAR, EV, beatAt } from "./timeline";
 import { PhoneSpec, clueGlow, drawPhone, lerp, pulseRings, touchDot, vignette } from "./shots";
-import { HER_F0, HER_M0, HER_SIT, HER_WIN, HIS_F0, HIS_M0, HIS_WIN, SIT, Z_IN, hisBokeh, herBokeh, herDuvet, herInBed, herPhoneBack, herRoomNight, hisRoomCurled, nightStreet, winC } from "./world";
+import { HER_F0, HER_M0, HER_SIT, HER_WIN, HIS_F0, HIS_M0, HIS_WIN, SIT, Z_IN, hisBokeh, herBokeh, herDuvet, herInBed, herPhoneBack, herRoomNight, hisPhoneBack, hisRoomCurled, nightStreet, winC } from "./world";
 
 // ---------------------------------------------------------------- A · pretty / ugly
 /** he flicks through her album on the beat (16.94 / 17.45 / 17.96) and stops on her sunflower portrait for "pretty" */
@@ -37,8 +37,10 @@ function shotPretty(c: Ctx, abs: number) {
   const ay = 805 + 45 * push; // where both faces sit on the frame (face at screen 300, 470)
   const cy = abs < 19.62 ? 1150 - 138 * smooth(phase(abs, 19.32, 19.62)) : ay + 170 * s;
   const avert = smooth(phase(abs, 20.55, 20.9)); // on "ugly"
-  const p: PhoneSpec = { cx: 540, cy, s, rot: -0.02 };
-  hisBokeh(c, abs, { dark: 0.85, shift: [0, (cy - 1000) * 0.15] });
+  // the phone comes up into frame (he has just picked it up again in the dark), slowing as it arrives
+  const rise = 1 - easeOut(phase(abs, BAR(8), BAR(8) + 0.3));
+  const p: PhoneSpec = { cx: 540, cy: cy + 520 * rise * rise, s, rot: -0.02 + 0.04 * rise };
+  hisBokeh(c, abs, { dark: 0.85, shift: [0, (cy - 1000) * 0.15 + 160 * rise] });
   drawPhone(c, abs, p, (k) => {
     if (out < 1) profileScreen(k, abs, { photos: HER_PHOTOS, at: album });
     if (out > 0) {
@@ -184,7 +186,7 @@ function hisTears(c: Ctx, abs: number) {
   c.scale(z, z);
   c.translate(-fx, -fy);
   const tears = 0.45 + 0.55 * smooth(phase(abs, T2[0], T2[0] + 0.6));
-  litFigure(c, (q) => drawKid(q, 540, 860, S, { body: "bust", eyes: "teary", brows: "sad", mouth: "wobble", look: [0, 0.85], arms: "down", tears }), {
+  litFigure(c, (q) => drawKid(q, 540, 860, S, { body: "bust", eyes: "teary", brows: "sad", mouth: "wobble", look: [0, 0.85], tears, arms: "custom", handL: [-52, 340], handR: [52, 340], shapeL: "hold", shapeR: "hold", thumbFlip: true, grip: (k) => hisPhoneBack(k, 0, 280, 92, 176, 0) }), {
     shade: 0.34,
     shadeCol: "rgb(10,12,34)",
     lights: [{ x: 540, y: 1180, r: 460, rgb: "160,190,255", a: 0.36 }],
@@ -272,29 +274,70 @@ function pillowShot(c: Ctx, abs: number, cover: number) {
   vignette(c, 0.7, 540, 820, 260, 1100);
   void abs;
 }
+/** Under the duvet with him (the music muffled): from just above his face. He lies on the pillow with the duvet pulled
+ *  up to his chin, both fists clutching its edge; it closes over the top of the frame like a tent, and the only light
+ *  is a thin slice of moonlight getting in at the top. A tear runs out of the corner of each eye towards the pillow;
+ *  he sobs; the camera creeps in, slower and slower. */
 function underBlanket(c: Ctx, abs: number) {
   const [m0, m1] = EV.muffle;
-  fillBg(c, "#05060f");
+  const p = phase(abs, m0, m1);
+  const sob = (Math.sin(abs * 8.5) + 0.5 * Math.sin(abs * 21)) * 3;
+  fillBg(c, "#04050c");
   c.save();
-  camera(c, 540, 860, 1.06 + 0.06 * smooth(phase(abs, m0, m1)));
-  litFigure(c, (q) => drawKid(q, 540, 900, 1.85, { body: "head", eyes: "teary", tears: 0.35 + 0.65 * smooth(phase(abs, m0, m1 - 0.1)), look: [0, 0.2], mouth: "wobble", brows: "sad" }), {
-    shade: 0.55,
-    shadeCol: "rgb(8,10,30)",
-    lights: [{ x: 700, y: 500, r: 700, rgb: "110,140,220", a: 0.35 }],
+  camera(c, 540, 860, 1.06 + 0.08 * (1 - Math.pow(1 - p, 2)), -0.03);
+  // the pillow under his head, in the dark
+  blob(c, [[90, 520], [990, 500], [1040, 1180], [60, 1200]], 3725, 2.4);
+  paint(c, "#2c3452", C.ink, 6);
+  inkLine(c, [[200, 560], [520, 540], [880, 560]], 3726, 4, "rgba(150,170,220,0.18)");
+  litFigure(c, (q) =>
+    drawKid(q, 540, 840 + sob, 1.55, {
+      body: "bust",
+      eyes: "teary",
+      tears: 0.4 + 0.6 * smooth(p),
+      look: [0.15, -0.35],
+      mouth: "wobble",
+      brows: "sad",
+      arms: "custom",
+      handL: [-74, 262],
+      handR: [74, 262],
+      shapeL: "fist",
+      shapeR: "fist",
+    }), {
+    shade: 0.5,
+    shadeCol: "rgb(6,8,26)",
+    lights: [{ x: 640, y: 380, r: 640, rgb: "120,150,230", a: 0.42 }],
+    rim: { ux: 0.3, uy: -1, rgb: "150,175,255", a: 0.5 },
   });
+  // the duvet over his chest, his fists on top of its edge
+  const top = 840 + sob + 262 * 1.55 - 26;
+  const duv: Pt[] = [[-120, top + 40], [200, top + 10], [420, top + 24], [660, top + 6], [900, top + 30], [1200, top + 10], [1200, 2100], [-120, 2100]];
+  blob(c, duv, 3727, 2.4);
+  paint(c, vgrad(c, top, top + 700, [[0, "#2f3d63"], [1, "#151c33"]]), C.ink, 7);
+  for (const side of [-1, 1]) {
+    const fx = 540 + side * 74 * 1.55,
+      fy = top + 6;
+    oval(c, fx, fy, 50, 44, 3728 + side, 0.8);
+    paint(c, "#a99a86", C.ink, 5);
+    for (let k = 0; k < 3; k++) inkLine(c, [[fx - 24 + k * 22, fy + 8], [fx - 22 + k * 22, fy + 30]], 3730 + k + side * 4, 2.4, "rgba(80,60,40,0.6)");
+  }
   c.restore();
-  // the duvet's fabric all round, a little moonlight through it from the top right
-  const g = c.createRadialGradient(560, 820, 140, 540, 860, 800);
-  g.addColorStop(0, "rgba(10,14,40,0.2)");
-  g.addColorStop(1, "rgba(3,4,12,0.97)");
-  c.fillStyle = g;
-  c.fillRect(-60, -60, W + 120, H + 120);
-  glow(c, 900, 260, 600, "rgba(90,120,210,0.18)");
+  // the duvet closing over the top of the frame like a tent: heavy folds hanging in, a slice of moonlight at the top
+  const tent: Pt[] = [[-80, -80], [1160, -80], [1160, 360], [980, 300], [820, 250], [660, 200], [540, 190], [400, 215], [240, 270], [80, 330], [-80, 380]];
+  blob(c, tent, 3732, 3);
+  paint(c, "#141a30", C.ink, 6);
   c.save();
-  c.globalAlpha = 0.4;
-  for (let i = 0; i < 5; i++) inkLine(c, [[-40, 300 + i * 360], [540, 200 + i * 360 + Math.sin(i) * 60], [1120, 320 + i * 360]], 3720 + i, 6, "#1b2340");
+  blob(c, tent, 3732, 3);
+  c.clip();
+  for (let k = 0; k < 6; k++) inkLine(c, [[80 + k * 190, -40], [120 + k * 180, 160 + (k % 2) * 60]], 3733 + k, 6, "rgba(4,6,18,0.6)");
   c.restore();
+  // the gap at the very top where the moonlight gets in
+  c.save();
+  c.globalCompositeOperation = "lighter";
+  glow(c, 600, 170, 380, "rgba(120,150,235,0.22)");
+  c.restore();
+  vignette(c, 0.7, 540, 900, 300, 1050);
 }
+
 function shotOff(c: Ctx, abs: number) {
   if (abs < EV.blanket) {
     // one quick swipe across 滑动来关机, landing on the "and", and the screen goes black — the room goes with it
@@ -439,7 +482,7 @@ export function shotHesitate(c: Ctx, abs: number) {
   const fx = lerp(lerp(284, 336, k), 300, e),
     fy = lerp(lerp(606, 636, k) + 16 * smooth(phase(abs, EV.hesitate, 30.5)), 640, e);
   herBokeh(c, abs, { dark: 0.15, zoom: lerp(1.25, 1, e) });
-  drawPhone(c, abs, { cx: 540 - (fx - 300) * s, cy: lerp(860, 910, e) - (fy - 640) * s, s, rot: 0 }, (q) => {
+  drawPhone(c, abs, { cx: 540 - (fx - 300) * s, cy: lerp(930, 960, e) - (fy - 640) * s, s, rot: 0 }, (q) => {
     if (appK < 1) herHome(q, abs, "00:52", { zoom: 1 + 0.08 * appK });
     appWindow(q, appK, WECHAT_AT, (a) => {
       chatScreen2(a, abs, { ...view, sendHot: down ? 1 : 0 });

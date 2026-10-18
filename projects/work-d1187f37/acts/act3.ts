@@ -79,7 +79,7 @@ function shotThrilled(c: Ctx, abs: number) {
     fy: 820,
     phone: happy ? 0.6 : 1,
     pose: happy
-      ? { eyes: "happy", mouth: "grin", blush: 1, arms: "face", tilt: -0.06 }
+      ? { eyes: "happy", mouth: "grin", blush: 1, tilt: -0.08 * Math.sin((abs - EV.ding2) * 9), arms: "custom", handL: [-56, 312], handR: [56, 312], shapeL: "hold", shapeR: "hold", thumbFlip: true, grip: (q) => herPhoneBack(q, 0, 262, 92, 176, 0) }
       : { eyes: "open", mouth: "flat", blush: 0.4, look: [0, 0.6], arms: "custom", handL: [-50, 300], handR: [50, 300], shapeL: "hold", shapeR: "hold", thumbFlip: true, grip: (q) => herPhoneBack(q, 0, 236, 92, 176, 0) },
     extra: (q) => {
       if (happy) littleHearts(q, abs, EV.ding2 + 0.1, HER_SIT.x, HER_SIT.y - 120);

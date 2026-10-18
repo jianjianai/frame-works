@@ -303,11 +303,53 @@ export function nightStreet(c: Ctx, abs: number, cam: Pt, Z: number, o: StreetOp
   }
   if (day > 0) {
     const sy = 980 - 400 * day;
+    const rise = Math.sin(Math.PI * clamp(day)); // strongest while it is coming up
     c.save();
     c.globalAlpha = clamp(day / 0.35);
-    glow(c, 490, sy, 460, `rgba(255,200,130,${(0.55 * day).toFixed(3)})`);
+    // the dawn band along the horizon, then the sun and its rays fanning up between the blocks
+    c.fillStyle = vgrad(c, sy - 500, sy + 300, [[0, "rgba(255,170,140,0)"], [0.7, `rgba(255,170,130,${(0.35 * rise + 0.1).toFixed(3)})`], [1, "rgba(255,200,150,0)"]]);
+    c.fillRect(-500, sy - 500, 2200, 800);
+    c.save();
+    c.globalCompositeOperation = "lighter";
+    for (let k = 0; k < 9; k++) {
+      const a = -Math.PI / 2 + (k - 4) * 0.2 + Math.sin(abs * 0.3 + k) * 0.02;
+      const g = c.createLinearGradient(490, sy, 490 + Math.cos(a) * 900, sy + Math.sin(a) * 900);
+      g.addColorStop(0, `rgba(255,214,160,${(0.16 * rise).toFixed(3)})`);
+      g.addColorStop(1, "rgba(255,214,160,0)");
+      c.fillStyle = g;
+      c.beginPath();
+      c.moveTo(490, sy);
+      c.lineTo(490 + Math.cos(a - 0.05) * 900, sy + Math.sin(a - 0.05) * 900);
+      c.lineTo(490 + Math.cos(a + 0.05) * 900, sy + Math.sin(a + 0.05) * 900);
+      c.closePath();
+      c.fill();
+    }
+    c.restore();
+    glow(c, 490, sy, 520, `rgba(255,200,130,${(0.6 * day).toFixed(3)})`);
     oval(c, 490, sy, 46, 46, 3762, 0.5);
     paint(c, mix("#ff9a6a", "#ffe9a8", day), null);
+    // clouds lit from below, pink at sunrise
+    for (const [cx0, cy0, w] of [[300, 520, 200], [700, 430, 160], [180, 380, 120]] as [number, number, number][]) {
+      c.fillStyle = `rgba(255,${Math.round(170 + 50 * day)},${Math.round(170 + 30 * day)},${(0.5 * rise + 0.15).toFixed(3)})`;
+      c.beginPath();
+      c.ellipse(cx0 + Math.sin(abs * 0.05) * 20, cy0, w, 13, -0.03, 0, Math.PI * 2);
+      c.ellipse(cx0 + w * 0.3, cy0 - 10, w * 0.5, 11, 0.02, 0, Math.PI * 2);
+      c.fill();
+    }
+    // a few birds crossing
+    c.strokeStyle = `rgba(40,30,50,${(0.6 * clamp((day - 0.3) / 0.3)).toFixed(3)})`;
+    c.lineWidth = 2.4;
+    c.lineCap = "round";
+    for (let k = 0; k < 4; k++) {
+      const bx = ((abs * (40 + k * 6) + k * 230) % 1400) - 300,
+        by = 470 + k * 34 + Math.sin(abs * 2 + k) * 8,
+        fl = 6 + 4 * Math.sin(abs * 12 + k * 2);
+      c.beginPath();
+      c.moveTo(bx - 10, by - fl * 0.4);
+      c.quadraticCurveTo(bx - 4, by - fl, bx, by);
+      c.quadraticCurveTo(bx + 4, by - fl, bx + 10, by - fl * 0.4);
+      c.stroke();
+    }
     c.restore();
   }
   // the far city between the two blocks: dark towers, a few lit windows, a haze of city light at their feet
@@ -356,6 +398,38 @@ export function nightStreet(c: Ctx, abs: number, cam: Pt, Z: number, o: StreetOp
   inkLine(c, [[550, 716], [546, 2400]], 3776, 5, `rgba(170,190,255,${(0.28 * night).toFixed(3)})`, 0.3);
   // the street lamps below, washing warm light up both walls
   for (const x of [470, 520]) glow(c, x, 2200, 520, `rgba(255,190,120,${(0.3 * night).toFixed(3)})`);
+  if (day > 0) {
+    // the morning sun from between the blocks: warm on the walls that face the gap, a warm edge on each block
+    c.save();
+    c.globalCompositeOperation = "soft-light";
+    const gl = c.createLinearGradient(440, 0, 0, 0);
+    gl.addColorStop(0, `rgba(255,200,140,${(0.7 * day).toFixed(3)})`);
+    gl.addColorStop(1, "rgba(255,200,140,0)");
+    c.fillStyle = gl;
+    c.fillRect(-280, 640, 718, 1760);
+    const gr = c.createLinearGradient(545, 0, 1100, 0);
+    gr.addColorStop(0, `rgba(255,200,140,${(0.7 * day).toFixed(3)})`);
+    gr.addColorStop(1, "rgba(255,200,140,0)");
+    c.fillStyle = gr;
+    c.fillRect(542, 700, 838, 1700);
+    c.restore();
+    inkLine(c, [[430, 646], [436, 2400]], 3777, 6, `rgba(255,214,160,${(0.6 * day).toFixed(3)})`, 0.3);
+    inkLine(c, [[548, 716], [544, 2400]], 3778, 6, `rgba(255,214,160,${(0.6 * day).toFixed(3)})`, 0.3);
+    // a few windows catching the sun
+    c.save();
+    c.globalCompositeOperation = "lighter";
+    for (let k = 0; k < 10; k++) {
+      const left = k % 2 === 0;
+      const col = Math.floor(hash(k * 3.3) * (left ? 4 : 6)),
+        row = Math.floor(hash(k * 5.1) * 7);
+      const x = left ? -90 + col * 120 : 600 + col * 120,
+        y = (left ? 700 : 760) + row * 170;
+      if ((left && x === HIS_WIN.x && y === HIS_WIN.y) || (!left && x === HER_WIN.x && y === HER_WIN.y)) continue;
+      const tw = 0.6 + 0.4 * Math.sin(abs * 1.5 + k);
+      glow(c, x + 36, y + 50, 60, `rgba(255,224,170,${(0.35 * day * tw).toFixed(3)})`);
+    }
+    c.restore();
+  }
   // the two windows, each with its room behind the glass; a lamp left on glows out into the night
   const [hx, hy] = winC(HIS_WIN);
   if (o.hisLit && night > 0) glow(c, hx, hy, 150, "rgba(255,205,140,0.5)", night);
