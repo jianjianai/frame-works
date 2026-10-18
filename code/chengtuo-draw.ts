@@ -1,0 +1,1497 @@
+// 秤砣：二维骨架剪纸角色。
+// 画法：深色描边 + 平涂 + 右下一道阴影；各部件按关节坐标拼起来，接缝不描边。
+// 坐标：角色单位，原点在两脚之间的地面，往上为负；全身约 590 高。
+// 朝向 face：0 正面，-1 3/4 朝画面左，1 3/4 朝画面右（中间值连续转身）。
+// 姿势一律按「朝左 / 正面」写：armL / legL 在画面右边（3/4 时是靠近镜头的一侧），
+// 角度 0 = 垂下，正 = 顺时针（朝左时就是往前）；face > 0 时整套镜像。
+
+import {
+  type Ink,
+  type P,
+  type V2,
+  Frame,
+  add,
+  angleOf,
+  capsule,
+  chain,
+  clamp01,
+  dirOf,
+  drawMerged,
+  drawPart,
+  fillShaded,
+  ik2,
+  len,
+  lerp,
+  merge,
+  mul,
+  norm,
+  ribbonPts,
+  smoothPath,
+  strokeLine,
+  sub,
+} from "./rig";
+
+export const COLORS = {
+  // 配色取自用户给的参考图（2026-10-17）：炭黑头发、灰调藏青外套、哑光芥末黄围巾、砖红袖标
+  line: "#25262c",
+  skin: "#fbe2d3",
+  skinShade: "#f0cab7",
+  blush: "240,150,150",
+  hair: "#35343a",
+  hairShade: "#2a292f",
+  hairHi: "#4d4c54",
+  coat: "#353f55",
+  coatShade: "#2b3346",
+  coatLight: "#424d66",
+  sweater: "#f8f1e2",
+  sweaterShade: "#e8dfca",
+  scarf: "#e2b856",
+  scarfShade: "#c99c40",
+  band: "#bd5349",
+  bandShade: "#9e433b",
+  tights: "#494a4f",
+  tightsShade: "#3d3e43",
+  glove: "#3f495b",
+  gloveShade: "#343d4d",
+  boot: "#5a6675",
+  bootShade: "#4c5765",
+  bootRim: "#677382",
+  bootInside: "#2e3136",
+  rust: "#8f6049",
+  sole: "#38393c",
+  rivet: "#d6d2cb",
+  rope: "#a08a6e",
+  ropeShade: "#7d6a53",
+  brick: "#cbc6bd",
+  brickShade: "#b2ada4",
+  eye: "#34363d",
+  liner: "#202126",
+  sclera: "#ffffff",
+  iris: "#33353c",
+  irisLight: "#4a4d56",
+  pupil: "#25262c",
+  brow: "#1d1e23",
+  nose: "#8a7a75",
+  mouth: "#8c3e4f",
+  mouthLine: "#5e5153",
+  tongue: "#f29a9c",
+  tear: "#cfeefa",
+};
+const K = COLORS;
+
+export type HandShape = "open" | "relax" | "fist" | "grip" | "point" | "pinky" | "flat";
+
+export interface ArmPose {
+  /** 肩：0 垂下，正 = 顺时针 */
+  a: number;
+  /** 肘：相对上臂 */
+  b: number;
+  /** 手腕：相对前臂 */
+  h: number;
+  /** 给了就用 IK：手腕伸到这一点（角色坐标） */
+  to?: V2;
+  /** IK 的分量：0 用 a/b，1 用 to（默认有 to 就是 1）；关键帧之间渐变就能从摆臂过渡到伸手 */
+  ik?: number;
+  /** IK 时肘往哪边拱：正 = 顺时针一侧 */
+  bend?: number;
+  shape: HandShape;
+  /** 画在身体后面还是前面（默认 3/4 时远侧的手在后） */
+  layer?: "back" | "front";
+  /** 拇指朝哪边（手的局部 x 方向，±1） */
+  thumb?: number;
+}
+
+export interface LegPose {
+  /** 大腿：0 垂下，正 = 顺时针 */
+  a: number;
+  /** 膝：相对大腿 */
+  b: number;
+  /** 脚：用 IK 时是绝对角度（0 = 鞋底放平），否则相对小腿 */
+  f: number;
+  /** 大腿朝镜头伸出来时（正面半蹲、蹲下）看上去变短：大腿在画面里的长度比例，默认 1 */
+  thighK?: number;
+  /** 给了就用 IK：脚踝到这一点 */
+  to?: V2;
+  /** IK 的分量（同手臂） */
+  ik?: number;
+  bend?: number;
+  /** 穿着铁靴 */
+  boot: boolean;
+}
+
+export interface Expr {
+  /** 闭眼 0..1 */
+  blink: number;
+  /** 笑眼（下眼睑往上推，1 = 弯成 ∩） */
+  happy: number;
+  /** 难过：外眼角压下来，嘴角往下 */
+  sad: number;
+  /** 使劲、坚决：内眼角压下来 */
+  fierce: number;
+  /** 睁大眼（惊） */
+  wide: number;
+  /** 嘴角：1 笑，-1 撇 */
+  smile: number;
+  /** 张嘴 0..1 */
+  open: number;
+  /** 眼珠看向（-1..1） */
+  look: V2;
+  blush: number;
+  /** 眼泪 0..1 */
+  tears: number;
+}
+
+export interface Pose {
+  face: number;
+  /** 头相对身体多转一点（正 = 更朝前） */
+  headTurn: number;
+  /** 胯（骨盆中心）的位置 */
+  hip: V2;
+  /** 整个人绕胯转（躺、翻、倒着） */
+  rot: number;
+  /** 上身前倾（相对骨盆，正 = 往前弯） */
+  lean: number;
+  /** 歪头 / 仰头 / 低头（朝左时正 = 仰） */
+  neck: number;
+  /** 呼吸 -1..1 */
+  breath: number;
+  /** 落地压扁（正）/ 起跳拉长（负） */
+  squash: number;
+  armL: ArmPose;
+  armR: ArmPose;
+  legL: LegPose;
+  legR: LegPose;
+  expr: Expr;
+  /** 头发、围巾、衣摆往哪边垂：(0, 1) 正常，(0, -1) 飘起来 */
+  gravity: V2;
+  /** 惯性：动作带起来的头发、围巾（加在 gravity 上） */
+  drag: V2;
+  /** 水下一样的慢慢摆动 0..1（飘的时候） */
+  float: number;
+  /** 时间（秒）：摆动、眼泪用 */
+  t: number;
+  /** 靴筒里露出几块砖（0..2） */
+  bricks: number;
+  /** 身上的物品：显示或隐藏 */
+  items: Items;
+}
+
+/** 身上的物品（外套、铁靴、袖标画好后也放在这里） */
+export interface Items {
+  /** 围巾（摘了露出脖子） */
+  scarf: boolean;
+  /** 手套（摘了是光着的手） */
+  gloves: boolean;
+}
+
+type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? (T[K] extends unknown[] ? T[K] : DeepPartial<T[K]>) : T[K] };
+export type PoseIn = DeepPartial<Pose>;
+
+// ——— 尺寸 ———
+export const BODY = {
+  // 按用户线稿量的（2026-10-17）：胯关节连线是原点
+  thigh: 125,
+  shin: 91.9,
+  /** 穿靴时脚踝离地（靴子还没画，先和光脚一样） */
+  ankleBoot: 65.1,
+  /** 光脚时脚踝离地（正面看脚背高） */
+  ankleBare: 65.1,
+  upperArm: 74.67,
+  foreArm: 71.8,
+  shoulderY: -142.8,
+  neckY: -162.7,
+  headUp: 55,
+  /** 胯关节离中线（比线稿量的 26.6 往里收 5.4：正面站着时两条大腿根挨在一起，裆和参考图一样低） */
+  hipW: 21.2,
+  shoulderW: 37.6,
+}
+
+export const NEUTRAL: Expr = {
+  blink: 0,
+  happy: 0,
+  sad: 0,
+  fierce: 0,
+  wide: 0,
+  smile: 0.35,
+  open: 0,
+  look: [0, 0],
+  blush: 0.3,
+  tears: 0,
+};
+
+export const DEFAULT_POSE: Pose = {
+  face: 0,
+  headTurn: 0,
+  // 两腿伸直刚好够到脚踝（大腿 + 小腿 = 216.9，胯 ±21.2、脚踝 ±46.6、离地 65.1）：腿要是有一点富余，IK 会把膝盖顶弯，两边还弯得不对称
+  hip: [0, -280.5],
+  rot: 0,
+  lean: 0,
+  neck: 0,
+  breath: 0,
+  squash: 0,
+  // 正面站姿照用户的人体三视图（`public/ref/秤砣-人体三视图.jpg`，2026-10-17）：手臂往外约 18°、几乎伸直，
+  // 手套垂得比前臂更竖一点；两腿伸直，各往外约 5°（脚踝离中线 46.6）
+  armL: { a: -0.26, b: -0.02, h: 0.26, shape: "relax" },
+  armR: { a: 0.26, b: 0.02, h: -0.26, shape: "relax" },
+  legL: { a: 0, b: 0, f: 0, thighK: 1, to: [46.6, -65.1], bend: 1, boot: true },
+  legR: { a: 0, b: 0, f: 0, thighK: 1, to: [-46.6, -65.1], bend: 1, boot: true },
+  expr: NEUTRAL,
+  gravity: [0, 1],
+  drag: [0, 0],
+  float: 0,
+  t: 0,
+  bricks: 2,
+  items: { scarf: true, gloves: true },
+};
+
+export function resolvePose(p: PoseIn): Pose {
+  return merge(DEFAULT_POSE, p);
+}
+
+/** 动作里的数是按原来的骨架写的（腿竖直 262 高、穿靴脚踝离地 34），用这两个换算到现在的骨架 */
+export const LEG_K = 214.3 / 262;
+/** 原来骨架的胯高 → 现在的 */
+export const hipAt = (y: number) => -BODY.ankleBare + (y + 34) * LEG_K;
+/** 原来骨架的脚踝位置 → 现在的 */
+export const footAt = (x: number, y: number): V2 => [x * LEG_K, -BODY.ankleBare + (y + 34) * LEG_K];
+
+// ——— 骨架 ———
+export interface Limb {
+  root: V2;
+  mid: V2;
+  end: V2;
+  a1: number;
+  a2: number;
+  /** 上面那节在画面里的长度比例（大腿朝镜头时变短） */
+  k?: number;
+  /** 手 / 脚的坐标系 */
+  tip: Frame;
+}
+
+export interface Rig {
+  pose: Pose;
+  mir: boolean;
+  u: number;
+  /** 身体转角（朝左为负） */
+  th: number;
+  /** 头的转角 */
+  thh: number;
+  pelvis: Frame;
+  chest: Frame;
+  head: Frame;
+  neck: V2;
+  arms: { L: Limb; R: Limb };
+  legs: { L: Limb; R: Limb };
+  field: V2;
+}
+
+/** 两个角度之间走近路插值。 */
+function mixAngle(a: number, b: number, w: number) {
+  if (w >= 1) return b;
+  const d = ((((b - a + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
+  return a + d * w;
+}
+
+/** 身体是一个椭圆柱：半宽 a、半厚 b。W 是转身后的轮廓半宽，fx 是表面上 φ 处（0 = 正前）的横坐标。 */
+function bodyFns(th: number) {
+  const c = Math.cos(th);
+  const s = Math.sin(th);
+  return {
+    W: (a: number, b: number) => Math.sqrt(a * a * c * c + b * b * s * s),
+    fx: (phi: number, a: number, b: number) => a * Math.sin(phi) * c + b * Math.cos(phi) * s,
+    fz: (phi: number, a: number, b: number) => -a * Math.sin(phi) * s + b * Math.cos(phi) * c,
+  };
+}
+
+export function rigOf(pIn: PoseIn | Pose): Rig {
+  const pose = resolvePose(pIn as PoseIn);
+  const mir = pose.face > 0;
+  const u = Math.min(1, Math.abs(pose.face));
+  const th = -u * 0.7;
+  const uh = Math.max(-1, Math.min(1, u + pose.headTurn));
+  const thh = -uh * 0.62;
+  const { fx } = bodyFns(th);
+  const br = pose.breath * 1.6;
+  const pelvis = new Frame(pose.hip[0], pose.hip[1], pose.rot);
+  const chest = new Frame(pose.hip[0], pose.hip[1], pose.rot - pose.lean);
+  const neck = chest.p(fx(0, 0, 10), BODY.neckY - br);
+  const headBase = new Frame(neck[0], neck[1], chest.a + pose.neck);
+  const hc = headBase.p(0, -BODY.headUp);
+  const head = new Frame(hc[0], hc[1], headBase.a);
+  const cth = Math.cos(th);
+
+  const arm = (side: 1 | -1, ap: ArmPose): Limb => {
+    const root = chest.p(side * BODY.shoulderW * cth, BODY.shoulderY - br);
+    let a1 = chest.a + ap.a;
+    let a2 = a1 + ap.b;
+    const w = ap.to ? (ap.ik ?? 1) : 0;
+    if (ap.to && w > 0) {
+      const r = ik2(root, ap.to, BODY.upperArm, BODY.foreArm, ap.bend ?? -side);
+      a1 = mixAngle(a1, r.a1, w);
+      a2 = mixAngle(a2, r.a2, w);
+    }
+    const mid = add(root, mul(dirOf(a1), BODY.upperArm));
+    const end = add(mid, mul(dirOf(a2), BODY.foreArm));
+    return { root, mid, end, a1, a2, tip: new Frame(end[0], end[1], a2 + ap.h) };
+  };
+  const leg = (side: 1 | -1, lp: LegPose): Limb => {
+    const root = pelvis.p(side * BODY.hipW * cth, 0);
+    const k = lp.thighK ?? 1;
+    const thigh = BODY.thigh * k;
+    let a1 = pelvis.a + lp.a;
+    let a2 = a1 + lp.b;
+    let fa = a2 + lp.f;
+    const w = lp.to ? (lp.ik ?? 1) : 0;
+    if (lp.to && w > 0) {
+      const r = ik2(root, lp.to, thigh, BODY.shin, lp.bend ?? 1);
+      a1 = mixAngle(a1, r.a1, w);
+      a2 = mixAngle(a2, r.a2, w);
+      fa = mixAngle(fa, lp.f, w);
+    }
+    const mid = add(root, mul(dirOf(a1), thigh));
+    const end = add(mid, mul(dirOf(a2), BODY.shin));
+    return { root, mid, end, a1, a2, k, tip: new Frame(end[0], end[1], fa) };
+  };
+  return {
+    pose,
+    mir,
+    u,
+    th,
+    thh,
+    pelvis,
+    chest,
+    head,
+    neck,
+    arms: { L: arm(1, pose.armL), R: arm(-1, pose.armR) },
+    legs: { L: leg(1, pose.legL), R: leg(-1, pose.legR) },
+    field: add(pose.gravity, pose.drag),
+  };
+}
+
+/** 关节在画面里的位置（已按朝向镜像），用来对齐道具、别的角色。 */
+export function jointsOf(pIn: PoseIn | Pose) {
+  const r = rigOf(pIn);
+  const m = (v: V2): V2 => (r.mir ? [-v[0], v[1]] : v);
+  return {
+    head: m(r.head.o),
+    neck: m(r.neck),
+    hip: m(r.pelvis.o),
+    wristL: m(r.arms.L.end),
+    wristR: m(r.arms.R.end),
+    elbowL: m(r.arms.L.mid),
+    elbowR: m(r.arms.R.mid),
+    shoulderL: m(r.arms.L.root),
+    shoulderR: m(r.arms.R.root),
+    ankleL: m(r.legs.L.end),
+    ankleR: m(r.legs.R.end),
+    kneeL: m(r.legs.L.mid),
+    kneeR: m(r.legs.R.mid),
+    /** 手掌中心 */
+    palmL: m(r.arms.L.tip.p(0, 17)),
+    palmR: m(r.arms.R.tip.p(0, 17)),
+  };
+}
+
+// ——— 画 ———
+export interface DrawOptions {
+  /** 描边粗细倍数（特写时可以调细） */
+  line?: number;
+  /** 手里拿的东西：在手掌和手指之间画，参数是手的坐标系（局部 +y 指向指尖）和是否镜像 */
+  hold?: { L?: (ctx: CanvasRenderingContext2D, hand: Frame, mir: boolean) => void; R?: (ctx: CanvasRenderingContext2D, hand: Frame, mir: boolean) => void };
+  /** 在前面的手臂之前画（被抱的人等） */
+  beforeFrontArms?: (ctx: CanvasRenderingContext2D) => void;
+}
+
+export function drawChengtuo(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, opts: DrawOptions = {}) {
+  const rig = rigOf(pIn);
+  const { pose, mir, u } = rig;
+  const ink: Ink = { line: K.line, lw: 3.0 * (opts.line ?? 1), shade: [mir ? -4 : 4, 4] };
+  const farBack = (side: "L" | "R") => {
+    const ap = side === "L" ? pose.armL : pose.armR;
+    if (ap.layer) return ap.layer === "back";
+    return side === "R" && u > 0.35;
+  };
+  // 正面（和腿合并描边用同一个界限）：上臂画在身子后面，见 drawUpperArm
+  const front = u < 0.25;
+  const scoped = (fn: () => void) => {
+    ctx.save();
+    if (pose.squash) ctx.scale(1 + pose.squash * 0.6, 1 - pose.squash);
+    if (mir) ctx.scale(-1, 1);
+    fn();
+    ctx.restore();
+  };
+
+  scoped(() => {
+    drawBackHair(ctx, rig, ink);
+    if (farBack("R")) drawArm(ctx, rig, "R", ink, opts);
+    if (farBack("L")) drawArm(ctx, rig, "L", ink, opts);
+    drawLegs(ctx, rig, ink);
+    const behind = front ? (["R", "L"] as const).filter((side) => !farBack(side)) : [];
+    for (const side of behind) drawUpperArm(ctx, rig, side, ink);
+    drawTorso(ctx, rig, ink, behind);
+    if (pose.items.scarf) drawScarf(ctx, rig, ink);
+    drawHead(ctx, rig, ink);
+  });
+  opts.beforeFrontArms?.(ctx);
+  scoped(() => {
+    for (const side of ["R", "L"] as const) {
+      if (farBack(side)) continue;
+      if (front) drawForearm(ctx, rig, side, ink, opts);
+      else drawArm(ctx, rig, side, ink, opts);
+    }
+  });
+}
+
+// ——— 头发（后面那一大片） ———
+// 用户亲手画的线稿（2026-10-17，`public/ref/秤砣-线稿.svg` 的「头部」图层）换算成头的坐标：脸最宽处半宽 41、下巴在 48，
+// 比例 0.905，中线 x=229.5。路径都是 [起点, 控制点1, 控制点2, 终点, 控制点1, …]（三次贝塞尔）。
+/** 头发的整个轮廓：头顶 + 披下来的长发（画在身体后面） */
+const HAIR_OUTLINE: V2[] = [
+  [-0.48, -74.05], [60.53, -73.65], [58.11, -2.94], [58.11, -2.94], [58.11, -2.94], [63.76, 54.44], [63.4, 54.12],
+  [63.04, 53.79], [73.87, 115.46], [70.23, 132.43], [66.59, 149.4], [56.89, 167.99], [56.53, 167.66], [56.17, 167.34],
+  [-57.05, 165.97], [-57.05, 165.97], [-57.05, 165.97], [-74.02, 102.94], [-68.36, 80.71], [-62.71, 58.49], [-59.87, 7.17],
+  [-59.84, 2.4], [-59.8, -2.37], [-61.49, -74.45], [-0.48, -74.04],
+];
+/** 齐刘海：下沿平，三道细缝（缝里露出额头） */
+const BANGS: V2[] = [
+  [37.91, -47.7], [51.3, -30.75], [45.67, -6.81], [45.63, -6.9], [45.58, -6.99], [28.09, -7.95], [28.09, -7.95],
+  [28.09, -7.95], [28.31, -11.84], [27.86, -15.72], [27.41, -19.6], [23.98, -28.51], [23.93, -28.6], [23.89, -28.69],
+  [24.89, -20.52], [24.66, -16.63], [24.44, -12.75], [23.06, -7.5], [23.02, -7.59], [22.97, -7.68], [3.2, -9.33],
+  [3.2, -9.33], [3.2, -9.33], [0.68, -33.31], [0.63, -33.41], [0.59, -33.5], [-1.6, -8.42], [-1.6, -8.42], [-1.6, -8.42],
+  [-23.99, -8.42], [-23.99, -8.42], [-23.99, -8.42], [-25.13, -13.9], [-25.13, -17.1], [-25.13, -20.29], [-24.44, -28.97],
+  [-24.48, -29.06], [-24.53, -29.15], [-27.18, -21.43], [-27.63, -18.46], [-28.09, -15.49], [-28.55, -8.64], [-28.55, -8.64],
+  [-28.55, -8.64], [-46.82, -7.04], [-46.82, -7.04], [-46.82, -7.04], [-48.46, -12.73], [-47.76, -21.0], [-47.07, -29.27],
+  [-42.44, -42.63], [-34.71, -50.43], [-26.98, -58.23], [-11.89, -63.09], [2.32, -62.12], [16.53, -61.15], [31.22, -56.16],
+  [37.91, -47.7],
+];
+/** 两边垂在脸边上的头发（盖住脸的边和耳根） */
+const LOCK_L: V2[] = [
+  [-36.4, 26.92], [-36.16, 26.69], [-49.93, 12.49], [-44.39, -17.84], [-44.39, -17.84], [-36.27, -17.52], [-36.27, -17.52],
+  [-38.86, -6.83], [-36.65, 27.15], [-36.4, 26.93],
+];
+const LOCK_R: V2[] = [
+  [37.09, -17.7], [40.76, -14.9], [33.43, 29.93], [33.43, 29.93], [33.43, 29.93], [48.94, 5.14], [45.92, -15.33],
+  [42.91, -35.8], [33.43, -20.5], [37.09, -17.7],
+];
+const EAR_L: V2[] = [
+  [-39.97, 3.52], [-40.81, -0.8], [-55.11, 2.06], [-49.12, 14.92], [-43.13, 27.78], [-33.56, 26.4], [-33.61, 26.34],
+  [-33.65, 26.28], [-39.13, 7.85], [-39.97, 3.52],
+];
+const EAR_R: V2[] = [
+  [39.2, 3.62], [40.09, -0.64], [51.75, 3.04], [46.21, 15.53], [40.67, 28.02], [32.85, 26.09], [32.89, 26.03],
+  [32.93, 25.98], [38.3, 7.9], [39.2, 3.62],
+];
+/** 眉毛（透过刘海画在头发上，往外眼角那头低一点） */
+const BROW_L: V2[] = [[-35.78, -12.61], [-35.78, -12.61], [-28.77, -15.14], [-24.42, -15.75], [-20.07, -16.35], [-18.5, -16.11], [-18.5, -16.11]];
+const BROW_R: V2[] = [[19.09, -15.75], [19.09, -15.75], [24.89, -15.99], [29.0, -15.38], [33.11, -14.78], [36.73, -13.33], [36.73, -13.33]];
+/** 线稿里眼珠的中心 (±20.52, 7.97)、半径 6.97×9.96；外侧月牙眼白最宽到 10.6 */
+const EYE_X = 20.52;
+const EYE_Y = 7.97;
+const IRIS_RX = 6.97;
+const IRIS_RY = 9.96;
+const EYE_OUT = 10.6;
+
+/** 按 map 把一串三次贝塞尔点画成路径 */
+function cubicPath(pts: V2[], map: (p: V2) => V2, close = true, path = new Path2D()): Path2D {
+  const p0 = map(pts[0]);
+  path.moveTo(p0[0], p0[1]);
+  for (let i = 1; i + 2 < pts.length; i += 3) {
+    const a = map(pts[i]);
+    const b = map(pts[i + 1]);
+    const c = map(pts[i + 2]);
+    path.bezierCurveTo(a[0], a[1], b[0], b[1], c[0], c[1]);
+  }
+  if (close) path.closePath();
+  return path;
+}
+
+const smooth01 = (a: number, b: number, x: number) => {
+  const t = clamp01((x - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
+
+function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
+  const { head, thh, field, pose } = rig;
+  const uh = -thh / 0.62;
+  // 飘起来、往下坠（受力朝上）时一缕一缕散开；其余时候是线稿的那一整片
+  const loose = pose.float >= 0.5 || -field[1] >= 0.12;
+  if (!loose) {
+    // 受力方向（头的坐标里，0 = 正下方）：低头、弯腰、走路带起来时，披下来的部分转向它
+    const f = rotateV(field, -head.a);
+    const delta = Math.max(-1.3, Math.min(1.3, angleOf(f)));
+    const PIVOT = 15;
+    const map = ([x, y]: V2): V2 => {
+      // 3/4：头顶那块（球）往后脑勺挪一点；披下来的一片在背后，挪得多些、略窄
+      const w = smooth01(-5, 40, y);
+      const lx = lerp(x + 6 * uh, x * (1 - 0.12 * uh) + 13 * uh, w);
+      if (y <= PIVOT) return head.p(lx, y);
+      const a = delta * smooth01(PIVOT, PIVOT + 30, y) * (0.3 + 0.7 * clamp01((y - PIVOT) / 150));
+      const c = Math.cos(a);
+      const sn = Math.sin(a);
+      const dy = y - PIVOT;
+      return head.p(lx * c - dy * sn, PIVOT + lx * sn + dy * c);
+    };
+    drawPart(ctx, cubicPath(HAIR_OUTLINE, map), K.hair, K.hairShade, ink);
+    return;
+  }
+  // 头顶那块照线稿，下面接一缕一缕的长发
+  const dome = ([x, y]: V2): V2 => head.p(x + 6 * uh, y);
+  const top = new Path2D();
+  const h = HAIR_OUTLINE;
+  const p0 = dome(h[0]);
+  top.moveTo(p0[0], p0[1]);
+  const bz = (a: V2, b: V2, c: V2) => {
+    const [pa, pb, pc] = [dome(a), dome(b), dome(c)];
+    top.bezierCurveTo(pa[0], pa[1], pb[0], pb[1], pc[0], pc[1]);
+  };
+  bz(h[1], h[2], h[3]);
+  bz([50, 30], [20, 45], [0, 45]);
+  bz([-20, 45], [-50, 30], h[21]);
+  bz(h[22], h[23], h[24]);
+  top.closePath();
+  const n = 8;
+  const up = clamp01(-field[1] * 1.2);
+  const strands: Path2D[] = [];
+  for (let i = 0; i < n; i++) {
+    const d = -1.34 + (i * 2.68) / (n - 1);
+    const hx = -54 * Math.sin(d + thh) + 6 * uh;
+    const root = head.p(hx, -4 + Math.abs(d) * 5);
+    // 发根方向：顺着头皮往外、往上（中间的直直往上）
+    const sn = Math.max(-1, Math.min(1, hx / 54));
+    const aDown = angleOf([sn * (0.06 + 0.2 * Math.abs(sn)), 1]);
+    const aUp = sn >= 0 ? -Math.PI + 1.15 * sn : Math.PI + 1.15 * sn;
+    const rootDir = dirOf(head.a + lerp(aDown, aUp, up));
+    const c = chain(root, rootDir, 6, 37, field, {
+      stiff: 0.3,
+      wave: pose.float * 0.22,
+      phase: pose.t * 1.5 + i * 1.3,
+      curl: pose.float * 0.12 * sn,
+      side: sn,
+      spread: 0.5,
+    });
+    strands.push(smoothPath(ribbonPts(c, [16, 17, 18, 19, 19, 18, 16], 0.28)));
+  }
+  drawMerged(ctx, [top, ...strands], K.hair, null, ink);
+}
+
+export function drawBrickShape(ctx: CanvasRenderingContext2D, f: Frame, w: number, h: number, ink: Ink, color = K.brick, shade = K.brickShade) {
+  const pts: P[] = [
+    [...f.p(-w / 2, -h), 1] as P,
+    [...f.p(w / 2, -h), 1] as P,
+    [...f.p(w / 2, 0), 1] as P,
+    [...f.p(-w / 2, 0), 1] as P,
+  ];
+  const path = smoothPath(pts);
+  drawPart(ctx, path, color, shade, { ...ink, shade: [3, 3] }, ink.lw * 0.85);
+  // 顶面一条亮边
+  strokeLine(ctx, [f.p(-w / 2 + 4, -h + 4), f.p(w / 2 - 4, -h + 4)], "rgba(255,255,255,0.55)", 2);
+}
+
+// ——— 身体（用户线稿 `public/ref/秤砣-线稿.svg` 的「身体」图层，2026-10-17） ———
+// 身体坐标：原点在两个胯关节连线的中点，y 向下；线稿像素 → ((X − 229.5)·0.905, (Y − 463.8)·0.905)，和头部同一个比例。
+/** 围巾：绕脖子的一圈 */
+const SCARF_WRAP: V2[] = [[-31.85, -163.68], [-31.13, -166.76], [-32.63, -171.52], [-31.73, -173.49], [-30.84, -175.46], [-24.35, -176.69], [-24.56, -176.77], [-24.77, -176.84], [-12.53, -180.37], [0.61, -180.26], [13.73, -180.14], [29.47, -175.99], [30.89, -174.21], [32.31, -172.42], [33.33, -167.57], [32.44, -165.77], [31.54, -163.97], [32.49, -163.06], [33.06, -161.52], [33.63, -159.97], [33.09, -153.49], [33.05, -153.66], [33.02, -153.84], [17.9, -142.54], [0.29, -143.07], [-17.32, -143.59], [-31.35, -151.69], [-32.11, -152.95], [-32.87, -154.22], [-32.56, -160.62], [-31.83, -163.7]];
+/** 围脖上的褶：两边的小折痕、上沿那道弧（只描线） */
+const SCARF_FOLDS: V2[][] = [
+  [[-31.68, -165.41], [-31.68, -165.41], [-31.41, -164.14], [-30.77, -163.51], [-30.14, -162.87], [-30.32, -162.51], [-29.87, -162.19]],
+  [[32, -164.1], [32, -164.1], [31, -162.83], [31, -162.83], [31, -162.83], [29.55, -161.2], [29.55, -161.2]],
+  [[-24.53, -174.5], [-24.53, -174.5], [-25.25, -174.4], [-25.52, -173.04], [-25.8, -171.67], [-15.35, -165.68], [-1.17, -165.59], [13.01, -165.5], [26.18, -171.22], [25.55, -173.04], [24.92, -174.86], [25.01, -174.22], [24.83, -174.31]],
+];
+/** 围巾垂下来的一头（上端开口，塞在围脖下面） */
+const SCARF_END: V2[] = [[10.26, -144], [10.26, -144], [8.75, -62.14], [9.61, -61.48], [10.47, -60.83], [32.08, -60.62], [32.51, -61.48], [32.95, -62.34], [31.43, -153.29], [31.41, -153.44]];
+/** 流苏 */
+const SCARF_FRINGE: V2[][] = [
+  [[10.11, -61.17], [10.11, -61.17], [10.35, -44.91], [10.3, -45], [10.25, -45.1], [10.11, -44.42], [12.29, -44.3], [14.47, -44.18], [14.72, -45.26], [14.67, -45.36], [14.63, -45.46], [14.72, -61.16], [14.67, -61.26], [14.63, -61.36], [10.11, -61.16], [10.11, -61.16]],
+  [[16.49, -60.99], [16.49, -60.99], [16.72, -44.73], [16.67, -44.82], [16.63, -44.92], [16.49, -44.24], [18.55, -44.11], [20.62, -44], [20.85, -45.08], [20.81, -45.18], [20.76, -45.28], [20.85, -60.98], [20.81, -61.08], [20.76, -61.18], [16.49, -60.98], [16.49, -60.98]],
+  [[22.56, -60.99], [22.56, -60.99], [22.77, -44.73], [22.74, -44.82], [22.69, -44.92], [22.56, -44.24], [24.46, -44.11], [26.36, -44], [26.57, -45.08], [26.53, -45.18], [26.48, -45.28], [26.57, -60.98], [26.53, -61.08], [26.48, -61.18], [22.57, -60.98], [22.57, -60.98]],
+  [[28.38, -61.35], [28.38, -61.35], [28.59, -45.09], [28.56, -45.18], [28.51, -45.28], [28.38, -44.6], [30.28, -44.48], [32.18, -44.36], [32.39, -45.45], [32.35, -45.54], [32.3, -45.64], [32.39, -61.34], [32.35, -61.44], [32.3, -61.54], [28.39, -61.34], [28.39, -61.34]],
+];
+/** 脖子（藏在围巾后面） */
+const NECK: V2[] = [[-12.09, -174.17], [-11.28, -172.63], [-11.44, -169.06], [-11.44, -166.36], [-11.44, -163.66], [-11.56, -160.7], [-12.61, -159.86], [-13.66, -159.03], [13.55, -159.29], [13.1, -159.47], [12.64, -159.65], [10.94, -163.45], [10.8, -166.14], [10.64, -168.84], [11.09, -173.65], [12.26, -174.49], [13.44, -175.32], [-12.91, -175.7], [-12.09, -174.16]];
+/** 身子（毛衣） */
+const TORSO: V2[] = [[-0.15, -5.41], [15.75, -5.41], [47.18, -9.96], [49.04, -11.17], [50.89, -12.38], [41.88, -52.75], [39.23, -67.9], [36.58, -83.05], [48.31, -136.82], [44.53, -145.53], [40.75, -154.24], [8.55, -161.43], [0.6, -161.43], [-7.36, -161.43], [-39.54, -153.48], [-44.09, -145.91], [-48.63, -138.34], [-37.65, -88.35], [-39.54, -70.92], [-41.44, -53.5], [-52.79, -14.5], [-50.52, -11.47], [-48.25, -8.44], [-0.15, -5.41], [-0.15, -5.41]];
+/** 手臂（画的是画面右边那只，上臂和前臂一整条，按肘关节切开） */
+const ARM: V2[] = [[111.75, -15.82], [111.75, -15.82], [67.59, -70.62], [67.59, -70.62], [67.59, -70.62], [17.98, -134.24], [17.98, -134.24], [17.98, -134.24], [14.05, -138.9], [29.57, -150.64], [45.09, -162.38], [85.61, -87.4], [85.39, -87.66], [85.16, -87.92], [126.14, -30.21], [125.91, -26.69], [125.68, -23.17], [113.64, -14.31], [111.74, -15.82]];
+/** 手套：手掌 */
+const PALM: V2[] = [[111.49, -16.15], [111.49, -16.15], [130.19, 10.63], [133.38, 11.68], [136.56, 12.74], [148.67, 1.28], [148.46, -1.06], [148.26, -3.39], [125.73, -27.61], [125.65, -27.79], [125.57, -27.96], [111.5, -16.15], [111.5, -16.15]];
+/** 手套：大拇指 */
+const THUMB: V2[] = [[129.33, 5.53], [129.33, 5.53], [133.16, 18.7], [128.48, 20.83], [123.81, 22.95], [111.7, -6.37], [116.79, -16.15], [121.89, -25.92], [129.33, 5.52], [129.33, 5.52]];
+/** 手套：三根手指 */
+const FINGERS: V2[][] = [
+  [[130.4, 7.01], [130.4, 7.01], [142.3, 24.44], [146.76, 22.1], [151.22, 19.77], [136.78, 1.92], [136.78, 1.92], [136.78, 1.92], [130.41, 7.01], [130.41, 7.01]],
+  [[137.2, 1.7], [137.2, 1.7], [148.67, 24.01], [152.92, 19.33], [157.16, 14.66], [140.81, -2.98], [140.81, -2.98], [140.81, -2.98], [137.2, 1.69], [137.2, 1.69]],
+  [[141.44, -2.76], [141.44, -2.76], [152.27, 18.48], [156.1, 13.81], [159.93, 9.14], [143.99, -6.16], [143.99, -6.16], [143.99, -6.16], [141.44, -2.76], [141.44, -2.76]],
+];
+/** 画面左边那条腿（大腿和小腿一整条，按膝关节切开） */
+const LEG_R_SHAPE: V2[] = [[-49.93, -11.34], [-49.93, -11.34], [-57.37, 83.89], [-58.04, 87.95], [-58.72, 92], [-65.48, 133.2], [-67.5, 137.93], [-69.53, 142.65], [-70.21, 191.29], [-70.21, 195.34], [-70.21, 199.39], [-74.26, 211.52], [-73.53, 214.46], [-72.8, 217.39], [-52.25, 220.45], [-46.97, 215.8], [-41.7, 211.17], [-41.84, 177.78], [-40.49, 175.75], [-39.15, 173.73], [-32.68, 150.85], [-33.06, 139.96], [-33.44, 129.06], [-0.64, -7.3], [-1.05, -7.77], [-1.25, -8], [-13.48, -8.9], [-25.65, -9.73], [-31.74, -10.15], [-37.82, -10.55], [-42.37, -10.85], [-46.92, -11.15], [-49.95, -11.34], [-49.95, -11.34]];
+/** 画面右边那条腿 */
+const LEG_L_SHAPE: V2[] = [[48.13, -14.12], [48.13, -14.12], [53.82, 29.43], [53.82, 32.09], [53.82, 34.74], [54.96, 83.97], [56.09, 87], [57.23, 90.03], [66.7, 139.26], [67.07, 141.91], [67.45, 144.56], [70.1, 196.06], [70.1, 197.2], [70.1, 198.34], [73.13, 209.32], [73.13, 211.6], [73.13, 213.87], [64.8, 217.65], [63.67, 217.28], [62.52, 216.9], [46.24, 216.9], [45.49, 215.39], [44.73, 213.88], [43.6, 191.53], [42.08, 189.64], [40.57, 187.75], [35.26, 161.24], [34.88, 158.96], [34.5, 156.69], [27.31, 115.79], [26.55, 109.35], [26.55, 109.35], [0.95, -6.23], [0.95, -6.23], [6.78, -6.3], [48.13, -14.1], [48.13, -14.1]];
+/** 光脚（画的是画面左边那只）：脚背内侧和大脚趾 */
+const FOOT_IN: V2[] = [[-47.55, 215.23], [-47.55, 215.23], [-47.34, 230.75], [-47.12, 233.93], [-46.91, 237.12], [-45.38, 251.15], [-45.42, 254.36], [-45.45, 257.57], [-46.18, 259.88], [-48.02, 261.25], [-49.87, 262.62], [-52.76, 264.82], [-53.17, 267.78], [-53.59, 270.75], [-56.32, 272.2], [-57.45, 273.72], [-58.57, 275.24], [-66.99, 280.6], [-71.42, 278.52], [-75.86, 276.44], [-73.13, 268.64], [-69.85, 266.01], [-68.36, 265.8], [-47.54, 215.23], [-47.54, 215.23], [-47.54, 215.23], [-47.55, 215.23], [-47.55, 215.23]];
+/** 光脚：其余的部分（填色用的轮廓） */
+const FOOT_OUT: V2[] = [[-73.47, 276.85], [-73.47, 276.85], [-79.21, 280.26], [-81.12, 278.13], [-83.03, 276], [-81.75, 268.57], [-78.78, 267.08], [-78.78, 267.08], [-81.76, 275.79], [-81.76, 275.79], [-81.76, 275.79], [-85.79, 279.82], [-88.98, 275.79], [-92.17, 271.75], [-86.85, 266.23], [-87.04, 266.06], [-87.04, 266.06], [-89.19, 276], [-89.19, 276], [-81.75, 275.79], [-96.84, 279.19], [-95.78, 272.82], [-94.72, 266.44], [-93.23, 265.59], [-93.42, 265.42], [-93.42, 265.42], [-95.56, 274.52], [-95.56, 274.52], [-95.56, 274.52], [-100.02, 274.09], [-100.87, 270.48], [-101.72, 266.87], [-98.54, 265.59], [-93.86, 260.28], [-89.19, 254.97], [-76.86, 236.49], [-75.38, 232.87], [-73.89, 229.26], [-72.82, 213.54], [-73.01, 213.37], [-73.2, 213.2], [-47.96, 214.82], [-48.16, 214.65], [-48.16, 214.65], [-47.54, 215.23], [-47.54, 215.23], [-47.54, 215.23], [-68.36, 265.8], [-69.85, 266.01], [-69.85, 266.01], [-73.47, 276.85], [-73.47, 276.85]];
+/** 光脚的线：三个小脚趾和外侧的边（照画的描） */
+const FOOT_LINES: V2[][] = [
+  [[-73.47, 276.85], [-73.47, 276.85], [-79.21, 280.26], [-81.12, 278.13], [-83.03, 276], [-81.75, 268.57], [-78.78, 267.08]],
+  [[-81.76, 275.79], [-81.76, 275.79], [-85.79, 279.82], [-88.98, 275.79], [-92.17, 271.75], [-86.85, 266.23], [-87.04, 266.06]],
+  [[-89.19, 276], [-81.75, 275.79], [-96.84, 279.19], [-95.78, 272.82], [-94.72, 266.44], [-93.23, 265.59], [-93.42, 265.42]],
+  [[-95.56, 274.52], [-95.56, 274.52], [-100.02, 274.09], [-100.87, 270.48], [-101.72, 266.87], [-98.54, 265.59], [-93.86, 260.28], [-89.19, 254.97], [-76.86, 236.49], [-75.38, 232.87], [-73.89, 229.26], [-72.82, 213.54], [-73.01, 213.37], [-73.2, 213.2], [-47.96, 214.82], [-48.16, 214.65]],
+];
+/** 线稿里的关节（身体坐标）：肩、肘、腕在画面右边那只手臂上；腿两条都画了 */
+const REST = {
+  // 肩关节放在手臂顶上那个圆头的中心（盖住身子的肩角）：原来放在线稿手臂顶端靠里，手臂一垂下来圆头就往下掉、露出身子方方的肩角
+  shoulder: [37.56, -142.83] as V2,
+  elbow: [76.48, -79.11] as V2,
+  wrist: [118.84, -21.27] as V2,
+  hipL: [26.07, -0.27] as V2,
+  kneeL: [45.26, 123.28] as V2,
+  ankleL: [59.28, 213.51] as V2,
+  hipR: [-27.06, 0.27] as V2,
+  kneeR: [-46.07, 123.28] as V2,
+  ankleR: [-60.28, 215.14] as V2,
+};
+
+
+/** 把一串三次贝塞尔点采样成折线 */
+function samplePts(pts: V2[], n = 10): V2[] {
+  const out: V2[] = [pts[0]];
+  for (let i = 1; i + 2 < pts.length; i += 3) {
+    const [p0, p1, p2, p3] = [pts[i - 1], pts[i], pts[i + 1], pts[i + 2]];
+    for (let k = 1; k <= n; k++) {
+      const t = k / n;
+      const a = 1 - t;
+      out.push([
+        a * a * a * p0[0] + 3 * a * a * t * p1[0] + 3 * a * t * t * p2[0] + t * t * t * p3[0],
+        a * a * a * p0[1] + 3 * a * a * t * p1[1] + 3 * a * t * t * p2[1] + t * t * t * p3[1],
+      ]);
+    }
+  }
+  return out;
+}
+
+/** 从 from 到 to 的半圆，往 bulge 那边鼓 */
+function capArc(from: V2, to: V2, bulge: V2, n = 10): V2[] {
+  const m: V2 = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2];
+  const r = Math.hypot(from[0] - m[0], from[1] - m[1]);
+  const a0 = Math.atan2(from[1] - m[1], from[0] - m[0]);
+  let sweep = Math.atan2(to[1] - m[1], to[0] - m[0]) - a0;
+  sweep = ((((sweep + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI;
+  const mid = a0 + sweep / 2;
+  if (Math.cos(mid) * bulge[0] + Math.sin(mid) * bulge[1] < 0) sweep -= (Math.sign(sweep) || 1) * 2 * Math.PI;
+  const out: V2[] = [];
+  for (let k = 1; k < n; k++) {
+    const a = a0 + (sweep * k) / n;
+    out.push([m[0] + r * Math.cos(a), m[1] + r * Math.sin(a)]);
+  }
+  return out;
+}
+
+/**
+ * 在关节处把一整条手臂 / 腿切成两节（切线垂直于骨头），两节在切口各补一个半圆：
+ * 弯的时候接缝被半圆盖住，合并描边后看不出切口。
+ */
+function splitAtJoint(poly: V2[], J: V2, axis: V2): [V2[], V2[]] {
+  const n = poly.length;
+  const d = poly.map((p) => (p[0] - J[0]) * axis[0] + (p[1] - J[1]) * axis[1]);
+  const s0 = d.findIndex((v) => v < 0);
+  const at = (i: number) => (s0 + i) % n;
+  const cross = (i: number, j: number): V2 => {
+    const k = d[i] / (d[i] - d[j]);
+    return [lerp(poly[i][0], poly[j][0], k), lerp(poly[i][1], poly[j][1], k)];
+  };
+  const near1: V2[] = [];
+  const far: V2[] = [];
+  const near2: V2[] = [];
+  let X1: V2 | null = null;
+  let X2: V2 | null = null;
+  for (let k = 0; k < n; k++) {
+    const i = at(k);
+    const j = at(k + 1);
+    if (!X1) near1.push(poly[i]);
+    else if (!X2) far.push(poly[i]);
+    else near2.push(poly[i]);
+    if (!X1 && d[i] < 0 && d[j] >= 0) X1 = cross(i, j);
+    else if (X1 && !X2 && d[i] >= 0 && d[j] < 0) X2 = cross(i, j);
+  }
+  const a = X1 ?? J;
+  const b = X2 ?? J;
+  const back: V2 = [-axis[0], -axis[1]];
+  const upper = [b, ...near2, ...near1, a, ...capArc(a, b, axis)];
+  const lower = [a, ...far, b, ...capArc(b, a, back)];
+  return [upper, lower];
+}
+
+/** 身体坐标 → 骨头的局部坐标（原点 o、转角 a，局部 +y 顺着骨头） */
+function toLocal(pts: V2[], o: V2, a: number): V2[] {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return pts.map(([x, y]) => {
+    const dx = x - o[0];
+    const dy = y - o[1];
+    return [dx * c + dy * s, -dx * s + dy * c];
+  });
+}
+
+/** 统一成同一个绕向：几块拼成一条路径填色时，重叠的地方才不会被当成洞 */
+function clockwise(pts: V2[]): V2[] {
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[(i + 1) % pts.length];
+    area += x0 * y1 - x1 * y0;
+  }
+  return area < 0 ? [...pts].reverse() : pts;
+}
+
+/** 手臂、腿切成上下两节，分别放进各自骨头的局部坐标 */
+function limbPieces(shape: V2[], root: V2, mid: V2, end: V2) {
+  const aU = angleOf(sub(mid, root));
+  const aL = angleOf(sub(end, mid));
+  const axis = norm(add(dirOf(aU), dirOf(aL)));
+  const [up, lo] = splitAtJoint(samplePts(shape, 12), mid, axis);
+  return { upper: clockwise(toLocal(up, root, aU)), lower: clockwise(toLocal(lo, mid, aL)) };
+}
+
+const ARM_PIECES = limbPieces(ARM, REST.shoulder, REST.elbow, REST.wrist);
+const LEG_PIECES = {
+  L: limbPieces(LEG_L_SHAPE, REST.hipL, REST.kneeL, REST.ankleL),
+  R: limbPieces(LEG_R_SHAPE, REST.hipR, REST.kneeR, REST.ankleR),
+};
+/** 手套在手腕的局部坐标里（手腕原点，+y 指向指尖） */
+const HAND_A = angleOf(sub(REST.wrist, REST.elbow));
+const HAND = {
+  palm: toLocal(PALM, REST.wrist, HAND_A),
+  thumb: toLocal(THUMB, REST.wrist, HAND_A),
+  fingers: FINGERS.map((f) => toLocal(f, REST.wrist, HAND_A)),
+};
+/** 光脚在脚踝的局部坐标里（画的是画面左边那只，另一只镜像） */
+const FOOT = {
+  inner: toLocal(FOOT_IN, REST.ankleR, 0),
+  outer: toLocal(FOOT_OUT, REST.ankleR, 0),
+  lines: FOOT_LINES.map((l) => toLocal(l, REST.ankleR, 0)),
+};
+
+function polyPath(pts: V2[], map: (p: V2) => V2): Path2D {
+  const path = new Path2D();
+  pts.forEach((q, i) => {
+    const m = map(q);
+    if (i) path.lineTo(m[0], m[1]);
+    else path.moveTo(m[0], m[1]);
+  });
+  path.closePath();
+  return path;
+}
+
+// ——— 手臂、手套 ———
+/**
+ * 肩膀那一圈：袖子和身子在这里是一块（参考图 `public/ref/秤砣-抱臂遮挡参考.png`），这里面它们互相重叠的地方不描线；
+ * 胳膊和身子之间那条线从腋下（上臂大约三分之一处）才开始。
+ */
+const SHOULDER_MERGE_R = 32;
+function shoulderZone(rig: Rig, side: "L" | "R"): Path2D {
+  const [x, y] = rig.arms[side].root;
+  const p = new Path2D();
+  p.arc(x, y, SHOULDER_MERGE_R, 0, Math.PI * 2);
+  return p;
+}
+/** 裁剪用：除了 path 以外的地方 */
+function outside(path: Path2D): Path2D {
+  const p = new Path2D();
+  p.rect(-1e4, -1e4, 2e4, 2e4);
+  p.addPath(path);
+  return p;
+}
+
+/** 一只手臂的两节放到现在的姿势上（线稿画的是 L 即画面右边那只，R 整只镜像） */
+function armPaths(rig: Rig, side: "L" | "R") {
+  const limb = rig.arms[side];
+  const sx = side === "L" ? 1 : -1;
+  const fU = new Frame(limb.root[0], limb.root[1], limb.a1);
+  const fF = new Frame(limb.mid[0], limb.mid[1], limb.a2);
+  const on = (f: Frame) => ([x, y]: V2) => f.p(x * sx, y);
+  return { limb, sx, upper: polyPath(ARM_PIECES.upper, on(fU)), lower: polyPath(ARM_PIECES.lower, on(fF)) };
+}
+
+function drawArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, opts: DrawOptions) {
+  const { limb, sx, upper, lower } = armPaths(rig, side);
+  const ap = side === "L" ? rig.pose.armL : rig.pose.armR;
+  // 合并描边（两倍宽的边再盖上填色），但肩膀那一圈里压在身子上的边不描：身子外面一遍、肩膀圈外面一遍
+  const torso = torsoPaths(rig).torso;
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw * 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  for (const keep of [outside(torso), outside(shoulderZone(rig, side))]) {
+    ctx.save();
+    ctx.clip(keep, "evenodd");
+    ctx.stroke(upper);
+    ctx.stroke(lower);
+    ctx.restore();
+  }
+  fillShaded(ctx, upper, K.sweater, K.sweaterShade, ink);
+  fillShaded(ctx, lower, K.sweater, K.sweaterShade, ink);
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c) => opts.hold?.[side]?.(c, limb.tip, rig.mir), !rig.pose.items.gloves);
+}
+
+/**
+ * 正面时上臂和身子重叠的地方显示身子的轮廓线、不显示上臂的（用户 2026-10-17）：上臂画在身子后面，
+ * 前臂和手套照样画在前面（抱臂、捂嘴这些动作要压在身子、脸前面）。
+ */
+function drawUpperArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
+  drawPart(ctx, armPaths(rig, side).upper, K.sweater, K.sweaterShade, ink);
+}
+
+/** 前臂 + 手套（正面，上臂已经画在身子后面）：前臂和露出来的上臂接的地方不描线；上臂藏在身子后面的那段，前臂照常描 */
+function drawForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, opts: DrawOptions) {
+  const { limb, sx, upper, lower } = armPaths(rig, side);
+  const ap = side === "L" ? rig.pose.armL : rig.pose.armR;
+  fillShaded(ctx, lower, K.sweater, K.sweaterShade, ink);
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  // 描两遍再并起来：上臂外面一遍，身子里面一遍（那里的上臂被身子挡着）
+  ctx.save();
+  const out = new Path2D();
+  out.rect(-1e4, -1e4, 2e4, 2e4);
+  out.addPath(upper);
+  ctx.clip(out, "evenodd");
+  ctx.stroke(lower);
+  ctx.restore();
+  ctx.save();
+  ctx.clip(torsoPaths(rig).torso);
+  ctx.stroke(lower);
+  ctx.restore();
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c) => opts.hold?.[side]?.(c, limb.tip, rig.mir), !rig.pose.items.gloves);
+}
+
+/**
+ * 手套：手指在手掌后面，拿着的东西画在手掌和大拇指之间。握拳时收起手指，指一下时只留一根。
+ * 手掌和手指、大拇指接的地方不描线（同一块手套，和刘海一个道理），手指之间的线留着。
+ * bare：摘了手套，同样的手形画成皮肤色（和脸一样细线、手指不加阴影）。
+ */
+function drawGlove(ctx: CanvasRenderingContext2D, f: Frame, sx: number, shape: HandShape, ink: Ink, hold: (ctx: CanvasRenderingContext2D) => void, bare = false) {
+  const on = ([x, y]: V2) => f.p(x * sx, y);
+  const fingers = (shape === "fist" || shape === "grip" ? [] : shape === "point" || shape === "pinky" ? [HAND.fingers[1]] : HAND.fingers).map(
+    (fi) => cubicPath(fi, on),
+  );
+  const base = bare ? K.skin : K.glove;
+  const lw = ink.lw * (bare ? 0.6 : 0.8);
+  for (const p of fingers) drawPart(ctx, p, base, bare ? null : K.gloveShade, ink, lw);
+  // 手掌只填色（不加阴影：右下那道月牙正好落在手指根上，像一条线），描边时扣掉手指盖住的地方
+  const palm = cubicPath(HAND.palm, on);
+  fillShaded(ctx, palm, base, null, ink);
+  ctx.save();
+  for (const p of fingers) {
+    const out = new Path2D();
+    out.rect(-1e4, -1e4, 2e4, 2e4);
+    out.addPath(p);
+    ctx.clip(out, "evenodd");
+  }
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = lw;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.stroke(palm);
+  ctx.restore();
+  hold(ctx);
+  // 大拇指压在手掌上：只填色，描边扣掉手掌——和手掌接的地方也不描（用户 2026-10-17）
+  const thumb = cubicPath(HAND.thumb, on);
+  fillShaded(ctx, thumb, base, null, ink);
+  ctx.save();
+  const out = new Path2D();
+  out.rect(-1e4, -1e4, 2e4, 2e4);
+  out.addPath(palm);
+  ctx.clip(out, "evenodd");
+  ctx.stroke(thumb);
+  ctx.restore();
+}
+
+// ——— 腿、光脚 ———
+function drawFoot(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
+  const limb = rig.legs[side];
+  // 线稿画的是画面左边那只，脚尖朝画面左边。正面时另一只镜像（两只脚尖往外分开）；
+  // 转到 3/4 两只脚都朝她面向的那边（用户 2026-10-17），朝右时整个人镜像，两只脚就一起朝右
+  const fx = side === "R" || rig.u >= 0.25 ? 1 : -1;
+  const onFoot = ([x, y]: V2) => limb.tip.p(x * fx, y);
+  // 线稿里脚是两块拼的：拼成一条路径一起填色、描两倍宽的边再盖上填色，中间那道斜线（连抗锯齿的细缝）都不出现；
+  // 只另描脚趾缝的线
+  const lw = ink.lw * 0.7;
+  const foot = new Path2D();
+  foot.addPath(cubicPath(FOOT.outer, onFoot));
+  foot.addPath(cubicPath(FOOT.inner, onFoot));
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = lw * 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.stroke(foot);
+  ctx.fillStyle = K.skin;
+  ctx.fill(foot);
+  ctx.lineWidth = lw;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  for (const l of FOOT.lines.slice(0, 3)) ctx.stroke(cubicPath(l, onFoot, false));
+  // 大脚趾和二脚趾之间：只留大脚趾外侧那一小段（和别的脚趾缝一样长），往上那条长斜线不画
+  ctx.stroke(cubicPath(FOOT.inner.slice(18, 22), onFoot, false));
+}
+
+/** 一条腿的两节（大腿、小腿）放到现在的姿势上 */
+function legPaths(rig: Rig, side: "L" | "R"): Path2D[] {
+  const limb = rig.legs[side];
+  const P = LEG_PIECES[side];
+  const fT = new Frame(limb.root[0], limb.root[1], limb.a1);
+  const fS = new Frame(limb.mid[0], limb.mid[1], limb.a2);
+  // 大腿朝镜头时顺着骨头压短（膝盖那个半圆也跟着压扁，膝盖的圆由小腿那头的半圆撑着）
+  const k = limb.k ?? 1;
+  return [polyPath(P.upper, (p) => fT.p(p[0], p[1] * k)), polyPath(P.lower, (p) => fS.p(p[0], p[1]))];
+}
+
+/**
+ * 胯（裤袜的裆）：线稿里没画，两条腿一分开（正面半蹲）大腿根之间就会露出白的。上沿藏在毛衣下摆里，
+ * 下沿是一道圆的裆；站着时被大腿盖住，和腿合并描边。
+ */
+function pelvisPath(rig: Rig): Path2D {
+  const pts: P[] = [
+    [-40, -12],
+    [-37, 6],
+    [-14, 19],
+    [0, 21],
+    [14, 19],
+    [37, 6],
+    [40, -12],
+    [0, -16],
+  ];
+  // 和腿的几块统一绕向，拼成一个形状填色时重叠处才不会变成洞
+  return smoothPath(clockwise(pts.map(([x, y]) => rig.pelvis.p(x * Math.cos(rig.th), y))) as P[]);
+}
+
+/**
+ * 腿：脚先画，裤腿的下沿压在脚踝上。正面时两条腿一起合并描边——同一条裤袜，大腿根挨在一起的地方不描线，
+ * 到裆下才分开（和参考图一样）；转到 3/4 两条腿前后叠着，要各描各的。
+ */
+function drawLegs(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
+  drawFoot(ctx, rig, "R", ink);
+  drawFoot(ctx, rig, "L", ink);
+  const pelvis = pelvisPath(rig);
+  if (rig.u >= 0.25) {
+    drawPart(ctx, pelvis, K.tights, null, ink);
+    for (const side of ["R", "L"] as const) drawMerged(ctx, legPaths(rig, side), K.tights, K.tightsShade, ink);
+    return;
+  }
+  const [thR, shR] = legPaths(rig, "R");
+  const [thL, shL] = legPaths(rig, "L");
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw * 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  for (const p of [pelvis, thR, shR, thL, shL]) ctx.stroke(p);
+  // 两条大腿和裆拼成一个形状加阴影：右下那道月牙只出现在外轮廓上，不会沿着里侧在裆上面拉出一道
+  const thighs = new Path2D();
+  thighs.addPath(pelvis);
+  thighs.addPath(thR);
+  thighs.addPath(thL);
+  fillShaded(ctx, thighs, K.tights, K.tightsShade, ink);
+  fillShaded(ctx, shR, K.tights, K.tightsShade, ink);
+  fillShaded(ctx, shL, K.tights, K.tightsShade, ink);
+}
+
+// ——— 身子、脖子 ———
+/** 身子、脖子放到现在的姿势上（3/4 按椭圆柱转，a 半宽、b 半厚；呼吸时胸口以上起伏） */
+function torsoPaths(rig: Rig): { neck: Path2D; torso: Path2D } {
+  const { chest, th, pose } = rig;
+  const { fx } = bodyFns(th);
+  const br = pose.breath * 1.6;
+  const on = (a: number, b: number) => ([x, y]: V2): V2 =>
+    chest.p(fx(Math.asin(Math.max(-1, Math.min(1, x / a))), a, b), y - br * clamp01(-y / 140));
+  return { neck: cubicPath(NECK, on(16, 12)), torso: cubicPath(TORSO, on(54, 32)) };
+}
+
+/** sides：正面时画在身子后面的上臂。身子的边在这些上臂的肩膀圈里不描（袖子和身子在肩膀是一块），腋下往下照常描 */
+function drawTorso(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L" | "R")[] = []) {
+  const { neck, torso } = torsoPaths(rig);
+  drawPart(ctx, neck, K.skin, K.skinShade, ink, ink.lw * 0.6);
+  if (!sides.length) {
+    drawPart(ctx, torso, K.sweater, K.sweaterShade, ink);
+    return;
+  }
+  fillShaded(ctx, torso, K.sweater, K.sweaterShade, ink);
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  // 不描的地方 = 每只手臂的（上臂 ∩ 肩膀圈）；它的补集 = 每只手臂各取「上臂外」或「肩膀圈外」，几只手臂的组合都描一遍
+  const keeps = sides.map((side) => [outside(armPaths(rig, side).upper), outside(shoulderZone(rig, side))]);
+  const combos = keeps.reduce<Path2D[][]>((acc, k) => acc.flatMap((c) => k.map((p) => [...c, p])), [[]]);
+  for (const combo of combos) {
+    ctx.save();
+    for (const p of combo) ctx.clip(p, "evenodd");
+    ctx.stroke(torso);
+    ctx.restore();
+  }
+}
+
+// ——— 围巾 ———
+function drawScarf(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
+  const { chest, th, pose, field } = rig;
+  const { fx } = bodyFns(th);
+  const br = pose.breath * 1.6;
+  // 3/4：贴着身体的东西按椭圆柱转（a 半宽、b 半厚）
+  const onBody = (a: number, b: number) => (x: number) => fx(Math.asin(Math.max(-1, Math.min(1, x / a))), a, b);
+  const wrapX = onBody(37, 28);
+  const endX = onBody(56, 34);
+
+  // 垂下来的一头：从围脖下面出来，越往下越顺着受力方向（走路、跳、弯腰）；
+  // 受力朝上（飘起来、往下坠）时从外侧翻上去，不盖住脸
+  const f = rotateV(field, -chest.a);
+  let aim = angleOf(f);
+  if (aim > Math.PI / 2) aim -= Math.PI * 2;
+  aim = Math.max(-2.6, Math.min(1.2, aim));
+  const PIV: V2 = [endX(21), -146.5];
+  const LEN = 102;
+  const endMap = ([x, y]: V2): V2 => {
+    const lx = endX(x);
+    const t = clamp01((y - PIV[1]) / LEN);
+    const a = aim * (0.35 + 0.65 * t) * smooth01(0, 0.3, t) + pose.float * 0.25 * Math.sin(pose.t * 1.7 + t * 3) * t;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const dx = lx - PIV[0];
+    const dy = y - PIV[1];
+    return chest.p(PIV[0] + dx * c - dy * s, PIV[1] + dx * s + dy * c - br);
+  };
+  // 流苏先画（压在垂下来那头的下沿后面）
+  for (const fr of SCARF_FRINGE) drawPart(ctx, cubicPath(fr, endMap), K.scarf, K.scarfShade, ink, ink.lw * 0.6);
+  const endPath = cubicPath(SCARF_END, endMap);
+  fillShaded(ctx, endPath, K.scarf, K.scarfShade, ink);
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw * 0.8;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.stroke(cubicPath(SCARF_END, endMap, false));
+
+  // 绕脖子的一圈压在上面
+  const wrapMap = ([x, y]: V2): V2 => chest.p(wrapX(x), y - br);
+  drawPart(ctx, cubicPath(SCARF_WRAP, wrapMap), K.scarf, K.scarfShade, ink, ink.lw * 0.8);
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw * 0.5;
+  for (const fold of SCARF_FOLDS) ctx.stroke(cubicPath(fold, wrapMap, false));
+}
+
+// ——— 头 ———
+/**
+ * 脸的轮廓（右半边，头的坐标，从头顶到下巴）：用户亲手画的脸形（2026-10-17，SVG），左右取平均变对称，
+ * 按最宽处半宽 41、下巴在 48 等比缩放。上面最宽，往下收到左右下颌角，再收成一个圆圆的下巴；头顶那一段藏在刘海下面。
+ */
+const FACE_CURVE: V2[] = [
+  [0, -52.75],
+  [57.81, -52.75],
+  [40.81, 18.53],
+  [30.16, 32.98],
+  [19.52, 47.43],
+  [1.92, 48],
+  [0, 48],
+];
+const FACE_HALF: V2[] = (() => {
+  const c = FACE_CURVE;
+  const bez = (p0: V2, p1: V2, p2: V2, p3: V2, t: number): V2 => {
+    const a = 1 - t;
+    return [
+      a * a * a * p0[0] + 3 * a * a * t * p1[0] + 3 * a * t * t * p2[0] + t * t * t * p3[0],
+      a * a * a * p0[1] + 3 * a * a * t * p1[1] + 3 * a * t * t * p2[1] + t * t * t * p3[1],
+    ];
+  };
+  const out: V2[] = [];
+  for (let i = 0; i < 20; i++) out.push(bez(c[0], c[1], c[2], c[3], i / 20));
+  for (let i = 0; i < 10; i++) out.push(bez(c[3], c[4], c[5], c[6], i / 10));
+  out.push(c[6]);
+  return out;
+})();
+
+/** 脸在 y 处的半宽（右半边从上到下 y 一直增加，直接插值） */
+function faceHW(y: number): number {
+  const h = FACE_HALF;
+  if (y <= h[0][1]) return h[0][0];
+  for (let i = 1; i < h.length; i++) {
+    if (y <= h[i][1]) {
+      const k = (y - h[i - 1][1]) / (h[i][1] - h[i - 1][1] || 1);
+      return lerp(h[i - 1][0], h[i][0], k);
+    }
+  }
+  return 0;
+}
+
+function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
+  const { head, thh, pose, field } = rig;
+  const e = pose.expr;
+  const sth = Math.sin(thh);
+  const cth = Math.cos(thh);
+  const uh = -thh / 0.62;
+  const cx = -4 * uh;
+  const H = (x: number, y: number): V2 => head.p(x, y);
+  const ang = head.a;
+  const thin = ink.lw * 0.6;
+
+  // 贴着脸的东西（脸、耳朵、两边的头发）用同一个变换：3/4 时往前挪 cx，下半往朝向那边推
+  const place = ([x, y]: V2): V2 => H(cx + x + 15 * sth * Math.pow(clamp01((y - 2) / 46), 1.4), y);
+
+  /** 皮肤（脸、耳朵）：头发的边只在压着它们的地方描线 */
+  const skins: Path2D[] = [];
+  // 耳朵（画在脸后面，脸和两边的头发压住耳根）。转身时转到后面的那只缩回脸后面
+  for (const [s, ear] of [[-1, EAR_L], [1, EAR_R]] as [number, V2[]][]) {
+    const z = Math.cos((s * Math.PI) / 2 + thh);
+    const k = clamp01(1 + z * 3.5);
+    if (k < 0.12) continue;
+    const map = ([x, y]: V2): V2 => {
+      const edge = s * faceHW(y);
+      return place([edge + (x - edge) * k, y]);
+    };
+    const earPath = cubicPath(ear, map);
+    drawPart(ctx, earPath, K.skin, null, ink, thin);
+    skins.push(earPath);
+  }
+
+  // 脸：用户画的脸形（FACE_HALF）
+  const facePts: P[] = [
+    ...FACE_HALF.map(place),
+    ...FACE_HALF.slice(1, -1)
+      .reverse()
+      .map(([x, y]) => place([-x, y])),
+  ];
+  const facePath = smoothPath(facePts);
+  // 细线、不加阴影：下巴那道月牙阴影连着描边像一条粗线
+  drawPart(ctx, facePath, K.skin, null, ink, thin);
+  skins.push(facePath);
+
+  // 五官按一个前面扁一点的椭圆放（a 半宽、b 半厚）：3/4 时远侧的眼睛不会贴到脸边
+  const feat = (phi: number, a = 40, b = 30) => a * Math.sin(phi) * cth + b * Math.cos(phi) * sth + cx * 0.3;
+  /** φ 处横向被压扁的程度（正面 1，转到侧边变小，近侧略大于 1） */
+  const squeeze = (phi: number, a = 40, b = 30) => (a * Math.cos(phi) * cth - b * Math.sin(phi) * sth) / (a * Math.cos(phi));
+  const EYE_PHI = Math.asin(EYE_X / 40);
+
+  // 腮红：眼睛下面一团淡淡的晕染，裁在脸里面
+  ctx.save();
+  ctx.clip(facePath);
+  for (const s of [-1, 1]) {
+    const vis = squeeze(s * 0.66);
+    if (vis < 0.2) continue;
+    const c = H(feat(s * 0.66), 23);
+    ctx.save();
+    ctx.translate(c[0], c[1]);
+    ctx.rotate(ang);
+    ctx.scale(10.5 * Math.min(1, vis), 6.2);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    g.addColorStop(0, `rgba(${K.blush},${0.3 + 0.35 * e.blush})`);
+    g.addColorStop(1, `rgba(${K.blush},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // 眼睛
+  const eyeSq = (s: number) => Math.min(1.06, 0.25 + 0.75 * squeeze(s * EYE_PHI));
+  for (const s of [-1, 1]) {
+    if (squeeze(s * EYE_PHI) < 0.15) continue;
+    drawEye(ctx, head, feat(s * EYE_PHI), EYE_Y, eyeSq(s), s, e, ink, -uh);
+  }
+  // 眼泪
+  if (e.tears > 0.01) {
+    for (const s of [-1, 1]) {
+      if (squeeze(s * EYE_PHI) < 0.3) continue;
+      drawTears(ctx, head, feat(s * EYE_PHI), EYE_Y, s, e.tears, field, pose.t, ink);
+    }
+  }
+  // 鼻子：正面一个小短竖（线稿的位置），转过去带出一点鼻尖
+  {
+    const nx = feat(0, 44, 36);
+    const ns = sth < -0.05 ? -1 : 1;
+    ctx.save();
+    ctx.translate(head.x, head.y);
+    ctx.rotate(ang);
+    ctx.strokeStyle = K.nose;
+    ctx.lineWidth = ink.lw * 0.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(nx + 0.3 * ns, 19.1);
+    ctx.quadraticCurveTo(nx + (0.5 + 1.4 * uh) * ns, 20.9, nx, 22);
+    if (uh > 0.3) ctx.lineTo(nx - 1.6 * uh * ns, 21.8);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // 嘴（线稿的位置）
+  drawMouth(ctx, head, feat(0, 36, 32), 32, 0.35 + 0.65 * cth, e, ink);
+
+  // 两边的头发：盖住脸边和耳根，跟着脸走
+  const locks = [LOCK_L, LOCK_R].map((lock) => cubicPath(lock, place));
+
+  // 刘海：两边贴着脸（盖住额头），下沿的几道缝 3/4 时往朝向那边挪；上面一截跟着头顶
+  const bangsMap = ([x, y]: V2): V2 => {
+    const front = cx + x + 0.7 * 48 * sth * (1 - Math.min(1, (x / 48) ** 2));
+    const w = smooth01(-50, -20, y);
+    return H(lerp(x + 6 * uh, front, w), y);
+  };
+  const bangs = cubicPath(BANGS, bangsMap);
+  // 先填色、后描边。头发压在头发上的边不描（刘海后面是头发、两边的头发接着刘海，用户 2026-10-17），
+  // 只描压在脸和耳朵上的边：刘海的下沿和几道缝、两边的头发贴着脸和耳朵的那一侧
+  for (const p of [...locks, bangs]) fillShaded(ctx, p, K.hair, null, ink);
+  const strokeOnSkin = (path: Path2D, under: Path2D[]) => {
+    for (const skin of skins) {
+      ctx.save();
+      ctx.clip(skin);
+      // 再扣掉别的头发盖住的地方
+      const out = new Path2D();
+      out.rect(-1e4, -1e4, 2e4, 2e4);
+      for (const q of under) out.addPath(q);
+      ctx.clip(out, "evenodd");
+      ctx.strokeStyle = K.line;
+      ctx.lineWidth = ink.lw * 0.8;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.stroke(path);
+      ctx.restore();
+    }
+  };
+  for (const p of locks) strokeOnSkin(p, [bangs]);
+  strokeOnSkin(bangs, locks);
+
+  // 眉毛：透过刘海画在头发上
+  for (const [s, brow] of [[-1, BROW_L], [1, BROW_R]] as [number, V2[]][]) {
+    if (squeeze(s * EYE_PHI) < 0.15) continue;
+    drawBrow(ctx, head, brow, feat(s * EYE_PHI), eyeSq(s), s, e, ink);
+  }
+}
+
+/**
+ * 眼睛（用户线稿）：竖着的深色大眼珠，只在外侧有一道月牙眼白；上眼线从内上角沿着眼睛上沿、绕过外侧，到外侧中下。
+ * 局部坐标以眼珠中心为原点，u 朝外眼角为正。sx 是 3/4 时横向压扁的比例。
+ * 眨眼 = 上眼皮落下来（闭成眼睛中下部的一道弧）；笑 = 下眼皮推上来，到 1 弯成 ∩；难过外眼角压下、使劲内眼角压下。
+ * turn 是头往哪边转（眼珠跟着朝那边）。
+ */
+function drawEye(ctx: CanvasRenderingContext2D, head: Frame, ex: number, ey: number, sx: number, s: number, e: Expr, ink: Ink, turn: number) {
+  ctx.save();
+  ctx.translate(head.x, head.y);
+  ctx.rotate(head.a);
+  const ry = IRIS_RY * (1 + e.wide * 0.1);
+  const out = EYE_OUT * (1 + e.wide * 0.08);
+  const sq = (u: number, a: number) => Math.sqrt(Math.max(0, 1 - (u / a) ** 2));
+  // 睁开时的上下沿：内侧就是眼珠的边，外侧是月牙
+  const topO = (u: number) => (u <= 0 ? -ry * sq(u, IRIS_RX) : -0.3 - (ry - 0.3) * sq(u, out));
+  const botO = (u: number) => (u <= 0 ? ry * sq(u, IRIS_RX) : -0.3 + (ry + 0.3) * sq(u, out));
+  const prof = (u: number) => (botO(u) - topO(u)) / (2 * ry);
+  const uc = (out - IRIS_RX) / 2;
+  const hw = (out + IRIS_RX) / 2;
+  const outer = (u: number) => (u - uc) / hw;
+  const bottom = (u: number) => {
+    const b0 = botO(u) - e.happy * (botO(u) - topO(u)) * 0.78;
+    // 闭眼时闭在眼睛中下部，不是落到最底下
+    return b0 + (Math.min(b0, 3.2 * prof(u)) - b0) * e.blink;
+  };
+  const lid = (u: number) => {
+    const t0 = topO(u);
+    return (
+      t0 +
+      e.happy * 0.5 * (botO(u) - t0) +
+      e.sad * 5 * Math.max(0, outer(u) + 0.15) +
+      e.fierce * 5.5 * Math.max(0, -outer(u) + 0.15)
+    );
+  };
+  const top = (u: number) => {
+    const y = lid(u);
+    const lo = bottom(u);
+    return Math.min(lo, y + (lo - y) * e.blink);
+  };
+  const X = (u: number) => ex + s * u * sx;
+  const N = 20;
+  const us = Array.from({ length: N + 1 }, (_, i) => -IRIS_RX + ((out + IRIS_RX) * i) / N);
+  const open = Math.max(...us.map((u) => bottom(u) - top(u)));
+  if (open > 0.6) {
+    const region = new Path2D();
+    region.moveTo(X(us[0]), ey + top(us[0]));
+    for (const u of us.slice(1)) region.lineTo(X(u), ey + top(u));
+    for (const u of [...us].reverse()) region.lineTo(X(u), ey + bottom(u));
+    region.closePath();
+    ctx.save();
+    ctx.clip(region);
+    ctx.fillStyle = K.sclera;
+    ctx.fill(region);
+    // 眼珠：转身时两只都朝那边看
+    const rx = IRIS_RX * sx * (1 - e.wide * 0.15);
+    const iry = IRIS_RY * (1 - e.wide * 0.12);
+    const ix = ex + turn * 1.2 + e.look[0] * 2.4;
+    const iy = ey + e.look[1] * 2.5;
+    const g = ctx.createLinearGradient(0, iy - iry, 0, iy + iry);
+    g.addColorStop(0, K.pupil);
+    g.addColorStop(0.5, K.iris);
+    g.addColorStop(1, K.irisLight);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(ix, iy, rx, iry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 左上一个大高光
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.ellipse(ix - rx * 0.3, iy - iry * 0.42, rx * 0.27, iry * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 上眼皮投下的一道影子
+    ctx.fillStyle = "rgba(40,40,50,0.14)";
+    ctx.beginPath();
+    ctx.moveTo(X(us[0]), ey + top(us[0]));
+    for (const u of us.slice(1)) ctx.lineTo(X(u), ey + top(u));
+    for (const u of [...us].reverse()) ctx.lineTo(X(u), ey + top(u) + 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    // 外侧月牙下半圈的细线
+    ctx.strokeStyle = K.liner;
+    ctx.globalAlpha = 0.8;
+    ctx.lineWidth = ink.lw * 0.32;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    const lu = us.filter((u) => u >= 0.5);
+    lu.forEach((u, i) => (i ? ctx.lineTo(X(u), ey + bottom(u)) : ctx.moveTo(X(u), ey + bottom(u))));
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  // 上眼线：从内上角（u=-6.2）沿上沿到外眼角，再绕下来到外侧中下；比眼睛的边往外让 0.9
+  const LINER_IN = -6.2;
+  const LINER_END = 9.5;
+  const pts: V2[] = [];
+  for (let i = 0; i <= 16; i++) {
+    const k = 0.5 - 0.5 * Math.cos((Math.PI * i) / 16);
+    const u = LINER_IN + (out - LINER_IN) * k;
+    pts.push([u, top(u)]);
+  }
+  for (let i = 1; i <= 4; i++) {
+    const u = out - ((out - LINER_END) * i) / 4;
+    pts.push([u, bottom(u)]);
+  }
+  const liner: V2[] = pts.map(([u, y]) => {
+    const dx = (u - uc) * sx;
+    const dy = y + 0.3;
+    const l = Math.hypot(dx, dy) || 1;
+    return [X(u) + ((s * dx) / l) * 0.9, ey + y + (dy / l) * 0.9];
+  });
+  const widths = liner.map((_, i) => {
+    const t = i / (liner.length - 1);
+    return 0.55 + 0.95 * (t < 0.65 ? t / 0.65 : 1 - (0.55 * (t - 0.65)) / 0.35);
+  });
+  drawLiner(ctx, liner, widths);
+  ctx.restore();
+}
+
+function drawLiner(ctx: CanvasRenderingContext2D, pts: V2[], w: number[]) {
+  const ribbon = ribbonPts(pts, w, 0.5);
+  ctx.fillStyle = K.liner;
+  ctx.fill(smoothPath(ribbon));
+}
+
+/** 眉毛（线稿的形状，透过刘海画在头发上）：难过时内端抬起，使劲时内端压下，惊讶时整条抬起。ex 是这只眼睛现在的位置。 */
+function drawBrow(ctx: CanvasRenderingContext2D, head: Frame, brow: V2[], ex: number, sx: number, s: number, e: Expr, ink: Ink) {
+  const lift = -3 * e.wide - 0.8 * e.happy + 0.6 * e.blink;
+  const map = ([x, y]: V2): V2 => {
+    // 0 内端 → 1 外端
+    const t = clamp01((Math.abs(x) - 18.5) / 18.2);
+    const dy = lift + e.sad * (-3.4 * (1 - t) + 1.6 * t) + e.fierce * (3 * (1 - t) - 1.2 * t);
+    return head.p(ex + (x - s * EYE_X) * sx, y + dy);
+  };
+  ctx.strokeStyle = K.brow;
+  ctx.lineWidth = ink.lw * 0.5;
+  ctx.lineCap = "round";
+  ctx.stroke(cubicPath(brow, map, false));
+}
+
+/** 嘴：一道细弧，中间粗、两头细；张嘴时是一个小口。 */
+function drawMouth(ctx: CanvasRenderingContext2D, head: Frame, mx: number, my: number, wk: number, e: Expr, ink: Ink) {
+  ctx.save();
+  ctx.translate(head.x, head.y);
+  ctx.rotate(head.a);
+  const s = e.smile - e.sad * 0.6;
+  const o = e.open;
+  const w = (6.8 + 1.6 * Math.abs(s) + o * 1.6) * wk;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  if (o < 0.08) {
+    const pts: V2[] = [];
+    for (let i = 0; i <= 10; i++) {
+      const t = i / 10;
+      const a = 1 - t;
+      const y = (a * a + t * t) * (my - s * 2.4) + 2 * a * t * (my + s * 5.4);
+      pts.push([mx - w + 2 * w * t, y]);
+    }
+    const widths = pts.map((_, i) => 0.35 + 0.5 * Math.sin((Math.PI * i) / 10));
+    ctx.fillStyle = K.mouthLine;
+    ctx.fill(smoothPath(ribbonPts(pts, widths, 0.5)));
+  } else {
+    const shape = new Path2D();
+    shape.moveTo(mx - w, my - s * 1.4);
+    shape.quadraticCurveTo(mx, my + s * 2.2, mx + w, my - s * 1.4);
+    shape.quadraticCurveTo(mx, my + 2 + o * 13 + s * 3, mx - w, my - s * 1.4);
+    shape.closePath();
+    ctx.fillStyle = K.mouth;
+    ctx.fill(shape);
+    ctx.save();
+    ctx.clip(shape);
+    ctx.fillStyle = K.tongue;
+    ctx.beginPath();
+    ctx.ellipse(mx, my + 3 + o * 9, w * 0.62, 3 + o * 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = K.mouthLine;
+    ctx.lineWidth = ink.lw * 0.5;
+    ctx.stroke(shape);
+  }
+  ctx.restore();
+}
+
+function drawTears(ctx: CanvasRenderingContext2D, head: Frame, ex: number, ey: number, s: number, amt: number, field: V2, t: number, ink: Ink) {
+  ctx.save();
+  ctx.translate(head.x, head.y);
+  ctx.rotate(head.a);
+  // 眼眶里一汪水
+  ctx.fillStyle = `rgba(207,238,250,${0.75 * Math.min(1, amt * 2)})`;
+  ctx.beginPath();
+  ctx.ellipse(ex, ey + 9, 9, 2.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // 往下（或飘着时往上）走的泪
+  const f = rotateV(field, -head.a);
+  const fl = len(f) || 1;
+  const d: V2 = [f[0] / fl, f[1] / fl];
+  const start: V2 = d[1] >= 0 ? [ex + s * 6, ey + 10] : [ex + s * 10, ey - 3];
+  const L = 13 * Math.min(1, amt * 1.4);
+  ctx.strokeStyle = `rgba(150,205,235,0.85)`;
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(start[0], start[1]);
+  ctx.quadraticCurveTo(start[0] + d[0] * L * 0.5 + s * 3, start[1] + d[1] * L * 0.5, start[0] + d[0] * L + s * 2, start[1] + d[1] * L);
+  ctx.stroke();
+  // 一颗泪珠，循环落下
+  if (amt > 0.4) {
+    const k = (t * 0.9 + (s > 0 ? 0.45 : 0)) % 1;
+    const p: V2 = [start[0] + d[0] * (L + k * 22) + s * 2, start[1] + d[1] * (L + k * 22)];
+    ctx.globalAlpha = 1 - k;
+    ctx.fillStyle = K.tear;
+    ctx.strokeStyle = "rgba(120,170,210,0.9)";
+    ctx.lineWidth = ink.lw * 0.45;
+    ctx.beginPath();
+    ctx.ellipse(p[0], p[1], 3, 4, angleOf(d), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
+function rotateV(v: V2, a: number): V2 {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return [v[0] * c - v[1] * s, v[0] * s + v[1] * c];
+}
+
+/** 手里拿着一块砖（给 DrawOptions.hold 用）：砖横在手掌上。 */
+export function holdBrick(ctx: CanvasRenderingContext2D, hand: Frame) {
+  const ink: Ink = { line: K.line, lw: 3, shade: [3, 3] };
+  drawBrickShape(ctx, hand.child(0, 33, 0), 36, 27, ink);
+}
