@@ -118,8 +118,8 @@ export function chengtuoPose(options: ChengtuoOptions = {}, t = 0): PoseIn {
 export function chengtuo(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, options: ChengtuoOptions = {}, t = 0, opts: DrawOptions = {}) {
   const o = chengtuoOptions.parse(options);
   const hold = { ...opts.hold };
-  if (o.brickL) hold.L ??= (c, hand) => holdBrick(c, hand);
-  if (o.brickR) hold.R ??= (c, hand) => holdBrick(c, hand);
+  if (o.brickL) hold.L ??= holdBrick;
+  if (o.brickR) hold.R ??= holdBrick;
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(s, s);
