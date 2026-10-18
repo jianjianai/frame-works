@@ -1191,6 +1191,15 @@ function drawTorso(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L
     return;
   }
   fillShaded(ctx, torso, K.sweater, K.sweaterShade, ink);
+  // 肩膀那一圈里身子的边不描，也不要右下的阴影月牙（用户 2026-10-18）：没有描线的地方剩一道月牙，像光照轮廓
+  for (const side of sides) {
+    ctx.save();
+    ctx.clip(torso);
+    ctx.clip(shoulderZone(rig, side));
+    ctx.fillStyle = K.sweater;
+    ctx.fill(torso);
+    ctx.restore();
+  }
   ctx.strokeStyle = K.line;
   ctx.lineWidth = ink.lw;
   ctx.lineJoin = "round";
