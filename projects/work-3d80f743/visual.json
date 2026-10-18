@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "background": "#0d0e11",
+  "clips": [
+    {
+      "id": "act1",
+      "name": "第一幕 最沉的人",
+      "source": {
+        "kind": "scene",
+        "module": "act1",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 39.99
+    },
+    {
+      "id": "act2",
+      "name": "第二幕 她飘得最高",
+      "source": {
+        "kind": "scene",
+        "module": "act2",
+        "engine": "canvas"
+      },
+      "start": 39.99,
+      "duration": 31.98
+    },
+    {
+      "id": "act3",
+      "name": "第三幕 明天见",
+      "source": {
+        "kind": "scene",
+        "module": "act3",
+        "engine": "canvas"
+      },
+      "start": 71.97,
+      "duration": 23.52
+    },
+    {
+      "id": "act4",
+      "name": "第四幕 赤脚",
+      "source": {
+        "kind": "scene",
+        "module": "act4",
+        "engine": "canvas"
+      },
+      "start": 95.49,
+      "duration": 18.39
+    },
+    {
+      "id": "act5",
+      "name": "第五幕 引力",
+      "source": {
+        "kind": "scene",
+        "module": "act5",
+        "engine": "canvas"
+      },
+      "start": 113.88,
+      "duration": 38.12
+    }
+  ]
+}
