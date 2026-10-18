@@ -1,0 +1,176 @@
+// 秤砣：入口。画法在 chengtuo-draw.ts，动作在 chengtuo-moves.ts，这里一起导出；
+// 另外有一套「按关节角度摆姿势」的参数（角度用度数），资源面板里调的就是它。
+
+import { z } from "zod";
+import { defineResources, resource } from "@frame/engine/resources";
+import { BODY, DEFAULT_POSE, NEUTRAL, drawChengtuo, holdBrick, rigOf, type DrawOptions, type Expr, type PoseIn } from "./chengtuo-draw";
+import { EXPRESSIONS } from "./chengtuo-moves";
+import { blinkAt, breathAt } from "./rig";
+
+export * from "./chengtuo-draw";
+export * from "./chengtuo-moves";
+
+const angle = (min: number, max: number, def: number, text: string) => z.number().min(min).max(max).default(def).describe(text);
+const amount = (text: string) => z.number().min(0).max(1).optional().describe(`${text}（0..1，不写用表情里的值）`);
+const handShape = z
+  .enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"])
+  .default("relax");
+const HAND_TEXT = "relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 摊平托着";
+const layer = z.enum(["auto", "front", "back"]).default("auto");
+
+/**
+ * 秤砣的参数。姿势按关节给角度（度）：0 = 垂下 / 伸直，正 = 顺时针（往画面左摆，朝左时就是往前）；
+ * 除了肩和胯，每个关节都相对上一节骨头。L 是正面时画面右边、3/4 时靠近镜头的那只手臂 / 腿，R 是另一只。
+ */
+export const chengtuoOptions = z.object({
+  face: z.number().min(-1).max(1).default(0).describe("朝向：0 正面，-1 3/4 朝画面左，1 3/4 朝画面右（中间值连续转身；朝右是整套镜像）"),
+  headTurn: z.number().min(-1).max(1).default(0).describe("头比身体多转多少（正 = 更朝向侧面）"),
+
+  expression: z
+    .enum(["平常", "笑", "哭着笑", "难过", "惊", "使劲", "闭眼", "哼歌", "仰望", "心疼"])
+    .default("平常")
+    .describe("表情；下面几项可以在它上面再调"),
+  blink: amount("闭眼"),
+  happy: amount("笑眼：下眼皮推上来，1 弯成 ∩"),
+  sad: amount("难过：外眼角压下、眉毛内端抬起"),
+  fierce: amount("使劲：内眼角压下、眉毛内端压下"),
+  wide: amount("睁大眼"),
+  smile: z.number().min(-1).max(1).optional().describe("嘴角：1 笑，-1 撇（不写用表情里的值）"),
+  open: amount("张嘴"),
+  lookX: z.number().min(-1).max(1).optional().describe("眼珠往左（−）右（+）看"),
+  lookY: z.number().min(-1).max(1).optional().describe("眼珠往上（−）下（+）看"),
+  blush: amount("腮红"),
+  tears: amount("眼泪"),
+
+  scarf: z.boolean().default(true).describe("围巾（关掉露出脖子）"),
+  gloves: z.boolean().default(true).describe("手套（关掉是光着的手）"),
+  brickL: z.boolean().default(false).describe("L 手里拿一块砖"),
+  brickR: z.boolean().default(false).describe("R 手里拿一块砖"),
+
+  neck: angle(-60, 60, 0, "脖子：正 = 仰头（朝左时；正面时是往画面右歪头）"),
+  lean: angle(-60, 100, 0, "腰：正 = 往前弯（正面时是往画面左歪）"),
+  rot: angle(-180, 180, 0, "整个人绕胯转（躺下、倒过来）"),
+
+  shoulderL: angle(-180, 180, -15, "L 肩：0 垂下；正面时往外张是负"),
+  elbowL: angle(-170, 170, -1, "L 肘（相对上臂）"),
+  wristL: angle(-120, 120, 15, "L 手腕（相对前臂）"),
+  handL: handShape.describe(`L 手形：${HAND_TEXT}`),
+  layerL: layer.describe("L 手臂画在身体前面还是后面（auto：3/4 时远侧的在后）"),
+  shoulderR: angle(-180, 180, 15, "R 肩：0 垂下；正面时往外张是正"),
+  elbowR: angle(-170, 170, 1, "R 肘（相对上臂）"),
+  wristR: angle(-120, 120, -15, "R 手腕（相对前臂）"),
+  handR: handShape.describe(`R 手形：${HAND_TEXT}`),
+  layerR: layer.describe("R 手臂画在身体前面还是后面"),
+
+  hipL: angle(-150, 150, -6, "L 胯：0 腿竖直；往前抬是正"),
+  kneeL: angle(-170, 170, -1, "L 膝（相对大腿）：往后弯是负"),
+  ankleL: angle(-90, 90, 7, "L 脚（相对小腿）：小腿竖直时 0 = 脚放平"),
+  thighL: z.number().min(0.4).max(1).default(1).describe("L 大腿的长度比例：正面蹲下、大腿朝镜头伸出来时压短"),
+  hipR: angle(-150, 150, 7, "R 胯"),
+  kneeR: angle(-170, 170, -1, "R 膝（相对大腿）"),
+  ankleR: angle(-90, 90, -6, "R 脚（相对小腿）"),
+  thighR: z.number().min(0.4).max(1).default(1).describe("R 大腿的长度比例"),
+
+  ground: z.boolean().default(true).describe("脚踩地：按腿的角度把低的那只脚放到地面上（关掉时胯停在站着的高度）"),
+  lift: z.number().min(-300).max(600).default(0).describe("再往上抬多高（跳起来、飘着；全身约 590 高）"),
+  float: z.boolean().default(false).describe("飘起来：头发、围巾往上漂，像在水里"),
+  wind: z.number().min(-2).max(2).default(0).describe("风 / 惯性：头发、围巾往画面左（−）或右（+）甩"),
+  idle: z.boolean().default(false).describe("呼吸和眨眼（按时间动）"),
+  line: z.number().min(0.4).max(2).default(1).describe("描边粗细倍数（特写时调细）"),
+});
+export type ChengtuoOptions = z.input<typeof chengtuoOptions>;
+
+const RAD = Math.PI / 180;
+const EXPR_KEYS = ["blink", "happy", "sad", "fierce", "wide", "smile", "open", "blush", "tears"] as const;
+
+/** 参数 → 姿势（drawChengtuo 用的 PoseIn，可以再和动作、关键帧混合）。t：时间（呼吸、眨眼、飘的摆动）。 */
+export function chengtuoPose(options: ChengtuoOptions = {}, t = 0): PoseIn {
+  const o = chengtuoOptions.parse(options);
+  const expr: Expr = { ...NEUTRAL, ...EXPRESSIONS[o.expression] };
+  for (const k of EXPR_KEYS) if (o[k] !== undefined) expr[k] = o[k];
+  expr.look = [o.lookX ?? expr.look[0], o.lookY ?? expr.look[1]];
+  if (o.idle) expr.blink = Math.max(expr.blink, blinkAt(t));
+  const auto = (l: "auto" | "front" | "back") => (l === "auto" ? undefined : l);
+  const pose: PoseIn = {
+    face: o.face,
+    headTurn: o.headTurn,
+    neck: o.neck * RAD,
+    lean: o.lean * RAD,
+    rot: o.rot * RAD,
+    breath: o.idle ? breathAt(t) : 0,
+    t,
+    armL: { a: o.shoulderL * RAD, b: o.elbowL * RAD, h: o.wristL * RAD, to: undefined, shape: o.handL, layer: auto(o.layerL) },
+    armR: { a: o.shoulderR * RAD, b: o.elbowR * RAD, h: o.wristR * RAD, to: undefined, shape: o.handR, layer: auto(o.layerR) },
+    legL: { a: o.hipL * RAD, b: o.kneeL * RAD, f: o.ankleL * RAD, thighK: o.thighL, to: undefined },
+    legR: { a: o.hipR * RAD, b: o.kneeR * RAD, f: o.ankleR * RAD, thighK: o.thighR, to: undefined },
+    expr,
+    float: o.float ? 1 : 0,
+    gravity: o.float ? [0, -1] : [0, 1],
+    // 风按画面方向给：朝右时整套镜像，这里先反过来
+    drag: [o.face > 0 ? -o.wind : o.wind, 0],
+    items: { scarf: o.scarf, gloves: o.gloves },
+  };
+  let y = DEFAULT_POSE.hip[1];
+  if (o.ground) {
+    const rig = rigOf({ ...pose, hip: [0, 0] });
+    y = -BODY.ankleBare - Math.max(rig.legs.L.end[1], rig.legs.R.end[1]);
+  }
+  pose.hip = [0, y - o.lift];
+  return pose;
+}
+
+/**
+ * 按参数画秤砣：(x, y) 是两脚之间的地面，s = 1 时全身约 590 高。
+ * opts 同 drawChengtuo（hold 手里拿的东西、beforeFrontArms 等）；brickL / brickR 打开时手里画一块砖。
+ */
+export function chengtuo(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, options: ChengtuoOptions = {}, t = 0, opts: DrawOptions = {}) {
+  const o = chengtuoOptions.parse(options);
+  const hold = { ...opts.hold };
+  if (o.brickL) hold.L ??= (c, hand) => holdBrick(c, hand);
+  if (o.brickR) hold.R ??= (c, hand) => holdBrick(c, hand);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  drawChengtuo(ctx, chengtuoPose(o, t), { ...opts, line: o.line * (opts.line ?? 1), hold });
+  ctx.restore();
+}
+
+export const resources = defineResources({
+  chengtuo: resource({
+    kind: "character",
+    title: "秤砣",
+    description:
+      "《引力》的女主秤砣：19 岁，黑色齐刘海长直发，米白毛衣、深灰裤袜、光脚，芥末黄围巾、藏青手套。二维骨架剪纸画风（深色描边、平涂、右下一道阴影）。正面和 3/4 连续转身；表情 10 种并可细调眼皮、眉毛、嘴；围巾、手套可以摘，手里可以拿砖；姿势按每个关节的角度摆，脚自动踩地；头发、围巾跟着风和失重飘。外套、铁靴、红袖标还没画。",
+    tags: ["秤砣", "女主", "少女", "长发", "围巾", "剪纸", "骨架", "引力"],
+    usage:
+      "chengtuo(ctx, x, y, s, { face, expression, shoulderL, elbowL, …, scarf, gloves }, t)  // (x, y) 两脚之间的地面，s = 1 全身约 590 高；动作用 drawChengtuo(ctx, pose) + walk / jumpGrab / kneelGive / float",
+    params: chengtuoOptions,
+    presets: {
+      "3/4 朝左": { face: -1, shoulderL: -5, elbowL: 16, wristL: 15, shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
+      "3/4 朝右": { face: 1, shoulderL: -5, elbowL: 16, wristL: 15, shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
+      抱臂: { shoulderL: -17, elbowL: 115, wristL: -14, shoulderR: 17, elbowR: -99, wristR: 6 },
+      半蹲: { shoulderL: -18, elbowL: 15, wristL: 9, shoulderR: 18, elbowR: -15, wristR: -9, hipL: -54, kneeL: 74, ankleL: -20, hipR: 54, kneeR: -74, ankleR: 20, thighL: 0.52, thighR: 0.52 },
+      挥手: { face: -1, expression: "笑", neck: 5, shoulderL: 155, elbowL: 29, wristL: -11, handL: "open", shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
+      坐: { face: -1, neck: -3, lean: 5, shoulderL: 20, elbowL: 34, wristL: 15, shoulderR: 26, elbowR: 37, wristR: -15, hipL: 88, kneeL: -95, ankleL: 7, hipR: 88, kneeR: -99, ankleR: 12, lookX: -0.4, lookY: 0.3 },
+      单膝跪递砖: { face: -1, neck: 10, lean: 11, shoulderL: 84, elbowL: 1, wristL: -14, handL: "flat", brickL: true, shoulderR: 40, elbowR: 63, wristR: 0, hipL: -16, kneeL: -110, ankleL: 62, hipR: 77, kneeR: -115, ankleR: 38, happy: 0.35, smile: 0.75, blush: 0.6, lookX: -0.6, lookY: -0.3 },
+      跳起来抓: { face: -1, expression: "使劲", neck: 29, lean: -5, lift: 187, shoulderL: 52, elbowL: 34, wristL: 0, handL: "open", shoulderR: 158, elbowR: -1, wristR: 11, handR: "grip", hipL: 25, kneeL: -55, ankleL: 30, hipR: 23, kneeR: -54, ankleR: 30, open: 0.3, lookX: -0.2, lookY: -1 },
+      飘: { face: -0.55, expression: "闭眼", float: true, lift: 60, neck: 8, lean: 5, rot: 3, shoulderL: -47, elbowL: 37, wristL: 11, handL: "open", shoulderR: 42, elbowR: 25, wristR: -6, handR: "open", hipL: -8, kneeL: -36, ankleL: 29, hipR: 4, kneeR: -17, ankleR: 26, blush: 0.4 },
+      摘了围巾和手套: { scarf: false, gloves: false },
+      呼吸眨眼: { idle: true },
+    },
+    preview: {
+      width: 640,
+      height: 960,
+      duration: 4,
+      background: "#f7ede8",
+      draw(ctx, t, p) {
+        const gy = 880;
+        ctx.fillStyle = "rgba(90,70,110,0.12)";
+        ctx.beginPath();
+        ctx.ellipse(320, gy, 130, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+        chengtuo(ctx, 320, gy, 1.22, p, t);
+      },
+    },
+  }),
+});
