@@ -298,7 +298,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     });
     // 失重时发根挪到头后面：往上、往中间收（被脸和刘海挡住），看着是从后脑勺长出来、往上漂，
     // 不是从脖子长出来；中间几缕藏在头后面的那截也短了，头顶上方有头发（用户 2026-10-18）
-    const C: V2[] = [[restX(sc, P) * (1 - 0.2 * rise), P - 45 * rise]];
+    const C: V2[] = [[restX(sc, P) * (1 - 0.35 * rise), P - 45 * rise]];
     for (let i = 1; i <= N; i++) {
       const y0 = P + (i - 1) * HAIR_DY;
       C.push(add(C[i - 1], rotateV([restX(sc, y0 + HAIR_DY) - restX(sc, y0), HAIR_DY], (a[i - 1] + a[i]) / 2)));
@@ -315,7 +315,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   /** 发梢那一线（风大时中间几绺拉长、两边的短） */
   const endY = (s: number) => hairEnd(s) + gust * (34 * (1 - (2 * s - 1) ** 2) - 14 + 14 * hairWisp(s));
   /** 风大时每缕往发梢越来越细（绕自己的中线 sc 收），相邻几缕之间拉开空隙、一缕一缕的；发根那一半不动 */
-  const thinS = (s: number, sc: number, y: number) => sc + (s - sc) * (1 - Math.max(gust, rise) * 0.5 * smooth01(P + 90, P + 170, y));
+  const thinS = (s: number, sc: number, y: number) => sc + (s - sc) * (1 - Math.max(gust * 0.5, rise * 0.65) * smooth01(P + 90, P + 170, y));
   /** 某缕上第 s 条在原来高度 y 处的点，放到画面上（加上风推的位移） */
   const W = (at: (s: number, y: number) => V2, s: number, y: number): V2 => {
     const q = at(s, y);
