@@ -260,7 +260,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     // 大风时各缕对着的方向也散开一点（用户 2026-10-18：「头发可以被吹散一点，更飘逸」）：飘出去那股上面几缕往上扬、下面几缕往下坠，
     // 发根附近还并在一起，越往发梢分得越开
     const ang = bendAlong(
-      phi + fan * (up * 0.7 + gust * 0.35),
+      // （飘出去时朝风向那边的边在上：往右吹 s = 1 在上，往左吹 s = 0 在上；两种都是 -fan 让上面几缕弯得更多）
+      phi + fan * (up * 0.7 - gust * 0.35),
       N,
       (i) => {
         const y = (i - 0.5) * HAIR_DY;
