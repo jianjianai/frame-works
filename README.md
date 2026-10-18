@@ -9,8 +9,8 @@
   - 表情 `expression`：平常、笑、哭着笑、难过、惊、使劲、闭眼、哼歌、仰望、心疼；`blink` `happy` `sad` `fierce` `wide` `smile` `open` `lookX/lookY` `blush` `tears` 在它上面再调。
   - 物品：`scarf` 围巾、`gloves` 手套（关掉是光着的手）、`brickL` / `brickR` 手里拿一块砖。外套、铁靴、红袖标还没画，画好后也放在这里开关。
   - 姿势：每个关节一个角度（度）。`neck` 脖子、`lean` 腰、`rot` 整个人转；手臂 `shoulder` 肩、`elbow` 肘、`wrist` 手腕、`hand` 手形、`layer` 画在身体前 / 后；腿 `hip` 胯、`knee` 膝、`ankle` 脚、`thigh` 大腿长度比例（正面蹲下时压短）。`ground` 打开时按腿的角度自动把脚放到地面，`lift` 再往上抬。
-  - 头发、围巾：`float` 飘起来（像在水里），`wind` 往左右甩。`idle` 呼吸和眨眼。
-  - 预设：3/4 朝左 / 朝右、抱臂、半蹲、挥手、坐、单膝跪递砖、跳起来抓、飘、摘了围巾和手套。
+  - 风和失重：`wind` 风的大小和方向（− 往画面左吹，+ 往右），头发、刘海、围巾一阵一阵地飘，4 秒一个循环；`float` 0–1 失重（0 垂着、0.5 没有重量、1 往上漂，像在水里），连续过渡、和风一起算。`idle` 呼吸和眨眼。
+  - 预设：3/4 朝左 / 朝右、抱臂、半蹲、挥手、坐、单膝跪递砖、跳起来抓、飘、摘了围巾和手套、呼吸眨眼、风里、水里漂。
 
 ## 用法
 
@@ -31,7 +31,7 @@ ctx.save(); ctx.translate(x, y); drawChengtuo(ctx, { ...pose, neck: -0.2 }); ctx
 
 ## 文件
 
-- `code/rig.ts`：通用的二维骨架工具（关节坐标系、两节 IK、平滑路径、合并描边、右下阴影、受力的链、关键帧混合、呼吸和眨眼、两张线稿之间的轮廓变形 `matchOutlines` / `lerpPts`），别的剪纸角色也用它。
+- `code/rig.ts`：通用的二维骨架工具（关节坐标系、两节 IK、平滑路径、合并描边、右下阴影、受力的链、关键帧混合、呼吸和眨眼、两张线稿之间的轮廓变形 `matchOutlines` / `lerpPts`、受力弯曲 `bendAlong`、风的循环 `loopSin` / `gusty`），别的剪纸角色也用它。
 - `code/chengtuo-draw.ts`：秤砣的画法、尺寸、配色、姿势类型。头和身体的轮廓是用户亲手画的线稿（作品 5b227852 的 `public/ref/秤砣-线稿.svg`）换算出来的贝塞尔常量。
 - `code/chengtuo-side.ts`：3/4 侧面（朝左）的线稿常量（用户画的，作品 5b227852 的 `public/ref/秤砣-侧面线稿.svg`，换算脚本在那个作品的 `production/侧面线稿换算.cjs`）：脸、刘海外轮廓、眼珠、鼻子、嘴、脖子、身子。转身时和正面的同一块逐点对应、平滑过渡。
 - `code/chengtuo-moves.ts`：动作、`POSES`、`EXPRESSIONS`。
