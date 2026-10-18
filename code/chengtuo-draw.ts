@@ -291,6 +291,8 @@ export interface Rig {
   th: number;
   /** 头的转角 */
   thh: number;
+  /** 头朝身体的反方向转（沿头的中线镜像着画） */
+  headMir: boolean;
   pelvis: Frame;
   chest: Frame;
   head: Frame;
@@ -325,8 +327,9 @@ export function rigOf(pIn: PoseIn | Pose): Rig {
   const mir = pose.face > 0;
   const u = Math.min(1, Math.abs(pose.face));
   const th = -u * 0.7;
+  // 头的转向：身体转了 u、头再多转 headTurn；往身体的反方向转过了正面（uh < 0）时，头按转过去的量画、再沿头的中线镜像
   const uh = Math.max(-1, Math.min(1, u + pose.headTurn));
-  const thh = -uh * 0.62;
+  const thh = -Math.abs(uh) * 0.62;
   const { fx } = bodyFns(th);
   const br = pose.breath * 1.6;
   const pelvis = new Frame(pose.hip[0], pose.hip[1], pose.rot);
@@ -381,6 +384,7 @@ export function rigOf(pIn: PoseIn | Pose): Rig {
     u,
     th,
     thh,
+    headMir: uh < 0,
     pelvis,
     chest,
     head,
@@ -445,8 +449,22 @@ export function drawChengtuo(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, 
     ctx.restore();
   };
 
+  // 头往身体的反方向转时：头（和后面的头发）沿头的中线镜像着画，光的方向、风在头上的方向跟着换回来
+  const headView = (fn: (r: Rig, k: Ink) => void) => {
+    if (!rig.headMir) return fn(rig, ink);
+    const { head } = rig;
+    ctx.save();
+    ctx.translate(head.x, head.y);
+    ctx.rotate(head.a);
+    ctx.scale(-1, 1);
+    ctx.rotate(-head.a);
+    ctx.translate(-head.x, -head.y);
+    fn({ ...rig, field: reflectOnHead(rig, rig.field) }, { ...ink, shade: [-ink.shade[0], ink.shade[1]] });
+    ctx.restore();
+  };
+
   scoped(() => {
-    drawBackHair(ctx, rig, ink);
+    headView((r, k) => drawBackHair(ctx, r, k));
     if (farBack("R")) drawArm(ctx, rig, "R", ink, opts);
     if (farBack("L")) drawArm(ctx, rig, "L", ink, opts);
     drawLegs(ctx, rig, ink);
@@ -456,7 +474,7 @@ export function drawChengtuo(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, 
     if (pose.items.scarf) drawScarfWrap(ctx, rig, ink, "back");
     drawTorso(ctx, rig, ink, behind);
     if (pose.items.scarf) drawScarfWrap(ctx, rig, ink, "front");
-    drawHead(ctx, rig, ink);
+    headView((r, k) => drawHead(ctx, r, k));
   });
   // 前面的手臂和围巾垂下来那头：围巾挂在胸前，垂在身边、举起来的手臂在它后面（风把围巾吹过手臂时压在手臂上），
   // 横在胸前的前臂（抱臂、递东西、抱人）压在围巾上面
@@ -470,6 +488,12 @@ export function drawChengtuo(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, 
   scoped(() => {
     for (const side of fronts) if (crossesChest(rig, side)) drawFront(side);
   });
+}
+
+/** 向量沿头的中线镜像（头的坐标里 x 取反） */
+function reflectOnHead(rig: Rig, v: V2): V2 {
+  const l = rotateV(v, -rig.head.a);
+  return rotateV([-l[0], l[1]], rig.head.a);
 }
 
 /** 前臂横在胸前（朝身体中线那边伸）：抱臂、递东西、抱人。按前臂在胸口坐标里朝里的分量判断 */
@@ -1370,7 +1394,7 @@ function drawScarfEnd(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const { endMap, wrapMap } = scarfMaps(rig);
   ctx.save();
   ctx.clip(outside(cubicPath(SCARF_WRAP, wrapMap)), "evenodd");
-  ctx.clip(outside(facePathOf(rig)), "evenodd");
+  ctx.clip(outside(facePathOf(rig, rig.headMir)), "evenodd");
   // 流苏先画（压在垂下来那头的下沿后面）
   for (const fr of SCARF_FRINGE) drawPart(ctx, cubicPath(fr, endMap), K.scarf, K.scarfShade, ink, ink.lw * 0.6);
   fillShaded(ctx, cubicPath(SCARF_END, endMap), K.scarf, K.scarfShade, ink);
@@ -1544,8 +1568,9 @@ function windBangs(pts: V2[], field: V2, pose: Pose): V2[] {
 function faceOf(rig: Rig): V2[] {
   return lerpPts(...FACE_TURN, -rig.thh / 0.62);
 }
-function facePathOf(rig: Rig): Path2D {
-  return polylinePath(faceOf(rig), ([x, y]) => rig.head.p(x, y));
+/** reflect：头镜像着画时（headMir），在没有镜像的画布上要用镜像过的脸 */
+function facePathOf(rig: Rig, reflect = false): Path2D {
+  return polylinePath(faceOf(rig), ([x, y]) => rig.head.p(reflect ? -x : x, y));
 }
 
 function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
