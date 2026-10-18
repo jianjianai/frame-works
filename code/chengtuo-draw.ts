@@ -437,10 +437,10 @@ export function drawChengtuo(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, 
   const farBack = (side: "L" | "R") => {
     const ap = side === "L" ? pose.armL : pose.armR;
     if (ap.layer) return ap.layer === "back";
-    return side === "R" && u > 0.35;
+    return side === "R" && u >= 0.55;
   };
   // 正面（和腿合并描边用同一个界限）：上臂画在身子后面，见 drawUpperArm
-  const front = u < 0.25;
+  const front = u < 0.55;
   const scoped = (fn: () => void) => {
     ctx.save();
     if (pose.squash) ctx.scale(1 + pose.squash * 0.6, 1 - pose.squash);
