@@ -493,16 +493,30 @@ const EYE_OUT = 10.6;
 
 /** 按 map 把一串三次贝塞尔点画成路径 */
 function cubicPath(pts: V2[], map: (p: V2) => V2, close = true, path = new Path2D()): Path2D {
-  const p0 = map(pts[0]);
-  path.moveTo(p0[0], p0[1]);
+  let p = map(pts[0]);
+  path.moveTo(p[0], p[1]);
   for (let i = 1; i + 2 < pts.length; i += 3) {
-    const a = map(pts[i]);
-    const b = map(pts[i + 1]);
     const c = map(pts[i + 2]);
+    const a = firmHandle(p, map(pts[i]), map(pts[i + 1]));
+    const b = firmHandle(c, map(pts[i + 1]), a);
     path.bezierCurveTo(a[0], a[1], b[0], b[1], c[0], c[1]);
+    p = c;
   }
   if (close) path.closePath();
   return path;
+}
+
+/**
+ * 手柄几乎是零长（线稿里的尖角、编辑器留下的零点几个单位的小钩子）时，换成顺着曲线方向的一小段：
+ * 显卡描边在这种点上会在轮廓外画出一小点白痕（头发右边耳朵高度那里）。形状看不出变化。
+ */
+function firmHandle(anchor: V2, handle: V2, other: V2): V2 {
+  if (Math.hypot(handle[0] - anchor[0], handle[1] - anchor[1]) >= 1) return handle;
+  const dx = other[0] - anchor[0];
+  const dy = other[1] - anchor[1];
+  const l = Math.hypot(dx, dy);
+  if (l < 1e-6) return handle;
+  return [anchor[0] + (dx / l) * 0.5, anchor[1] + (dy / l) * 0.5];
 }
 
 const smooth01 = (a: number, b: number, x: number) => {
