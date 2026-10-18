@@ -1,7 +1,8 @@
 // 秤砣：二维骨架剪纸角色。
 // 画法：深色描边 + 平涂 + 右下一道阴影；各部件按关节坐标拼起来，接缝不描边。
 // 坐标：角色单位，原点在两脚之间的地面，往上为负；全身约 590 高。
-// 朝向 face：0 正面，-1 3/4 朝画面左，1 3/4 朝画面右（中间值连续转身）。
+// 朝向 face：0 正面，-1 3/4 朝画面左，1 3/4 朝画面右（中间值连续转身）。正面和 3/4 各有一张用户画的线稿
+// （正面 `秤砣-线稿.svg`，3/4 `秤砣-侧面线稿.svg`），转身时身子、脖子、脸、刘海、五官从一张平滑过渡到另一张。
 // 姿势一律按「朝左 / 正面」写：armL / legL 在画面右边（3/4 时是靠近镜头的一侧），
 // 角度 0 = 垂下，正 = 顺时针（朝左时就是往前）；face > 0 时整套镜像。
 
@@ -12,9 +13,10 @@ import {
   Frame,
   add,
   angleOf,
-  capsule,
+  bezierPolyline,
   chain,
   clamp01,
+  clockwisePoly,
   dirOf,
   drawMerged,
   drawPart,
@@ -22,14 +24,23 @@ import {
   ik2,
   len,
   lerp,
+  lerpPts,
+  lerpV,
+  marksByBox,
+  matchOutlines,
   merge,
   mul,
+  nearestIndex,
   norm,
+  polylinePath,
+  resampleOpen,
   ribbonPts,
+  rowSpan,
   smoothPath,
   strokeLine,
   sub,
 } from "./rig";
+import { SIDE_BANGS, SIDE_FACE, SIDE_IRIS, SIDE_MOUTH, SIDE_NECK, SIDE_NOSE, SIDE_TORSO } from "./chengtuo-side";
 
 export const COLORS = {
   // 配色取自用户给的参考图（2026-10-17）：炭黑头发、灰调藏青外套、哑光芥末黄围巾、砖红袖标
@@ -321,7 +332,9 @@ export function rigOf(pIn: PoseIn | Pose): Rig {
   const cth = Math.cos(th);
 
   const arm = (side: 1 | -1, ap: ArmPose): Limb => {
-    const root = chest.p(side * BODY.shoulderW * cth, BODY.shoulderY - br);
+    // 肩关节：正面在线稿的位置，3/4 跟着侧面线稿的身子走
+    const sh = lerpV(side === 1 ? REST.shoulder : [-REST.shoulder[0], REST.shoulder[1]], SHOULDER_SIDE[side === 1 ? "L" : "R"], u);
+    const root = chest.p(sh[0], sh[1] - br);
     let a1 = chest.a + ap.a;
     let a2 = a1 + ap.b;
     const w = ap.to ? (ap.ik ?? 1) : 0;
@@ -524,6 +537,14 @@ const smooth01 = (a: number, b: number, x: number) => {
   return t * t * (3 - 2 * t);
 };
 
+/**
+ * 头发转到 3/4 时的横向位置（照三视图的 3/4 量的，用户 2026-10-18）：头顶那块几乎不挪，远侧（画面左）稍宽一点，盖住侧面刘海的边；
+ * 披下来的一片往后脑勺挪一点（近侧多、远侧少）。w：0 头顶 → 1 披下来的部分。
+ */
+function hairTurnX(x: number, uh: number, w: number) {
+  return x + uh * lerp(-1.2 + (2.2 * x) / 60, 4.5 + (2.5 * x) / 65, w);
+}
+
 function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const { head, thh, field, pose } = rig;
   const uh = -thh / 0.62;
@@ -535,9 +556,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     const delta = Math.max(-1.3, Math.min(1.3, angleOf(f)));
     const PIVOT = 15;
     const map = ([x, y]: V2): V2 => {
-      // 3/4：头顶那块（球）往后脑勺挪一点；披下来的一片在背后，挪得多些、略窄
       const w = smooth01(-5, 40, y);
-      const lx = lerp(x + 6 * uh, x * (1 - 0.12 * uh) + 13 * uh, w);
+      const lx = hairTurnX(x, uh, w);
       if (y <= PIVOT) return head.p(lx, y);
       const a = delta * smooth01(PIVOT, PIVOT + 30, y) * (0.3 + 0.7 * clamp01((y - PIVOT) / 150));
       const c = Math.cos(a);
@@ -549,7 +569,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     return;
   }
   // 头顶那块照线稿，下面接一缕一缕的长发
-  const dome = ([x, y]: V2): V2 => head.p(x + 6 * uh, y);
+  const dome = ([x, y]: V2): V2 => head.p(hairTurnX(x, uh, 0), y);
   const top = new Path2D();
   const h = HAIR_OUTLINE;
   const p0 = dome(h[0]);
@@ -568,7 +588,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const strands: Path2D[] = [];
   for (let i = 0; i < n; i++) {
     const d = -1.34 + (i * 2.68) / (n - 1);
-    const hx = -54 * Math.sin(d + thh) + 6 * uh;
+    const hx = -54 * Math.sin(d + thh) - 1.2 * uh;
     const root = head.p(hx, -4 + Math.abs(d) * 5);
     // 发根方向：顺着头皮往外、往上（中间的直直往上）
     const sn = Math.max(-1, Math.min(1, hx / 54));
@@ -784,6 +804,26 @@ const FOOT = {
   outer: toLocal(FOOT_OUT, REST.ankleR, 0),
   lines: FOOT_LINES.map((l) => toLocal(l, REST.ankleR, 0)),
 };
+
+// ——— 转身：身子、脖子从正面线稿过渡到侧面线稿（chengtuo-side.ts） ———
+/** 两张线稿的同一块按包围盒里的几个标志点切段、逐点对应（box：标志点在包围盒里的比例位置，按顺时针排） */
+function turnPair(front: V2[], side: V2[], box: V2[], perSeg: number): [V2[], V2[]] {
+  const a = clockwisePoly(bezierPolyline(front));
+  const b = clockwisePoly(bezierPolyline(side));
+  return matchOutlines(a, marksByBox(a, box), b, marksByBox(b, box), perSeg);
+}
+/** 身子：领口中间、右肩、右腰、右下角、下摆中间、左下角、左腰、左肩 */
+const TORSO_TURN = turnPair(TORSO, SIDE_TORSO, [[0.5, 0], [1, 0.1], [1, 0.55], [1, 1], [0.5, 1], [0, 1], [0, 0.55], [0, 0.1]], 16);
+/** 脖子：四个角 */
+const NECK_TURN = turnPair(NECK, SIDE_NECK, [[0, 0], [1, 0], [1, 1], [0, 1]], 8);
+/** 肩关节转到 3/4 时的位置：跟着身子轮廓上离它最近的那一点挪 */
+const SHOULDER_SIDE = (() => {
+  const follow = (p: V2): V2 => {
+    const i = nearestIndex(TORSO_TURN[0], p);
+    return add(p, sub(TORSO_TURN[1][i], TORSO_TURN[0][i]));
+  };
+  return { L: follow(REST.shoulder), R: follow([-REST.shoulder[0], REST.shoulder[1]]) };
+})();
 
 function polyPath(pts: V2[], map: (p: V2) => V2): Path2D {
   const path = new Path2D();
@@ -1010,14 +1050,12 @@ function drawLegs(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
 }
 
 // ——— 身子、脖子 ———
-/** 身子、脖子放到现在的姿势上（3/4 按椭圆柱转，a 半宽、b 半厚；呼吸时胸口以上起伏） */
+/** 身子、脖子放到现在的姿势上（转身时从正面线稿过渡到侧面线稿；呼吸时胸口以上起伏） */
 function torsoPaths(rig: Rig): { neck: Path2D; torso: Path2D } {
-  const { chest, th, pose } = rig;
-  const { fx } = bodyFns(th);
+  const { chest, u, pose } = rig;
   const br = pose.breath * 1.6;
-  const on = (a: number, b: number) => ([x, y]: V2): V2 =>
-    chest.p(fx(Math.asin(Math.max(-1, Math.min(1, x / a))), a, b), y - br * clamp01(-y / 140));
-  return { neck: cubicPath(NECK, on(16, 12)), torso: cubicPath(TORSO, on(54, 32)) };
+  const on = ([x, y]: V2): V2 => chest.p(x, y - br * clamp01(-y / 140));
+  return { neck: polylinePath(lerpPts(...NECK_TURN, u), on), torso: polylinePath(lerpPts(...TORSO_TURN, u), on) };
 }
 
 /** sides：正面时画在身子后面的上臂。身子的边在这些上臂的肩膀圈里不描（袖子和身子在肩膀是一块），腋下往下照常描 */
@@ -1133,19 +1171,119 @@ function faceHW(y: number): number {
   return 0;
 }
 
+// ——— 转身：脸、刘海、五官从正面线稿过渡到侧面线稿（chengtuo-side.ts） ———
+/** 正面的脸：FACE_CURVE 是右半边（头顶到下巴），左半边镜像 */
+const FRONT_FACE: V2[] = (() => {
+  const half = bezierPolyline(FACE_CURVE, 32, false);
+  return [...half, ...half.slice(1, -1).reverse().map(([x, y]): V2 => [-x, y])];
+})();
+/** 脸：头顶、最右、下巴、最左四个标志点之间逐点对应 */
+const FACE_TURN: [V2[], V2[]] = (() => {
+  const a = clockwisePoly(FRONT_FACE);
+  const b = clockwisePoly(bezierPolyline(SIDE_FACE));
+  const marks = (p: V2[]) => {
+    const by = (f: (q: V2) => number) => p.reduce((bi, q, i) => (f(q) > f(p[bi]) ? i : bi), 0);
+    return [by((q) => -q[1]), by((q) => q[0]), by((q) => q[1]), by((q) => -q[0])];
+  };
+  return matchOutlines(a, marks(a), b, marks(b), 32);
+})();
+
+/** 横向的分段线性映射：xs 里的每个位置对到 ys（两头按端点的斜率外推） */
+function pieceLinear(xs: number[], ys: number[]) {
+  return (x: number) => {
+    let i = 0;
+    while (i < xs.length - 2 && x > xs[i + 1]) i++;
+    return ys[i] + ((x - xs[i]) / (xs[i + 1] - xs[i])) * (ys[i + 1] - ys[i]);
+  };
+}
+
+/**
+ * 刘海：侧面线稿只画了外轮廓（下沿一条直线），缝照正面的补上——
+ * 正面的下沿（连同三道缝）按「左下角、两只眼珠、右下角」对齐的横向映射搬到侧面的下沿上，缝的深浅不变；
+ * 上面的圆顶按弧长对应（头顶是标志点）。
+ */
+const BANGS_TURN: [V2[], V2[]] = (() => {
+  const front = clockwisePoly(bezierPolyline(BANGS, 16));
+  const side = clockwisePoly(bezierPolyline(SIDE_BANGS, 24));
+  const [fR, fL] = marksByBox(front, [[1, 1], [0, 1]]);
+  const [sR, sL] = marksByBox(side, [[1, 1], [0, 1]]);
+  const walk = (p: V2[], a: number, b: number) => {
+    const out: V2[] = [];
+    for (let i = a; ; i = (i + 1) % p.length) {
+      out.push(p[i]);
+      if (i === b) return out;
+    }
+  };
+  // 下沿：右下角 → 左下角，逐点搬过去
+  const bottomF = walk(front, fR, fL);
+  const [FR, FL, SR, SL] = [front[fR], front[fL], side[sR], side[sL]];
+  const mapX = pieceLinear([FL[0], -EYE_X, EYE_X, FR[0]], [SL[0], SIDE_IRIS.R.c[0], SIDE_IRIS.L.c[0], SR[0]]);
+  const base = (a: V2, b: V2, x: number) => a[1] + ((x - a[0]) / (b[0] - a[0])) * (b[1] - a[1]);
+  const bottomS = bottomF.map(([x, y]): V2 => {
+    const nx = mapX(x);
+    return [nx, base(SL, SR, nx) + (y - base(FL, FR, x))];
+  });
+  // 圆顶：左下角 → 头顶 → 右下角
+  const dome = (p: V2[], a: number, b: number) => {
+    const d = walk(p, a, b);
+    const top = d.reduce((bi, q, i) => (q[1] < d[bi][1] ? i : bi), 0);
+    return [...resampleOpen(d.slice(0, top + 1), 24).slice(1), ...resampleOpen(d.slice(top), 24).slice(1, -1)];
+  };
+  // 侧面线稿里刘海的边和脸的边几乎重合：下沿以上，刘海的边至少比脸宽出一点，脸不从刘海边上露出来（露出来的一小条会被两边的头发压出一小截线）
+  const sideFace = FACE_TURN[1];
+  const cover = (p: V2): V2 => {
+    if (p[1] > base(SL, SR, p[0]) - 8) return p;
+    const span = rowSpan(sideFace, p[1]);
+    if (!span) return p;
+    return p[0] > (span[0] + span[1]) / 2 ? [Math.max(p[0], span[1] + 1.5), p[1]] : [Math.min(p[0], span[0] - 1.5), p[1]];
+  };
+  return [
+    [...bottomF, ...dome(front, fL, fR)],
+    [...bottomS, ...dome(side, sL, sR).map(cover)],
+  ];
+})();
+
+/** 眼睛的位置和大小：正面在线稿的位置，3/4 按侧面线稿的眼珠放、横竖按眼珠的大小缩（s：-1 画面左，1 画面右） */
+function eyeAt(s: number, uh: number) {
+  const side = s < 0 ? SIDE_IRIS.R : SIDE_IRIS.L;
+  return {
+    x: lerp(s * EYE_X, side.c[0], uh),
+    y: lerp(EYE_Y, side.c[1], uh),
+    sx: lerp(1, side.rx / IRIS_RX, uh),
+    sy: lerp(1, side.ry / IRIS_RY, uh),
+  };
+}
+/** 鼻子：起点、控制点、终点 */
+const NOSE_FRONT: V2[] = [[0.3, 19.1], [0.5, 20.9], [0, 22]];
+const NOSE_SIDE: V2[] = [SIDE_NOSE[0], lerpV(SIDE_NOSE[0], SIDE_NOSE[3], 0.5), SIDE_NOSE[3]];
+/** 嘴：正面线稿的嘴半宽 7.32；侧面按线稿的两个嘴角放（中点、半宽、斜度） */
+const MOUTH_SIDE = (() => {
+  const a = SIDE_MOUTH[0];
+  const b = SIDE_MOUTH[SIDE_MOUTH.length - 1];
+  return { c: lerpV(a, b, 0.5), wk: len(sub(b, a)) / 2 / 7.32, tilt: Math.atan2(b[1] - a[1], b[0] - a[0]) };
+})();
+
 function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const { head, thh, pose, field } = rig;
   const e = pose.expr;
-  const sth = Math.sin(thh);
-  const cth = Math.cos(thh);
   const uh = -thh / 0.62;
-  const cx = -4 * uh;
   const H = (x: number, y: number): V2 => head.p(x, y);
   const ang = head.a;
   const thin = ink.lw * 0.6;
 
-  // 贴着脸的东西（脸、耳朵、两边的头发）用同一个变换：3/4 时往前挪 cx，下半往朝向那边推
-  const place = ([x, y]: V2): V2 => H(cx + x + 15 * sth * Math.pow(clamp01((y - 2) / 46), 1.4), y);
+  // 脸：正面线稿 → 侧面线稿
+  const face = lerpPts(...FACE_TURN, uh);
+  const facePath = polylinePath(face, ([x, y]) => H(x, y));
+  // 贴着脸边的东西（耳朵、两边的头发）跟着脸的左右边走：每一行按正面脸的左右边 → 现在脸的左右边横向映射
+  const [fy0, fy1] = [Math.min(...face.map((p) => p[1])) + 1, Math.max(...face.map((p) => p[1])) - 1];
+  const place = ([x, y]: V2): V2 => {
+    if (uh <= 0) return H(x, y);
+    const yy = Math.max(fy0, Math.min(fy1, y));
+    const from = rowSpan(FACE_TURN[0], yy);
+    const to = rowSpan(face, yy);
+    if (!from || !to) return H(x, y);
+    return H(to[0] + ((x - from[0]) / (from[1] - from[0])) * (to[1] - to[0]), y);
+  };
 
   /** 皮肤（脸、耳朵）：头发的边只在压着它们的地方描线 */
   const skins: Path2D[] = [];
@@ -1163,35 +1301,21 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     skins.push(earPath);
   }
 
-  // 脸：用户画的脸形（FACE_HALF）
-  const facePts: P[] = [
-    ...FACE_HALF.map(place),
-    ...FACE_HALF.slice(1, -1)
-      .reverse()
-      .map(([x, y]) => place([-x, y])),
-  ];
-  const facePath = smoothPath(facePts);
   // 细线、不加阴影：下巴那道月牙阴影连着描边像一条粗线
   drawPart(ctx, facePath, K.skin, null, ink, thin);
   skins.push(facePath);
 
-  // 五官按一个前面扁一点的椭圆放（a 半宽、b 半厚）：3/4 时远侧的眼睛不会贴到脸边
-  const feat = (phi: number, a = 40, b = 30) => a * Math.sin(phi) * cth + b * Math.cos(phi) * sth + cx * 0.3;
-  /** φ 处横向被压扁的程度（正面 1，转到侧边变小，近侧略大于 1） */
-  const squeeze = (phi: number, a = 40, b = 30) => (a * Math.cos(phi) * cth - b * Math.sin(phi) * sth) / (a * Math.cos(phi));
-  const EYE_PHI = Math.asin(EYE_X / 40);
+  const eyes = [-1, 1].map((s) => ({ s, ...eyeAt(s, uh) }));
 
   // 腮红：眼睛下面一团淡淡的晕染，裁在脸里面
   ctx.save();
   ctx.clip(facePath);
-  for (const s of [-1, 1]) {
-    const vis = squeeze(s * 0.66);
-    if (vis < 0.2) continue;
-    const c = H(feat(s * 0.66), 23);
+  for (const { s, x, y, sx } of eyes) {
+    const c = H(x + s * 4 * sx, y + 23 - EYE_Y);
     ctx.save();
     ctx.translate(c[0], c[1]);
     ctx.rotate(ang);
-    ctx.scale(10.5 * Math.min(1, vis), 6.2);
+    ctx.scale(10.5 * sx, 6.2);
     const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
     g.addColorStop(0, `rgba(${K.blush},${0.3 + 0.35 * e.blush})`);
     g.addColorStop(1, `rgba(${K.blush},0)`);
@@ -1203,23 +1327,12 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   }
   ctx.restore();
 
-  // 眼睛
-  const eyeSq = (s: number) => Math.min(1.06, 0.25 + 0.75 * squeeze(s * EYE_PHI));
-  for (const s of [-1, 1]) {
-    if (squeeze(s * EYE_PHI) < 0.15) continue;
-    drawEye(ctx, head, feat(s * EYE_PHI), EYE_Y, eyeSq(s), s, e, ink, -uh);
-  }
-  // 眼泪
-  if (e.tears > 0.01) {
-    for (const s of [-1, 1]) {
-      if (squeeze(s * EYE_PHI) < 0.3) continue;
-      drawTears(ctx, head, feat(s * EYE_PHI), EYE_Y, s, e.tears, field, pose.t, ink);
-    }
-  }
-  // 鼻子：正面一个小短竖（线稿的位置），转过去带出一点鼻尖
+  // 眼睛、眼泪
+  for (const { s, x, y, sx, sy } of eyes) drawEye(ctx, head, x, y, sx, sy, s, e, ink);
+  if (e.tears > 0.01) for (const { s, x, y } of eyes) drawTears(ctx, head, x, y, s, e.tears, field, pose.t, ink);
+  // 鼻子：一小笔
   {
-    const nx = feat(0, 44, 36);
-    const ns = sth < -0.05 ? -1 : 1;
+    const [n0, n1, n2] = lerpPts(NOSE_FRONT, NOSE_SIDE, uh);
     ctx.save();
     ctx.translate(head.x, head.y);
     ctx.rotate(ang);
@@ -1228,25 +1341,22 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.beginPath();
-    ctx.moveTo(nx + 0.3 * ns, 19.1);
-    ctx.quadraticCurveTo(nx + (0.5 + 1.4 * uh) * ns, 20.9, nx, 22);
-    if (uh > 0.3) ctx.lineTo(nx - 1.6 * uh * ns, 21.8);
+    ctx.moveTo(n0[0], n0[1]);
+    ctx.quadraticCurveTo(n1[0], n1[1], n2[0], n2[1]);
     ctx.stroke();
     ctx.restore();
   }
-  // 嘴（线稿的位置）
-  drawMouth(ctx, head, feat(0, 36, 32), 32, 0.35 + 0.65 * cth, e, ink);
+  // 嘴
+  {
+    const c = lerpV([0, 32], MOUTH_SIDE.c, uh);
+    drawMouth(ctx, head, c[0], c[1], lerp(1, MOUTH_SIDE.wk, uh), lerp(0, MOUTH_SIDE.tilt, uh), e, ink);
+  }
 
   // 两边的头发：盖住脸边和耳根，跟着脸走
   const locks = [LOCK_L, LOCK_R].map((lock) => cubicPath(lock, place));
 
-  // 刘海：两边贴着脸（盖住额头），下沿的几道缝 3/4 时往朝向那边挪；上面一截跟着头顶
-  const bangsMap = ([x, y]: V2): V2 => {
-    const front = cx + x + 0.7 * 48 * sth * (1 - Math.min(1, (x / 48) ** 2));
-    const w = smooth01(-50, -20, y);
-    return H(lerp(x + 6 * uh, front, w), y);
-  };
-  const bangs = cubicPath(BANGS, bangsMap);
+  // 刘海：正面线稿 → 侧面线稿（缝照正面的补上）
+  const bangs = polylinePath(lerpPts(...BANGS_TURN, uh), ([x, y]) => H(x, y));
   // 先填色、后描边。头发压在头发上的边不描（刘海后面是头发、两边的头发接着刘海，用户 2026-10-17），
   // 只描压在脸和耳朵上的边：刘海的下沿和几道缝、两边的头发贴着脸和耳朵的那一侧
   for (const p of [...locks, bangs]) fillShaded(ctx, p, K.hair, null, ink);
@@ -1270,23 +1380,25 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   for (const p of locks) strokeOnSkin(p, [bangs]);
   strokeOnSkin(bangs, locks);
 
-  // 眉毛：透过刘海画在头发上
+  // 眉毛：透过刘海画在头发上，跟着眼睛走
   for (const [s, brow] of [[-1, BROW_L], [1, BROW_R]] as [number, V2[]][]) {
-    if (squeeze(s * EYE_PHI) < 0.15) continue;
-    drawBrow(ctx, head, brow, feat(s * EYE_PHI), eyeSq(s), s, e, ink);
+    const eye = eyes[s < 0 ? 0 : 1];
+    drawBrow(ctx, head, brow, eye.x, eye.y, eye.sx, eye.sy, s, e, ink);
   }
 }
 
 /**
  * 眼睛（用户线稿）：竖着的深色大眼珠，只在外侧有一道月牙眼白；上眼线从内上角沿着眼睛上沿、绕过外侧，到外侧中下。
- * 局部坐标以眼珠中心为原点，u 朝外眼角为正。sx 是 3/4 时横向压扁的比例。
+ * 局部坐标以眼珠中心为原点，u 朝外眼角为正。sx、sy 是转身时横向、纵向缩放的比例（侧面线稿的眼珠大小）。
  * 眨眼 = 上眼皮落下来（闭成眼睛中下部的一道弧）；笑 = 下眼皮推上来，到 1 弯成 ∩；难过外眼角压下、使劲内眼角压下。
- * turn 是头往哪边转（眼珠跟着朝那边）。
  */
-function drawEye(ctx: CanvasRenderingContext2D, head: Frame, ex: number, ey: number, sx: number, s: number, e: Expr, ink: Ink, turn: number) {
+function drawEye(ctx: CanvasRenderingContext2D, head: Frame, ex: number, ey: number, sx: number, sy: number, s: number, e: Expr, ink: Ink) {
   ctx.save();
   ctx.translate(head.x, head.y);
   ctx.rotate(head.a);
+  ctx.translate(ex, ey);
+  ctx.scale(1, sy);
+  ctx.translate(-ex, -ey);
   const ry = IRIS_RY * (1 + e.wide * 0.1);
   const out = EYE_OUT * (1 + e.wide * 0.08);
   const sq = (u: number, a: number) => Math.sqrt(Math.max(0, 1 - (u / a) ** 2));
@@ -1333,7 +1445,7 @@ function drawEye(ctx: CanvasRenderingContext2D, head: Frame, ex: number, ey: num
     // 眼珠：转身时两只都朝那边看
     const rx = IRIS_RX * sx * (1 - e.wide * 0.15);
     const iry = IRIS_RY * (1 - e.wide * 0.12);
-    const ix = ex + turn * 1.2 + e.look[0] * 2.4;
+    const ix = ex + e.look[0] * 2.4 * sx;
     const iy = ey + e.look[1] * 2.5;
     const g = ctx.createLinearGradient(0, iy - iry, 0, iy + iry);
     g.addColorStop(0, K.pupil);
@@ -1401,14 +1513,14 @@ function drawLiner(ctx: CanvasRenderingContext2D, pts: V2[], w: number[]) {
   ctx.fill(smoothPath(ribbon));
 }
 
-/** 眉毛（线稿的形状，透过刘海画在头发上）：难过时内端抬起，使劲时内端压下，惊讶时整条抬起。ex 是这只眼睛现在的位置。 */
-function drawBrow(ctx: CanvasRenderingContext2D, head: Frame, brow: V2[], ex: number, sx: number, s: number, e: Expr, ink: Ink) {
+/** 眉毛（线稿的形状，透过刘海画在头发上）：难过时内端抬起，使劲时内端压下，惊讶时整条抬起。(ex, ey) 是这只眼睛现在的位置，跟着眼睛缩放。 */
+function drawBrow(ctx: CanvasRenderingContext2D, head: Frame, brow: V2[], ex: number, ey: number, sx: number, sy: number, s: number, e: Expr, ink: Ink) {
   const lift = -3 * e.wide - 0.8 * e.happy + 0.6 * e.blink;
   const map = ([x, y]: V2): V2 => {
     // 0 内端 → 1 外端
     const t = clamp01((Math.abs(x) - 18.5) / 18.2);
     const dy = lift + e.sad * (-3.4 * (1 - t) + 1.6 * t) + e.fierce * (3 * (1 - t) - 1.2 * t);
-    return head.p(ex + (x - s * EYE_X) * sx, y + dy);
+    return head.p(ex + (x - s * EYE_X) * sx, ey + (y + dy - EYE_Y) * sy);
   };
   ctx.strokeStyle = K.brow;
   ctx.lineWidth = ink.lw * 0.5;
@@ -1416,11 +1528,14 @@ function drawBrow(ctx: CanvasRenderingContext2D, head: Frame, brow: V2[], ex: nu
   ctx.stroke(cubicPath(brow, map, false));
 }
 
-/** 嘴：一道细弧，中间粗、两头细；张嘴时是一个小口。 */
-function drawMouth(ctx: CanvasRenderingContext2D, head: Frame, mx: number, my: number, wk: number, e: Expr, ink: Ink) {
+/** 嘴：一道细弧，中间粗、两头细；张嘴时是一个小口。wk 横向缩放，tilt 斜度（转身时侧面线稿的嘴）。 */
+function drawMouth(ctx: CanvasRenderingContext2D, head: Frame, mx: number, my: number, wk: number, tilt: number, e: Expr, ink: Ink) {
   ctx.save();
   ctx.translate(head.x, head.y);
   ctx.rotate(head.a);
+  ctx.translate(mx, my);
+  ctx.rotate(tilt);
+  ctx.translate(-mx, -my);
   const s = e.smile - e.sad * 0.6;
   const o = e.open;
   const w = (6.8 + 1.6 * Math.abs(s) + o * 1.6) * wk;
