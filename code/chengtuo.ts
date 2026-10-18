@@ -3,15 +3,68 @@
 
 import { z } from "zod";
 import { defineResources, resource } from "@frame/engine/resources";
-import { type DrawOptions, type PoseIn, figureOptions, figurePose } from "./figure";
+import { type DrawOptions, type PoseIn, figurePose } from "./figure";
 import { CHENGTUO, drawChengtuo, holdBrick } from "./chengtuo-draw";
 
 export * from "./figure";
 export * from "./chengtuo-draw";
 export * from "./chengtuo-moves";
 
-/** 秤砣的参数：基础模型的参数（朝向、表情、每个关节的角度、风、失重…）加上她身上的物品 */
-export const chengtuoOptions = figureOptions.extend({
+/**
+ * 秤砣的参数：基础模型的参数（figureOptions，朝向、表情、每个关节的角度、风、失重…）加上她身上的物品。
+ * 资源面板不运行代码读参数，所以基础模型那部分在这里原样写一遍（改 figureOptions 时这里一起改）。
+ */
+export const chengtuoOptions = z.object({
+  face: z.number().min(-1).max(1).default(0).describe("朝向：0 正面，-1 3/4 朝画面左，1 3/4 朝画面右（中间值连续转身；朝右是整套镜像）"),
+  headTurn: z.number().min(-1).max(1).default(0).describe("头比身体多转多少（正 = 更朝向侧面）"),
+
+  expression: z
+    .enum(["平常", "笑", "哭着笑", "难过", "惊", "使劲", "闭眼", "哼歌", "仰望", "心疼"])
+    .default("平常")
+    .describe("表情；下面几项可以在它上面再调"),
+  blink: z.number().min(0).max(1).optional().describe("闭眼（0..1，不写用表情里的值）"),
+  happy: z.number().min(0).max(1).optional().describe("笑眼：下眼皮推上来，1 弯成 ∩（0..1，不写用表情里的值）"),
+  sad: z.number().min(0).max(1).optional().describe("难过：外眼角压下、眉毛内端抬起（0..1，不写用表情里的值）"),
+  fierce: z.number().min(0).max(1).optional().describe("使劲：内眼角压下、眉毛内端压下（0..1，不写用表情里的值）"),
+  wide: z.number().min(0).max(1).optional().describe("睁大眼（0..1，不写用表情里的值）"),
+  smile: z.number().min(-1).max(1).optional().describe("嘴角：1 笑，-1 撇（不写用表情里的值）"),
+  open: z.number().min(0).max(1).optional().describe("张嘴（0..1，不写用表情里的值）"),
+  lookX: z.number().min(-1).max(1).optional().describe("眼珠往左（−）右（+）看"),
+  lookY: z.number().min(-1).max(1).optional().describe("眼珠往上（−）下（+）看"),
+  blush: z.number().min(0).max(1).optional().describe("腮红（0..1，不写用表情里的值）"),
+  tears: z.number().min(0).max(1).optional().describe("眼泪（0..1，不写用表情里的值）"),
+
+  neck: z.number().min(-60).max(60).default(0).describe("脖子：正 = 仰头（朝左时；正面时是往画面右歪头）"),
+  lean: z.number().min(-60).max(100).default(0).describe("腰：正 = 往前弯（正面时是往画面左歪）"),
+  rot: z.number().min(-180).max(180).default(0).describe("整个人绕胯转（躺下、倒过来）"),
+
+  shoulderL: z.number().min(-180).max(180).default(-15).describe("L 肩：0 垂下；正面时往外张是负"),
+  elbowL: z.number().min(-170).max(170).default(-1).describe("L 肘（相对上臂）"),
+  wristL: z.number().min(-120).max(120).default(15).describe("L 手腕（相对前臂）"),
+  handL: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("L 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 平托"),
+  layerL: z.enum(["auto", "front", "back"]).default("auto").describe("L 手臂画在身体前面还是后面（auto：3/4 时远侧的在后）"),
+  shoulderR: z.number().min(-180).max(180).default(15).describe("R 肩：0 垂下；正面时往外张是正"),
+  elbowR: z.number().min(-170).max(170).default(1).describe("R 肘（相对上臂）"),
+  wristR: z.number().min(-120).max(120).default(-15).describe("R 手腕（相对前臂）"),
+  handR: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("R 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 平托"),
+  layerR: z.enum(["auto", "front", "back"]).default("auto").describe("R 手臂画在身体前面还是后面"),
+
+  hipL: z.number().min(-150).max(150).default(-6).describe("L 胯：0 腿竖直；往前抬是正"),
+  kneeL: z.number().min(-170).max(170).default(-1).describe("L 膝（相对大腿）：往后弯是负"),
+  ankleL: z.number().min(-90).max(90).default(7).describe("L 脚（相对小腿）：小腿竖直时 0 = 脚放平"),
+  thighL: z.number().min(0.4).max(1).default(1).describe("L 大腿的长度比例：正面蹲下、大腿朝镜头伸出来时压短"),
+  hipR: z.number().min(-150).max(150).default(7).describe("R 胯"),
+  kneeR: z.number().min(-170).max(170).default(-1).describe("R 膝（相对大腿）"),
+  ankleR: z.number().min(-90).max(90).default(-6).describe("R 脚（相对小腿）"),
+  thighR: z.number().min(0.4).max(1).default(1).describe("R 大腿的长度比例"),
+
+  ground: z.boolean().default(true).describe("脚踩地：按腿的角度把低的那只脚放到地面上（关掉时胯停在站着的高度）"),
+  lift: z.number().min(-300).max(600).default(0).describe("再往上抬多高（跳起来、飘着；全身约 590 高）"),
+  float: z.number().min(0).max(1).default(0).describe("失重：0 垂着 → 0.5 没有重量 → 1 头发、围巾都往上漂，像在水里（连续过渡，和风一起算）"),
+  wind: z.number().min(-2).max(2).default(0).describe("风：大小和方向，往画面左（−）或右（+）吹；头发、围巾跟着一阵一阵地飘（4 秒一个循环）"),
+  idle: z.boolean().default(false).describe("呼吸和眨眼（按时间动）"),
+  line: z.number().min(0.4).max(2).default(1).describe("描边粗细倍数（特写时调细）"),
+
   scarf: z.boolean().default(true).describe("围巾（关掉露出脖子）"),
   gloves: z.boolean().default(true).describe("手套（关掉是光着的手）"),
   coat: z.boolean().default(true).describe("外套（袖子卷到小臂中间；关掉是毛衣）"),
