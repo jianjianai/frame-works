@@ -212,7 +212,7 @@ function hairWisp(s: number) {
 
 /** 披下来的部分每隔 3 一行的左右边（线稿的轮廓；140 以下不再变宽） */
 const HAIR_DY = 3;
-const HAIR_ROWS: V2[] = Array.from({ length: 66 }, (_, i) => rowSpan(HAIR_POLY, Math.min(HAIR_PIVOT + i * HAIR_DY, 140)) ?? [-60, 60]);
+const HAIR_ROWS: V2[] = Array.from({ length: 92 }, (_, i) => rowSpan(HAIR_POLY, Math.min(HAIR_PIVOT + i * HAIR_DY, 140)) ?? [-60, 60]);
 
 /** 披下来那片上第 s 条（0 左边 → 1 右边）在高度 y 处的 x：头的坐标，还没转身、没受力；140 以下两边稍微收拢 */
 function hairRestX(s: number, y: number) {
@@ -273,7 +273,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     // 发根附近还并在一起，越往发梢分得越开
     const ang = bendAlong(
       // （飘出去时朝风向那边的边在上：往右吹 s = 1 在上，往左吹 s = 0 在上；两种都是 -fan 让上面几缕弯得更多）
-      phi + fan * (up * 0.7 - gust * 0.2),
+      // 失重时中间几缕往中间偏：从头后面往上飘、在头顶上方露出来，是背后的头发（用户 2026-10-18）；外面几缕还是往两边翻
+      phi + fan * (up * 0.7 - gust * 0.2) - Math.sign(fan) * up * 0.45 * (1 - Math.abs(fan)) ** 2,
       N,
       (i) => {
         const y = (i - 0.5) * HAIR_DY;
@@ -305,7 +306,9 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     return { s0, s1, at };
   });
   /** 发梢那一线（风大时中间几绺拉长、两边的短） */
-  const endY = (s: number) => hairEnd(s) + gust * (34 * (1 - (2 * s - 1) ** 2) - 14 + 14 * hairWisp(s));
+  // 失重时中间几缕（往头顶上飘的）长一些，从头后面出来以后还有一段
+  const endY = (s: number) =>
+    hairEnd(s) + gust * (34 * (1 - (2 * s - 1) ** 2) - 14 + 14 * hairWisp(s)) + up * 70 * (1 - Math.abs(2 * s - 1)) ** 1.5;
   /** 风大时每缕往发梢越来越细（绕自己的中线 sc 收），相邻几缕之间拉开空隙、一缕一缕的；发根那一半不动 */
   const thinS = (s: number, sc: number, y: number) => sc + (s - sc) * (1 - gust * 0.5 * smooth01(P + 90, P + 170, y));
   /** 某缕上第 s 条在原来高度 y 处的点，放到画面上（加上风推的位移） */
@@ -341,17 +344,17 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   while (HAIR_POLY[lastBelow][1] <= P) lastBelow--;
   // 两头补上正好在 P 这一行的点：头顶这块的下边和下面几绺的上边严丝合缝，不然漏出一条缝、露出描边（耳朵高度两边各一小段横线）
   const onRow = (a: V2, b: V2): V2 => [lerp(a[0], b[0], (P - a[1]) / (b[1] - a[1])), P];
-  const dome = polylinePath(
-    [
-      onRow(HAIR_POLY[lastBelow], HAIR_POLY[(lastBelow + 1) % HAIR_POLY.length]),
-      ...HAIR_POLY.slice(lastBelow + 1),
-      ...HAIR_POLY.slice(0, firstBelow),
-      onRow(HAIR_POLY[firstBelow - 1], HAIR_POLY[firstBelow]),
-    ].map(([x, y]) => {
-      const tx = turn(x, y);
-      return head.p(tx + windDx(tx, y), y);
-    }),
-  );
+  const domeSrc: V2[] = [
+    onRow(HAIR_POLY[lastBelow], HAIR_POLY[(lastBelow + 1) % HAIR_POLY.length]),
+    ...HAIR_POLY.slice(lastBelow + 1),
+    ...HAIR_POLY.slice(0, firstBelow),
+    onRow(HAIR_POLY[firstBelow - 1], HAIR_POLY[firstBelow]),
+  ];
+  const domeAt = ([x, y]: V2): V2 => {
+    const tx = turn(x, y);
+    return head.p(tx + windDx(tx, y), y);
+  };
+  const dome = polylinePath(domeSrc.map(domeAt));
   // 耳朵上下这一段的外轮廓（头顶接下面几缕的地方）用一条光滑的曲线兜住：头顶照线稿、下面几缕按受力弯，
   // 风大时两段接成一个角或一道 S（用户 2026-10-18：face 1 wind 2「这两个地方还是不自然」）。
   // 只往外补、不往里削，风越大越贴这条曲线，没风时一点不动
@@ -408,6 +411,27 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   ctx.lineCap = "round";
   for (const p of [dome, ...pieces, ...bridges]) ctx.stroke(p);
   fillShaded(ctx, all, K.hair, K.hairShade, ink);
+  // 失重时中间几缕从头后面飘上来、叠在头顶后面：头顶那条轮廓线照样描出来（用户 2026-10-18「头上方的线条需要保留」）。
+  // 只描在后面有头发的地方：头顶本来就是外轮廓的地方已经有线，再描会变粗
+  const lineK = smooth01(0.05, 0.4, up);
+  if (lineK > 0) {
+    const behind = new Path2D();
+    for (const p of pieces) behind.addPath(p);
+    const top = new Path2D();
+    domeSrc
+      .filter(([, y]) => y < P - 8)
+      .map(domeAt)
+      .forEach(([x, y], i) => (i ? top.lineTo(x, y) : top.moveTo(x, y)));
+    ctx.save();
+    ctx.clip(behind);
+    ctx.globalAlpha *= lineK;
+    ctx.strokeStyle = K.line;
+    ctx.lineWidth = ink.lw;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.stroke(top);
+    ctx.restore();
+  }
 
   // 分缝往上的细发丝线（画在左边那绺的右边上）：分缝处粗、往上变细
   ctx.fillStyle = K.line;
