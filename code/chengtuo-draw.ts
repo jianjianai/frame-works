@@ -286,7 +286,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     );
     // 抖：风里一绺一绺地抖，失重时像在水里慢慢漾；越往发梢越大
     const a = ang.map((v, i) => {
-      const r = i / N;
+      // 按原来的 65 段算往发梢的位置（为了失重时加长多算了几段，风里的抖不跟着变小）
+      const r = i / 65;
       // 风里的抖：两个节奏叠在一起、每缕错开，发梢各摆各的
       const flap = 0.16 * loopSin(t, 5, k * 0.9 - i * 0.15) + 0.08 * loopSin(t, 3, k * 2.1 - i * 0.1);
       return v + gust * flap * r ** 1.5 + pose.float * 0.25 * loopSin(t, 1, k * 1.3 - i * 0.08) * r;
