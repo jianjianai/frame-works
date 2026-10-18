@@ -681,8 +681,15 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const firstBelow = HAIR_POLY.findIndex((q) => q[1] > P);
   let lastBelow = HAIR_POLY.length - 1;
   while (HAIR_POLY[lastBelow][1] <= P) lastBelow--;
+  // 两头补上正好在 P 这一行的点：头顶这块的下边和下面几绺的上边严丝合缝，不然漏出一条缝、露出描边（耳朵高度两边各一小段横线）
+  const onRow = (a: V2, b: V2): V2 => [lerp(a[0], b[0], (P - a[1]) / (b[1] - a[1])), P];
   const dome = polylinePath(
-    [...HAIR_POLY.slice(lastBelow + 1), ...HAIR_POLY.slice(0, firstBelow)].map(([x, y]) => head.p(turn(x, y), y)),
+    [
+      onRow(HAIR_POLY[lastBelow], HAIR_POLY[(lastBelow + 1) % HAIR_POLY.length]),
+      ...HAIR_POLY.slice(lastBelow + 1),
+      ...HAIR_POLY.slice(0, firstBelow),
+      onRow(HAIR_POLY[firstBelow - 1], HAIR_POLY[firstBelow]),
+    ].map(([x, y]) => head.p(turn(x, y), y)),
   );
   // 合并描边：每块先描两倍宽的边，再整个一起填色、加阴影（拼起来的地方不留缝）
   const all = new Path2D();
@@ -914,6 +921,11 @@ const TORSO_TURN = turnPair(TORSO, SIDE_TORSO, [[0.5, 0], [1, 0.1], [1, 0.55], [
 /** 脖子：四个角 */
 const NECK_TURN = turnPair(NECK, SIDE_NECK, [[0, 0], [1, 0], [1, 1], [0, 1]], 8);
 /** 肩关节转到 3/4 时的位置：跟着身子轮廓上离它最近的那一点挪 */
+/** 3/4 时围脖往前（画面左）挪多少：跟着脖子的中间走 */
+const WRAP_SIDE_SHIFT = (() => {
+  const mid = (pts: V2[]) => pts.reduce((a, p) => a + p[0], 0) / pts.length;
+  return mid(NECK_TURN[1]) - mid(NECK_TURN[0]);
+})();
 /** 3/4 时两腿往前（画面左）挪多少：跟着毛衣下摆中间那一点走 */
 const HIP_SIDE_SHIFT = (() => {
   const i = nearestIndex(TORSO_TURN[0], [0, -5.4]);
@@ -1190,10 +1202,11 @@ function scarfMaps(rig: Rig) {
   const { chest, th, pose, field } = rig;
   const { fx } = bodyFns(th);
   const br = pose.breath * 1.6;
-  // 3/4：贴着身体的东西按椭圆柱转（a 半宽、b 半厚）
+  // 3/4：垂下来那头贴在胸前，按椭圆柱转（a 半宽、b 半厚）
   const onBody = (a: number, b: number) => (x: number) => fx(Math.asin(Math.max(-1, Math.min(1, x / a))), a, b);
-  const wrapX = onBody(37, 28);
   const endX = onBody(56, 34);
+  // 绕脖子那圈是圆的（用户 2026-10-18）：转身时不压窄，整圈跟着脖子平移
+  const wrapShift = rig.u * WRAP_SIDE_SHIFT;
 
   // 垂下来的一头：从围脖下面出来，一段一段转向受力方向（走路、跳、弯腰、风，bendAlong）；
   // 受力朝上（失重、往下坠）时先往外侧（画面右边）偏，从外侧翻上去，不盖住脸（转角限制在 -2.8..1.4）；
@@ -1224,7 +1237,7 @@ function scarfMaps(rig: Rig) {
     const dy = y - PIV[1];
     return chest.p(PIV[0] + dx * c - dy * s, PIV[1] + dx * s + dy * c - br);
   };
-  const wrapMap = ([x, y]: V2): V2 => chest.p(wrapX(x), y - br);
+  const wrapMap = ([x, y]: V2): V2 => chest.p(x + wrapShift, y - br);
   return { endMap, wrapMap };
 }
 
