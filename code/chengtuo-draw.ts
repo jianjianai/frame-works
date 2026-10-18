@@ -243,15 +243,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     const d = Math.min(y - P, 40);
     return 1 + slope * d - (slope * d * d) / 80;
   };
-  /**
-   * 风推的横向位移（x, y 是没受力时的位置，头顶和下面几缕用同一个，接缝处不会错开）：整头往下风处推；
-   * 下风那边耳朵上下再往外鼓出一块，把头顶顺着接到飘出去的那股头发上（不在耳朵旁折出一个往里凹的角）
-   */
-  const windDx = (x: number, y: number) => {
-    const side = smooth01(0.25, 1, (x * Math.sign(push)) / 60);
-    const bell = smooth01(-40, P, y) * (1 - smooth01(P, P + 60, y));
-    return push * (leanK(y) + 2 * side * bell);
-  };
+  /** 风推的横向位移（y 是没受力时的高度，头顶和下面几缕用同一个，接缝处不会错开） */
+  const windDx = (_x: number, y: number) => push * leanK(y);
   const n = HAIR_TIPS.length;
   const N = HAIR_ROWS.length - 1;
 
@@ -363,7 +356,11 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     const tB = unit(sub(B, edge[m - 1]));
     const c1: V2 = [A[0] + tA[0] * d, A[1] + tA[1] * d];
     const c2: V2 = [B[0] - tB[0] * d, B[1] - tB[1] * d];
+    // 往外补的方向：两端连线的法线，朝离开头的那边（整段一个方向，轮廓来回折时也不会忘左忘右）
     const center = head.p(0, P);
+    let nn = unit([B[1] - A[1], A[0] - B[0]]);
+    const away = sub(lerpV(A, B, 0.5), center);
+    if (nn[0] * away[0] + nn[1] * away[1] < 0) nn = [-nn[0], -nn[1]];
     const curve = edge.map((o, i): V2 => {
       const t = i / m;
       const u = 1 - t;
@@ -371,11 +368,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
         u * u * u * A[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * B[0],
         u * u * u * A[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * B[1],
       ];
-      // 沿外法线往外补到曲线上（曲线在里面就不动）
-      const T = sub(edge[Math.min(m, i + 1)], edge[Math.max(0, i - 1)]);
-      let nn = unit([T[1], -T[0]]);
-      const away = sub(o, center);
-      if (nn[0] * away[0] + nn[1] * away[1] < 0) nn = [-nn[0], -nn[1]];
+      // 曲线在外面就补到曲线上，在里面就不动
       const k = Math.max(0, (b[0] - o[0]) * nn[0] + (b[1] - o[1]) * nn[1]) * gust;
       return [o[0] + nn[0] * k, o[1] + nn[1] * k];
     });
