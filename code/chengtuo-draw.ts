@@ -780,6 +780,12 @@ export const CHENGTUO: Look = {
   },
   onForearm: drawCuff,
   shoe: (rig) => !!items(rig).boots,
+  // 铁靴着地：鞋底和靴筒一圈（跪着时靴筒前面贴着地）
+  soles: (rig, side) => {
+    const m = bootMap(rig, side);
+    const anchors = (pts: V2[]) => pts.filter((_, i) => i % 3 === 0);
+    return [...anchors(BOOT_L.sole), ...anchors(BOOT_L.body)].map(m);
+  },
   overLeg: (ctx, rig, side, ink) => {
     if (items(rig).boots && (side === "L" ? rig.pose.legL : rig.pose.legR).boot) drawBoot(ctx, rig, side, ink);
   },
