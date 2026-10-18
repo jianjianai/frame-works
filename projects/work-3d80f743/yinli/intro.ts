@@ -18,6 +18,7 @@ import { ash, crack, sky, whiteBand, city, net, ground, tower, WHITE } from "./w
 import { facades } from "./sets";
 import { PAL, UMBRELLAS, crowdLook, blend, KID_MOM_LOOK } from "./palette";
 import { SHOP, shopScene } from "./shop";
+import { qin, qinJoints, kneelLegs, type QinStyle } from "./qin";
 
 export const beat = (k: number) => 0.013 + 0.5 * k;
 const lerpPt = (a: Pt, b: Pt, e: number): Pt => [mix(a[0], b[0], e), mix(a[1], b[1], e)];
@@ -501,6 +502,8 @@ function briefcase(c: C, t: number) {
 }
 
 // ---------- ⑤⑥⑦ 她 ----------
+/** 单膝跪下掏砖：前面立着的是远侧那条腿，砖从它的靴筒里抽出来 */
+const kneelCt = (w: number): QinStyle => ({ legs: kneelLegs(w) });
 function qinWalkAt(t: number): Fig {
   const x = qinX(t);
   // 步子按走过的路算：摸小石头的头时几乎停住，脚步也跟着慢下来；每一步落在拍子上
@@ -585,9 +588,10 @@ function qinFig(t: number): Fig {
   if (t < B_STAND) {
     // 单膝跪下，手伸进前面那只靴筒，抽出一块砖（很沉），放进他手里
     const kneel = E.io(ph(t, B_KNEEL, B_BOOT));
-    const f: Fig = { ...base, y: FRONT, lean: mix(-0.1, -0.42, kneel), legL: mix(-0.35, -1.35, kneel), kneeL: mix(0.6, 1.35, kneel), legR: mix(0.4, 0.35, kneel), kneeR: mix(0.6, 1.25, kneel), aR: 0.35, bendR: -0.4, head: -0.3, eyes: "open" };
-    const fj = pose(f);
-    const bootTop: Pt = [fj.anL[0] - 2, fj.anL[1] - 24];
+    const f: Fig = { ...base, y: FRONT, lean: mix(-0.1, -0.42, kneel), legL: mix(-0.35, -1.35, kneel), kneeL: mix(0.6, 1.35, kneel), legR: mix(0.4, 0.35, kneel), kneeR: mix(0.6, 1.25, kneel), aR: 0.35, bendR: -0.4, head: -0.3, eyes: "open", ct: kneelCt(kneel) };
+    // 靴筒口：跪稳以后前面那只靴子（秤砣远侧的腿）的位置
+    const fj = qinJoints({ ...f, ct: kneelCt(1) });
+    const bootTop: Pt = [fj.anL[0] - 2, fj.anL[1] - 20];
     const chestP: Pt = [x - 26, FRONT - 98];
     const give: Pt = [ZK + 31 + BR, FRONT - 70 - BR * 0.62 - 2];
     let hand: Pt;
@@ -598,12 +602,12 @@ function qinFig(t: number): Fig {
     else if (t < B_BACK) hand = [give[0], give[1] + brickDip(t)];
     else hand = lerpPt([give[0], give[1] + brickDip(B_BACK)], [x - 16, FRONT - 52], E.io(ph(t, B_BACK, B_BACK + 0.3)));
     const lookHim = E.io(ph(t, B_TURN, B_GIVE));
-    return { ...f, hL: hand, head: mix(-0.3, 0.05, lookHim), eyes: t > B_GIVE + 0.05 ? "smile" : "open" };
+    return { ...f, hL: hand, head: mix(-0.3, 0.05, lookHim), eyes: t > B_GIVE + 0.05 ? "smile" : "open", ct: { ...kneelCt(kneel), layerFar: "front", handFar: t > B_GIVE ? "flat" : "grip", expression: t > B_GIVE + 0.05 ? "微笑" : t > B_TURN ? "心疼" : "低头看" } };
   }
   if (t < T_UP) {
     // 冲他笑了一下，站起来。伏笔：送出一块砖，她轻了——站起来时脚跟离地了一下
     const st = E.io(ph(t, B_STAND, B_STAND + 0.5));
-    return { ...base, y: FRONT - 11 * Math.sin(Math.PI * ph(t, B_STAND + 0.38, B_STAND + 0.6)), lean: mix(-0.42, 0.04, st), legL: mix(-1.35, -0.1, st), kneeL: mix(1.35, 0.15, st), legR: mix(0.35, 0.1, st), kneeR: mix(1.25, 0.15, st), aL: -0.15, aR: 0.2, head: mix(0.05, -0.1, st), eyes: "smile" };
+    return { ...base, y: FRONT - 11 * Math.sin(Math.PI * ph(t, B_STAND + 0.38, B_STAND + 0.6)), lean: mix(-0.42, 0.04, st), legL: mix(-1.35, -0.1, st), kneeL: mix(1.35, 0.15, st), legR: mix(0.35, 0.1, st), kneeR: mix(1.25, 0.15, st), aL: -0.15, aR: 0.2, head: mix(0.05, -0.1, st), eyes: "smile", ct: kneelCt(1 - st) };
   }
   // 往前走，只和两个人打招呼：抬头看窗后的老钟，抬手、点头；弯腰摸摸跑过来的小石头的头
   const f = qinWalkAt(t);
@@ -624,6 +628,8 @@ function qinFig(t: number): Fig {
     hL,
     head: 0.05 + 0.5 * toLao - 0.3 * nodL - 0.45 * pat,
     eyes: toLao > 0.3 || pat > 0.3 ? "smile" : "open",
+    // 朝窗后的老钟挥手：远侧的手举过头（素材库「挥手」），近侧的手会横过脸
+    ct: { arms: { far: [138 + 8 * Math.sin(t * 12), 38, 8], w: lift }, handFar: lift > 0.25 ? "open" : pat > 0.3 ? "flat" : undefined },
   };
 }
 
@@ -631,7 +637,7 @@ function qinFig(t: number): Fig {
 function brickAt(t: number): { p: Pt; rot: number; warm: number } | null {
   if (t < B_PULL) return null;
   if (t < B_GIVE) {
-    const h = pose(qinFig(t)).handL;
+    const h = qinJoints(qinFig(t), t).handL;
     const v = E.io(ph(t, B_TURN, B_GIVE));
     return { p: lerpPt([h[0], h[1] + BR * 0.95], [h[0] - BR, h[1] + 2], v), rot: mix(Math.PI / 2 - 0.08, -0.05, v), warm: 0 };
   }
@@ -946,10 +952,10 @@ const s01: Shot = {
       if (br && t < B_PULL + 0.15) stone(c, br.p[0], br.p[1], BR, "活下去", br.warm, br.rot);
       // 起身以后她从周磊身后绕过去：先画她，他挡在前面
       const behind = t > 9.1;
-      if (behind) figure(c, qinFig(t), t);
+      if (behind) qin(c, qinFig, t);
       const zj = figure(c, zhouFig(t), t);
       if (t < T_LAND) cutRope(c, zj.anR, t, 40); // 他脚踝上也拖着一截割断的红绳
-      if (!behind) figure(c, qinFig(t), t);
+      if (!behind) qin(c, qinFig, t);
       if (br && t >= B_PULL + 0.15) stone(c, br.p[0], br.p[1], BR, "活下去", br.warm, br.rot);
       puffs(c, t);
       c.restore();

@@ -6,6 +6,7 @@ import { GIRL_LOOK, highSet, HIGH_RB, HIGH_SIT } from "./verse1";
 import { qinRoom, street } from "./sets";
 import { hand, pen } from "./props";
 import { PAL } from "./palette";
+import { qin, qinJoints, kneelLegs } from "./qin";
 
 /** 近景：在砖上写字、递过去。recv 是接砖那只手的位置 */
 export function writeClose(c: C, t: number, o: { t0: number; words: string; give: number; recv: [number, number]; warmAt: number; bg?: string; wEnd?: number; recvSleeve?: string }) {
@@ -71,7 +72,7 @@ function deskScene(c: C, t: number, o: { pile?: boolean } = {}) {
   c.fillRect(DESK_X + 14, -48, 8, 48);
   // 桌上：写好的一摞，和正在写的那块
   for (let i = 0; i < 4; i++) stone(c, 380, -158 - i * 13, 10, "", 0, 0.02 * (i % 2 ? 1 : -1));
-  figure(c, qinWriting(t), t);
+  qin(c, qinWriting, t);
   stone(c, 236, -165, 10, "活下去", 0, -0.04);
   if (o.pile) brickPile(c);
 }
@@ -135,7 +136,7 @@ const s14: Shot = {
 const RB = HIGH_RB;
 const QK = HIGH_SIT.qin; // 她跪在这里
 const T_GOT = 36.95; // 接住：很沉
-const kneelQin: Fig = { x: QK, y: RB, kind: "qin", facing: 1, legL: 1.3, kneeL: 1.7, legR: 1.1, kneeR: 1.5, lean: 0.1, head: -0.4, rim: 0.8, eyes: "open" };
+const kneelQin: Fig = { x: QK, y: RB, kind: "qin", facing: 1, legL: 1.3, kneeL: 1.7, legR: 1.1, kneeR: 1.5, lean: 0.1, head: -0.4, rim: 0.8, eyes: "open", ct: { legs: kneelLegs(1) } };
 function girlRoof(t: number): Fig {
   const upright = E.io(ph(t, 35.95, 36.3));
   const got = E.out(ph(t, T_GOT, T_GOT + 0.12));
@@ -171,10 +172,10 @@ function girlRoof(t: number): Fig {
   return { ...base, hL: [h[0] - 5, h[1] + 2], hR: [h[0] + 6, h[1]] };
 }
 function qinRoof(t: number): Fig {
-  const fj = pose(kneelQin);
+  const fj = qinJoints(kneelQin); // 秤砣跪着：远侧那条腿立在前面，砖从它的靴筒里抽出来
   const gj = pose({ ...girlRoof(Math.min(t, T_GOT - 0.01)), hL: undefined, hR: undefined });
   const rest: Pt = [QK + 24, RB - 66];
-  const bootTop: Pt = [fj.anR[0] + 4, fj.anR[1] - 26];
+  const bootTop: Pt = [fj.anL[0] + 2, fj.anL[1] - 20];
   const chestP: Pt = [QK + 30, RB - 108];
   const give: Pt = [gj.neck[0] - 26, gj.neck[1] + 24];
   let hand: Pt;
@@ -185,12 +186,20 @@ function qinRoof(t: number): Fig {
   else if (t < T_GOT) hand = lerpPt(chestP, give, E.io(ph(t, 36.55, T_GOT)));
   else hand = lerpPt(give, rest, E.io(ph(t, T_GOT + 0.15, T_GOT + 0.45)));
   const hug = t < 35.95 ? 1 - E.io(ph(t, 35.88, 35.95)) : 0;
-  return { ...kneelQin, hL: hand, hR: hug > 0 ? [gj.neck[0] + 10, gj.neck[1] + 10] : [QK + 34, RB - 70], head: -0.4 + 0.15 * E.io(ph(t, 37.2, 37.5)), eyes: t > T_GOT + 0.3 ? "smile" : "open" };
+  const pulling = t > 35.95 && t < T_GOT + 0.3;
+  return {
+    ...kneelQin,
+    hL: hand,
+    hR: hug > 0 ? [gj.neck[0] + 10, gj.neck[1] + 10] : [QK + 34, RB - 70],
+    head: -0.4 + 0.15 * E.io(ph(t, 37.2, 37.5)),
+    eyes: t > T_GOT + 0.3 ? "smile" : "open",
+    ct: { legs: kneelLegs(1), layerFar: pulling ? "front" : undefined, handFar: t > 36.55 && t < T_GOT + 0.15 ? "flat" : undefined, expression: t > T_GOT + 0.3 ? "微笑" : "心疼" },
+  };
 }
 function brickRoof(t: number): { p: Pt; rot: number; warm: number } | null {
   if (t < 36.2) return null;
   if (t < T_GOT) {
-    const h = pose(qinRoof(t)).handL;
+    const h = qinJoints(qinRoof(t), t).handL;
     const v = E.io(ph(t, 36.55, T_GOT));
     return { p: lerpPt([h[0], h[1] + 11], [h[0] + 12, h[1] + 2], v), rot: mix(Math.PI / 2 - 0.08, 0.05, v), warm: 0 };
   }
@@ -214,7 +223,7 @@ const s15: Shot = {
     highSet(c, k, t);
     c.save();
     applyCam(c, k);
-    figure(c, qinRoof(t), t);
+    qin(c, qinRoof, t);
     const gj = figure(c, girlRoof(t), t);
     c.strokeStyle = "rgba(190,70,60,0.85)";
     c.lineWidth = 2.5;
@@ -318,7 +327,7 @@ const s16: Shot = {
     } else if (p <= 0) {
       fig = { ...qinLying(), lean: mix(0.35, -1.52, lie), x: mix(-230, -260, lie), y: mix(-62, -112, lie), legL: mix(1.35, 1.5, lie), kneeL: mix(1.4, 0.05, lie), legR: mix(1.25, 1.45, lie), kneeR: mix(1.3, 0.1, lie), float: 0.4 * lie, eyes: "open" };
     } else fig = { ...qinFloatSleep(t, p), eyes: t > 39.2 ? "closed" : "open" };
-    const j = figure(c, fig, t);
+    const j = qin(c, fig, t);
     rope(c, BEDPOST, j.anR, mix(30, 0, clamp(p * 1.4)), 3.2);
     c.restore();
     vignette(c, 0.6);

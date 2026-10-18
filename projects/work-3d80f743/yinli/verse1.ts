@@ -6,6 +6,7 @@ import { street } from "./sets";
 import { PAL } from "./palette";
 import { dumbbell, padlock, chain, hand } from "./props";
 import { beat, cityCam, T_SHOP, qinWalking, introStreetLife } from "./intro";
+import { qin, kneelLegs } from "./qin";
 import { SHOP, BIG_S, BIG_X, shopScene } from "./shop";
 
 
@@ -38,7 +39,7 @@ const s05: Shot = {
     // 前奏的街接过来：街上的人还在，她接着往前走；镜头扎进店门口以后他们都在画外，不再画
     if (t < 16.6) {
       introStreetLife(c, t);
-      figure(c, qinWalking(t), t);
+      qin(c, qinWalking, t);
     }
     c.restore();
     ash(c, t, k, { n: 0.5 });
@@ -353,7 +354,7 @@ function qinHigh(t: number): Fig {
     const kneel = E.io(ph(t, T_LAND2, T_LAND2 + 0.35));
     const x = mix(LAND_X, HIGH_SIT.qin, kneel);
     const gj = pose(girlHigh(t));
-    return { ...L, x, y: HIGH_RB, facing: 1, legL: mix(0.1, 1.3, kneel), kneeL: mix(0.6, 1.7, kneel), legR: mix(-0.1, 1.1, kneel), kneeR: mix(0.5, 1.5, kneel), lean: 0.1, head: -0.4, hR: [gj.neck[0] + 10, gj.neck[1] + 10], hL: [gj.hip[0] - 6, gj.hip[1] - 22], eyes: "open" };
+    return { ...L, x, y: HIGH_RB, facing: 1, legL: mix(0.1, 1.3, kneel), kneeL: mix(0.6, 1.7, kneel), legR: mix(-0.1, 1.1, kneel), kneeR: mix(0.5, 1.5, kneel), lean: 0.1, head: -0.4, hR: [gj.neck[0] + 10, gj.neck[1] + 10], hL: [gj.hip[0] - 6, gj.hip[1] - 22], eyes: "open", ct: { legs: kneelLegs(kneel), expression: "心疼" } };
   }
   if (t >= T_CATCH) {
     const p = pairHip(t);
@@ -389,7 +390,7 @@ function drawHigh(c: C, t: number) {
   const d = dumbbellHigh(t);
   // 抱住以后千斤画在前面（脸贴在她肩上看得见）
   const hugging = t >= T_CATCH;
-  if (hugging) figure(c, qinHigh(t), t);
+  if (hugging) qin(c, qinHigh, t);
   const gj = figure(c, girlHigh(t), t);
   if (d) dumbbell(c, d.p[0], d.p[1], BIG_S, d.rot);
   // 铁链和锁：锁开之前连着脚踝和哑铃；锁开了，链子从脚踝上滑下去，跟着哑铃掉
@@ -417,7 +418,7 @@ function drawHigh(c: C, t: number) {
     c.ellipse(gj.anR[0], gj.anR[1] - 3, 6, 2.5, 0, 0, Math.PI * 2);
     c.stroke();
   }
-  if (!hugging) figure(c, qinHigh(t), t);
+  if (!hugging) qin(c, qinHigh, t);
 
   // 哑铃砸到地上：裂纹和一圈灰
   if (t > T_HIT) {

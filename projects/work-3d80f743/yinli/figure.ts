@@ -1,6 +1,7 @@
 // 剪影人偶：按关节角度或手脚目标点（反向运动学）摆姿势，顶光勾一圈亮边。
 import { type C, clamp, mix } from "./core";
 import { PAL, LOOKS, blend, darker, type Look } from "./palette";
+import type { QinStyle } from "./qin";
 
 export type Kind = "qin" | "kid" | "man" | "woman" | "girl" | "old" | "weigher" | "worker" | "little" | "plain";
 export type Pt = [number, number];
@@ -48,6 +49,7 @@ export interface Fig {
   look?: Partial<Look>; // 换衣服颜色
   umbrellaColor?: string;
   ink?: number; // 描边浓度
+  ct?: QinStyle; // 秤砣换成素材库角色以后（qin.ts）另加的：表情、手形、手里的东西
 }
 
 export interface Joints {

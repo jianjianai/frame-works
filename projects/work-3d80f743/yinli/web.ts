@@ -8,6 +8,7 @@ import { figure, type Pt } from "./figure";
 import { ash, tower, sky, whiteBand, city, TOWER_TOP } from "./world";
 import { PAL, crowdLook, blend } from "./palette";
 import { qinFloatSleep } from "./pre1";
+import { qin } from "./qin";
 import { farBurn } from "./intro";
 
 export const WEB_A = 39.36;
@@ -207,7 +208,7 @@ export function webDraw(c: C, t: number, o: { cam?: Cam; dawn?: number; noQin?: 
     c.beginPath();
     c.rect(-140, TOWER_TOP + 70, 280, 170);
     c.clip();
-    figure(c, { ...qinFloatSleep(t, 1), x: 15, y: TOWER_TOP + 96, s: 0.55, rim: 0, tone: 0.1 }, t);
+    qin(c, { ...qinFloatSleep(t, 1), x: 15, y: TOWER_TOP + 96, s: 0.55, rim: 0, tone: 0.1 }, t);
     c.restore();
     c.fillStyle = "#6b5a6e";
     for (let i = 0; i <= 6; i++) c.fillRect(-140 + i * 46, TOWER_TOP + 70, 6, 170);
