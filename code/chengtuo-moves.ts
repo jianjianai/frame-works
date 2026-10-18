@@ -1,507 +1,478 @@
-// 秤砣的动作：走、跑、蹲跳抓、单膝跪下掏砖递砖、飘，和片子里用到的姿势。
-// 全部按「朝左 3/4」写（face: -1）；要朝右就把返回的姿势 face 改成 1（整套镜像），位移 x 取反。
-// 所有函数只依赖时间 t，可以任意跳转。
+// 秤砣的动作：全部用动作引擎（figure-motion.ts）按关节角度（度）写关键帧，和资源面板的参数一样。
+// 都按「朝左 3/4」（face: -1）写；要朝右把 face 改成 1（整套镜像），根的 x 取反。
+// 所有函数只依赖时间 t，可以任意跳转。返回 { pose, x }：pose 给 drawChengtuo，x 是根（两脚之间的地面）的横向位置。
 
-import { type PoseIn, type Expr, LEG_K, NEUTRAL, footAt, hipAt } from "./figure";
-import { type Key, type V2, blinkAt, breathAt, clamp01, ease, merge, sampleKeysPose } from "./rig";
+import { type Angles, type GaitStep, type MoveFrame, type MoveKey, gait, gaitSteps, playMove } from "./figure-motion";
+import { CHENGTUO } from "./chengtuo-draw";
 
-// 下面的胯高、脚的位置都是按原来的骨架写的（腿竖直 262 高、脚踝离地 34），用 hipAt / footAt 换算到现在的骨架。
-const G = -34; // 脚踝着地（原来的单位）
-const GB = -34; // 光脚（靴子还没画，先一样）
+const LOOK = { look: CHENGTUO };
 
-/** 活着的脸：叠上眨眼。 */
-export function alive(expr: Partial<Expr>, t: number, seed = 0): Partial<Expr> {
-  const b = blinkAt(t, seed);
-  return { ...expr, blink: Math.max(expr.blink ?? 0, b) };
-}
-
-/** 站着：呼吸、眨眼、一点点重心晃动。 */
-export function stand(t: number, base: PoseIn = {}, seed = 0): PoseIn {
-  const br = breathAt(t, seed);
-  const sway = Math.sin(t * 0.9 + seed) * 0.012;
-  const p: PoseIn = {
-    breath: br,
-    hip: [0, hipAt(-296 + br * 1.2)],
-    lean: sway,
-    neck: -sway * 0.6,
-    armL: { a: -0.26 + br * 0.015 },
-    armR: { a: 0.26 - br * 0.015 },
-  };
-  const out = merge(p, base);
-  out.expr = alive({ ...NEUTRAL, ...(base.expr ?? {}) } as Expr, t, seed);
-  out.t = t;
-  return out;
-}
-
-/** 3/4 站姿（朝左）。 */
-export const STAND34: PoseIn = {
-  face: -1,
-  hip: [0, hipAt(-297)],
-  armL: { a: -0.08, b: 0.28, shape: "relax" },
-  armR: { a: 0.14, b: 0.32, shape: "relax" },
-  legL: { to: footAt(22, G) },
-  legR: { to: footAt(-26, G) },
-};
+// ——— 走路：铁靴，一步一「咚」 ———
+// 一步（L 脚落地 → R 脚落地）：落地（脚跟先着地）→ 下沉（膝盖吃住分量，后脚抬起）→ 经过（站直、摆动的脚收在身下）→ 上升（踮脚送出去，前脚伸出）。
+// 铁靴重：落地那一下身子沉得多、轻轻压扁，抬脚低、慢，手臂摆得小。
+const WALK: GaitStep[] = [
+  {
+    at: 0,
+    squash: 0.02,
+    p: { hipL: 19, kneeL: -3, ankleL: -8, hipR: -14, kneeR: -10, ankleR: -2, shoulderL: -11, elbowL: 10, shoulderR: 13, elbowR: 22, lean: 6, neck: -2 },
+  },
+  {
+    at: 0.2,
+    ease: "out",
+    squash: 0.045,
+    p: { hipL: 13, kneeL: -20, ankleL: 7, hipR: -18, kneeR: -24, ankleR: 8, shoulderL: -8, elbowL: 14, shoulderR: 10, elbowR: 26, lean: 9, neck: -4 },
+  },
+  {
+    at: 0.48,
+    ease: "inOut",
+    p: { hipL: -2, kneeL: -4, ankleL: 6, hipR: 10, kneeR: -38, ankleR: 18, shoulderL: 0, elbowL: 14, shoulderR: 2, elbowR: 20, lean: 6, neck: -2 },
+  },
+  {
+    at: 0.74,
+    ease: "inOut",
+    p: { hipL: -13, kneeL: -2, ankleL: 4, hipR: 22, kneeR: -16, ankleR: 0, shoulderL: 10, elbowL: 18, shoulderR: -9, elbowR: 14, lean: 5, neck: -1 },
+  },
+];
 
 export interface WalkOpts {
-  /** 两步一个周期的秒数（120 BPM 一步一拍就是 1） */
-  period?: number;
-  /** 一步走多远 */
-  stride?: number;
-  /** 抬脚多高 */
-  lift?: number;
-  /** 前倾 */
-  lean?: number;
-  /** 落地有多沉（0..1） */
-  heavy?: number;
-  /** 第一步落地的时刻 */
+  /** 一步的秒数（120 BPM 一步一拍是 0.5） */
+  step?: number;
+  /** 第一步（L 脚落地，「咚」）的时刻 */
   t0?: number;
-  barefoot?: boolean;
+  /** 再叠一点表情、朝向等（角度用度） */
+  base?: Angles;
 }
 
-/**
- * 走路（朝左）：返回姿势和根的位移 x（往左为负），以及每一步落地的时刻（「咚」）。
- * 铁靴：脚抬得吃力、落得快，落地那一下身体往下一沉、头发往下甩。
- */
+/** 走路（朝左）：返回姿势、根的位置 x（往左为负）和第几步。落地的那只脚钉在地上，不打滑。 */
 export function walk(t: number, o: WalkOpts = {}) {
-  const T = o.period ?? 1;
-  const S = o.stride ?? 76;
-  const lift = o.lift ?? 34;
-  const heavy = o.heavy ?? 1;
-  const t0 = o.t0 ?? 0;
-  const half = T / 2;
-  const v = S / half;
-  const x = -v * (t - t0);
-  const ground = o.barefoot ? GB : G;
-  const duty = 0.6;
-  const reach = (v * duty * T) / 2;
-  const footPhase = (tt: number, off: number) => {
-    const ph = (((tt - t0) / T + off) % 1 + 1) % 1;
-    if (ph < duty) return { rel: -reach + v * ph * T, h: 0, s: -1 };
-    const s = (ph - duty) / (1 - duty);
-    const p = ease.inOut(clamp01(s / 0.82));
-    const h = lift * (s < 0.55 ? ease.out(s / 0.55) : 1 - ease.in((s - 0.55) / 0.45));
-    return { rel: reach + (-reach - reach) * p, h, s };
-  };
-  const fL = footPhase(t, 0);
-  const fR = footPhase(t, 0.5);
-  // 离上一次落地多久
-  const since = (((t - t0) % half) + half) % half;
-  const dip = since < 0.07 ? since / 0.07 : Math.exp(-(since - 0.07) * 7);
-  const lag = 0.09;
-  const fLl = footPhase(t - lag, 0);
-  const fRl = footPhase(t - lag, 0.5);
-  const fwd = (f: { rel: number }) => -f.rel / reach;
-  const br = breathAt(t);
-  const pose: PoseIn = {
-    face: -1,
-    t,
-    breath: br * 0.5,
-    hip: [0, hipAt(-291 + 9 * heavy * dip - 4 * Math.sin((Math.PI * since) / half))],
-    squash: 0.03 * heavy * dip,
-    lean: (o.lean ?? 0.08) + 0.04 * heavy * dip,
-    neck: -0.05 * heavy * dip,
-    legL: { to: footAt(fL.rel, ground - fL.h), f: fL.s < 0 ? 0 : 0.18 * Math.sin(Math.PI * fL.s), bend: 1, boot: !o.barefoot },
-    legR: { to: footAt(fR.rel - 6, ground - fR.h), f: fR.s < 0 ? 0 : 0.18 * Math.sin(Math.PI * fR.s), bend: 1, boot: !o.barefoot },
-    armL: { a: 0.04 - 0.34 * fwd(fLl), b: 0.3 + 0.25 * clamp01(-fwd(fLl)), shape: "relax" },
-    armR: { a: 0.1 - 0.3 * fwd(fRl), b: 0.32 + 0.22 * clamp01(-fwd(fRl)), shape: "relax" },
-    drag: [0.22 * Math.min(1, v / 150), 0.35 * heavy * dip],
-    expr: alive({ ...NEUTRAL }, t),
-  };
-  return { pose, x: x * LEG_K };
+  return gait(WALK, t, { ...LOOK, step: o.step ?? 0.5, t0: o.t0, base: { face: -1, ...o.base }, idle: true });
 }
 
-/** 每一步落地（「咚」）的时刻：t0 起每半个周期一次。 */
+/** 每一步落地（「咚」）的时刻 */
 export function walkSteps(from: number, to: number, o: WalkOpts = {}): number[] {
-  const half = (o.period ?? 1) / 2;
-  const t0 = o.t0 ?? 0;
-  const out: number[] = [];
-  for (let k = Math.ceil((from - t0) / half); t0 + k * half <= to; k++) out.push(t0 + k * half);
-  return out;
+  return gaitSteps(from, to, o.step ?? 0.5, o.t0 ?? 0);
 }
 
-// ——— 蹲 → 跳 → 空中抓住 → 往下坠 → 落地 ———
-// 局部时间：0 站着仰头，0.45 蹲到底，0.62 起跳，0.97 抓住，1.05 最高点，1.42 落地，1.9 站稳。
-// 目标（被抓的脚踝）在头顶前上方 grab。
-export function jumpGrab(t: number, grab: V2 = [-84, -790]): PoseIn {
-  const up = { neck: 0.42, expr: { ...NEUTRAL, look: [-0.3, -0.9] as V2, smile: -0.1, fierce: 0.3 } };
-  const air = (hipY: number, kneeBend: number) => ({
-    hip: [0, hipAt(hipY)] as V2,
-    legL: { to: footAt(10, hipY + 262 - kneeBend), bend: 1 },
-    legR: { to: footAt(-24, hipY + 258 - kneeBend * 0.8), bend: 1 },
-  });
-  // 抓的是远侧那只手（在头后面伸上去，不挡脸）
-  const reach = (to: V2, ik: number, a: number, b: number, shape: "relax" | "open" | "grip") => ({ a, b, h: 0.2, to, ik, bend: 1, shape });
-  const R0: V2 = [-70, -560];
-  const keys: Key<PoseIn>[] = [
-    {
-      t: 0,
-      pose: {
-        ...STAND34,
-        ...up,
-        armL: { a: -0.05, b: 0.3, h: 0, shape: "relax" },
-        armR: reach(R0, 0, 0.1, 0.3, "relax"),
-        legL: { to: footAt(22, G), bend: 1 },
-        legR: { to: footAt(-26, G), bend: 1 },
-        lean: 0,
-        squash: 0,
-        drag: [0, 0],
-      },
-    },
-    {
-      t: 0.45,
-      ease: ease.inOut,
-      pose: {
-        hip: [8, hipAt(-228)],
-        lean: 0.5,
-        neck: 0.75,
-        squash: 0.07,
-        armL: { a: -1.05, b: 0.35, h: 0, shape: "relax" },
-        armR: reach(R0, 0, -0.85, 0.4, "relax"),
-        legL: { to: footAt(22, G), bend: 1 },
-        legR: { to: footAt(-26, G), bend: 1 },
-        expr: { ...NEUTRAL, look: [-0.3, -0.9], smile: -0.2, fierce: 0.8 },
-        drag: [0, 0.2],
-      },
-    },
-    {
-      t: 0.62,
-      ease: ease.out,
-      pose: {
-        hip: [-6, hipAt(-330)],
-        lean: -0.06,
-        neck: 0.55,
-        squash: -0.08,
-        armL: { a: 1.7, b: 0.5, h: 0, shape: "open" },
-        armR: reach(R0, 0, 2.6, 0.15, "open"),
-        legL: { to: footAt(16, G - 30), bend: 1 },
-        legR: { to: footAt(-20, G - 22), bend: 1 },
-        expr: { ...NEUTRAL, look: [-0.3, -1], smile: 0, fierce: 0.9, open: 0.25 },
-        drag: [0, 0.9],
-      },
-    },
-    {
-      t: 0.97,
-      ease: ease.out,
-      pose: {
-        ...air(-500, 26),
-        lean: -0.08,
-        neck: 0.5,
-        squash: -0.03,
-        armR: reach(grab, 1, 2.6, 0.15, "grip"),
-        armL: { a: 0.9, b: 0.6, h: 0, shape: "open" },
-        expr: { ...NEUTRAL, look: [-0.2, -1], smile: 0, fierce: 1, open: 0.3 },
-        drag: [0, 0.6],
-      },
-    },
-    {
-      t: 1.07,
-      ease: ease.sine,
-      pose: {
-        ...air(-520, 34),
-        lean: -0.04,
-        neck: 0.4,
-        squash: 0,
-        armR: reach([grab[0] + 4, grab[1] - 22], 1, 2.6, 0.15, "grip"),
-        armL: { a: 0.5, b: 0.7, h: 0, shape: "open" },
-        expr: { ...NEUTRAL, look: [-0.2, -1], smile: 0, fierce: 1, open: 0.1 },
-        drag: [0, 0],
-      },
-    },
-    {
-      t: 1.42,
-      ease: ease.in,
-      pose: {
-        ...air(-300, 4),
-        lean: 0.02,
-        neck: 0.35,
-        squash: -0.04,
-        armR: reach([grab[0] + 10, -575], 1, 2.6, 0.15, "grip"),
-        armL: { a: 1.4, b: 0.5, h: 0, shape: "open" },
-        legL: { to: footAt(16, G), bend: 1 },
-        legR: { to: footAt(-26, G), bend: 1 },
-        expr: { ...NEUTRAL, look: [-0.2, -0.8], fierce: 1, smile: -0.2 },
-        drag: [0, -1.25],
-      },
-    },
-    {
-      t: 1.55,
-      ease: ease.out,
-      pose: {
-        hip: [4, hipAt(-232)],
-        lean: 0.38,
-        neck: 0.2,
-        squash: 0.11,
-        armR: reach([grab[0] + 6, -490], 1, 2.6, 0.15, "grip"),
-        armL: { a: 0.9, b: 0.9, h: 0, shape: "open" },
-        legL: { to: footAt(16, G), bend: 1 },
-        legR: { to: footAt(-26, G), bend: 1 },
-        expr: { ...NEUTRAL, look: [-0.2, -0.5], fierce: 1, smile: -0.3, blink: 0.4 },
-        drag: [0, 1.6],
-      },
-    },
-    {
-      t: 1.95,
-      ease: ease.inOut,
-      pose: {
-        hip: [2, hipAt(-276)],
-        lean: 0.12,
-        neck: 0.25,
-        squash: 0,
-        armR: reach([grab[0] + 2, -470], 1, 2.6, 0.15, "grip"),
-        armL: { a: 0.3, b: 0.5, h: 0, shape: "relax" },
-        legL: { to: footAt(16, G), bend: 1 },
-        legR: { to: footAt(-26, G), bend: 1 },
-        expr: { ...NEUTRAL, look: [-0.2, -0.6], fierce: 0.4, smile: 0 },
-        drag: [0, 0],
-      },
-    },
-  ];
-  const p = sampleKeysPose(keys, t);
-  return { ...STAND34, ...p, face: -1, t, gravity: [0, 1] };
-}
+// ——— 姿势（静止，角度用度；片子里的关键时刻，也是动作的关键帧） ———
+type Pose = Angles & { items?: Record<string, boolean | number> };
 
-// ——— 单膝跪下，从靴筒里抽出一块砖，递出去 ———
-// 局部时间：0 站着，0.55 跪下，1.0 手伸进靴筒，1.45 抽出来（砖少一块），2.0 递到前上方，之后停住。
-// 砖在手里时 hasBrick 为真（在 hold.L 里画砖）。
-export function kneelGive(t: number, to: V2 = [-190, -250]) {
-  const keys: Key<PoseIn>[] = [
-    {
-      t: 0,
-      pose: {
-        ...STAND34,
-        lean: 0.02,
-        neck: 0,
-        armL: { a: -0.08, b: 0.28, h: 0, to: [-84, -150], ik: 0, bend: -1, shape: "relax" },
-        armR: { a: 0.14, b: 0.32, h: 0, to: [-80, -480], ik: 0, bend: 1, shape: "relax" },
-        legL: { to: footAt(22, G), bend: 1, f: 0 },
-        legR: { to: footAt(-26, G), bend: 1, f: 0 },
-        expr: { ...NEUTRAL },
-      },
-    },
-    {
-      t: 0.55,
-      ease: ease.inOut,
-      pose: {
-        hip: [18, hipAt(-150)],
-        lean: 0.3,
-        neck: -0.25,
-        squash: 0.03,
-        armL: { a: 0.2, b: 0.5, h: 0, to: [-84, -150], ik: 0, bend: -1, shape: "relax" },
-        armR: { a: 0.6, b: 0.9, h: 0, shape: "relax" },
-        legL: { to: footAt(165, -74), bend: 1, f: -1.1 },
-        legR: { to: footAt(-88, G), bend: 1, f: 0 },
-        expr: { ...NEUTRAL, look: [-0.3, 0.6], smile: 0.1 },
-      },
-    },
-    {
-      t: 1.0,
-      ease: ease.inOut,
-      pose: {
-        hip: [14, hipAt(-152)],
-        lean: 0.62,
-        neck: -0.35,
-        squash: 0,
-        armL: { a: 0.2, b: 0.5, ik: 1, h: 0.2, to: [-84, -150], bend: -1, shape: "grip" },
-        armR: { a: 0.8, b: 1.2, h: 0, shape: "relax" },
-        legL: { to: footAt(165, -74), bend: 1, f: -1.1 },
-        legR: { to: footAt(-88, G), bend: 1, f: 0 },
-        expr: { ...NEUTRAL, look: [-0.4, 0.8], smile: 0 },
-      },
-    },
-    {
-      t: 1.45,
-      ease: ease.inOut,
-      pose: {
-        hip: [14, hipAt(-154)],
-        lean: 0.42,
-        neck: -0.15,
-        armL: { a: 0.2, b: 0.5, ik: 1, h: 0.1, to: [-132, -214], bend: -1, shape: "grip" },
-        armR: { a: 0.75, b: 1.15, h: 0, shape: "relax" },
-        legL: { to: footAt(165, -74), bend: 1, f: -1.1 },
-        legR: { to: footAt(-88, G), bend: 1, f: 0 },
-        expr: { ...NEUTRAL, look: [-0.3, 0.2], smile: 0.1 },
-      },
-    },
-    {
-      t: 2.05,
-      ease: ease.inOut,
-      pose: {
-        hip: [10, hipAt(-156)],
-        lean: 0.2,
-        neck: 0.18,
-        armL: { a: 0.2, b: 0.5, ik: 1, h: -0.25, to: to, bend: -1, shape: "flat" },
-        armR: { a: 0.7, b: 1.1, h: 0, shape: "relax" },
-        legL: { to: footAt(165, -74), bend: 1, f: -1.1 },
-        legR: { to: footAt(-88, G), bend: 1, f: 0 },
-        expr: { ...NEUTRAL, look: [-0.6, -0.3], smile: 0.75, happy: 0.35, blush: 0.6 },
-      },
-    },
-  ];
-  const p = sampleKeysPose(keys, t);
-  const pose: PoseIn = { ...p, face: -1, t, breath: breathAt(t) * 0.6, items: { bricks: t < 1.3 ? 2 : 1 } };
-  pose.expr = alive(pose.expr as Expr, t, 3);
-  return { pose, hasBrick: t >= 1.25 };
-}
+/** 一条腿：胯、膝的角度，脚相对地面的角度（0 = 鞋底放平，正 = 脚尖翘起） */
+const legL = (hip: number, knee: number, foot = 0): Angles => ({ hipL: hip, kneeL: knee, ankleL: foot - hip - knee });
+const legR = (hip: number, knee: number, foot = 0): Angles => ({ hipR: hip, kneeR: knee, ankleR: foot - hip - knee });
 
-// ——— 光脚飘起来（头发、衣摆、围巾往上，像在水里） ———
-export function float(t: number, base: PoseIn = {}): PoseIn {
-  const s = Math.sin(t * 1.1);
-  const c = Math.cos(t * 0.8);
-  const p: PoseIn = {
-    face: -0.55,
-    t,
-    float: 1,
-    gravity: [0, -1],
-    hip: [0, hipAt(-296 + s * 6)],
-    rot: 0.05 * c,
-    lean: 0.06 + 0.04 * s,
-    neck: 0.1 + 0.05 * c,
-    armL: { a: -0.75 - 0.12 * s, b: 0.55 + 0.1 * c, h: 0.2, shape: "open" },
-    armR: { a: 0.65 + 0.1 * c, b: 0.5 - 0.1 * s, h: -0.1, shape: "open" },
-    legL: { to: undefined, a: -0.18 + 0.06 * s, b: -0.55 - 0.08 * c, f: 0.5, boot: false },
-    legR: { to: undefined, a: 0.12 - 0.05 * c, b: -0.35 + 0.08 * s, f: 0.45, boot: false },
-    items: { bricks: 0 },
-    expr: { ...NEUTRAL, blink: 1, smile: 0.25, blush: 0.4 },
-  };
-  return merge(p, base);
-}
+/** 3/4 朝左站着：重心在后脚（R），前脚（L）放松、膝盖微弯，两手自然垂着、肘微弯 */
+const STAND: Pose = {
+  face: -1,
+  ...legL(7, -9),
+  ...legR(-4, -2),
+  shoulderL: -5,
+  elbowL: 14,
+  wristL: 8,
+  shoulderR: 7,
+  elbowR: 16,
+  wristR: -4,
+  lean: 2,
+};
 
-// ——— 片子里用到的姿势（静止，给设定图和关键帧用） ———
-export const POSES: Record<string, PoseIn> = {
-  // 正面抱臂（用户的抱臂三视图，`public/ref/秤砣-抱臂三视图.png`）：上臂贴着身体两侧稍往外，肘弯到 90° 多，
-  // 两条前臂横在胸前交叉：画面右边那只（armL）在上、略往上斜，另一只在下、略往下斜，手套抓住对面的胳膊
-  // 正面半蹲、手扶膝盖（用户的半蹲三视图，`public/ref/秤砣-半蹲三视图.png`）：膝盖往两边分开，
-  // 大腿朝镜头伸出来，看上去只有一半长（thighK）；小腿往里收到脚踝；手臂几乎伸直，手套扣在膝盖上
-  半蹲: {
-    face: 0,
-    hip: [0, -190],
-    legL: { to: [42.2, -65.1], bend: -1, thighK: 0.52 },
-    legR: { to: [-42.2, -65.1], bend: 1, thighK: 0.52 },
-    armL: { a: 0, b: 0, to: [64, -190], bend: -1, h: 0.15, shape: "relax" },
-    armR: { a: 0, b: 0, to: [-64, -190], bend: 1, h: -0.15, shape: "relax" },
+/** 单膝跪（R 膝着地，L 脚在前踩稳），靴子挨着她 */
+const KNEEL: Angles = { ...legL(78, -84), ...legR(-12, -98, -55), lean: 6 };
+
+export const POSES: Record<string, Pose> = {
+  站: STAND,
+  仰头: { ...STAND, neck: 30, lean: -3, shoulderL: -2, shoulderR: 10, expression: "仰望" },
+  "蹲（起跳前）": {
+    face: -1,
+    ...legL(66, -112, 0),
+    ...legR(52, -104, 0),
+    lean: 34,
+    neck: 34,
+    shoulderL: -46,
+    elbowL: 18,
+    wristL: 10,
+    shoulderR: -34,
+    elbowR: 22,
+    expression: "使劲",
+    lookY: -0.9,
   },
-  抱臂: {
-    face: 0,
-    armL: { a: -0.3, b: 2.0, h: -0.25, shape: "relax" },
-    armR: { a: 0.3, b: -1.72, h: 0.1, shape: "relax" },
+  空中抓住: {
+    face: -1,
+    ...legL(34, -62, -30),
+    ...legR(8, -40, -40),
+    lean: -6,
+    neck: 30,
+    shoulderL: 75,
+    elbowL: 35,
+    wristL: 10,
+    handL: "open",
+    shoulderR: 168,
+    elbowR: 4,
+    wristR: 6,
+    handR: "grip",
+    lift: 230,
+    expression: "使劲",
+    lookY: -1,
   },
-  仰头: {
-    ...STAND34,
-    neck: 0.45,
-    expr: { ...NEUTRAL, look: [-0.3, -1], smile: 0 },
+  落地: {
+    face: -1,
+    ...legL(46, -70, 0),
+    ...legR(30, -60, 0),
+    lean: 32,
+    neck: 18,
+    shoulderL: 30,
+    elbowL: 40,
+    handL: "open",
+    shoulderR: 150,
+    elbowR: 10,
+    handR: "grip",
+    expression: "使劲",
+    lookY: -0.6,
   },
-  挥手: {
-    ...STAND34,
-    armL: { a: 2.7, b: 0.5, h: -0.2, shape: "open" },
-    neck: 0.08,
-    expr: { ...NEUTRAL, happy: 1, smile: 0.9, open: 0.3, blush: 0.6 },
+
+  "单膝跪·掏砖": {
+    face: -1,
+    ...KNEEL,
+    lean: 32,
+    neck: -22,
+    shoulderL: 18,
+    elbowL: 42,
+    wristL: -10,
+    handL: "grip",
+    shoulderR: 24,
+    elbowR: 40,
+    expression: "平常",
+    lookY: 0.8,
   },
-  弯腰摸头: {
-    ...STAND34,
-    hip: [6, hipAt(-290)],
-    lean: 0.42,
-    neck: -0.2,
-    armL: { to: [-120, -340], bend: -1, a: 0, b: 0, h: 0.6, shape: "open" },
-    expr: { ...NEUTRAL, happy: 0.7, smile: 0.8, blush: 0.6 },
+  递砖: {
+    face: -1,
+    ...KNEEL,
+    lean: 8,
+    neck: 10,
+    shoulderL: 72,
+    elbowL: 12,
+    wristL: -22,
+    handL: "flat",
+    shoulderR: 18,
+    elbowR: 34,
+    expression: "微笑",
+    lookX: -0.4,
+    lookY: -0.3,
+    items: { bricks: 1 },
   },
+  半蹲: { face: 0, shoulderL: -18, elbowL: 15, wristL: 9, shoulderR: 18, elbowR: -15, wristR: -9, hipL: -54, kneeL: 74, ankleL: -20, hipR: 54, kneeR: -74, ankleR: 20, thighL: 0.52, thighR: 0.52 },
+  抱臂: { face: 0, shoulderL: -17, elbowL: 115, wristL: -14, shoulderR: 17, elbowR: -99, wristR: 6 },
+  挥手: { ...STAND, neck: -8, shoulderR: 138, elbowR: 38, wristR: 8, handR: "open", shoulderL: -4, elbowL: 16, expression: "微笑", lookX: -0.4, lookY: -0.5 },
+  弯腰摸头: { ...STAND, ...legL(16, -14), ...legR(-6, -10), lean: 24, neck: -14, shoulderL: 62, elbowL: 18, wristL: -36, handL: "flat", shoulderR: -14, elbowR: 22, expression: "微笑", lookY: 0.7 },
   拽: {
-    ...STAND34,
-    hip: [30, hipAt(-250)],
-    lean: -0.32,
-    neck: 0.3,
-    armL: { to: [-40, -600], bend: 1, a: 0, b: 0, h: 0.1, shape: "grip" },
-    armR: { to: [-20, -580], bend: 1, a: 0, b: 0, h: 0.1, shape: "grip" },
-    legL: { to: footAt(70, G), bend: 1 },
-    legR: { to: footAt(-70, G), bend: 1 },
-    expr: { ...NEUTRAL, fierce: 1, smile: -0.4, open: 0.2, look: [0, -1] },
+    face: -1,
+    ...legL(32, -44, 0),
+    ...legR(-18, -26, 0),
+    lean: -16,
+    neck: 18,
+    shoulderL: 168,
+    elbowL: 14,
+    handL: "grip",
+    shoulderR: 160,
+    elbowR: 20,
+    handR: "grip",
+    expression: "使劲",
+    lookY: -0.8,
   },
   抱住: {
-    face: -0.3,
-    lean: 0.06,
-    neck: -0.12,
-    armL: { a: 1.25, b: 1.5, h: 0.3, shape: "relax", layer: "front" },
-    armR: { a: 1.05, b: 1.25, h: 0.3, shape: "relax", layer: "front" },
-    expr: { ...NEUTRAL, blink: 1, smile: 0.3, sad: 0.3, blush: 0.7 },
+    face: -1,
+    ...legL(16, -38, -35),
+    ...legR(4, -24, -40),
+    lean: 14,
+    neck: -16,
+    shoulderL: 34,
+    elbowL: 112,
+    wristL: 20,
+    handL: "relax",
+    shoulderR: 46,
+    elbowR: 118,
+    handR: "relax",
+    lift: 120,
+    expression: "心疼",
   },
   坐: {
     face: -1,
-    hip: [0, hipAt(-150)],
-    lean: 0.08,
-    neck: -0.05,
-    armL: { a: 0.35, b: 0.6, shape: "relax" },
-    armR: { a: 0.45, b: 0.65, shape: "relax" },
-    legL: { to: footAt(-120, G), bend: 1 },
-    legR: { to: footAt(-150, G), bend: 1 },
-    expr: { ...NEUTRAL, look: [-0.4, 0.3] },
+    ...legL(86, -76, 4),
+    ...legR(80, -96, 4),
+    lean: 8,
+    neck: -4,
+    shoulderL: 34,
+    elbowL: 40,
+    wristL: 10,
+    shoulderR: 30,
+    elbowR: 44,
+    lookX: -0.4,
+    lookY: 0.2,
   },
   写字: {
     face: -1,
-    hip: [0, hipAt(-150)],
-    lean: 0.38,
-    neck: -0.35,
-    armL: { to: [-150, -250], bend: -1, a: 0, b: 0, h: 0.4, shape: "point" },
-    armR: { to: [-130, -262], bend: -1, a: 0, b: 0, h: 0.3, shape: "flat" },
-    legL: { to: footAt(-120, G), bend: 1 },
-    legR: { to: footAt(-150, G), bend: 1 },
-    expr: { ...NEUTRAL, look: [-0.4, 1], smile: 0.15, blink: 0.35 },
+    ...legL(84, -86, 0),
+    ...legR(80, -84, 0),
+    lean: 22,
+    neck: -20,
+    shoulderL: 48,
+    elbowL: 84,
+    wristL: -18,
+    handL: "grip",
+    shoulderR: 44,
+    elbowR: 78,
+    handR: "flat",
+    expression: "平常",
+    lookY: 0.9,
   },
-  嘘: {
-    ...STAND34,
-    face: -0.5,
-    neck: -0.05,
-    armL: { to: [-22, -470], bend: -1, a: 0, b: 0, h: 2.6, shape: "point" },
-    expr: { ...NEUTRAL, smile: 0, wide: 0.6, look: [-0.5, 0] },
-  },
-  拉钩: {
-    ...STAND34,
-    hip: [0, hipAt(-250)],
-    lean: 0.3,
-    armL: { to: [-120, -300], bend: -1, a: 0, b: 0, h: -0.4, shape: "pinky" },
-    legL: { to: footAt(30, G), bend: 1 },
-    legR: { to: footAt(-50, G), bend: 1 },
-    expr: { ...NEUTRAL, sad: 0.4, smile: 0.4, look: [-0.5, 0.5] },
-  },
+  嘘: { ...STAND, neck: -4, shoulderL: 24, elbowL: 142, wristL: -10, handL: "point", expression: "嘘", lookX: -0.5 },
+  拉钩: { ...STAND, ...legL(12, -12), lean: 8, neck: -8, shoulderL: 46, elbowL: 50, wristL: -10, handL: "pinky", expression: "心疼", lookY: 0.5 },
   从楼顶跳下: {
-    face: -0.6,
-    hip: [0, hipAt(-296)],
-    rot: 0.05,
-    lean: 0.12,
-    neck: -0.32,
-    drag: [0, -1.7],
-    armL: { a: 2.35, b: 0.35, h: 0, shape: "open" },
-    armR: { a: -2.2, b: -0.35, h: 0, shape: "open" },
-    legL: { to: undefined, a: 0.45, b: -0.95, f: 0 },
-    legR: { to: undefined, a: -0.05, b: -0.45, f: 0 },
-    expr: { ...NEUTRAL, fierce: 0.8, smile: -0.3, open: 0.35, look: [-0.2, 1] },
+    face: -1,
+    rot: -38,
+    ...legL(-14, -40, -40),
+    ...legR(-30, -20, -40),
+    lean: 4,
+    neck: 30,
+    shoulderL: 150,
+    elbowL: 10,
+    handL: "open",
+    shoulderR: 140,
+    elbowR: 14,
+    handR: "open",
+    lift: 200,
+    expression: "使劲",
   },
   倒着睡: {
     face: -1,
-    rot: Math.PI / 2,
-    hip: [0, hipAt(-296)],
-    gravity: [0, -1],
-    float: 0.4,
-    armL: { a: 0.3, b: 0.4, shape: "relax" },
-    armR: { a: 0.1, b: 0.5, shape: "relax" },
-    legL: { to: undefined, a: 0.05, b: -0.1, f: 0, boot: false },
-    legR: { to: undefined, a: -0.05, b: -0.2, f: 0, boot: false },
-    items: { bricks: 0 },
-    expr: { ...NEUTRAL, blink: 1, smile: 0.15 },
+    rot: -90,
+    ground: false,
+    ...legL(4, -8, -20),
+    ...legR(0, -4, -20),
+    lean: 0,
+    neck: -4,
+    shoulderL: 8,
+    elbowL: 14,
+    shoulderR: 10,
+    elbowR: 12,
+    expression: "闭眼",
+    float: 1,
+    items: { boots: false },
   },
   弯腰握手: {
-    face: -0.6,
-    hip: [0, hipAt(-296)],
-    gravity: [0, -1],
-    float: 1,
-    lean: 0.65,
-    neck: -0.35,
-    armL: { a: 0.35, b: 0.15, h: 0, shape: "open" },
-    armR: { a: 0.1, b: 0.1, h: 0, shape: "relax" },
-    legL: { to: undefined, a: -0.25, b: -0.3, f: 0.4, boot: false },
-    legR: { to: undefined, a: -0.05, b: -0.2, f: 0.4, boot: false },
-    items: { bricks: 0 },
-    expr: { ...NEUTRAL, tears: 0.8, happy: 0.4, smile: 0.5, look: [-0.3, 1] },
+    face: -1,
+    ...legL(24, -46, -40),
+    ...legR(12, -34, -45),
+    lean: 54,
+    neck: -24,
+    shoulderL: 74,
+    elbowL: 6,
+    wristL: -8,
+    handL: "grip",
+    shoulderR: 30,
+    elbowR: 40,
+    handR: "relax",
+    lift: 160,
+    float: 0.5,
+    expression: "哭着笑",
+    lookY: 0.9,
+    items: { boots: false },
   },
+
 };
 
+// ——— 站着：呼吸、眨眼、重心轻轻晃 ———
+/** 站着（默认 3/4 朝左的站姿，base 可以换成别的姿势）：呼吸、眨眼、重心很慢地晃 */
+export function stand(t: number, base: Angles = STAND, seed = 0): MoveFrame {
+  const sway = Math.sin(t * 0.9 + seed * 1.7);
+  return playMove([{ t: 0, p: { ...base, lean: (base.lean ?? 0) + sway * 0.8, neck: (base.neck ?? 0) - sway * 0.5 } }], t, { ...LOOK, idle: true, seed });
+}
 
+// ——— 跑：铁靴跑，一步一「咚」，中间短短地腾空 ———
+const RUN: GaitStep[] = [
+  {
+    at: 0,
+    squash: 0.03,
+    p: { face: -1, ...legL(30, -12, 6), ...legR(-28, -46, -30), shoulderL: -34, elbowL: 72, shoulderR: 36, elbowR: 84, handL: "fist", handR: "fist", lean: 16, neck: -6 },
+  },
+  {
+    at: 0.22,
+    ease: "out",
+    squash: 0.06,
+    p: { ...legL(18, -40, 0), ...legR(-8, -92, -10), shoulderL: -18, elbowL: 80, shoulderR: 20, elbowR: 88, lean: 19, neck: -8 },
+  },
+  {
+    at: 0.5,
+    ease: "inOut",
+    lift: 8,
+    p: { ...legL(-24, -8, -34), ...legR(40, -62, 10), shoulderL: 18, elbowL: 80, shoulderR: -16, elbowR: 76, lean: 16, neck: -6 },
+  },
+  {
+    at: 0.76,
+    ease: "out",
+    lift: 22,
+    p: { ...legL(-18, -56, -20), ...legR(40, -26, 14), shoulderL: 32, elbowL: 78, shoulderR: -30, elbowR: 70, lean: 15, neck: -5 },
+  },
+];
+
+/** 跑（朝左）：一步 step 秒（默认 0.3），站着的脚钉在地上，两步之间短短地离地 */
+export function run(t: number, o: WalkOpts = {}) {
+  return gait(RUN, t, { ...LOOK, step: o.step ?? 0.3, t0: o.t0, base: { face: -1, expression: "使劲", ...o.base } });
+}
+
+// ——— 蹲 → 跳 → 空中抓住 → 往下坠 → 落地 ———
+// 局部时间：0 仰头看着他，0.6 蹲到底（攒劲），1.09 起跳离地，1.44 在空中抓住他的脚踝，1.6 还往上冲了一点，
+// 1.86 带着铁靴的分量越落越快、砸到地上，2.0 膝盖吃住，2.6 站稳（手还抓着他往下拽）。
+export const JUMP_GRAB = { crouch: 0.6, launch: 1.09, grab: 1.44, apex: 1.6, land: 1.86 };
+
+/** 跳起来抓的关键帧（接在别的动作后面用 shiftKeys） */
+export function jumpGrabKeys(grabLift = 230): MoveKey[] {
+  const J = JUMP_GRAB;
+  return [
+    { t: 0, p: { ...POSES.仰头 } },
+    { t: 0.25, ease: "inOut", p: { ...POSES.仰头, ...legL(14, -22), ...legR(4, -18), lean: 6, neck: 26 } },
+    { t: J.crouch, ease: "inOut", p: { ...POSES["蹲（起跳前）"] }, squash: 0.05 },
+    {
+      t: J.launch,
+      ease: "in",
+      dx: -18,
+      squash: -0.08,
+      p: {
+        ...legL(-4, -2, -40),
+        ...legR(-14, -6, -42),
+        lean: -4,
+        neck: 26,
+        shoulderL: 120,
+        elbowL: 20,
+        handL: "open",
+        shoulderR: 172,
+        elbowR: 6,
+        handR: "open",
+        lift: 40,
+        expression: "使劲",
+        open: 0.35,
+        teeth: 0,
+        lookY: -1,
+      },
+    },
+    { t: J.grab, ease: "out", dx: -12, squash: -0.03, p: { ...POSES.空中抓住, lift: grabLift } },
+    { t: J.apex, ease: "out", dx: -2, squash: 0, p: { ...POSES.空中抓住, ...legL(26, -50, -25), shoulderR: 170, lift: grabLift + 18 } },
+    {
+      t: J.land,
+      ease: "in",
+      dx: -2,
+      squash: -0.04,
+      p: { ...POSES.空中抓住, ...legL(16, -14, 0), ...legR(-4, -10, 0), shoulderL: 95, elbowL: 30, shoulderR: 172, lift: 0, neck: 20 },
+    },
+    { t: J.land + 0.12, ease: "out", squash: 0.1, p: { ...POSES.落地 } },
+    {
+      t: 2.6,
+      ease: "inOut",
+      squash: 0,
+      p: { ...POSES.落地, ...legL(18, -26), ...legR(6, -22), lean: 12, neck: 14, shoulderL: 10, elbowL: 30, handL: "relax", shoulderR: 118, elbowR: 16, expression: "坚定", lookY: -0.3 },
+    },
+  ];
+}
+
+/** 跳起来在空中抓住头顶的人、带着他坠下来落地（朝左）。grabLift：抓住时离地多高（默认 230） */
+export function jumpGrab(t: number, grabLift = 230): MoveFrame {
+  return playMove(jumpGrabKeys(grabLift), t, { ...LOOK, idle: t > 2.6 });
+}
+
+// ——— 单膝跪下，从靴筒里抽出一块砖，递出去，站起来 ———
+// 局部时间：0 站着，0.5 跪下（L 脚往前踩稳），0.95 手伸进靴筒，1.35 抽出一块砖（很沉），2.0 托着递到他手边，
+// 2.2 冲他笑，3.0 起身，3.45 站直，3.55 脚跟离地了一下（送出一块砖，她轻了，伏笔），3.8 落回去。
+export const KNEEL_GIVE = { kneel: 0.5, reach: 0.95, pull: 1.35, give: 2.0, rise: 3.0, stood: 3.45, heel: 3.55 };
+
+/** 跪下递砖的关键帧（接在别的动作后面用 shiftKeys） */
+export function kneelGiveKeys(): MoveKey[] {
+  const K = KNEEL_GIVE;
+  return [
+    { t: 0, p: { ...STAND, expression: "平常" } },
+    { t: K.kneel, ease: "inOut", plant: "L", squash: 0.03, p: { ...POSES["单膝跪·掏砖"], lean: 14, neck: -8, shoulderL: 10, elbowL: 30, handL: "relax", lookY: 0.5 } },
+    { t: K.reach, ease: "inOut", plant: "L", squash: 0, p: { ...POSES["单膝跪·掏砖"] } },
+    {
+      t: K.pull,
+      ease: "out",
+      plant: "L",
+      items: { bricks: 1 },
+      p: { ...POSES["单膝跪·掏砖"], lean: 22, neck: -10, shoulderL: 38, elbowL: 64, wristL: -24, handL: "grip", lookY: 0.4 },
+    },
+    { t: K.give, ease: "inOut", plant: "L", p: { ...POSES.递砖, expression: "平常", lookX: -0.4, lookY: -0.2 } },
+    { t: K.give + 0.35, ease: "out", plant: "L", p: { ...POSES.递砖 } },
+    { t: K.rise, plant: "L", p: { ...POSES.递砖, shoulderL: 30, elbowL: 30, handL: "relax" } },
+    { t: K.stood, ease: "inOut", plant: "L", p: { ...STAND, expression: "微笑" } },
+    { t: K.heel, ease: "out", plant: "L", p: { ...STAND, ...legL(7, -9, -14), ...legR(-4, -2, -16), lift: 7, expression: "微笑" } },
+    { t: K.heel + 0.25, ease: "in", plant: "L", p: { ...STAND, expression: "微笑" }, squash: 0.02 },
+    { t: K.heel + 0.45, ease: "out", p: { ...STAND, expression: "微笑" }, squash: 0 },
+  ];
+}
+
+/** 单膝跪下、从靴筒掏砖递出去、再站起来（朝左）。hasBrick：砖在手里（用 holdBrick 画在 L 手上） */
+export function kneelGive(t: number): MoveFrame & { hasBrick: boolean } {
+  const K = KNEEL_GIVE;
+  const f = playMove(kneelGiveKeys(), t, { ...LOOK, idle: true, seed: 3 });
+  return { ...f, hasBrick: t >= K.pull - 0.05 && t < K.rise };
+}
+
+// ——— 打招呼：抬手、点头、笑 ———
+/** 朝窗口（左上）的人打招呼：远侧的手抬起来（不挡脸）、点一下头、笑（朝左） */
+export function greet(t: number): MoveFrame {
+  const keys: MoveKey[] = [
+    { t: 0, p: { ...STAND } },
+    { t: 0.35, ease: "out", p: { ...POSES.挥手, neck: 4, expression: "微笑" } },
+    { t: 0.6, ease: "inOut", p: { ...POSES.挥手, neck: -10 } },
+    { t: 0.9, ease: "inOut", p: { ...POSES.挥手, neck: 2 } },
+    // 放下来先收肘（手经过肩膀旁边），不从身前横扫过去
+    { t: 1.2, ease: "inOut", p: { ...POSES.挥手, shoulderR: 60, elbowR: 110, wristR: 10, neck: 0 } },
+    { t: 1.6, ease: "inOut", p: { ...STAND, expression: "微笑" } },
+  ];
+  return playMove(keys, t, { ...LOOK, idle: true, seed: 1 });
+}
+
+// ——— 弯腰摸摸孩子的头 ———
+/** 弯腰、摸两下孩子的头（孩子的头顶在她身前约 −390 高）、直起来（朝左） */
+export function patHead(t: number): MoveFrame {
+  const P = POSES.弯腰摸头;
+  const keys: MoveKey[] = [
+    { t: 0, p: { ...STAND, expression: "微笑" } },
+    { t: 0.45, ease: "inOut", p: { ...P } },
+    { t: 0.7, ease: "inOut", p: { ...P, shoulderL: (P.shoulderL ?? 0) - 6, wristL: (P.wristL ?? 0) + 8 } },
+    { t: 0.95, ease: "inOut", p: { ...P } },
+    { t: 1.2, ease: "inOut", p: { ...P, shoulderL: (P.shoulderL ?? 0) - 6, wristL: (P.wristL ?? 0) + 8 } },
+    { t: 1.75, ease: "inOut", p: { ...STAND, expression: "微笑" } },
+  ];
+  return playMove(keys, t, { ...LOOK, idle: true, seed: 2 });
+}
+
+// ——— 飘：光脚，像在水里（失重） ———
+/** 光脚飘着（头发、围巾往上漂），身子像在水里一样慢慢地摆；base 可以叠别的姿势 */
+export function float(t: number, base: Angles = {}): MoveFrame {
+  const s = Math.sin(t * 1.1);
+  const c = Math.cos(t * 0.8);
+  const o: Angles = {
+    face: -0.55,
+    ...legL(-6 + 4 * s, -34 - 6 * c, -50),
+    ...legR(6 - 3 * c, -22 + 5 * s, -45),
+    lean: 4 + 3 * s,
+    neck: 6 + 3 * c,
+    rot: 3 * c,
+    shoulderL: -44 - 7 * s,
+    elbowL: 34 + 6 * c,
+    wristL: 12,
+    handL: "open",
+    shoulderR: 40 + 6 * c,
+    elbowR: 28 - 6 * s,
+    wristR: -8,
+    handR: "open",
+    float: 1,
+    lift: 70 + 8 * s,
+    expression: "闭眼",
+    smile: 0.3,
+    blush: 0.4,
+    ...base,
+  };
+  return playMove([{ t: 0, p: o, items: { boots: false, bricks: 0 } }], t, { ...LOOK, idle: false });
+}
+
+export type { MoveFrame, MoveKey };
+export { playMove };
+export { legL, legR, STAND };
