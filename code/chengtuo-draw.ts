@@ -61,6 +61,7 @@ import {
   strokeBodyPart,
   toLocal,
   EAR_SIDE_IN,
+  faceOf,
 } from "./figure";
 import { SIDE_IRIS } from "./figure-side";
 import { SIDE_BANGS } from "./chengtuo-side";
@@ -323,12 +324,27 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
 }
 
 
+/** 刘海下沿的高度（头的坐标）：后面那缕鬓发从这里垂下来 */
+const BANGS_BOTTOM_Y = -6.64;
+
+/**
+ * 3/4 时后面那缕鬓发（盖着耳根）：直直地垂下来（用户 2026-10-18）——整缕按刘海下沿那一行横向映射，
+ * 不像耳朵那样一行一行贴着脸边走（下颌往里收，贴着走就斜了）；再跟耳朵一起往脸这边收。
+ */
+function lockBack(h: HeadView): Path2D {
+  const { rig, H, uh, place } = h;
+  const from = rowSpan(FACE_TURN[0], BANGS_BOTTOM_Y);
+  const to = rowSpan(faceOf(rig), BANGS_BOTTOM_Y);
+  if (uh <= 0 || !from || !to) return cubicPath(LOCK_R, place);
+  const k = (to[1] - to[0]) / (from[1] - from[0]);
+  return cubicPath(LOCK_R, ([x, y]) => H(to[0] + (x - from[0]) * k - EAR_SIDE_IN * uh, y));
+}
+
 /** 刘海和两边的头发（Look.frontHair）：盖住脸边和耳根，跟着脸走；先填色、后描边，头发压在头发上的边不描（用户 2026-10-17），只描压在脸和耳朵上的边 */
 function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink) {
   const { rig, H, uh, place } = h;
   const { head, field, pose } = rig;
-  // 后面那缕鬓发盖着耳根：跟耳朵一起往脸这边收
-  const locks = [cubicPath(LOCK_L, place), cubicPath(LOCK_R, ([x, y]) => place([x - EAR_SIDE_IN * uh, y]))];
+  const locks = [cubicPath(LOCK_L, place), lockBack(h)];
   // 刘海：正面线稿 → 侧面线稿（缝照正面的补上），再按风、失重飘起来
   const bangs = polylinePath(windBangs(lerpPts(...BANGS_TURN, uh), rotateV(field, -head.a), pose), ([x, y]) => H(x, y));
   for (const p of [...locks, bangs]) fillShaded(ctx, p, K.hair, null, ink);
