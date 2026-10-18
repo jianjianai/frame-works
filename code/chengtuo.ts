@@ -103,7 +103,7 @@ export const resources = defineResources({
     kind: "character",
     title: "秤砣",
     description:
-      "《引力》的女主秤砣：19 岁，黑色齐刘海长直发，藏青外套（袖子卷到小臂、肩头铆钉）、左臂红袖标、米白毛衣、深灰裤袜、插着砖的生锈铁靴（麻绳、铆钉），芥末黄围巾、藏青手套。二维骨架剪纸画风（深色描边、平涂、右下一道阴影），建在「基础模型」上（骨架、身体、脸和表情、转身都是基础模型的，她只换了配色、发型、衣服、鞋）。正面和 3/4 连续转身；表情 10 种并可细调眼皮、眉毛、嘴；外套、袖标、铁靴、围巾、手套都可以单独脱掉（全脱是基础模型），靴子里、手里可以插砖、拿砖；姿势按每个关节的角度摆，脚自动踩地；头发、刘海、围巾随风一阵一阵地飘（4 秒循环），失重从垂着到漂起来连续过渡、和风联动。",
+      "《引力》的女主秤砣：19 岁，黑色齐刘海长直发，藏青外套（袖子卷到小臂、肩头铆钉）、左臂红袖标、米白毛衣、深灰裤袜、插着砖的生锈铁靴（麻绳、铆钉），芥末黄围巾、藏青手套。二维骨架剪纸画风（深色描边、平涂、右下一道阴影），建在「基础模型」上（骨架、身体、脸和表情、转身都是基础模型的，她只换了配色、发型、衣服、鞋）。正面和 3/4 连续转身；表情 10 种并可细调眼皮、眉毛、嘴；外套、袖标、铁靴、围巾、手套都可以单独脱掉，靴子里、手里可以插砖、拿砖；姿势按每个关节的角度摆，脚自动踩地；头发、刘海、围巾随风一阵一阵地飘（4 秒循环），失重从垂着到漂起来连续过渡、和风联动。",
     tags: ["秤砣", "女主", "少女", "长发", "围巾", "外套", "铁靴", "袖标", "剪纸", "骨架", "引力"],
     usage:
       "chengtuo(ctx, x, y, s, { face, expression, shoulderL, elbowL, …, coat, band, boots, bricks, scarf, gloves }, t)  // (x, y) 两脚之间的地面，s = 1 全身约 590 高；动作用 drawChengtuo(ctx, pose) + walk / jumpGrab / kneelGive / float",
@@ -119,7 +119,7 @@ export const resources = defineResources({
       跳起来抓: { face: -1, expression: "使劲", neck: 29, lean: -5, lift: 187, shoulderL: 52, elbowL: 34, wristL: 0, handL: "open", shoulderR: 158, elbowR: -1, wristR: 11, handR: "grip", hipL: 25, kneeL: -55, ankleL: 30, hipR: 23, kneeR: -54, ankleR: 30, open: 0.3, lookX: -0.2, lookY: -1 },
       飘: { face: -0.55, expression: "闭眼", float: 1, lift: 60, neck: 8, lean: 5, rot: 3, shoulderL: -47, elbowL: 37, wristL: 11, handL: "open", shoulderR: 42, elbowR: 25, wristR: -6, handR: "open", hipL: -8, kneeL: -36, ankleL: 29, hipR: 4, kneeR: -17, ankleR: 26, blush: 0.4 },
       摘了围巾和手套: { scarf: false, gloves: false },
-      基础模型: { coat: false, band: false, boots: false },
+      毛衣光脚: { coat: false, band: false, boots: false },
       呼吸眨眼: { idle: true },
       风里: { face: -1, wind: 1.6, idle: true, neck: 4, shoulderL: -5, elbowL: 16, wristL: 15, shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
       水里漂: { face: -0.55, expression: "闭眼", float: 1, wind: 0.6, lift: 60, neck: 8, lean: 5, rot: 3, shoulderL: -47, elbowL: 37, wristL: 11, handL: "open", shoulderR: 42, elbowR: 25, wristR: -6, handR: "open", hipL: -8, kneeL: -36, ankleL: 29, hipR: 4, kneeR: -17, ankleR: 26, blush: 0.4 },
