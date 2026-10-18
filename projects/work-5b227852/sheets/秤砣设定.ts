@@ -1,6 +1,6 @@
-// 秤砣设定图：t 当页码。0 转面，1 表情，2 动作姿势，3 以后转身过渡（正面线稿 ↔ 侧面线稿）。
+// 秤砣设定图：t 当页码。0 转面，1 表情，2 片子里的姿势，3 以后转身过渡（正面线稿 ↔ 侧面线稿）。
 import type { Scene, SceneOptions } from "@frame/engine/types";
-import { EXPRESSIONS, NEUTRAL, POSES, STAND34, drawChengtuo, float, holdBrick, jumpGrab, kneelGive, type PoseIn } from "@materials/剪纸角色/code/chengtuo";
+import { EXPRESSIONS, POSES, chengtuo, drawChengtuo, float, type ChengtuoOptions } from "@materials/剪纸角色/code/chengtuo";
 
 const W = 1080;
 const H = 1920;
@@ -20,93 +20,77 @@ function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number
   ctx.fillText(text, x, y);
 }
 
-function figure(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, pose: PoseIn) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(s, s);
+function figure(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, o: ChengtuoOptions) {
   ctx.fillStyle = "rgba(90,70,110,0.12)";
   ctx.beginPath();
-  ctx.ellipse(0, 0, 110, 14, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, y, 110 * s, 14 * s, 0, 0, Math.PI * 2);
   ctx.fill();
-  drawChengtuo(ctx, pose);
-  ctx.restore();
+  chengtuo(ctx, x, y, s, o, 0.3);
 }
 
 function expressions(ctx: CanvasRenderingContext2D) {
-  label(ctx, "秤砣 · 表情", W / 2, 90, 44);
+  label(ctx, "秤砣 · 表情", W / 2, 80, 44);
   const names = Object.keys(EXPRESSIONS);
-  const cols = 3;
+  const cols = 4;
   const cw = W / cols;
-  const ch = 400;
+  const ch = 352;
   names.forEach((name, i) => {
     const cx = cw * (i % cols) + cw / 2;
-    const cy = 330 + Math.floor(i / cols) * ch;
-    const s = 2.3;
+    const cy = 120 + Math.floor(i / cols) * ch;
+    const s = 2.15;
     ctx.save();
     ctx.beginPath();
-    ctx.roundRect(cx - cw / 2 + 14, cy - 170, cw - 28, 330, 28);
+    ctx.roundRect(cx - cw / 2 + 10, cy, cw - 20, ch - 52, 24);
     ctx.fillStyle = "rgba(255,255,255,0.45)";
     ctx.fill();
     ctx.clip();
-    ctx.translate(cx, cy + 497 * s + 15);
-    ctx.scale(s, s);
+    // 一半正面、一半 3/4，表情在两个角度都看得到
     const face = i % 2 === 0 ? 0 : -0.6;
-    const e = { ...NEUTRAL, ...EXPRESSIONS[name] };
-    drawChengtuo(ctx, { face, expr: e, t: 0.3, neck: name === "仰望" ? 0.25 : name === "难过" || name === "心疼" ? -0.12 : 0 }, { line: 0.8 });
+    chengtuo(ctx, cx + 4, cy + 150 + 497 * s, s, { face, expression: name as ChengtuoOptions["expression"], line: 0.8 }, 0.37);
     ctx.restore();
-    label(ctx, name, cx, cy + 200, 28);
+    label(ctx, name, cx, cy + ch - 18, 26);
   });
 }
 
 function gallery(ctx: CanvasRenderingContext2D) {
-  label(ctx, "秤砣 · 片子里的动作", W / 2, 90, 44);
-  const list: [string, PoseIn, boolean?][] = [
-    ["蹲（起跳前）", jumpGrab(0.45)],
-    ["空中抓住", jumpGrab(0.97)],
-    ["落地", jumpGrab(1.55)],
-    ["单膝跪·掏砖", kneelGive(1.0).pose],
-    ["递砖", kneelGive(2.2).pose, true],
-    ...Object.entries(POSES).map(([k, v]) => [k, v] as [string, PoseIn]),
-  ];
+  label(ctx, "秤砣 · 片子里的姿势", W / 2, 80, 44);
+  const names = Object.keys(POSES);
   const cols = 4;
   const cw = W / cols;
-  const ch = 335;
-  list.forEach(([name, pose, brick], i) => {
+  const ch = 352;
+  names.forEach((name, i) => {
+    const { items, ...o } = POSES[name];
     const cx = cw * (i % cols) + cw / 2;
-    const base = 440 + Math.floor(i / cols) * ch;
-    const s = 0.47;
-    ctx.save();
-    ctx.translate(cx + (name === "倒着睡" ? -30 : 0), base - (name === "倒着睡" ? 40 : 0));
-    ctx.scale(s, s);
+    const base = 120 + (Math.floor(i / cols) + 1) * ch - 64;
+    const s = Math.min(0.46, 270 / (600 + Math.max(0, o.lift ?? 0)));
     ctx.fillStyle = "rgba(90,70,110,0.12)";
     ctx.beginPath();
-    ctx.ellipse(0, 0, 110, 14, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, base, 110 * s * 2, 14 * s * 2, 0, 0, Math.PI * 2);
     ctx.fill();
-    drawChengtuo(ctx, { ...pose, t: 0.4 }, brick ? { hold: { L: holdBrick } } : {});
-    ctx.restore();
-    label(ctx, name, cx, base + 42, 24);
+    chengtuo(ctx, cx, base, s, { ...o, ...(items as object), brickL: name === "递砖" } as ChengtuoOptions, 0.4);
+    label(ctx, name, cx, base + 38, 24);
   });
 }
 
 function turnaround(ctx: CanvasRenderingContext2D) {
   label(ctx, "秤砣 · 转面", W / 2, 90, 44);
   const y = 820;
-  figure(ctx, 190, y, 1.0, STAND34);
-  figure(ctx, 540, y, 1.0, {});
-  figure(ctx, 890, y, 1.0, { ...STAND34, face: 1 });
+  chengtuo(ctx, 190, y, 1.0, POSES.站 as ChengtuoOptions, 0.3);
+  chengtuo(ctx, 540, y, 1.0, {}, 0.3);
+  chengtuo(ctx, 890, y, 1.0, { ...(POSES.站 as ChengtuoOptions), face: 1 }, 0.3);
   label(ctx, "3/4 朝左", 190, y + 70);
   label(ctx, "正面", 540, y + 70);
   label(ctx, "3/4 朝右", 890, y + 70);
   // 光脚、飘起来
   const y2 = 1700;
-  figure(ctx, 300, y2, 1.0, {
-    face: 0,
-    legL: { boot: false },
-    legR: { boot: false },
-    items: { bricks: 0 },
-  });
+  chengtuo(ctx, 300, y2, 1.0, { boots: false, bricks: 0 }, 0.3);
   label(ctx, "光脚", 300, y2 + 70);
-  figure(ctx, 770, y2 - 60, 0.9, float(0.6));
+  const f = float(0.6);
+  ctx.save();
+  ctx.translate(770, y2 - 40);
+  ctx.scale(0.9, 0.9);
+  drawChengtuo(ctx, f.pose);
+  ctx.restore();
   label(ctx, "飘起来（头发、围巾往上）", 760, y2 + 70);
 }
 

@@ -1,99 +1,71 @@
-// 秤砣动作样片：走进来（一步一咚）→ 停下仰头 → 蹲、跳、空中抓住 → 带着铁靴的分量坠下来落地 →
-// 单膝跪下、从靴筒里抽出一块砖递出去 → 站起来，笑一下，脚跟轻轻离地一下（送出一块砖，她轻了）。
-// 周磊只画一截腿和接砖的手，用来看动作。
+// 秤砣动作样片（开场救周磊那一段）：从画面右边走进来（一步一咚）→ 停下、仰头 → 蹲、跳、空中抓住他的脚踝 →
+// 带着铁靴的分量坠下来落地 → 单膝跪下、从靴筒里抽出一块砖递出去 → 站起来，笑一下，脚跟轻轻离地一下（送出一块砖，她轻了）。
+// 周磊只画一截腿和接砖的手，用来看动作。全部只依赖时间，可以任意跳转。
 import type { Sample, Scene, SceneOptions } from "@frame/engine/types";
-import { BODY, LEG_K, NEUTRAL, STAND34, alive, drawChengtuo, footAt, hipAt, holdBrick, jointsOf, jumpGrab, kneelGive, walk, walkSteps, type PoseIn } from "@materials/剪纸角色/code/chengtuo";
-import { type V2, blend, breathAt, clamp01, ease, lerp } from "@materials/剪纸角色/code/rig";
+import {
+  JUMP_GRAB,
+  KNEEL_GIVE,
+  POSES,
+  drawChengtuo,
+  holdBrick,
+  jointsOf,
+  jumpGrabKeys,
+  kneelGiveKeys,
+  legR,
+  playMove,
+  shiftKeys,
+  walk,
+  walkSteps,
+  type MoveFrame,
+  type MoveKey,
+} from "@materials/剪纸角色/code/chengtuo";
+import { type V2, clamp01, ease, lerp } from "@materials/剪纸角色/code/rig";
+import { CHENGTUO } from "@materials/剪纸角色/code/chengtuo-draw";
 
-export const sample: Sample = { duration: 9.4 };
+export const sample: Sample = { duration: 10 };
 
 const W = 1080;
 const H = 1920;
-const S = 1.12;
+const S = 1.1;
 const GY = 1480;
-const X0 = 760;
+const X0 = 1240;
 
-const WALK = { t0: 0.5, period: 1, stride: 92, lift: 44 };
+// 时间表
+const STEP = 0.5;
 const STOP = 2.0;
-const JUMP = 2.55;
-const KNEEL = 4.85;
-const GIVE = 7.35;
-const UP = 7.55;
-const GRAB: V2 = [-84, -790];
+const JUMP = STOP + 0.55;
+const JUMP_END = JUMP + 2.6;
+/** 跪下递砖那段从这里算（它的第一帧站着去掉，直接从落地站稳的姿势跪下去） */
+const KB = JUMP_END + 0.15;
+const KNEEL = KB + KNEEL_GIVE.kneel;
+const GRAB_T = JUMP + JUMP_GRAB.grab;
+const LAND_T = JUMP + JUMP_GRAB.land;
+const GIVE_T = KB + KNEEL_GIVE.give;
 
 const phase = (t: number, a: number, b: number) => clamp01((t - a) / (b - a));
 
-interface State {
-  x: number;
-  pose: PoseIn;
-  brick: boolean;
+// 停下以后是一整串关键帧：前脚踩住、后脚收上来、仰头 → 跳起来抓 → 跪下递砖（跪下从落地的姿势直接过去）
+const STOP_FRAME = walk(STOP, { step: STEP });
+const KEYS: MoveKey[] = [
+  { t: STOP, p: STOP_FRAME.options, x: STOP_FRAME.x },
+  { t: STOP + 0.22, ease: "out", plant: "L", p: { ...STOP_FRAME.options, ...legR(6, -46, -20), lean: 4 } },
+  ...shiftKeys(jumpGrabKeys(), JUMP).map((k, i) => (i === 0 ? { ...k, plant: "L" as const } : k)),
+  ...shiftKeys(kneelGiveKeys(), KB, true),
+];
+
+function stateAt(t: number): MoveFrame & { brick: boolean } {
+  if (t < STOP) return { ...walk(t, { step: STEP }), brick: false };
+  const f = playMove(KEYS, t, { look: CHENGTUO, idle: t < JUMP || t > KB + KNEEL_GIVE.stood, seed: 3 });
+  const k = t - KB;
+  return { ...f, brick: k >= KNEEL_GIVE.pull - 0.05 && t < GIVE_T + 0.05 };
 }
 
-function stateAt(t: number): State {
-  if (t < STOP) {
-    const w = walk(t, WALK);
-    return { x: w.x, pose: w.pose, brick: false };
-  }
-  const w = walk(STOP, WALK);
-  const xEnd = w.x;
-  const wL = w.pose.legL!.to![0];
-  const wR = w.pose.legR!.to![0];
-  // 停下：前脚踩住不动，身体移到前脚上，后脚收上来
-  const shift = wR - footAt(-26, 0)[0];
-  const xStop = xEnd + shift;
-  if (t < JUMP) {
-    const p = ease.inOut(phase(t, STOP, 2.45));
-    const q = ease.inOut(phase(t, 2.08, 2.45));
-    const j0 = jumpGrab(0);
-    const pose = blend(w.pose, j0, p);
-    pose.legL = { ...j0.legL, to: [lerp(wL - shift * p, footAt(22, 0)[0], q), footAt(0, -34 - 20 * Math.sin(Math.PI * q))[1]], f: 0.12 * Math.sin(Math.PI * q) };
-    pose.legR = { ...j0.legR, to: [wR - shift * p, -BODY.ankleBare], f: 0 };
-    pose.t = t;
-    pose.expr = alive(blend(w.pose.expr ?? NEUTRAL, j0.expr ?? NEUTRAL, p) as typeof NEUTRAL, t);
-    return { x: xEnd + shift * p, pose, brick: false };
-  }
-  if (t < KNEEL - 0.35) {
-    const pose = jumpGrab(t - JUMP);
-    pose.breath = breathAt(t) * 0.5;
-    return { x: xStop, pose, brick: false };
-  }
-  if (t < KNEEL) {
-    const p = ease.inOut(phase(t, KNEEL - 0.35, KNEEL));
-    const pose = blend(jumpGrab(KNEEL - 0.35 - JUMP), kneelGive(0).pose, p);
-    pose.t = t;
-    return { x: xStop, pose, brick: false };
-  }
-  if (t < UP) {
-    const k = kneelGive(t - KNEEL);
-    return { x: xStop, pose: k.pose, brick: k.hasBrick && t < GIVE };
-  }
-  // 站起来：前脚踩住，身体压上去，后腿收回来
-  const kp = kneelGive(UP - KNEEL).pose;
-  const shift2 = -88 - -26;
-  const p = ease.inOut(phase(t, UP, 8.25));
-  const q = ease.inOut(phase(t, UP + 0.12, 8.25));
-  const end: PoseIn = {
-    ...STAND34,
-    face: -0.55,
-    neck: 0.06,
-    lean: 0.02,
-    armL: { a: -0.12, b: 0.25, h: 0, to: [-84, -150], ik: 0, bend: -1, shape: "relax" },
-    armR: { a: 0.16, b: 0.3, h: 0, shape: "relax" },
-    expr: { ...NEUTRAL, smile: 0.85, happy: 0.75, blush: 0.6, look: [-0.5, 0] },
-  };
-  const pose = blend(kp, end, p);
-  // 脚跟离地一下：送出去一块砖，她轻了
-  const lift = Math.sin(Math.PI * phase(t, 8.45, 8.95)) * 9;
-  pose.legL = { ...end.legL, to: footAt(lerp(165 - shift2 * p, 22, q), lerp(-74, -34, q) - 26 * Math.sin(Math.PI * q) - lift), f: lerp(-1.1, 0, ease.out(q)) + 0.06 * lift / 9, bend: 1 };
-  pose.legR = { ...end.legR, to: footAt(-88 - shift2 * p, -34 - lift), f: 0.06 * lift / 9, bend: 1 };
-  pose.hip = [lerp(kp.hip![0], 0, p), lerp(kp.hip![1], hipAt(-297), p) - lift * LEG_K];
-  pose.breath = breathAt(t) * 0.6;
-  pose.items = { ...pose.items, bricks: 1 };
-  pose.t = t;
-  pose.expr = alive(pose.expr as typeof NEUTRAL, t, 5);
-  pose.expr.look = [lerp(-0.5, -0.2, phase(t, 8.45, 8.9)), lerp(0, 0.7, Math.sin(Math.PI * phase(t, 8.4, 9.1)))];
-  return { x: xStop + shift2 * LEG_K * p, pose, brick: false };
-}
+// 抓住的那一刻手在哪：他的脚踝就挂在那里
+const GRAB_AT: V2 = (() => {
+  const f = stateAt(GRAB_T);
+  const p = jointsOf(f.pose).palmR;
+  return [f.x + p[0], p[1] - 8];
+})();
 
 // ——— 地上的灰：每一脚扬起一圈 ———
 interface Puff {
@@ -103,16 +75,14 @@ interface Puff {
 }
 const PUFFS: Puff[] = (() => {
   const out: Puff[] = [];
-  for (const st of walkSteps(0, STOP, WALK)) {
+  for (const st of walkSteps(0, STOP, { step: STEP })) {
     const s = stateAt(st + 0.001);
     const j = jointsOf(s.pose);
-    const front = Math.min(j.ankleL[0], j.ankleR[0]);
-    out.push({ t: st, x: s.x + front, size: 1 });
+    out.push({ t: st, x: s.x + Math.min(j.ankleL[0], j.ankleR[0]), size: 1 });
   }
-  const land = JUMP + 1.42;
-  const s = stateAt(land);
-  out.push({ t: land, x: s.x - 30, size: 2.2 });
-  out.push({ t: KNEEL + 0.55, x: stateAt(KNEEL + 0.55).x + 40, size: 0.8 });
+  const s = stateAt(LAND_T);
+  out.push({ t: LAND_T, x: s.x, size: 2.2 });
+  out.push({ t: KNEEL, x: stateAt(KNEEL).x + 60, size: 0.8 });
   return out;
 })();
 
@@ -158,19 +128,15 @@ function drawPuff(ctx: CanvasRenderingContext2D, t: number, p: Puff) {
 }
 
 // ——— 周磊：一截腿（被抓住前悬着晃，抓住后跟着她的手下来）和接砖的手 ———
-function drawLegAbove(ctx: CanvasRenderingContext2D, t: number, st: State) {
-  const tau = t - JUMP;
-  const fade = 1 - phase(t, KNEEL - 0.5, KNEEL - 0.1);
+function drawLegAbove(ctx: CanvasRenderingContext2D, t: number, st: MoveFrame) {
+  const fade = 1 - phase(t, KNEEL - 0.3, KNEEL + 0.1);
   if (fade <= 0) return;
-  let ankle: V2 = [GRAB[0] + Math.sin(t * 1.3) * 6, GRAB[1] - 12 + Math.sin(t * 0.9) * 4];
-  if (tau >= 0.97) {
-    const j = jointsOf(st.pose);
-    const w = j.palmR;
-    ankle = [w[0] + 2, w[1] - 14];
+  let ankle: V2 = [GRAB_AT[0] + Math.sin(t * 1.3) * 6, GRAB_AT[1] + Math.sin(t * 0.9) * 4];
+  if (t >= GRAB_T) {
+    const p = jointsOf(st.pose).palmR;
+    ankle = [st.x + p[0], p[1] - 8];
   }
-  const sx = X0 + st.x * S;
-  // 抓住前：她的根停在 xStop，脚踝挂在 GRAB
-  const ax = sx + ankle[0] * S;
+  const ax = X0 + ankle[0] * S;
   const ay = GY + ankle[1] * S;
   ctx.save();
   ctx.globalAlpha = fade;
@@ -179,12 +145,11 @@ function drawLegAbove(ctx: CanvasRenderingContext2D, t: number, st: State) {
   ctx.lineWidth = 46;
   ctx.beginPath();
   ctx.moveTo(ax + 10, ay - 30);
-  ctx.lineTo(ax + 40, -40);
+  ctx.lineTo(ax + 40, ay - 420);
   ctx.stroke();
   ctx.strokeStyle = "#8c95ad";
   ctx.lineWidth = 40;
   ctx.stroke();
-  // 皮鞋
   ctx.fillStyle = "#3b3346";
   ctx.strokeStyle = "#2a2b40";
   ctx.lineWidth = 3.5;
@@ -202,12 +167,11 @@ function drawLegAbove(ctx: CanvasRenderingContext2D, t: number, st: State) {
   ctx.restore();
 }
 
-function drawTaker(ctx: CanvasRenderingContext2D, t: number, brickAt: V2 | null) {
-  const inn = ease.inOut(phase(t, 6.75, GIVE));
-  const out = ease.inOut(phase(t, GIVE + 0.1, GIVE + 0.75));
+function drawTaker(ctx: CanvasRenderingContext2D, t: number, target: V2) {
+  const inn = ease.inOut(phase(t, GIVE_T - 0.6, GIVE_T));
+  const out = ease.inOut(phase(t, GIVE_T + 0.15, GIVE_T + 0.8));
   const v = inn - out;
   if (v <= 0.001) return null;
-  const target: V2 = brickAt ?? [360, 1150];
   const hx = lerp(-140, target[0] - 30, v);
   const hy = lerp(target[1] + 90, target[1] + 22, v);
   ctx.save();
@@ -257,6 +221,13 @@ function background(ctx: CanvasRenderingContext2D) {
   }
 }
 
+/** 砖在她手里时的位置（递出去的那一刻） */
+const BRICK_AT: V2 = (() => {
+  const f = stateAt(GIVE_T - 0.001);
+  const p = jointsOf(f.pose).palmL;
+  return [X0 + (f.x + p[0]) * S, GY + p[1] * S];
+})();
+
 export function createScene({ width, height }: SceneOptions): Scene {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -271,8 +242,7 @@ export function createScene({ width, height }: SceneOptions): Scene {
       const j = jointsOf(st.pose);
       const sx = X0 + st.x * S;
       // 影子：离地越高越小越淡
-      const footY = Math.max(j.ankleL[1], j.ankleR[1]);
-      const air = clamp01((-BODY.ankleBare - footY) / 215);
+      const air = clamp01((st.pose.hip![1] + 280) / -230);
       ctx.fillStyle = `rgba(110,80,110,${0.16 * (1 - air * 0.6)})`;
       ctx.beginPath();
       ctx.ellipse(sx + ((j.ankleL[0] + j.ankleR[0]) / 2) * S, GY, 120 * (1 - air * 0.4), 16, 0, 0, Math.PI * 2);
@@ -286,8 +256,8 @@ export function createScene({ width, height }: SceneOptions): Scene {
       ctx.restore();
       // 砖递出去以后在接的人手里
       const palm: V2 = [sx + j.palmL[0] * S, GY + j.palmL[1] * S];
-      const hand = drawTaker(ctx, t, t < GIVE ? palm : stateBrickAt(t));
-      if (t >= GIVE && hand) {
+      const hand = drawTaker(ctx, t, t < GIVE_T ? palm : BRICK_AT);
+      if (t >= GIVE_T + 0.05 && hand) {
         ctx.save();
         ctx.translate(hand[0], hand[1]);
         ctx.scale(S, S);
@@ -305,11 +275,4 @@ export function createScene({ width, height }: SceneOptions): Scene {
       canvas.width = canvas.height = 1;
     },
   };
-}
-
-function stateBrickAt(t: number): V2 {
-  void t;
-  const st = stateAt(GIVE - 0.001);
-  const j = jointsOf(st.pose);
-  return [X0 + st.x * S + j.palmL[0] * S, GY + j.palmL[1] * S];
 }

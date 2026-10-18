@@ -17,7 +17,7 @@ const project: AnimationProject = {
   credits: [],
   load: () => import("./scene"),
   loadVisual: () => import("./visual.json"),
-  experiences: ["骨架剪纸动画"],
+  experiences: ["骨架剪纸动画","情绪运镜","剧情音乐短片"],
   materials: ["剪纸角色"],
 };
 export default project;
