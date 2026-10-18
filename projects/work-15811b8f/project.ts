@@ -12,7 +12,6 @@ const project: AnimationProject = {
   fps: 30,
   accent: "#7aa2f7",
   tags: [],
-  status: "draft",
   beats: [{"at":0,"title":"01 · 入夜","detail":"光斑与城市点亮，主标题显现"},{"at":6,"title":"02 · 雨中脉冲","detail":"波纹置换转场，雨幕随拍提速"},{"at":14,"title":"03 · 夜空盛放","detail":"每小节烟花和火花"},{"at":20,"title":"04 · 留住微光","detail":"回到夜城，品牌落版与余音"}],
   subtitles: [],
   credits: [],
