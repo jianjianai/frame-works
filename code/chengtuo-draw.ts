@@ -13,19 +13,21 @@ import {
   Frame,
   add,
   angleOf,
+  bendAlong,
   bezierPolyline,
-  chain,
   clamp01,
   clockwisePoly,
   dirOf,
   drawMerged,
   drawPart,
   fillShaded,
+  gusty,
   ik2,
   len,
   lerp,
   lerpPts,
   lerpV,
+  loopSin,
   marksByBox,
   matchOutlines,
   merge,
@@ -553,9 +555,10 @@ const HAIR_PIVOT = 15;
 /**
  * 发梢分成几绺，每绺收成一个圆尖，绺和绺之间往上分开一道 V（不是一刀切的直线，用户 2026-10-18）。
  * 数是每绺的尖比分缝处长多少；cut 是每道分缝往上画的细发丝线有多长（占整片长度的比例）。
+ * 绺数是双数：中间那道缝正好在正中，飘起来时左右两半从这里分开。
  */
-const HAIR_TIPS = [13, 19, 16, 22, 17, 20, 12];
-const HAIR_CUTS = [0.26, 0.2, 0.32, 0.22, 0.3, 0.18];
+const HAIR_TIPS = [13, 19, 16, 22, 21, 17, 20, 12];
+const HAIR_CUTS = [0.26, 0.2, 0.32, 0.38, 0.22, 0.3, 0.18];
 
 /** 发梢那一线的高度：分缝处是一道中间低、两边高的弧，再加上每绺的尖（s：0 左边 → 1 右边） */
 function hairEnd(s: number) {
@@ -579,118 +582,109 @@ function hairRestX(s: number, y: number) {
 }
 
 /**
- * 披下来的一整片：每一条头发从自己的发根往下，一段一段转向受力方向（越往下转得越多，风大时上面也早早转过去）。
- * 只算左右两边，中间的按比例插：横着吹时左边的头发从脑后绕过去、和右边的叠在一起，飘出去的一股自然变窄，
- * 右边从耳朵下面直接接出去。风大时中间几绺拉长、两边的短，飘出去的一股收成尖；
- * 有横着的风（或动作带起来的惯性）时一绺一绺地抖，越往发梢越大，相邻几绺错开一点。
+ * 后面的头发：头顶照线稿，耳朵以下披下来的部分是几绺并排的头发（垂着时拼成一整片）。
+ * 每绺从发根往下一段一段转向受力方向（重力 + 风 + 动作带起来的惯性，bendAlong），越往下转得越多：
+ * - 横着吹时左边的头发从脑后绕过去、和右边的叠在一起，飘出去的一股自然变窄，右边从耳朵下面直接接出去；
+ *   风大时中间几绺拉长、两边的短，收成尖；每绺按自己的节奏抖（4 秒一个循环）。
+ * - 失重（float）、往下坠时受力朝上：左边几绺往左外侧、右边几绺往右外侧偏，从两边翻上去，越往上越散开；
+ *   0 → 1 连续过渡，和风一起算（风把飘起来的头发吹向一边）。
  */
-function drawHangingHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, uh: number) {
-  const { head, field, pose } = rig;
-  const P = HAIR_PIVOT;
-  // 受力方向（头的坐标里，0 = 正下方）：低头、弯腰、走路、风
-  const f = rotateV(field, -head.a);
-  const delta = Math.max(-1.3, Math.min(1.3, angleOf(f)));
-  const gust = clamp01(Math.abs(f[0]) / 1.2);
-  const base = lerp(0.3, 0.65, gust);
-  const bendAt = (y: number) => delta * smooth01(P, P + 30, y) * (base + (1 - base) * clamp01((y - P) / 150));
-  const turn = (x: number, y: number) => hairTurnX(x, uh, smooth01(-5, 40, y));
-  const restX = (s: number, y: number) => turn(hairRestX(s, y), y);
-  // 左右两边：从耳朵下面一段一段接下去
-  const edges = [0, 1].map((s) => {
-    const pts: V2[] = [[restX(s, P), P]];
-    for (let i = 1; i < HAIR_ROWS.length; i++) {
-      const y0 = P + (i - 1) * HAIR_DY;
-      pts.push(add(pts[i - 1], rotateV([restX(s, y0 + HAIR_DY) - restX(s, y0), HAIR_DY], bendAt(y0 + HAIR_DY / 2))));
-    }
-    return pts;
-  });
-  const edgeAt = (pts: V2[], y: number): V2 => {
-    const t = Math.max(0, Math.min(pts.length - 1.001, (y - P) / HAIR_DY));
-    const i = Math.floor(t);
-    return lerpV(pts[i], pts[i + 1], t - i);
-  };
-  /** 披下来那片上 (s, v) 处的点（v 0 耳朵下面 → 1 发梢），放到现在的样子（画面坐标） */
-  const place = (s: number, v: number): V2 => {
-    const mid = 1 - (2 * s - 1) ** 2;
-    const y = lerp(P, hairEnd(s), v) + gust * (24 * mid - 6) * v * v;
-    const k = (y - P) / 150;
-    const flap = gust * (6 * Math.sin(pose.t * 6.5 - k * 5 + s * 3) + 2.5 * Math.sin(pose.t * 10.7 + s * 17)) * k * k;
-    const q = add(lerpV(edgeAt(edges[0], y), edgeAt(edges[1], y), s), rotateV([flap, 0], bendAt(y)));
-    return head.p(q[0], q[1]);
-  };
-
-  // 轮廓：右边往下 → 发梢从右到左 → 左边往上 → 头顶（线稿）
-  const NV = 24;
-  const PER = 8;
-  const NS = HAIR_TIPS.length * PER;
-  const pts: V2[] = [];
-  for (let i = 0; i <= NV; i++) pts.push(place(1, i / NV));
-  for (let j = NS - 1; j >= 1; j--) pts.push(place(j / NS, 1));
-  for (let i = NV; i >= 0; i--) pts.push(place(0, i / NV));
-  const firstBelow = HAIR_POLY.findIndex((q) => q[1] > P);
-  let lastBelow = HAIR_POLY.length - 1;
-  while (HAIR_POLY[lastBelow][1] <= P) lastBelow--;
-  for (const [x, y] of [...HAIR_POLY.slice(lastBelow + 1), ...HAIR_POLY.slice(0, firstBelow)]) pts.push(head.p(turn(x, y), y));
-  drawPart(ctx, polylinePath(pts), K.hair, K.hairShade, ink);
-
-  // 分缝往上的细发丝线：分缝处粗、往上变细
-  ctx.fillStyle = K.line;
-  HAIR_CUTS.forEach((cut, i) => {
-    const s = (i + 1) / HAIR_TIPS.length;
-    const line: V2[] = [];
-    for (let j = 0; j <= 8; j++) line.push(place(s, 1 - cut + (cut * j) / 8));
-    const widths = line.map((_, j) => ink.lw * (0.04 + 0.34 * (j / 8)));
-    ctx.fill(smoothPath(ribbonPts(line, widths, 0.4)));
-  });
-}
-
 function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const { head, thh, field, pose } = rig;
   const uh = -thh / 0.62;
-  // 飘起来、往下坠（受力朝上）时一缕一缕散开；其余时候是线稿的那一整片
-  const loose = pose.float >= 0.5 || -field[1] >= 0.12;
-  if (!loose) {
-    drawHangingHair(ctx, rig, ink, uh);
-    return;
-  }
-  // 头顶那块照线稿，下面接一缕一缕的长发
-  const dome = ([x, y]: V2): V2 => head.p(hairTurnX(x, uh, 0), y);
-  const top = new Path2D();
-  const h = HAIR_OUTLINE;
-  const p0 = dome(h[0]);
-  top.moveTo(p0[0], p0[1]);
-  const bz = (a: V2, b: V2, c: V2) => {
-    const [pa, pb, pc] = [dome(a), dome(b), dome(c)];
-    top.bezierCurveTo(pa[0], pa[1], pb[0], pb[1], pc[0], pc[1]);
-  };
-  bz(h[1], h[2], h[3]);
-  bz([50, 30], [20, 45], [0, 45]);
-  bz([-20, 45], [-50, 30], h[21]);
-  bz(h[22], h[23], h[24]);
-  top.closePath();
-  const n = 8;
-  const up = clamp01(-field[1] * 1.2);
-  const strands: Path2D[] = [];
-  for (let i = 0; i < n; i++) {
-    const d = -1.34 + (i * 2.68) / (n - 1);
-    const hx = -54 * Math.sin(d + thh) - 1.2 * uh;
-    const root = head.p(hx, -4 + Math.abs(d) * 5);
-    // 发根方向：顺着头皮往外、往上（中间的直直往上）
-    const sn = Math.max(-1, Math.min(1, hx / 54));
-    const aDown = angleOf([sn * (0.06 + 0.2 * Math.abs(sn)), 1]);
-    const aUp = sn >= 0 ? -Math.PI + 1.15 * sn : Math.PI + 1.15 * sn;
-    const rootDir = dirOf(head.a + lerp(aDown, aUp, up));
-    const c = chain(root, rootDir, 6, 37, field, {
-      stiff: 0.3,
-      wave: pose.float * 0.22,
-      phase: pose.t * 1.5 + i * 1.3,
-      curl: pose.float * 0.12 * sn,
-      side: sn,
-      spread: 0.5,
+  const P = HAIR_PIVOT;
+  const t = pose.t;
+  // 受力（头的坐标里，角度 0 = 正下方）
+  const f = gusty(rotateV(field, -head.a), t);
+  const phi = angleOf(f);
+  const strength = Math.min(len(f), 1.5);
+  const gust = clamp01(Math.abs(f[0]) / 1.2);
+  const up = clamp01(0.3 - f[1]);
+  const turn = (x: number, y: number) => hairTurnX(x, uh, smooth01(-5, 40, y));
+  const restX = (s: number, y: number) => turn(hairRestX(s, y), y);
+  const n = HAIR_TIPS.length;
+  const N = HAIR_ROWS.length - 1;
+
+  // 每绺：沿自己的中线从根往下逐段转（bendAlong），两边按垂直于中线的方向放（怎么弯都保持宽度）。
+  // 飘起来时左边几绺往左、右边几绺往右偏一点（决定从哪边翻上去，中间两绺也要偏，不然在正中不稳、迟迟不起来），
+  // 并且在发根附近就转上去，贴着头往上漂，不在两边绕出大弯
+  const locks = HAIR_TIPS.map((_, k) => {
+    const s0 = k / n;
+    const s1 = (k + 1) / n;
+    const sc = (s0 + s1) / 2;
+    const fan = (sc - 0.5) * 2;
+    // 飘起来时每绺对着的方向按位置往外散开（越靠外越往外），像一团往上漾的火苗
+    const ang = bendAlong(
+      phi + fan * up * 0.7,
+      N,
+      (i) => {
+        const y = (i - 0.5) * HAIR_DY;
+        return 0.03 * HAIR_DY * strength * ((1 + 0.5 * gust) * smooth01(0, 40, y) + 3 * up * (1 - smooth01(20, 70, y)));
+      },
+      (i) => -Math.sign(fan) * up * (0.25 + 0.2 * Math.abs(fan)) * smooth01(0, 20, i * HAIR_DY),
+    );
+    // 抖：风里一绺一绺地抖，失重时像在水里慢慢漾；越往发梢越大
+    const a = ang.map((v, i) => {
+      const r = i / N;
+      return v + gust * 0.12 * loopSin(t, 5, k * 0.9 - i * 0.15) * r ** 1.5 + pose.float * 0.25 * loopSin(t, 1, k * 1.3 - i * 0.08) * r;
     });
-    strands.push(smoothPath(ribbonPts(c, [16, 17, 18, 19, 19, 18, 16], 0.28)));
-  }
-  drawMerged(ctx, [top, ...strands], K.hair, null, ink);
+    const C: V2[] = [[restX(sc, P), P]];
+    for (let i = 1; i <= N; i++) {
+      const y0 = P + (i - 1) * HAIR_DY;
+      C.push(add(C[i - 1], rotateV([restX(sc, y0 + HAIR_DY) - restX(sc, y0), HAIR_DY], (a[i - 1] + a[i]) / 2)));
+    }
+    /** 这绺上第 s 条（s0..s1）在原来高度 y 处的点 */
+    const at = (s: number, y: number): V2 => {
+      const tt = Math.max(0, Math.min(N - 0.001, (y - P) / HAIR_DY));
+      const i = Math.floor(tt);
+      const f = tt - i;
+      return add(lerpV(C[i], C[i + 1], f), rotateV([restX(s, y) - restX(sc, y), 0], lerp(a[i], a[i + 1], f)));
+    };
+    return { s0, s1, at };
+  });
+  /** 发梢那一线（风大时中间几绺拉长、两边的短） */
+  const endY = (s: number) => hairEnd(s) + gust * (24 * (1 - (2 * s - 1) ** 2) - 6);
+  const H = (q: V2): V2 => head.p(q[0], q[1]);
+
+  // 每绺一块：右边往下 → 发梢 → 左边往上
+  const NV = 24;
+  const PER = 8;
+  const pieces = locks.map(({ s0, s1, at }) => {
+    const pts: V2[] = [];
+    for (let i = 0; i <= NV; i++) pts.push(H(at(s1, lerp(P, endY(s1), i / NV))));
+    for (let j = PER - 1; j >= 1; j--) {
+      const s = lerp(s0, s1, j / PER);
+      pts.push(H(at(s, endY(s))));
+    }
+    for (let i = NV; i >= 0; i--) pts.push(H(at(s0, lerp(P, endY(s0), i / NV))));
+    return polylinePath(pts);
+  });
+  // 头顶：线稿耳朵以上那部分
+  const firstBelow = HAIR_POLY.findIndex((q) => q[1] > P);
+  let lastBelow = HAIR_POLY.length - 1;
+  while (HAIR_POLY[lastBelow][1] <= P) lastBelow--;
+  const dome = polylinePath(
+    [...HAIR_POLY.slice(lastBelow + 1), ...HAIR_POLY.slice(0, firstBelow)].map(([x, y]) => head.p(turn(x, y), y)),
+  );
+  // 合并描边：每块先描两倍宽的边，再整个一起填色、加阴影（拼起来的地方不留缝）
+  const all = new Path2D();
+  for (const p of [dome, ...pieces]) all.addPath(p);
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw * 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  for (const p of [dome, ...pieces]) ctx.stroke(p);
+  fillShaded(ctx, all, K.hair, K.hairShade, ink);
+
+  // 分缝往上的细发丝线（画在左边那绺的右边上）：分缝处粗、往上变细
+  ctx.fillStyle = K.line;
+  HAIR_CUTS.forEach((cut, i) => {
+    const { s1, at } = locks[i];
+    const line: V2[] = [];
+    for (let j = 0; j <= 8; j++) line.push(H(at(s1, lerp(P, endY(s1), 1 - cut + (cut * j) / 8))));
+    const widths = line.map((_, j) => ink.lw * (0.04 + 0.34 * (j / 8)));
+    ctx.fill(smoothPath(ribbonPts(line, widths, 0.4)));
+  });
 }
 
 export function drawBrickShape(ctx: CanvasRenderingContext2D, f: Frame, w: number, h: number, ink: Ink, color = K.brick, shade = K.brickShade) {
@@ -1177,18 +1171,29 @@ function drawScarf(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const wrapX = onBody(37, 28);
   const endX = onBody(56, 34);
 
-  // 垂下来的一头：从围脖下面出来，越往下越顺着受力方向（走路、跳、弯腰）；
-  // 受力朝上（飘起来、往下坠）时从外侧翻上去，不盖住脸
-  const f = rotateV(field, -chest.a);
-  let aim = angleOf(f);
-  if (aim > Math.PI / 2) aim -= Math.PI * 2;
-  aim = Math.max(-2.6, Math.min(1.2, aim));
+  // 垂下来的一头：从围脖下面出来，一段一段转向受力方向（走路、跳、弯腰、风，bendAlong）；
+  // 受力朝上（失重、往下坠）时先往外侧（画面右边）偏，从外侧翻上去，不盖住脸（转角限制在 -2.8..1.4）；
+  // 风里按 4 秒的循环抖，失重时慢慢漾
+  const f = gusty(rotateV(field, -chest.a), pose.t);
+  const gust = clamp01(Math.abs(f[0]) / 1.2);
+  const up = clamp01(0.3 - f[1]);
+  const STEPS = 20;
+  const bend = bendAlong(
+    angleOf(f),
+    STEPS,
+    (i) => (3.2 / STEPS) * Math.min(len(f), 1.5) * (1 + 0.5 * gust) * smooth01(0, 0.3, (i - 0.5) / STEPS),
+    (i) => -0.9 * up * smooth01(0, 0.3, i / STEPS),
+  ).map((a) => Math.max(-2.8, Math.min(1.4, a)));
   const PIV: V2 = [endX(21), -146.5];
   const LEN = 102;
   const endMap = ([x, y]: V2): V2 => {
     const lx = endX(x);
     const t = clamp01((y - PIV[1]) / LEN);
-    const a = aim * (0.35 + 0.65 * t) * smooth01(0, 0.3, t) + pose.float * 0.25 * Math.sin(pose.t * 1.7 + t * 3) * t;
+    const i = Math.min(STEPS - 1, Math.floor(t * STEPS));
+    const a =
+      lerp(bend[i], bend[i + 1], t * STEPS - i) +
+      gust * (0.22 * loopSin(pose.t, 5, -t * 4) + 0.08 * loopSin(pose.t, 9, 1.7 - t * 6)) * t +
+      pose.float * 0.25 * loopSin(pose.t, 1, t * 3) * t;
     const c = Math.cos(a);
     const s = Math.sin(a);
     const dx = lx - PIV[0];
@@ -1348,6 +1353,29 @@ const MOUTH_SIDE = (() => {
   return { c: lerpV(a, b, 0.5), wk: len(sub(b, a)) / 2 / 7.32, tilt: Math.atan2(b[1] - a[1], b[0] - a[0]) };
 })();
 
+/**
+ * 刘海在风里：两边贴着脸不动，中间的下半截往下风处飘、按位置错开地抖（4 秒一个循环）；
+ * 受力朝上（失重、往下坠）时下沿往上翘，失重时慢慢漾。field 是头的坐标里的受力。
+ */
+function windBangs(pts: V2[], field: V2, pose: Pose): V2[] {
+  const t = pose.t;
+  const f = gusty(field, t);
+  const wind = Math.max(-2, Math.min(2, f[0]));
+  const up = clamp01(0.3 - f[1]);
+  if (Math.abs(wind) < 1e-3 && up < 1e-3 && pose.float < 1e-3) return pts;
+  const xs = pts.map((p) => p[0]);
+  const x0 = Math.min(...xs);
+  const x1 = Math.max(...xs);
+  const cx = (x0 + x1) / 2;
+  const hw = (x1 - x0) / 2;
+  return pts.map(([x, y]) => {
+    const w = smooth01(-40, -8, y) * (1 - smooth01(0.55, 0.95, Math.abs(x - cx) / hw));
+    const dx = wind * 3.6 * (1 + 0.45 * loopSin(t, 5, x * 0.15));
+    const dy = Math.abs(wind) * 2 * (0.55 + 0.45 * loopSin(t, 7, x * 0.2 + 1)) + up * 4 + pose.float * 1.5 * loopSin(t, 1, x * 0.1);
+    return [x + dx * w, y - dy * w];
+  });
+}
+
 function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const { head, thh, pose, field } = rig;
   const e = pose.expr;
@@ -1440,8 +1468,8 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   // 两边的头发：盖住脸边和耳根，跟着脸走
   const locks = [LOCK_L, LOCK_R].map((lock) => cubicPath(lock, place));
 
-  // 刘海：正面线稿 → 侧面线稿（缝照正面的补上）
-  const bangs = polylinePath(lerpPts(...BANGS_TURN, uh), ([x, y]) => H(x, y));
+  // 刘海：正面线稿 → 侧面线稿（缝照正面的补上），再按风、失重飘起来
+  const bangs = polylinePath(windBangs(lerpPts(...BANGS_TURN, uh), rotateV(field, -head.a), pose), ([x, y]) => H(x, y));
   // 先填色、后描边。头发压在头发上的边不描（刘海后面是头发、两边的头发接着刘海，用户 2026-10-17），
   // 只描压在脸和耳朵上的边：刘海的下沿和几道缝、两边的头发贴着脸和耳朵的那一侧
   for (const p of [...locks, bangs]) fillShaded(ctx, p, K.hair, null, ink);
