@@ -948,6 +948,14 @@ function turnPair(front: V2[], side: V2[], box: V2[], perSeg: number): [V2[], V2
 const TORSO_TURN = turnPair(TORSO, SIDE_TORSO, [[0.5, 0], [1, 0.1], [1, 0.55], [1, 1], [0.5, 1], [0, 1], [0, 0.55], [0, 0.1]], 16);
 /** 脖子：四个角 */
 const NECK_TURN = turnPair(NECK, SIDE_NECK, [[0, 0], [1, 0], [1, 1], [0, 1]], 8);
+/**
+ * 脖子上半截跟着头转（headTurn 让头和身体转得不一样时，转过去的下颌比正面高、偏到一边，脖子顶不跟着就露出一道空隙）：
+ * 侧面线稿的脖子换成相对脖子那一点（3/4 时往前挪了 6.44）的坐标，头往反方向转时再镜像一份
+ */
+const NECK_HEAD_TURN = {
+  same: turnPair(NECK, SIDE_NECK.map(([x, y]): V2 => [x + 6.44, y]), [[0, 0], [1, 0], [1, 1], [0, 1]], 8),
+  mirror: turnPair(NECK, SIDE_NECK.map(([x, y]): V2 => [-(x + 6.44), y]), [[0, 0], [1, 0], [1, 1], [0, 1]], 8),
+};
 /** 肩关节转到 3/4 时的位置：跟着身子轮廓上离它最近的那一点挪 */
 /** 3/4 时围脖往前（画面左）挪多少：跟着脖子的中间走 */
 const WRAP_SIDE_SHIFT = (() => {
@@ -1202,11 +1210,20 @@ function drawLegs(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
 // ——— 身子、脖子 ———
 /** 身子、脖子放到现在的姿势上（转身时从正面线稿过渡到侧面线稿；呼吸时胸口以上起伏） */
 function torsoPaths(rig: Rig): { neck: Path2D; torso: Path2D } {
-  const { chest, u, pose } = rig;
+  const { chest, u, pose, thh, headMir } = rig;
   const br = pose.breath * 1.6;
   const on = ([x, y]: V2): V2 => chest.p(x, y - br * clamp01(-y / 140));
-  // 脖子往下多画一截（藏在身子后面）：领口往下弯露出来的那块还是脖子，下沿的阴影也藏在身子后面
-  const neck = lerpPts(...NECK_TURN, u).map(([x, y]): V2 => [x, y > -164 ? y + 12 : y]);
+  // 脖子：下半截跟着身体转，上半截跟着头转（以脖子那一点为准），中间平滑过渡
+  const nx = 10 * Math.sin(-0.7 * u);
+  const body = lerpPts(...NECK_TURN, u);
+  const head = lerpPts(...(headMir ? NECK_HEAD_TURN.mirror : NECK_HEAD_TURN.same), -thh / 0.62);
+  // 再往下多画一截（藏在身子后面）：领口往下弯露出来的那块还是脖子，下沿的阴影也藏在身子后面
+  const neck = body.map(([x, y], i): V2 => {
+    const [hx, hy] = head[i];
+    const w = smooth01(-162, -172, y);
+    const ny = lerp(y, hy, w);
+    return [lerp(x, hx + nx, w), ny > -164 ? ny + 12 : ny];
+  });
   return { neck: polylinePath(neck, on), torso: polylinePath(lerpPts(...TORSO_TURN, u), on) };
 }
 
