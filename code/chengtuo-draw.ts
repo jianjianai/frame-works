@@ -282,7 +282,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
         const ramp = lerp(smooth01(0, 40, y), smooth01(-30, 30, y), gust);
         return 0.03 * HAIR_DY * strength * ((1 + 0.5 * gust) * ramp + 3 * up * (1 - smooth01(20, 70, y)));
       },
-      (i) => -Math.sign(fan) * up * (0.25 + 0.2 * Math.abs(fan)) * smooth01(0, 20, i * HAIR_DY),
+      // （中间几缕一开始就偏得多：在发根附近就翻上来、藏在头后面往上飘，不先垂一段再绕到头的两侧）
+      (i) => -Math.sign(fan) * up * (0.25 + 0.2 * Math.abs(fan) + 1.6 * (1 - Math.abs(fan)) ** 3) * smooth01(0, 20, i * HAIR_DY),
     );
     // 抖：风里一绺一绺地抖，失重时像在水里慢慢漾；越往发梢越大
     const a = ang.map((v, i) => {
