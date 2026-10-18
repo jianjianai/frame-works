@@ -13,7 +13,6 @@ const project: AnimationProject = {
   poster: "films/paper-wings/poster.webp",
   posterTime: 25,
     tags: ["2D 分层插画", "视差镜头", "路径运动"],
-    status: "demo",
     beats: [
       {
         at: 0,
