@@ -198,8 +198,11 @@ function hairEnd(s: number) {
   return 143 + 8 * (1 - (2 * s - 1) ** 2) + HAIR_TIPS[k] * (1 - Math.abs(u) ** 1.5);
 }
 
-/** 风大时每缕的尖再各拉长一截（长短不一，看着是被吹散的）：只拉尖，分缝处不变（s：0 左边 → 1 右边） */
-const HAIR_WISP = [0.3, 1, 0.5, 0.8, 1, 0.2, 0.9, 0.4];
+/**
+ * 风大时每缕的尖再各拉长一截：中间几缕长、两边短（用户 2026-10-18），左右稍微不对称，看着是被吹散的；
+ * 只拉尖，分缝处不变（s：0 左边 → 1 右边）
+ */
+const HAIR_WISP = [0.05, 0.3, 0.65, 1, 0.9, 0.6, 0.25, 0.1];
 function hairWisp(s: number) {
   const n = HAIR_TIPS.length;
   const k = Math.min(n - 1, Math.floor(s * n));
@@ -302,7 +305,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     return { s0, s1, at };
   });
   /** 发梢那一线（风大时中间几绺拉长、两边的短） */
-  const endY = (s: number) => hairEnd(s) + gust * (24 * (1 - (2 * s - 1) ** 2) - 6 + 18 * hairWisp(s));
+  const endY = (s: number) => hairEnd(s) + gust * (26 * (1 - (2 * s - 1) ** 2) - 10 + 14 * hairWisp(s));
   /** 风大时每缕往发梢越来越细（绕自己的中线 sc 收），相邻几缕之间拉开空隙、一缕一缕的；发根那一半不动 */
   const thinS = (s: number, sc: number, y: number) => sc + (s - sc) * (1 - gust * 0.5 * smooth01(P + 90, P + 170, y));
   /** 某缕上第 s 条在原来高度 y 处的点，放到画面上（加上风推的位移） */
