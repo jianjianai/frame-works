@@ -142,7 +142,7 @@ export const resources = defineResources({
       "3/4 朝右": { face: 1, shoulderL: -5, elbowL: 16, wristL: 15, shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
       抱臂: { shoulderL: -17, elbowL: 115, wristL: -14, shoulderR: 17, elbowR: -99, wristR: 6 },
       半蹲: { shoulderL: -18, elbowL: 15, wristL: 9, shoulderR: 18, elbowR: -15, wristR: -9, hipL: -54, kneeL: 74, ankleL: -20, hipR: 54, kneeR: -74, ankleR: 20, thighL: 0.52, thighR: 0.52 },
-      挥手: { face: -1, expression: "笑", neck: 5, shoulderL: 155, elbowL: 29, wristL: -11, handL: "open", shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
+      挥手: { face: -1, expression: "笑", neck: 5, shoulderL: -135, elbowL: -35, wristL: -10, handL: "open", shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
       坐: { face: -1, neck: -3, lean: 5, shoulderL: 20, elbowL: 34, wristL: 15, shoulderR: 26, elbowR: 37, wristR: -15, hipL: 88, kneeL: -95, ankleL: 7, hipR: 88, kneeR: -99, ankleR: 12, lookX: -0.4, lookY: 0.3 },
       单膝跪递砖: { face: -1, neck: 10, lean: 11, shoulderL: 84, elbowL: 1, wristL: -14, handL: "flat", brickL: true, shoulderR: 40, elbowR: 63, wristR: 0, hipL: -16, kneeL: -110, ankleL: 62, hipR: 77, kneeR: -115, ankleR: 38, happy: 0.35, smile: 0.75, blush: 0.6, lookX: -0.6, lookY: -0.3 },
       跳起来抓: { face: -1, expression: "使劲", neck: 29, lean: -5, lift: 187, shoulderL: 52, elbowL: 34, wristL: 0, handL: "open", shoulderR: 158, elbowR: -1, wristR: 11, handR: "grip", hipL: 25, kneeL: -55, ankleL: 30, hipR: 23, kneeR: -54, ankleR: 30, open: 0.3, lookX: -0.2, lookY: -1 },
