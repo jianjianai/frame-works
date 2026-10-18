@@ -1000,6 +1000,14 @@ function drawArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: 
   }
   fillShaded(ctx, upper, K.sweater, K.sweaterShade, ink);
   fillShaded(ctx, lower, K.sweater, K.sweaterShade, ink);
+  // 肩膀那一圈里袖子压在身子上的那段也不要右下的阴影月牙（用户 2026-10-18）：那里没有描线，月牙会变成一道像光照轮廓的深色边
+  // （朝右时光的方向跟着镜像，月牙正好落在近侧手臂贴着身子的那条边上）
+  ctx.save();
+  ctx.clip(torso);
+  ctx.clip(shoulderZone(rig, side));
+  ctx.fillStyle = K.sweater;
+  ctx.fill(upper);
+  ctx.restore();
   drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c) => opts.hold?.[side]?.(c, limb.tip, rig.mir), !rig.pose.items.gloves);
 }
 
