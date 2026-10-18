@@ -314,7 +314,9 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       const i = Math.floor(tt);
       const f = tt - i;
       // 失重时每缕宽一点，和旁边的叠住，飘起来以后各缕之间不留大空隙（用户 2026-10-18：「头发之间间距太大了」）
-      return add(lerpV(C[i], C[i + 1], f), rotateV([(restX(s, y) - restX(sc, y)) * (1 + 0.35 * up), 0], lerp(a[i], a[i + 1], f)));
+      // （中间两缕各自往左右翻上来、翻的时候往外绕了一下，正中间会隔开一道缝：越靠中间加得越宽，叠住）
+      const widen = 1 + up * (0.35 + 0.6 * (1 - Math.abs(fan)) ** 4);
+      return add(lerpV(C[i], C[i + 1], f), rotateV([(restX(s, y) - restX(sc, y)) * widen, 0], lerp(a[i], a[i + 1], f)));
     };
     return { s0, s1, at };
   });
