@@ -257,8 +257,10 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     const sc = (s0 + s1) / 2;
     const fan = (sc - 0.5) * 2;
     // 飘起来时每绺对着的方向按位置往外散开（越靠外越往外），像一团往上漾的火苗
+    // 大风时各缕对着的方向也散开一点（用户 2026-10-18：「头发可以被吹散一点，更飘逸」）：飘出去那股上面几缕往上扬、下面几缕往下坠，
+    // 发根附近还并在一起，越往发梢分得越开
     const ang = bendAlong(
-      phi + fan * up * 0.7,
+      phi + fan * (up * 0.7 + gust * 0.35),
       N,
       (i) => {
         const y = (i - 0.5) * HAIR_DY;
@@ -271,7 +273,9 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     // 抖：风里一绺一绺地抖，失重时像在水里慢慢漾；越往发梢越大
     const a = ang.map((v, i) => {
       const r = i / N;
-      return v + gust * 0.12 * loopSin(t, 5, k * 0.9 - i * 0.15) * r ** 1.5 + pose.float * 0.25 * loopSin(t, 1, k * 1.3 - i * 0.08) * r;
+      // 风里的抖：两个节奏叠在一起、每缕错开，发梢各摆各的
+      const flap = 0.16 * loopSin(t, 5, k * 0.9 - i * 0.15) + 0.08 * loopSin(t, 3, k * 2.1 - i * 0.1);
+      return v + gust * flap * r ** 1.5 + pose.float * 0.25 * loopSin(t, 1, k * 1.3 - i * 0.08) * r;
     });
     const C: V2[] = [[restX(sc, P), P]];
     for (let i = 1; i <= N; i++) {
