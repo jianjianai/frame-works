@@ -17,10 +17,11 @@ const project: AnimationProject = {
   credits: [],
   load: () => import("./scene"),
   loadVisual: () => import("./visual.json"),
-  experiences: ["剧情音乐短片","s0rrow"],
+  experiences: ["剧情音乐短片","s0rrow","情绪运镜"],
   materials: ["s0rrow"],
   loadAudioDocument: () => import("./audio.json"),
   loadAudio: () => import("./audio"),
   posterTime: 1,
+  tempo: {"bpm":117.39,"firstBeat":0.0737,"beatsPerBar":4},
 };
 export default project;

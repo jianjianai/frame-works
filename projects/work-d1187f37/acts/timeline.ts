@@ -1,4 +1,9 @@
-import { beatAt } from "./draw";
+// 时间表（重置版）：剧情事件和原版一样，画面和音效共用。节拍和 project.ts 的 tempo 相同，这里用常量算，
+// 模块加载时就能用（素材库的 beatAt 要在画的时候才读得到作品的 tempo）。
+export const BPM = 117.39;
+export const BEAT = 60 / BPM;
+export const BEAT0 = 0.0737;
+export const beatAt = (k: number) => BEAT0 + k * BEAT;
 
 /** Bar n starts at beat 4n (work time = song time − 16.332). Song as cut for this work:
  *  verse 1 = bars 0–7, chorus 1 = 8–15, verse 2 = 16–23, then (CUT) the last loop of the outro, which keeps
@@ -17,14 +22,18 @@ export const END = 57.0;
  *  avert on "ugly"), the window pass-through into her room (twist, a continuous move) and slow camera/fade ramps. */
 export const EV = {
   // act 1 — his side
-  typing1: [beatAt(0.5), beatAt(1.5)] as const, // 0.33–0.84 「对方正在输入...」 #1
-  typing2: [beatAt(2), beatAt(3)] as const, // 1.10–1.61 #2
-  um1: beatAt(3.5), // 1.86 her 37th 「嗯」 arrives
+  // 重置版的开头先拍人：首帧是他刚把那一大段发出去（脸上的光一跳），屏住呼吸等；第 1.5 拍顺着视线往下甩到手机上
+  sent: beatAt(0), // 0.07 the long message goes (the screen light jumps on his face)
+  whip1: beatAt(1.5), // 0.84 whip down along his gaze to the phone
+  typing1: [beatAt(2), beatAt(2.5)] as const, // 1.10–1.35 「对方正在输入...」 #1 (on the phone now)
+  typing2: [beatAt(3), beatAt(3.5)] as const, // 1.61–1.86 #2
+  um1: beatAt(3.5), // 1.86 her 「嗯」 arrives
   hisFace: beatAt(5.5), // 2.88 cut to his face
   scrollUp: [beatAt(8.5), beatAt(9.5)] as const, // 4.42–4.93 back up to July…
   scrollDown: [beatAt(11), beatAt(11.5)] as const, // 5.70–5.95 …held there, then one quick flick down to now
   tapAvatar: beatAt(12), // 6.21 he taps her avatar…
   pagePush: [6.3, 6.65] as const, // …and her 朋友圈 slides in
+  memIn: beatAt(15), // 7.74 the push into the photo becomes the old-screen cut into his memory (until BAR(4))
   turn1: beatAt(17), // 8.76 she turns round in class…
   hide1: beatAt(18), // 9.27 …and hides behind her book
   classFace: beatAt(19), // 9.79 his face, looking down at the milk

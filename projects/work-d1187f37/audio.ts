@@ -3,7 +3,7 @@ import { createPcmAudio, StereoPcm } from "../../src/engine/procedural-audio";
 import { seeded } from "../../src/engine/math";
 
 /** Synthesized sound effects for 《unhappy》· 同一段聊天两个视角 (all deterministic). Each entry is one
- *  clip in audio.json (generated source, module "sfx", trackId = name); start times follow scenes/lib/timeline.ts. */
+ *  clip in audio.json (generated source, module "sfx", trackId = name); start times follow acts/timeline.ts. */
 const SR = 48000;
 const TAU = Math.PI * 2;
 
