@@ -13,7 +13,6 @@ const project: AnimationProject = {
   poster: "films/tiny-seed/poster.webp",
   posterTime: 26.8,
     tags: ["矢量形变", "生长动画", "因果叙事"],
-    status: "demo",
     beats: [
       {
         at: 0,
