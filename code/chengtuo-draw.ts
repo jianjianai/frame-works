@@ -60,6 +60,7 @@ import {
   smooth01,
   strokeBodyPart,
   toLocal,
+  EAR_SIDE_IN,
 } from "./figure";
 import { SIDE_IRIS } from "./figure-side";
 import { SIDE_BANGS } from "./chengtuo-side";
@@ -326,7 +327,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
 function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink) {
   const { rig, H, uh, place } = h;
   const { head, field, pose } = rig;
-  const locks = [LOCK_L, LOCK_R].map((lock) => cubicPath(lock, place));
+  // 后面那缕鬓发盖着耳根：跟耳朵一起往脸这边收
+  const locks = [cubicPath(LOCK_L, place), cubicPath(LOCK_R, ([x, y]) => place([x - EAR_SIDE_IN * uh, y]))];
   // 刘海：正面线稿 → 侧面线稿（缝照正面的补上），再按风、失重飘起来
   const bangs = polylinePath(windBangs(lerpPts(...BANGS_TURN, uh), rotateV(field, -head.a), pose), ([x, y]) => H(x, y));
   for (const p of [...locks, bangs]) fillShaded(ctx, p, K.hair, null, ink);
