@@ -308,7 +308,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   // 每缕按自己的节奏抖，和旁边那缕的分界会裂开一道细缝、露出描边（风里看着像几道细线，用户 2026-10-18）：
   // 里面的边往旁边那缕里多画一点，叠在一起，外轮廓不变
   const OVER = 0.3 / n;
-  const pieces = locks.map(({ s0, s1, at }, k) => {
+  const piecePts = locks.map(({ s0, s1, at }, k) => {
     const a0 = k === 0 ? s0 : s0 - OVER;
     const a1 = k === n - 1 ? s1 : s1 + OVER;
     const pts: V2[] = [];
@@ -318,8 +318,9 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       pts.push(W(at, s, endY(s)));
     }
     for (let i = NV; i >= 0; i--) pts.push(W(at, a0, lerp(P, endY(a0), i / NV)));
-    return polylinePath(pts);
+    return pts;
   });
+  const pieces = piecePts.map((pts) => polylinePath(pts));
   // 头顶：线稿耳朵以上那部分
   const firstBelow = HAIR_POLY.findIndex((q) => q[1] > P);
   let lastBelow = HAIR_POLY.length - 1;
@@ -337,14 +338,61 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       return head.p(tx + windDx(tx, y), y);
     }),
   );
+  // 耳朵上下这一段的外轮廓（头顶接下面几缕的地方）用一条光滑的曲线兜住：头顶照线稿、下面几缕按受力弯，
+  // 风大时两段接成一个角或一道 S（用户 2026-10-18：face 1 wind 2「这两个地方还是不自然」）。
+  // 只往外补、不往里削，风越大越贴这条曲线，没风时一点不动
+  const bridges = gust > 0.01 ? ([0, 1] as const).map((side) => hairBridge(side)) : [];
+  function hairBridge(side: 0 | 1): Path2D {
+    const at = locks[side === 0 ? 0 : n - 1].at;
+    const edge: V2[] = [];
+    for (let i = 0; i < 16; i++) {
+      const y = lerp(-30, P, i / 16);
+      const span = rowSpan(HAIR_POLY, y) ?? [-60, 60];
+      const tx = turn(span[side], y);
+      edge.push(head.p(tx + windDx(tx, y), y));
+    }
+    for (let i = 0; i <= 24; i++) edge.push(W(at, side, lerp(P, P + 80, i / 24)));
+    const m = edge.length - 1;
+    const unit = (v: V2): V2 => {
+      const l = len(v) || 1;
+      return [v[0] / l, v[1] / l];
+    };
+    const [A, B] = [edge[0], edge[m]];
+    const d = len(sub(B, A)) / 3;
+    const tA = unit(sub(edge[1], A));
+    const tB = unit(sub(B, edge[m - 1]));
+    const c1: V2 = [A[0] + tA[0] * d, A[1] + tA[1] * d];
+    const c2: V2 = [B[0] - tB[0] * d, B[1] - tB[1] * d];
+    const center = head.p(0, P);
+    const curve = edge.map((o, i): V2 => {
+      const t = i / m;
+      const u = 1 - t;
+      const b: V2 = [
+        u * u * u * A[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * B[0],
+        u * u * u * A[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * B[1],
+      ];
+      // 沿外法线往外补到曲线上（曲线在里面就不动）
+      const T = sub(edge[Math.min(m, i + 1)], edge[Math.max(0, i - 1)]);
+      let nn = unit([T[1], -T[0]]);
+      const away = sub(o, center);
+      if (nn[0] * away[0] + nn[1] * away[1] < 0) nn = [-nn[0], -nn[1]];
+      const k = Math.max(0, (b[0] - o[0]) * nn[0] + (b[1] - o[1]) * nn[1]) * gust;
+      return [o[0] + nn[0] * k, o[1] + nn[1] * k];
+    });
+    // 和各缕同一个绕向：叠在头发上的地方合并填色时不会抵消成洞
+    const poly = [...curve, ...edge.slice().reverse()];
+    const area = (pts: V2[]) => pts.reduce((a, p, i) => a + p[0] * pts[(i + 1) % pts.length][1] - pts[(i + 1) % pts.length][0] * p[1], 0);
+    if (Math.sign(area(poly)) !== Math.sign(area(piecePts[0]))) poly.reverse();
+    return polylinePath(poly);
+  }
   // 合并描边：每块先描两倍宽的边，再整个一起填色、加阴影（拼起来的地方不留缝）
   const all = new Path2D();
-  for (const p of [dome, ...pieces]) all.addPath(p);
+  for (const p of [dome, ...pieces, ...bridges]) all.addPath(p);
   ctx.strokeStyle = K.line;
   ctx.lineWidth = ink.lw * 2;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  for (const p of [dome, ...pieces]) ctx.stroke(p);
+  for (const p of [dome, ...pieces, ...bridges]) ctx.stroke(p);
   fillShaded(ctx, all, K.hair, K.hairShade, ink);
 
   // 分缝往上的细发丝线（画在左边那绺的右边上）：分缝处粗、往上变细
