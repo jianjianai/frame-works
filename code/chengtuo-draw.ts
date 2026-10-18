@@ -316,9 +316,17 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   /** 发梢那一线（风大时中间几绺拉长、两边的短） */
   // 失重时中间几缕（往头顶上飘的）长一些，从头后面出来以后还有一段
   const endY = (s: number) =>
-    hairEnd(s) + gust * (34 * (1 - (2 * s - 1) ** 2) - 14 + 14 * hairWisp(s)) + up * up * 70 * (1 - Math.abs(2 * s - 1)) ** 1.5;
-  /** 风大时每缕往发梢越来越细（绕自己的中线 sc 收），相邻几缕之间拉开空隙、一缕一缕的；发根那一半不动 */
-  const thinS = (s: number, sc: number, y: number) => sc + (s - sc) * (1 - gust * 0.5 * smooth01(P + 90, P + 170, y));
+    hairEnd(s) + gust * (34 * (1 - (2 * s - 1) ** 2) - 14 + 14 * hairWisp(s)) + up * up * 70 * (1 - Math.abs(2 * s - 1)) ** 1.5 + up * 14 * hairWisp(s);
+  /**
+   * 风大时每缕往发梢越来越细（绕自己的中线 sc 收），相邻几缕之间拉开空隙、一缕一缕的；发根那一半不动。
+   * 失重时一样收细（按这缕自己的长度，中间几缕加长了）：发梢是一缕一缕的细尖、缝比较细，
+   * 不是几大块圆头中间隔着深 V（用户 2026-10-18：「上面还是坑坑洼洼的，和之前飘逸的头发一样的缝隙就好了」）
+   */
+  const thinS = (s: number, sc: number, y: number) => {
+    const windThin = gust * 0.5 * smooth01(P + 90, P + 170, y);
+    const floatThin = up * 0.5 * smooth01(0.45, 1, (y - P) / (endY(sc) - P));
+    return sc + (s - sc) * (1 - Math.max(windThin, floatThin));
+  };
   /** 某缕上第 s 条在原来高度 y 处的点，放到画面上（加上风推的位移） */
   const W = (at: (s: number, y: number) => V2, s: number, y: number): V2 => {
     const q = at(s, y);
