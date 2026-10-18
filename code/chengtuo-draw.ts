@@ -273,7 +273,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     // 发根附近还并在一起，越往发梢分得越开
     const ang = bendAlong(
       // （飘出去时朝风向那边的边在上：往右吹 s = 1 在上，往左吹 s = 0 在上；两种都是 -fan 让上面几缕弯得更多）
-      phi + fan * (up * 0.7 - gust * 0.2),
+      phi + fan * (up * 0.45 - gust * 0.2),
       N,
       (i) => {
         const y = (i - 0.5) * HAIR_DY;
@@ -281,7 +281,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
         const ramp = lerp(smooth01(0, 40, y), smooth01(-30, 30, y), gust);
         return 0.03 * HAIR_DY * strength * ((1 + 0.5 * gust) * ramp + 3 * up * (1 - smooth01(20, 70, y)));
       },
-      (i) => -Math.sign(fan) * up * (0.25 + 0.2 * Math.abs(fan)) * smooth01(0, 20, i * HAIR_DY),
+      // 失重时每缕从发根起整根转过去朝上（左边几缕从左边翻、右边从右边），不在下巴旁边绕 U 形弯、鼓出两块像翅膀
+      () => -Math.sign(fan) * Math.PI * up * up,
     );
     // 抖：风里一绺一绺地抖，失重时像在水里慢慢漾；越往发梢越大
     const a = ang.map((v, i) => {
@@ -290,7 +291,9 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       const flap = 0.16 * loopSin(t, 5, k * 0.9 - i * 0.15) + 0.08 * loopSin(t, 3, k * 2.1 - i * 0.1);
       return v + gust * flap * r ** 1.5 + pose.float * 0.25 * loopSin(t, 1, k * 1.3 - i * 0.08) * r;
     });
-    const C: V2[] = [[restX(sc, P), P]];
+    // 失重时发根挪到头后面：往上、往中间收（被脸和刘海挡住），看着是从后脑勺长出来、往上漂，
+    // 不是从脖子长出来；中间几缕藏在头后面的那截也短了，头顶上方有头发（用户 2026-10-18）
+    const C: V2[] = [[restX(sc, P) * (1 - 0.5 * up), P - 45 * up]];
     for (let i = 1; i <= N; i++) {
       const y0 = P + (i - 1) * HAIR_DY;
       C.push(add(C[i - 1], rotateV([restX(sc, y0 + HAIR_DY) - restX(sc, y0), HAIR_DY], (a[i - 1] + a[i]) / 2)));
@@ -335,12 +338,14 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     return pts;
   });
   const pieces = piecePts.map((pts) => polylinePath(pts));
-  // 头顶：线稿耳朵以上那部分
-  const firstBelow = HAIR_POLY.findIndex((q) => q[1] > P);
+  // 头顶：线稿耳朵以上那部分。失重时下沿跟着发根往上收到 Pd，两边贴着脸的那截往里收到脸后面（不留一个平的断口）
+  const Pd = P - 45 * up;
+  const tuck = (x: number, y: number) => Math.sign(x) * lerp(Math.abs(x), Math.min(Math.abs(x), 30), up * smooth01(Pd - 30, Pd, y));
+  const firstBelow = HAIR_POLY.findIndex((q) => q[1] > Pd);
   let lastBelow = HAIR_POLY.length - 1;
-  while (HAIR_POLY[lastBelow][1] <= P) lastBelow--;
+  while (HAIR_POLY[lastBelow][1] <= Pd) lastBelow--;
   // 两头补上正好在 P 这一行的点：头顶这块的下边和下面几绺的上边严丝合缝，不然漏出一条缝、露出描边（耳朵高度两边各一小段横线）
-  const onRow = (a: V2, b: V2): V2 => [lerp(a[0], b[0], (P - a[1]) / (b[1] - a[1])), P];
+  const onRow = (a: V2, b: V2): V2 => [lerp(a[0], b[0], (Pd - a[1]) / (b[1] - a[1])), Pd];
   const dome = polylinePath(
     [
       onRow(HAIR_POLY[lastBelow], HAIR_POLY[(lastBelow + 1) % HAIR_POLY.length]),
@@ -348,14 +353,16 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       ...HAIR_POLY.slice(0, firstBelow),
       onRow(HAIR_POLY[firstBelow - 1], HAIR_POLY[firstBelow]),
     ].map(([x, y]) => {
-      const tx = turn(x, y);
+      const tx = turn(tuck(x, y), y);
       return head.p(tx + windDx(tx, y), y);
     }),
   );
   // 耳朵上下这一段的外轮廓（头顶接下面几缕的地方）用一条光滑的曲线兜住：头顶照线稿、下面几缕按受力弯，
   // 风大时两段接成一个角或一道 S（用户 2026-10-18：face 1 wind 2「这两个地方还是不自然」）。
   // 只往外补、不往里削，风越大越贴这条曲线，没风时一点不动
-  const bridges = gust > 0.01 ? ([0, 1] as const).map((side) => hairBridge(side)) : [];
+  // （失重时头顶和下面几缕不再接在耳朵那一行，不兜）
+  const bridgeW = gust * (1 - smooth01(0, 0.3, up));
+  const bridges = bridgeW > 0.01 ? ([0, 1] as const).map((side) => hairBridge(side)) : [];
   function hairBridge(side: 0 | 1): Path2D {
     const at = locks[side === 0 ? 0 : n - 1].at;
     const edge: V2[] = [];
@@ -390,7 +397,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
         u * u * u * A[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * B[1],
       ];
       // 曲线在外面就补到曲线上，在里面就不动
-      const k = Math.max(0, (b[0] - o[0]) * nn[0] + (b[1] - o[1]) * nn[1]) * gust;
+      const k = Math.max(0, (b[0] - o[0]) * nn[0] + (b[1] - o[1]) * nn[1]) * bridgeW;
       return [o[0] + nn[0] * k, o[1] + nn[1] * k];
     });
     // 和各缕同一个绕向：叠在头发上的地方合并填色时不会抵消成洞
