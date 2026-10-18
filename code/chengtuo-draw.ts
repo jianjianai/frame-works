@@ -293,7 +293,10 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       const r = i / 65;
       // 风里的抖：两个节奏叠在一起、每缕错开，发梢各摆各的
       const flap = 0.16 * loopSin(t, 5, k * 0.9 - i * 0.15) + 0.08 * loopSin(t, 3, k * 2.1 - i * 0.1);
-      return v + gust * flap * r ** 1.5 + pose.float * 0.25 * loopSin(t, 1, k * 1.3 - i * 0.08) * r;
+      // 失重时的漾：幅度、沿头发的波浪和风里的抖一样（用户 2026-10-18：上面晃得太大，和风一样的幅度刚好），节奏慢一些像在水里；
+      // 原来是整根往一边摆，头发越长发梢摆得越开。加长的那截不再加大
+      const drift = 0.16 * loopSin(t, 1, k * 1.3 - i * 0.15) + 0.08 * loopSin(t, 2, k * 2.1 - i * 0.1);
+      return v + gust * flap * r ** 1.5 + pose.float * drift * Math.min(r, 1) ** 1.5;
     });
     const C: V2[] = [[restX(sc, P), P]];
     for (let i = 1; i <= N; i++) {
