@@ -10,14 +10,6 @@ import { blinkAt, breathAt } from "./rig";
 export * from "./chengtuo-draw";
 export * from "./chengtuo-moves";
 
-const angle = (min: number, max: number, def: number, text: string) => z.number().min(min).max(max).default(def).describe(text);
-const amount = (text: string) => z.number().min(0).max(1).optional().describe(`${text}（0..1，不写用表情里的值）`);
-const handShape = z
-  .enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"])
-  .default("relax");
-const HAND_TEXT = "relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 摊平托着";
-const layer = z.enum(["auto", "front", "back"]).default("auto");
-
 /**
  * 秤砣的参数。姿势按关节给角度（度）：0 = 垂下 / 伸直，正 = 顺时针（往画面左摆，朝左时就是往前）；
  * 除了肩和胯，每个关节都相对上一节骨头。L 是正面时画面右边、3/4 时靠近镜头的那只手臂 / 腿，R 是另一只。
@@ -30,45 +22,45 @@ export const chengtuoOptions = z.object({
     .enum(["平常", "笑", "哭着笑", "难过", "惊", "使劲", "闭眼", "哼歌", "仰望", "心疼"])
     .default("平常")
     .describe("表情；下面几项可以在它上面再调"),
-  blink: amount("闭眼"),
-  happy: amount("笑眼：下眼皮推上来，1 弯成 ∩"),
-  sad: amount("难过：外眼角压下、眉毛内端抬起"),
-  fierce: amount("使劲：内眼角压下、眉毛内端压下"),
-  wide: amount("睁大眼"),
+  blink: z.number().min(0).max(1).optional().describe("闭眼（0..1，不写用表情里的值）"),
+  happy: z.number().min(0).max(1).optional().describe("笑眼：下眼皮推上来，1 弯成 ∩（0..1，不写用表情里的值）"),
+  sad: z.number().min(0).max(1).optional().describe("难过：外眼角压下、眉毛内端抬起（0..1，不写用表情里的值）"),
+  fierce: z.number().min(0).max(1).optional().describe("使劲：内眼角压下、眉毛内端压下（0..1，不写用表情里的值）"),
+  wide: z.number().min(0).max(1).optional().describe("睁大眼（0..1，不写用表情里的值）"),
   smile: z.number().min(-1).max(1).optional().describe("嘴角：1 笑，-1 撇（不写用表情里的值）"),
-  open: amount("张嘴"),
+  open: z.number().min(0).max(1).optional().describe("张嘴（0..1，不写用表情里的值）"),
   lookX: z.number().min(-1).max(1).optional().describe("眼珠往左（−）右（+）看"),
   lookY: z.number().min(-1).max(1).optional().describe("眼珠往上（−）下（+）看"),
-  blush: amount("腮红"),
-  tears: amount("眼泪"),
+  blush: z.number().min(0).max(1).optional().describe("腮红（0..1，不写用表情里的值）"),
+  tears: z.number().min(0).max(1).optional().describe("眼泪（0..1，不写用表情里的值）"),
 
   scarf: z.boolean().default(true).describe("围巾（关掉露出脖子）"),
   gloves: z.boolean().default(true).describe("手套（关掉是光着的手）"),
   brickL: z.boolean().default(false).describe("L 手里拿一块砖"),
   brickR: z.boolean().default(false).describe("R 手里拿一块砖"),
 
-  neck: angle(-60, 60, 0, "脖子：正 = 仰头（朝左时；正面时是往画面右歪头）"),
-  lean: angle(-60, 100, 0, "腰：正 = 往前弯（正面时是往画面左歪）"),
-  rot: angle(-180, 180, 0, "整个人绕胯转（躺下、倒过来）"),
+  neck: z.number().min(-60).max(60).default(0).describe("脖子：正 = 仰头（朝左时；正面时是往画面右歪头）"),
+  lean: z.number().min(-60).max(100).default(0).describe("腰：正 = 往前弯（正面时是往画面左歪）"),
+  rot: z.number().min(-180).max(180).default(0).describe("整个人绕胯转（躺下、倒过来）"),
 
-  shoulderL: angle(-180, 180, -15, "L 肩：0 垂下；正面时往外张是负"),
-  elbowL: angle(-170, 170, -1, "L 肘（相对上臂）"),
-  wristL: angle(-120, 120, 15, "L 手腕（相对前臂）"),
-  handL: handShape.describe(`L 手形：${HAND_TEXT}`),
-  layerL: layer.describe("L 手臂画在身体前面还是后面（auto：3/4 时远侧的在后）"),
-  shoulderR: angle(-180, 180, 15, "R 肩：0 垂下；正面时往外张是正"),
-  elbowR: angle(-170, 170, 1, "R 肘（相对上臂）"),
-  wristR: angle(-120, 120, -15, "R 手腕（相对前臂）"),
-  handR: handShape.describe(`R 手形：${HAND_TEXT}`),
-  layerR: layer.describe("R 手臂画在身体前面还是后面"),
+  shoulderL: z.number().min(-180).max(180).default(-15).describe("L 肩：0 垂下；正面时往外张是负"),
+  elbowL: z.number().min(-170).max(170).default(-1).describe("L 肘（相对上臂）"),
+  wristL: z.number().min(-120).max(120).default(15).describe("L 手腕（相对前臂）"),
+  handL: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("L 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 摊平托着"),
+  layerL: z.enum(["auto", "front", "back"]).default("auto").describe("L 手臂画在身体前面还是后面（auto：3/4 时远侧的在后）"),
+  shoulderR: z.number().min(-180).max(180).default(15).describe("R 肩：0 垂下；正面时往外张是正"),
+  elbowR: z.number().min(-170).max(170).default(1).describe("R 肘（相对上臂）"),
+  wristR: z.number().min(-120).max(120).default(-15).describe("R 手腕（相对前臂）"),
+  handR: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("R 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 摊平托着"),
+  layerR: z.enum(["auto", "front", "back"]).default("auto").describe("R 手臂画在身体前面还是后面"),
 
-  hipL: angle(-150, 150, -6, "L 胯：0 腿竖直；往前抬是正"),
-  kneeL: angle(-170, 170, -1, "L 膝（相对大腿）：往后弯是负"),
-  ankleL: angle(-90, 90, 7, "L 脚（相对小腿）：小腿竖直时 0 = 脚放平"),
+  hipL: z.number().min(-150).max(150).default(-6).describe("L 胯：0 腿竖直；往前抬是正"),
+  kneeL: z.number().min(-170).max(170).default(-1).describe("L 膝（相对大腿）：往后弯是负"),
+  ankleL: z.number().min(-90).max(90).default(7).describe("L 脚（相对小腿）：小腿竖直时 0 = 脚放平"),
   thighL: z.number().min(0.4).max(1).default(1).describe("L 大腿的长度比例：正面蹲下、大腿朝镜头伸出来时压短"),
-  hipR: angle(-150, 150, 7, "R 胯"),
-  kneeR: angle(-170, 170, -1, "R 膝（相对大腿）"),
-  ankleR: angle(-90, 90, -6, "R 脚（相对小腿）"),
+  hipR: z.number().min(-150).max(150).default(7).describe("R 胯"),
+  kneeR: z.number().min(-170).max(170).default(-1).describe("R 膝（相对大腿）"),
+  ankleR: z.number().min(-90).max(90).default(-6).describe("R 脚（相对小腿）"),
   thighR: z.number().min(0.4).max(1).default(1).describe("R 大腿的长度比例"),
 
   ground: z.boolean().default(true).describe("脚踩地：按腿的角度把低的那只脚放到地面上（关掉时胯停在站着的高度）"),
@@ -169,7 +161,8 @@ export const resources = defineResources({
         ctx.beginPath();
         ctx.ellipse(320, gy, 130, 16, 0, 0, Math.PI * 2);
         ctx.fill();
-        chengtuo(ctx, 320, gy, 1.22, p, t);
+        // 抬高了（跳、飘）就缩小一点，整个人留在画面里
+        chengtuo(ctx, 320, gy, Math.min(1.3, 840 / (650 + Math.max(0, p.lift))), p, t);
       },
     },
   }),
