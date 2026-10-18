@@ -275,8 +275,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     // 发根附近还并在一起，越往发梢分得越开
     const ang = bendAlong(
       // （飘出去时朝风向那边的边在上：往右吹 s = 1 在上，往左吹 s = 0 在上；两种都是 -fan 让上面几缕弯得更多）
-      // 失重时从头后面散成一圈：中间往上、两边往外（最外面一缕约 75°），围住头的上半
-      phi + fan * (up * 1.5 - gust * 0.2),
+      // 失重时从头后面散成一圈：中间往上、两边往外（最外面一缕约 65°），围住头的上半
+      phi + fan * (up * 1.3 - gust * 0.2),
       N,
       (i) => {
         const y = (i - 0.5) * HAIR_DY;
@@ -292,7 +292,9 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       const r = i / N;
       // 风里的抖：两个节奏叠在一起、每缕错开，发梢各摆各的
       const flap = 0.16 * loopSin(t, 5, k * 0.9 - i * 0.15) + 0.08 * loopSin(t, 3, k * 2.1 - i * 0.1);
-      return v + gust * flap * r ** 1.5 + pose.float * 0.25 * loopSin(t, 1, k * 1.3 - i * 0.08) * r;
+      // 飘起来时像在水里：每缕沿着长度带一道慢慢漾的 S 形波浪（不然直直的像一圈尖刺）
+      const wave = rise * 0.45 * loopSin(t, 1, k * 1.3 - i * 0.15) * Math.min(1, r * 2.5);
+      return v + gust * flap * r ** 1.5 + pose.float * 0.25 * loopSin(t, 1, k * 1.3 - i * 0.08) * r + wave;
     });
     // 失重时发根挪到头后面：往上、往中间收（被脸和刘海挡住），看着是从后脑勺长出来、往上漂，
     // 不是从脖子长出来；中间几缕藏在头后面的那截也短了，头顶上方有头发（用户 2026-10-18）
@@ -313,7 +315,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   /** 发梢那一线（风大时中间几绺拉长、两边的短） */
   const endY = (s: number) => hairEnd(s) + gust * (34 * (1 - (2 * s - 1) ** 2) - 14 + 14 * hairWisp(s));
   /** 风大时每缕往发梢越来越细（绕自己的中线 sc 收），相邻几缕之间拉开空隙、一缕一缕的；发根那一半不动 */
-  const thinS = (s: number, sc: number, y: number) => sc + (s - sc) * (1 - gust * 0.5 * smooth01(P + 90, P + 170, y));
+  const thinS = (s: number, sc: number, y: number) => sc + (s - sc) * (1 - Math.max(gust, rise) * 0.5 * smooth01(P + 90, P + 170, y));
   /** 某缕上第 s 条在原来高度 y 处的点，放到画面上（加上风推的位移） */
   const W = (at: (s: number, y: number) => V2, s: number, y: number): V2 => {
     const q = at(s, y);
