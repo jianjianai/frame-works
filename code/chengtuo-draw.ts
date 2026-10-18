@@ -445,7 +445,9 @@ function windLock(pts: V2[], field: V2, pose: Pose, out: 1 | -1): V2[] {
   const up = clamp01(0.3 - f[1]);
   if (Math.abs(wind) < 1e-3 && up < 1e-3 && pose.float < 1e-3) return pts;
   // 整缕绕发根转的角度（y 朝下，尖往右摆是负的），越往下转得越多，像一缕软的头发弯过去
-  const a = -(wind * 0.3 * (1 + 0.35 * loopSin(t, 5, out)) + out * (up * 0.9 + pose.float * 0.12 * loopSin(t, 1, out)));
+  let a = -(wind * 0.3 * (1 + 0.35 * loopSin(t, 5, out)) + out * (up * 0.9 + pose.float * 0.12 * loopSin(t, 1, out)));
+  // 风往脸上吹时这缕压在脸颊上，只摆一点（不然会横过脸、盖到眼睛上）；往外吹才整个飘开
+  if (a * out > 0) a *= 0.3;
   const tipY = Math.max(...pts.map((p) => p[1]));
   const root: V2 = [pts.reduce((s, p) => s + p[0], 0) / pts.length, BANGS_BOTTOM_Y];
   return pts.map(([x, y]) => {
