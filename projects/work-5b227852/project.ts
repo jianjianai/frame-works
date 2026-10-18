@@ -19,5 +19,6 @@ const project: AnimationProject = {
   loadVisual: () => import("./visual.json"),
   experiences: ["骨架剪纸动画","情绪运镜","剧情音乐短片"],
   materials: ["剪纸角色"],
+  status: "abandoned",
 };
 export default project;
