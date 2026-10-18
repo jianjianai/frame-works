@@ -61,6 +61,7 @@ import {
   strokeBodyPart,
   toLocal,
   EAR_SIDE_IN,
+  faceHW,
   faceOf,
 } from "./figure";
 import { SIDE_IRIS } from "./figure-side";
@@ -343,14 +344,37 @@ function lockBack(h: HeadView, pts: V2[]): Path2D {
   return cubicPath(pts, ([x, y]) => H(to[0] + (x - from[0]) * k + shear * (y - BANGS_BOTTOM_Y) - EAR_SIDE_IN * uh, y));
 }
 
+/** 远侧那缕（画面左边，正面线稿的坐标）压在脸上的部分往脸的左边上收：k = 1 不动，0 收到边上 */
+function tuckLock(pts: V2[], k: number): V2[] {
+  if (k >= 1) return pts;
+  return pts.map(([x, y]) => {
+    const edge = -faceHW(y);
+    return [x > edge ? edge + (x - edge) * k : x, y];
+  });
+}
+
 /** 刘海和两边的头发（Look.frontHair）：盖住脸边和耳根，跟着脸走；先填色、后描边，头发压在头发上的边不描（用户 2026-10-17），只描压在脸和耳朵上的边 */
 function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink) {
   const { rig, H, uh, place } = h;
   const { head, field, pose } = rig;
   const f = rotateV(field, -head.a);
-  const locks = [cubicPath(windLock(LOCK_L, f, pose, -1), place), lockBack(h, windLock(LOCK_R, f, pose, 1))];
+  // 转身时远侧那缕（LOCK_L）绕到脸后面（用户 2026-10-18：「face -1 时左边的被脸遮挡」）：
+  // 压在脸上的那半截往脸的边上收，转过一半收完，之后整缕画在脸后面（只露出脸外面的部分），不会一下跳到后面
+  const tuck = clamp01(1 - uh / 0.5);
+  const far = cubicPath(tuckLock(windLock(LOCK_L, f, pose, -1), tuck), place);
+  const near = lockBack(h, windLock(LOCK_R, f, pose, 1));
+  const locks = tuck > 0 ? [far, near] : [near];
   // 刘海：正面线稿 → 侧面线稿（缝照正面的补上），再按风、失重飘起来
   const bangs = polylinePath(windBangs(lerpPts(...BANGS_TURN, uh), f, pose), ([x, y]) => H(x, y));
+  if (tuck <= 0) {
+    ctx.save();
+    const out = new Path2D();
+    out.rect(-1e4, -1e4, 2e4, 2e4);
+    out.addPath(facePathOf(rig));
+    ctx.clip(out, "evenodd");
+    fillShaded(ctx, far, K.hair, null, ink);
+    ctx.restore();
+  }
   for (const p of [...locks, bangs]) fillShaded(ctx, p, K.hair, null, ink);
   for (const p of locks) h.strokeOnSkin(p, [bangs]);
   h.strokeOnSkin(bangs, locks);
@@ -445,9 +469,7 @@ function windLock(pts: V2[], field: V2, pose: Pose, out: 1 | -1): V2[] {
   const up = clamp01(0.3 - f[1]);
   if (Math.abs(wind) < 1e-3 && up < 1e-3 && pose.float < 1e-3) return pts;
   // 整缕绕发根转的角度（y 朝下，尖往右摆是负的），越往下转得越多，像一缕软的头发弯过去
-  let a = -(wind * 0.3 * (1 + 0.35 * loopSin(t, 5, out)) + out * (up * 0.9 + pose.float * 0.12 * loopSin(t, 1, out)));
-  // 风往脸上吹时这缕压在脸颊上，只摆一点（不然会横过脸、盖到眼睛上）；往外吹才整个飘开
-  if (a * out > 0) a *= 0.3;
+  const a = -(wind * 0.3 * (1 + 0.35 * loopSin(t, 5, out)) + out * (up * 0.9 + pose.float * 0.12 * loopSin(t, 1, out)));
   const tipY = Math.max(...pts.map((p) => p[1]));
   const root: V2 = [pts.reduce((s, p) => s + p[0], 0) / pts.length, BANGS_BOTTOM_Y];
   return pts.map(([x, y]) => {
