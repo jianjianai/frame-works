@@ -324,8 +324,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     hairEnd(s) + gust * (34 * (1 - (2 * s - 1) ** 2) - 14 + 14 * hairWisp(s)) + up * up * 70 * (1 - Math.abs(2 * s - 1)) ** 1.5 - up * 0.55 * hairTip(s);
   /**
    * 风大时每缕往发梢越来越细（绕自己的中线 sc 收），相邻几缕之间拉开空隙、一缕一缕的；发根那一半不动。
-   * 失重时一样收细（按这缕自己的长度，中间几缕加长了）：发梢是一缕一缕的细尖、缝比较细，
-   * 不是几大块圆头中间隔着深 V（用户 2026-10-18：「上面还是坑坑洼洼的，和之前飘逸的头发一样的缝隙就好了」）
+   * 失重时只收一点（按这缕自己的长度，中间几缕加长了），尖也变短（endY）：头顶上方排着一圈发梢，
+   * 收得多、尖长就是一排尖刺、中间隔着深缺口（用户 2026-10-18：「缝隙还是大，还是坑坑洼洼的」）
    */
   const thinS = (s: number, sc: number, y: number) => {
     const windThin = gust * 0.5 * smooth01(P + 90, P + 170, y);
