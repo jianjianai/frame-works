@@ -689,7 +689,8 @@ function scarfMaps(rig: Rig) {
 
   // 垂下来的一头：从围脖下面出来，一段一段转向受力方向（走路、跳、弯腰、风，bendAlong）；
   // 受力朝上（失重、往下坠）时先往外侧（画面右边）偏，从外侧翻上去，不盖住脸（转角限制在 -2.8..1.4）；
-  // 风里按 4 秒的循环抖，失重时慢慢漾
+  // 失重时只翻到斜着往外、往上（约 -2.3），不竖直贴着脸、被脸挡掉一块像一面小旗（用户 2026-10-18：「失重时围巾再修一下」）；
+  // 风里按 4 秒的循环抖，失重时慢慢漾，沿着围巾还有一道游动的波浪，像丝带在水里
   const f = gusty(rotateV(field, -chest.a), pose.t);
   const gust = clamp01(Math.abs(f[0]) / 1.2);
   const up = clamp01(0.3 - f[1]);
@@ -699,7 +700,7 @@ function scarfMaps(rig: Rig) {
     STEPS,
     (i) => (3.2 / STEPS) * Math.min(len(f), 1.5) * (1 + 0.5 * gust) * smooth01(0, 0.3, (i - 0.5) / STEPS),
     (i) => -0.9 * up * smooth01(0, 0.3, i / STEPS),
-  ).map((a) => Math.max(-2.8, Math.min(1.4, a)));
+  ).map((a) => Math.max(lerp(-2.8, -2.3, up), Math.min(1.4, a)));
   const PIV: V2 = [endX(21), -146.5];
   const LEN = 102;
   const endMap = ([x, y]: V2): V2 => {
@@ -709,7 +710,7 @@ function scarfMaps(rig: Rig) {
     const a =
       lerp(bend[i], bend[i + 1], t * STEPS - i) +
       gust * (0.22 * loopSin(pose.t, 5, -t * 4) + 0.08 * loopSin(pose.t, 9, 1.7 - t * 6)) * t +
-      pose.float * 0.25 * loopSin(pose.t, 1, t * 3) * t;
+      pose.float * (0.25 * loopSin(pose.t, 1, t * 3) + 0.3 * loopSin(pose.t, 2, 1 - t * 5)) * t;
     const c = Math.cos(a);
     const s = Math.sin(a);
     const dx = lx - PIV[0];
