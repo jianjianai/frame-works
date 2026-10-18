@@ -2,7 +2,7 @@
 // 全部按「朝左 3/4」写（face: -1）；要朝右就把返回的姿势 face 改成 1（整套镜像），位移 x 取反。
 // 所有函数只依赖时间 t，可以任意跳转。
 
-import { type PoseIn, type Expr, LEG_K, NEUTRAL, footAt, hipAt } from "./chengtuo-draw";
+import { type PoseIn, type Expr, LEG_K, NEUTRAL, footAt, hipAt } from "./figure";
 import { type Key, type V2, blinkAt, breathAt, clamp01, ease, merge, sampleKeysPose } from "./rig";
 
 // 下面的胯高、脚的位置都是按原来的骨架写的（腿竖直 262 高、脚踝离地 34），用 hipAt / footAt 换算到现在的骨架。
@@ -339,7 +339,7 @@ export function kneelGive(t: number, to: V2 = [-190, -250]) {
     },
   ];
   const p = sampleKeysPose(keys, t);
-  const pose: PoseIn = { ...p, face: -1, t, breath: breathAt(t) * 0.6, bricks: t < 1.3 ? 2 : 1 };
+  const pose: PoseIn = { ...p, face: -1, t, breath: breathAt(t) * 0.6, items: { bricks: t < 1.3 ? 2 : 1 } };
   pose.expr = alive(pose.expr as Expr, t, 3);
   return { pose, hasBrick: t >= 1.25 };
 }
@@ -361,7 +361,7 @@ export function float(t: number, base: PoseIn = {}): PoseIn {
     armR: { a: 0.65 + 0.1 * c, b: 0.5 - 0.1 * s, h: -0.1, shape: "open" },
     legL: { to: undefined, a: -0.18 + 0.06 * s, b: -0.55 - 0.08 * c, f: 0.5, boot: false },
     legR: { to: undefined, a: 0.12 - 0.05 * c, b: -0.35 + 0.08 * s, f: 0.45, boot: false },
-    bricks: 0,
+    items: { bricks: 0 },
     expr: { ...NEUTRAL, blink: 1, smile: 0.25, blush: 0.4 },
   };
   return merge(p, base);
@@ -485,7 +485,7 @@ export const POSES: Record<string, PoseIn> = {
     armR: { a: 0.1, b: 0.5, shape: "relax" },
     legL: { to: undefined, a: 0.05, b: -0.1, f: 0, boot: false },
     legR: { to: undefined, a: -0.05, b: -0.2, f: 0, boot: false },
-    bricks: 0,
+    items: { bricks: 0 },
     expr: { ...NEUTRAL, blink: 1, smile: 0.15 },
   },
   弯腰握手: {
@@ -499,21 +499,9 @@ export const POSES: Record<string, PoseIn> = {
     armR: { a: 0.1, b: 0.1, h: 0, shape: "relax" },
     legL: { to: undefined, a: -0.25, b: -0.3, f: 0.4, boot: false },
     legR: { to: undefined, a: -0.05, b: -0.2, f: 0.4, boot: false },
-    bricks: 0,
+    items: { bricks: 0 },
     expr: { ...NEUTRAL, tears: 0.8, happy: 0.4, smile: 0.5, look: [-0.3, 1] },
   },
 };
 
-export const EXPRESSIONS: Record<string, Partial<Expr>> = {
-  平常: {},
-  笑: { happy: 1, smile: 1, open: 0.35, blush: 0.7 },
-  哭着笑: { happy: 0.5, smile: 0.7, tears: 0.9, blush: 0.8 },
-  难过: { sad: 1, smile: -0.5, look: [0, 0.6], blink: 0.15 },
-  惊: { wide: 1, open: 0.55, smile: -0.2 },
-  使劲: { fierce: 1, smile: -0.5, open: 0.25 },
-  闭眼: { blink: 1, smile: 0.25 },
-  哼歌: { blink: 1, happy: 0.4, smile: 0.4, open: 0.18, blush: 0.6 },
-  仰望: { look: [0, -1], smile: 0, wide: 0.2 },
-  心疼: { sad: 0.7, smile: 0.25, look: [0, 0.8], blush: 0.5 },
-};
 
