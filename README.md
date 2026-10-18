@@ -17,7 +17,7 @@
 ## 作品
 片名、作品 id、剧情和复盘结论在「剧情音乐短片」的 `作品.md`。和这个库有关的：
 - 《i have no friends》：第一支，`reference/` 里是它的分镜代码。重置版重画了光影、开头三镜和回忆的匹配剪辑（`reference/no-friends-remake/`）；YouTube 版是英文本地化。
-- 《unhappy》：聊天版的双视角聊天、打字删字、教室、女主房间在 `reference/unhappy-chat/`；被否的小狗版留下了狗、雨夜、医院（`reference/unhappy/`）。
+- 《unhappy》：聊天版的双视角聊天、打字删字、教室、女主房间在 `reference/unhappy-chat/`；被否的小狗版留下了狗、雨夜、医院（`reference/unhappy/`）。重置版（bbb593a6）画了他的精细卧室（开灯 / 关灯月光 / 早上、坐在床上的打光、手机后面的虚化房间），在 `code/his-room.ts`。
 - 《mirrors》：`code/mirrors`、`reference/mirrors`。
 - 《屏蔽》：爸爸（夜班保安）、门卫室和雪在 `code/blocked/`，夜晚宿舍在 `code/dorm-night.ts`，人物打光 `litFigure` 在 draw.ts。用户从五个一句话备选里选了这个亲情反转（没选 AI 男友、角膜移植、偷看连成一圈、求救手势）；第一轮被否的剧情（「这几个都不太行」）：他一年前死在去接她的雨夜、鬼魂偷看她的动态；失忆的他嫉妒的「另一个男生」是失忆前的自己；她合照里看的一直是拍照的他。
 - 《迟到三年的赞》：stalk ur socials 的第一次，整支被否。
