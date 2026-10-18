@@ -9,28 +9,28 @@ const LOOK = { look: CHENGTUO };
 
 // ——— 走路：铁靴，一步一「咚」 ———
 // 一步（L 脚落地 → R 脚落地）：落地（脚跟先着地）→ 下沉（膝盖吃住分量，后脚抬起）→ 经过（站直、摆动的脚收在身下）→ 上升（踮脚送出去，前脚伸出）。
-// 铁靴重：落地那一下身子沉得多、轻轻压扁，抬脚低、慢，手臂摆得小。
+// 铁靴重：落地那一下身子沉一下、轻轻压扁，抬脚低。身子挺直、抬着下巴、手臂摆开，带一点笑，走得有自信（用户 2026-10-18）。
 const WALK: GaitStep[] = [
   {
     at: 0,
     squash: 0.02,
-    p: { hipL: 19, kneeL: -3, ankleL: -8, hipR: -14, kneeR: -10, ankleR: -2, shoulderL: -11, elbowL: 10, shoulderR: 13, elbowR: 22, lean: 6, neck: -2 },
+    p: { hipL: 19, kneeL: -3, ankleL: -8, hipR: -14, kneeR: -10, ankleR: -2, shoulderL: -21, elbowL: 12, shoulderR: 22, elbowR: 22, lean: 0, neck: 7 },
   },
   {
     at: 0.2,
     ease: "out",
-    squash: 0.045,
-    p: { hipL: 13, kneeL: -20, ankleL: 7, hipR: -18, kneeR: -24, ankleR: 8, shoulderL: -8, elbowL: 14, shoulderR: 10, elbowR: 26, lean: 9, neck: -4 },
+    squash: 0.04,
+    p: { hipL: 13, kneeL: -20, ankleL: 7, hipR: -18, kneeR: -24, ankleR: 8, shoulderL: -16, elbowL: 16, shoulderR: 18, elbowR: 26, lean: 2, neck: 8 },
   },
   {
     at: 0.48,
     ease: "inOut",
-    p: { hipL: -2, kneeL: -4, ankleL: 6, hipR: 10, kneeR: -38, ankleR: 18, shoulderL: 0, elbowL: 14, shoulderR: 2, elbowR: 20, lean: 6, neck: -2 },
+    p: { hipL: -2, kneeL: -4, ankleL: 6, hipR: 10, kneeR: -38, ankleR: 18, shoulderL: 0, elbowL: 14, shoulderR: 2, elbowR: 20, lean: -2, neck: 7 },
   },
   {
     at: 0.74,
     ease: "inOut",
-    p: { hipL: -13, kneeL: -2, ankleL: 4, hipR: 22, kneeR: -16, ankleR: 0, shoulderL: 10, elbowL: 18, shoulderR: -9, elbowR: 14, lean: 5, neck: -1 },
+    p: { hipL: -13, kneeL: -2, ankleL: 4, hipR: 22, kneeR: -16, ankleR: 0, shoulderL: 18, elbowL: 20, shoulderR: -16, elbowR: 16, lean: -3, neck: 6 },
   },
 ];
 
@@ -45,7 +45,7 @@ export interface WalkOpts {
 
 /** 走路（朝左）：返回姿势、根的位置 x（往左为负）和第几步。落地的那只脚钉在地上，不打滑。 */
 export function walk(t: number, o: WalkOpts = {}) {
-  return gait(WALK, t, { ...LOOK, step: o.step ?? 0.5, t0: o.t0, base: { face: -1, ...o.base }, idle: true });
+  return gait(WALK, t, { ...LOOK, step: o.step ?? 0.5, t0: o.t0, base: { face: -1, smile: 0.6, squint: 0.12, lookX: -0.25, ...o.base }, idle: true });
 }
 
 /** 每一步落地（「咚」）的时刻 */
