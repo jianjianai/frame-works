@@ -4,7 +4,7 @@ const project:AnimationProject={
  description:'一张红纸，在秩序、挤压和无尽折叠中寻找自己的形状。原创三维视听短片，128 BPM 四轨电子配乐。建议戴耳机、全屏观看。',
  renderer:'three',engineProtocol:1,composition:{width:1920,height:1080},duration:120,fps:30,
  accent:'#b91224',poster:'films/work-b6ee56e9/poster.svg',posterTime:89,
- tags:["原创短片","空间折叠","电影感电子","无对白","原创视听短片"],status:'film',
+ tags:["原创短片","空间折叠","电影感电子","无对白","原创视听短片"],
  beats:[
   {id:'sheet',at:0,title:'一张纸',detail:'微距触感；第一次折痕带动镜头撤离'},
   {id:'order',at:7.5,title:'秩序',detail:'节拍进入，机械门框逐排升起'},
