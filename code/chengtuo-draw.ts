@@ -232,6 +232,10 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const up = clamp01(0.3 - f[1]);
   const turn = (x: number, y: number) => hairTurnX(x, uh, smooth01(-5, 40, y));
   const restX = (s: number, y: number) => turn(hairRestX(s, y), y);
+  // 风把整头头发往下风处推：头顶不动，越往下推得越多，到披下来的地方（耳朵）推满，下面几缕整个跟着挪——
+  // 不然耳朵以上还竖着、下面却横着飘，迎风那边鼓出一块、下风那边折出一个角（用户 2026-10-18：face 1 wind 2 不自然）
+  const push = Math.max(-2, Math.min(2, f[0])) * 5;
+  const lean = (y: number) => push * smooth01(-50, P, y);
   const n = HAIR_TIPS.length;
   const N = HAIR_ROWS.length - 1;
 
@@ -274,7 +278,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   });
   /** 发梢那一线（风大时中间几绺拉长、两边的短） */
   const endY = (s: number) => hairEnd(s) + gust * (24 * (1 - (2 * s - 1) ** 2) - 6);
-  const H = (q: V2): V2 => head.p(q[0], q[1]);
+  const H = (q: V2): V2 => head.p(q[0] + push, q[1]);
 
   // 每绺一块：右边往下 → 发梢 → 左边往上
   const NV = 24;
@@ -301,7 +305,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       ...HAIR_POLY.slice(lastBelow + 1),
       ...HAIR_POLY.slice(0, firstBelow),
       onRow(HAIR_POLY[firstBelow - 1], HAIR_POLY[firstBelow]),
-    ].map(([x, y]) => head.p(turn(x, y), y)),
+    ].map(([x, y]) => head.p(turn(x, y) + lean(y), y)),
   );
   // 合并描边：每块先描两倍宽的边，再整个一起填色、加阴影（拼起来的地方不留缝）
   const all = new Path2D();
