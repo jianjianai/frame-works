@@ -198,6 +198,15 @@ function hairEnd(s: number) {
   return 143 + 8 * (1 - (2 * s - 1) ** 2) + HAIR_TIPS[k] * (1 - Math.abs(u) ** 1.5);
 }
 
+/** 风大时每缕的尖再各拉长一截（长短不一，看着是被吹散的）：只拉尖，分缝处不变（s：0 左边 → 1 右边） */
+const HAIR_WISP = [0.3, 1, 0.5, 0.8, 1, 0.2, 0.9, 0.4];
+function hairWisp(s: number) {
+  const n = HAIR_TIPS.length;
+  const k = Math.min(n - 1, Math.floor(s * n));
+  const u = (s * n - k) * 2 - 1;
+  return HAIR_WISP[k] * (1 - Math.abs(u) ** 1.5);
+}
+
 /** 披下来的部分每隔 3 一行的左右边（线稿的轮廓；140 以下不再变宽） */
 const HAIR_DY = 3;
 const HAIR_ROWS: V2[] = Array.from({ length: 66 }, (_, i) => rowSpan(HAIR_POLY, Math.min(HAIR_PIVOT + i * HAIR_DY, 140)) ?? [-60, 60]);
@@ -293,7 +302,9 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     return { s0, s1, at };
   });
   /** 发梢那一线（风大时中间几绺拉长、两边的短） */
-  const endY = (s: number) => hairEnd(s) + gust * (24 * (1 - (2 * s - 1) ** 2) - 6);
+  const endY = (s: number) => hairEnd(s) + gust * (24 * (1 - (2 * s - 1) ** 2) - 6 + 18 * hairWisp(s));
+  /** 风大时每缕往发梢越来越细（绕自己的中线 sc 收），相邻几缕之间拉开空隙、一缕一缕的；发根那一半不动 */
+  const thinS = (s: number, sc: number, y: number) => sc + (s - sc) * (1 - gust * 0.5 * smooth01(P + 90, P + 170, y));
   /** 某缕上第 s 条在原来高度 y 处的点，放到画面上（加上风推的位移） */
   const W = (at: (s: number, y: number) => V2, s: number, y: number): V2 => {
     const q = at(s, y);
@@ -307,15 +318,17 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   // 里面的边往旁边那缕里多画一点，叠在一起，外轮廓不变
   const OVER = 0.3 / n;
   const piecePts = locks.map(({ s0, s1, at }, k) => {
+    const sc = (s0 + s1) / 2;
     const a0 = k === 0 ? s0 : s0 - OVER;
     const a1 = k === n - 1 ? s1 : s1 + OVER;
+    const E = (s: number, y: number) => W(at, thinS(s, sc, y), y);
     const pts: V2[] = [];
-    for (let i = 0; i <= NV; i++) pts.push(W(at, a1, lerp(P, endY(a1), i / NV)));
+    for (let i = 0; i <= NV; i++) pts.push(E(a1, lerp(P, endY(a1), i / NV)));
     for (let j = PER - 1; j >= 1; j--) {
       const s = lerp(a0, a1, j / PER);
-      pts.push(W(at, s, endY(s)));
+      pts.push(E(s, endY(s)));
     }
-    for (let i = NV; i >= 0; i--) pts.push(W(at, a0, lerp(P, endY(a0), i / NV)));
+    for (let i = NV; i >= 0; i--) pts.push(E(a0, lerp(P, endY(a0), i / NV)));
     return pts;
   });
   const pieces = piecePts.map((pts) => polylinePath(pts));
@@ -396,9 +409,12 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   // 分缝往上的细发丝线（画在左边那绺的右边上）：分缝处粗、往上变细
   ctx.fillStyle = K.line;
   HAIR_CUTS.forEach((cut, i) => {
-    const { s1, at } = locks[i];
+    const { s0, s1, at } = locks[i];
     const line: V2[] = [];
-    for (let j = 0; j <= 8; j++) line.push(W(at, s1, lerp(P, endY(s1), 1 - cut + (cut * j) / 8)));
+    for (let j = 0; j <= 8; j++) {
+      const y = lerp(P, endY(s1), 1 - cut + (cut * j) / 8);
+      line.push(W(at, thinS(s1, (s0 + s1) / 2, y), y));
+    }
     const widths = line.map((_, j) => ink.lw * (0.04 + 0.34 * (j / 8)));
     ctx.fill(smoothPath(ribbonPts(line, widths, 0.4)));
   });
