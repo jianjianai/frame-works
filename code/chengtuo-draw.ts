@@ -332,24 +332,25 @@ const BANGS_BOTTOM_Y = -6.64;
  * 不像耳朵那样一行一行贴着脸边走（下颌往里收，贴着走就斜了）；线稿里这缕的尖往里收，再横向错切一点，
  * 压在脸上的内侧边（看得见的那条线）竖直；再跟耳朵一起往脸这边收。
  */
-function lockBack(h: HeadView): Path2D {
+function lockBack(h: HeadView, pts: V2[]): Path2D {
   const { rig, H, uh, place } = h;
   const from = rowSpan(FACE_TURN[0], BANGS_BOTTOM_Y);
   const to = rowSpan(faceOf(rig), BANGS_BOTTOM_Y);
-  if (uh <= 0 || !from || !to) return cubicPath(LOCK_R, place);
+  if (uh <= 0 || !from || !to) return cubicPath(pts, place);
   const k = (to[1] - to[0]) / (from[1] - from[0]);
   const [top, tip] = [LOCK_R[0], LOCK_R[3]];
   const shear = ((top[0] - tip[0]) / (tip[1] - top[1])) * k * uh;
-  return cubicPath(LOCK_R, ([x, y]) => H(to[0] + (x - from[0]) * k + shear * (y - BANGS_BOTTOM_Y) - EAR_SIDE_IN * uh, y));
+  return cubicPath(pts, ([x, y]) => H(to[0] + (x - from[0]) * k + shear * (y - BANGS_BOTTOM_Y) - EAR_SIDE_IN * uh, y));
 }
 
 /** 刘海和两边的头发（Look.frontHair）：盖住脸边和耳根，跟着脸走；先填色、后描边，头发压在头发上的边不描（用户 2026-10-17），只描压在脸和耳朵上的边 */
 function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink) {
   const { rig, H, uh, place } = h;
   const { head, field, pose } = rig;
-  const locks = [cubicPath(LOCK_L, place), lockBack(h)];
+  const f = rotateV(field, -head.a);
+  const locks = [cubicPath(windLock(LOCK_L, f, pose, -1), place), lockBack(h, windLock(LOCK_R, f, pose, 1))];
   // 刘海：正面线稿 → 侧面线稿（缝照正面的补上），再按风、失重飘起来
-  const bangs = polylinePath(windBangs(lerpPts(...BANGS_TURN, uh), rotateV(field, -head.a), pose), ([x, y]) => H(x, y));
+  const bangs = polylinePath(windBangs(lerpPts(...BANGS_TURN, uh), f, pose), ([x, y]) => H(x, y));
   for (const p of [...locks, bangs]) fillShaded(ctx, p, K.hair, null, ink);
   for (const p of locks) h.strokeOnSkin(p, [bangs]);
   h.strokeOnSkin(bangs, locks);
@@ -429,6 +430,29 @@ function windBangs(pts: V2[], field: V2, pose: Pose): V2[] {
     const dx = wind * 3.6 * (1 + 0.45 * loopSin(t, 5, x * 0.15));
     const dy = Math.abs(wind) * 2 * (0.55 + 0.45 * loopSin(t, 7, x * 0.2 + 1)) + up * 4 + pose.float * 1.5 * loopSin(t, 1, x * 0.1);
     return [x + dx * w, y - dy * w];
+  });
+}
+
+/**
+ * 鬓发在风里（用户 2026-10-18：「这个头发也要能被风影响」）：发根在刘海下沿钉住，越往下越顺着受力偏——
+ * 风往下风处摆、一阵一阵地抖（4 秒一个循环），受力朝上（失重、往下坠）时往外漾起来。
+ * pts 是正面线稿的坐标；out：这缕在脸的哪一边（1 右、-1 左），漾起来往外；field 是头的坐标里的受力。
+ */
+function windLock(pts: V2[], field: V2, pose: Pose, out: 1 | -1): V2[] {
+  const t = pose.t;
+  const f = gusty(field, t);
+  const wind = Math.max(-2, Math.min(2, f[0]));
+  const up = clamp01(0.3 - f[1]);
+  if (Math.abs(wind) < 1e-3 && up < 1e-3 && pose.float < 1e-3) return pts;
+  // 整缕绕发根转的角度（y 朝下，尖往右摆是负的），越往下转得越多，像一缕软的头发弯过去
+  const a = -(wind * 0.3 * (1 + 0.35 * loopSin(t, 5, out)) + out * (up * 0.9 + pose.float * 0.12 * loopSin(t, 1, out)));
+  const tipY = Math.max(...pts.map((p) => p[1]));
+  const root: V2 = [pts.reduce((s, p) => s + p[0], 0) / pts.length, BANGS_BOTTOM_Y];
+  return pts.map(([x, y]) => {
+    const r = a * smooth01(BANGS_BOTTOM_Y, tipY, y);
+    const dx = x - root[0];
+    const dy = y - root[1];
+    return [root[0] + dx * Math.cos(r) - dy * Math.sin(r), root[1] + dx * Math.sin(r) + dy * Math.cos(r)];
   });
 }
 
