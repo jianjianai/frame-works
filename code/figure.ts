@@ -70,6 +70,7 @@ export const BASE_COLORS = {
   mouth: "#8c3e4f",
   mouthLine: "#5e5153",
   tongue: "#f29a9c",
+  teeth: "#fffaf4",
   tear: "#cfeefa",
 };
 export type Palette = typeof BASE_COLORS;
@@ -136,6 +137,14 @@ export interface Expr {
   blush: number;
   /** 眼泪 0..1 */
   tears: number;
+  /** 眯眼：下眼皮推上来一点（温柔地笑、看远处），不弯成 ∩ */
+  squint: number;
+  /** 嘴圆起来（「哦」、惊讶的小圆嘴） */
+  round: number;
+  /** 露出咬紧的牙（使劲） */
+  teeth: number;
+  /** 嘴发抖、撇成波浪（忍着哭） */
+  wobble: number;
 }
 
 export interface Pose {
@@ -207,6 +216,10 @@ export const NEUTRAL: Expr = {
   look: [0, 0],
   blush: 0.3,
   tears: 0,
+  squint: 0,
+  round: 0,
+  teeth: 0,
+  wobble: 0,
 };
 
 export const DEFAULT_POSE: Pose = {
@@ -377,6 +390,44 @@ export function figureRig(pIn: PoseIn | Pose, look: Look = BASE_LOOK): Rig {
   };
 }
 
+// ——— 着地 ———
+/** 光脚能着地的点（脚踝的局部坐标，画面左边那只）：脚尖、脚掌、脚跟 */
+const BARE_SOLE: V2[] = [[-38, 63], [-20, 64.5], [0, 65], [12, 62]];
+/** 跪着时膝盖着地的那一点在膝关节下面多远 */
+const KNEE_R = 12;
+/** 坐着时大腿后面着地：离骨头多远 */
+const THIGH_R = 15;
+
+/**
+ * 身上能着地的点（画面坐标）：两只脚的鞋底（穿着鞋时问角色的 Look.soles）、膝盖、大腿后面（坐着）。
+ * 脚踩地（ground）就是把最低的那一点放到地面上：站着是鞋底，跪着是膝盖，坐在地上是大腿后面。
+ */
+export function contactsOf(rig: Rig): V2[] {
+  const pts: V2[] = [];
+  for (const side of ["L", "R"] as const) {
+    const limb = rig.legs[side];
+    const lp = side === "L" ? rig.pose.legL : rig.pose.legR;
+    const shod = (rig.look.shoe?.(rig, side) ?? false) && lp.boot;
+    const own = shod ? rig.look.soles?.(rig, side) : undefined;
+    if (own) pts.push(...own);
+    else {
+      const fx = side === "R" || rig.u >= 0.25 ? 1 : -1;
+      for (const [x, y] of BARE_SOLE) pts.push(limb.tip.p(x * fx, y));
+    }
+    pts.push([limb.mid[0], limb.mid[1] + KNEE_R]);
+    // 大腿后面（朝左时在大腿右边）：坐下时贴着地
+    const back: V2 = [Math.cos(limb.a1) * THIGH_R, Math.sin(limb.a1) * THIGH_R];
+    for (const k of [0.15, 0.5]) pts.push(add(lerpV(limb.root, limb.mid, k), back));
+  }
+  return pts;
+}
+
+/** 脚踩地时胯该放多高：把这个姿势（胯在 0 高度时）最低的着地点放到地面上 */
+export function groundHip(pose: PoseIn, look: Look = BASE_LOOK): number {
+  const rig = figureRig({ ...pose, hip: [0, 0] }, look);
+  return -Math.max(...contactsOf(rig).map((p) => p[1]));
+}
+
 /** 关节在画面里的位置（已按朝向镜像），用来对齐道具、别的角色。 */
 export function figureJoints(pIn: PoseIn | Pose, look: Look = BASE_LOOK) {
   const r = figureRig(pIn, look);
@@ -466,6 +517,8 @@ export interface Look {
   shoe?(rig: Rig, side: "L" | "R"): boolean;
   /** 每条腿画完以后：鞋、靴子 */
   overLeg?(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink): void;
+  /** 穿着鞋的脚能着地的点（画面坐标，鞋底和鞋面一圈）：脚踩地按它算；不写按光脚 */
+  soles?(rig: Rig, side: "L" | "R"): V2[];
 }
 
 /** 基础模型本身：素色上衣、下装，光头、光手、光脚 */
@@ -1437,7 +1490,7 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   // 嘴
   {
     const c = lerpV([0, 32], MOUTH_SIDE.c, uh);
-    drawMouth(ctx, head, c[0], c[1], lerp(1, MOUTH_SIDE.wk, uh), lerp(0, MOUTH_SIDE.tilt, uh), e, ink);
+    drawMouth(ctx, head, c[0], c[1], lerp(1, MOUTH_SIDE.wk, uh), lerp(0, MOUTH_SIDE.tilt, uh), e, ink, pose.t);
   }
 
   // 刘海、鬓发（角色的）：只描压在脸和耳朵上的边
@@ -1492,7 +1545,7 @@ function drawEye(ctx: CanvasRenderingContext2D, head: Frame, ex: number, ey: num
   const hw = (out + IRIS_RX) / 2;
   const outer = (u: number) => (u - uc) / hw;
   const bottom = (u: number) => {
-    const b0 = botO(u) - e.happy * (botO(u) - topO(u)) * 0.78;
+    const b0 = botO(u) - (e.happy * 0.78 + e.squint * 0.32) * (botO(u) - topO(u));
     // 闭眼时闭在眼睛中下部，不是落到最底下
     return b0 + (Math.min(b0, 3.2 * prof(u)) - b0) * e.blink;
   };
@@ -1501,8 +1554,9 @@ function drawEye(ctx: CanvasRenderingContext2D, head: Frame, ex: number, ey: num
     return (
       t0 +
       e.happy * 0.5 * (botO(u) - t0) +
-      e.sad * 5 * Math.max(0, outer(u) + 0.15) +
-      e.fierce * 5.5 * Math.max(0, -outer(u) + 0.15)
+      e.squint * 0.1 * (botO(u) - t0) +
+      e.sad * 6.5 * Math.max(0, outer(u) + 0.15) +
+      e.fierce * 7 * Math.max(0, -outer(u) + 0.15)
     );
   };
   const top = (u: number) => {
@@ -1597,11 +1651,11 @@ function drawLiner(ctx: CanvasRenderingContext2D, pts: V2[], w: number[]) {
 
 /** 眉毛（线稿的形状，透过刘海画在头发上）：难过时内端抬起，使劲时内端压下，惊讶时整条抬起。(ex, ey) 是这只眼睛现在的位置，跟着眼睛缩放。 */
 function drawBrow(ctx: CanvasRenderingContext2D, head: Frame, brow: V2[], ex: number, ey: number, sx: number, sy: number, s: number, e: Expr, ink: Ink) {
-  const lift = -3 * e.wide - 0.8 * e.happy + 0.6 * e.blink;
+  const lift = -4 * e.wide - 1 * e.happy + 0.6 * e.blink;
   const map = ([x, y]: V2): V2 => {
     // 0 内端 → 1 外端
     const t = clamp01((Math.abs(x) - 18.5) / 18.2);
-    const dy = lift + e.sad * (-3.4 * (1 - t) + 1.6 * t) + e.fierce * (3 * (1 - t) - 1.2 * t);
+    const dy = lift + e.sad * (-5.5 * (1 - t) + 2.2 * t) + e.fierce * (5 * (1 - t) - 1.6 * t);
     return head.p(ex + (x - s * EYE_X) * sx, ey + (y + dy - EYE_Y) * sy);
   };
   ctx.strokeStyle = K.brow;
@@ -1610,8 +1664,11 @@ function drawBrow(ctx: CanvasRenderingContext2D, head: Frame, brow: V2[], ex: nu
   ctx.stroke(cubicPath(brow, map, false));
 }
 
-/** 嘴：一道细弧，中间粗、两头细；张嘴时是一个小口。wk 横向缩放，tilt 斜度（转身时侧面线稿的嘴）。 */
-function drawMouth(ctx: CanvasRenderingContext2D, head: Frame, mx: number, my: number, wk: number, tilt: number, e: Expr, ink: Ink) {
+/**
+ * 嘴：一道细弧，中间粗、两头细；张嘴时是一个小口。wk 横向缩放，tilt 斜度（转身时侧面线稿的嘴）。
+ * round 收成小圆嘴（惊讶、「哦」），teeth 露出咬紧的牙（使劲），wobble 忍着哭时嘴抖成波浪（按时间 t 抖）。
+ */
+function drawMouth(ctx: CanvasRenderingContext2D, head: Frame, mx: number, my: number, wk: number, tilt: number, e: Expr, ink: Ink, t = 0) {
   ctx.save();
   ctx.translate(head.x, head.y);
   ctx.rotate(head.a);
@@ -1620,34 +1677,53 @@ function drawMouth(ctx: CanvasRenderingContext2D, head: Frame, mx: number, my: n
   ctx.translate(-mx, -my);
   const s = e.smile - e.sad * 0.6;
   const o = e.open;
-  const w = (6.8 + 1.6 * Math.abs(s) + o * 1.6) * wk;
+  const r = e.round;
+  const w = (6.8 + 1.6 * Math.abs(s) + o * 1.6) * wk * (1 - 0.5 * r) * (1 + 0.45 * e.teeth);
+  // 抖：沿着嘴一道小波浪，左右两个嘴角一上一下
+  const wob = (k: number) => e.wobble * 1.3 * Math.sin(k * Math.PI * 3 + t * 13) * Math.sin(Math.PI * k);
+  const jit = e.wobble * 0.9 * Math.sin(t * 17);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  if (o < 0.08) {
+  if (o < 0.08 && e.teeth < 0.05) {
     const pts: V2[] = [];
-    for (let i = 0; i <= 10; i++) {
-      const t = i / 10;
-      const a = 1 - t;
-      const y = (a * a + t * t) * (my - s * 2.4) + 2 * a * t * (my + s * 5.4);
-      pts.push([mx - w + 2 * w * t, y]);
+    for (let i = 0; i <= 12; i++) {
+      const k = i / 12;
+      const a = 1 - k;
+      const y = (a * a + k * k) * (my - s * 2.4) + 2 * a * k * (my + s * 5.4) + wob(k) + (k - 0.5) * 2 * jit;
+      pts.push([mx - w + 2 * w * k, y]);
     }
-    const widths = pts.map((_, i) => 0.35 + 0.5 * Math.sin((Math.PI * i) / 10));
+    const widths = pts.map((_, i) => 0.35 + 0.5 * Math.sin((Math.PI * i) / 12));
     ctx.fillStyle = K.mouthLine;
     ctx.fill(smoothPath(ribbonPts(pts, widths, 0.5)));
   } else {
+    const oo = Math.max(o, e.teeth * 0.3);
+    const yl = my - s * 1.4 + jit;
+    const yr = my - s * 1.4 - jit;
     const shape = new Path2D();
-    shape.moveTo(mx - w, my - s * 1.4);
-    shape.quadraticCurveTo(mx, my + s * 2.2, mx + w, my - s * 1.4);
-    shape.quadraticCurveTo(mx, my + 2 + o * 13 + s * 3, mx - w, my - s * 1.4);
+    shape.moveTo(mx - w, yl);
+    shape.quadraticCurveTo(mx, my + s * 2.2 - r * oo * 7 + wob(0.5), mx + w, yr);
+    shape.quadraticCurveTo(mx, my + 2 + oo * 13 + s * 3 + r * oo * 3, mx - w, yl);
     shape.closePath();
     ctx.fillStyle = K.mouth;
     ctx.fill(shape);
     ctx.save();
     ctx.clip(shape);
-    ctx.fillStyle = K.tongue;
-    ctx.beginPath();
-    ctx.ellipse(mx, my + 3 + o * 9, w * 0.62, 3 + o * 3, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (e.teeth < 0.5) {
+      ctx.fillStyle = K.tongue;
+      ctx.beginPath();
+      ctx.ellipse(mx, my + 3 + oo * 9, w * 0.62, 3 + oo * 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (e.teeth > 0.01) {
+      // 上下两排牙：咬紧时几乎填满，中间一道缝
+      const top = Math.min(yl, yr) - 8;
+      const gap = my + (1 + oo * 6.5) * (0.6 + 0.4 * Math.min(1, s + 0.6));
+      ctx.globalAlpha = Math.min(1, e.teeth * 1.5);
+      ctx.fillStyle = K.teeth;
+      ctx.fillRect(mx - w - 1, top, 2 * w + 2, gap - top - 0.6 + (1 - e.teeth) * -3);
+      ctx.fillRect(mx - w - 1, gap + 0.6 + (1 - e.teeth) * 4, 2 * w + 2, 30);
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
     ctx.strokeStyle = K.mouthLine;
     ctx.lineWidth = ink.lw * 0.5;
@@ -1705,15 +1781,25 @@ export function rotateV(v: V2, a: number): V2 {
 /** 表情（每个角色都能用；参数里的 expression 选一种，再细调） */
 export const EXPRESSIONS: Record<string, Partial<Expr>> = {
   平常: {},
+  微笑: { smile: 1, squint: 0.5, blush: 0.5 },
   笑: { happy: 1, smile: 1, open: 0.35, blush: 0.7 },
-  哭着笑: { happy: 0.5, smile: 0.7, tears: 0.9, blush: 0.8 },
-  难过: { sad: 1, smile: -0.5, look: [0, 0.6], blink: 0.15 },
-  惊: { wide: 1, open: 0.55, smile: -0.2 },
-  使劲: { fierce: 1, smile: -0.5, open: 0.25 },
+  哭着笑: { happy: 0.7, sad: 0.4, smile: 0.9, open: 0.22, tears: 1, blush: 0.85 },
+  含泪: { sad: 0.5, smile: 0.5, squint: 0.15, tears: 0.45, blush: 0.6 },
+  忍着哭: { sad: 0.9, smile: -0.45, wobble: 1, tears: 0.55, blush: 0.6, look: [0, 0.3] },
+  难过: { sad: 1, smile: -0.7, blink: 0.2, look: [0, 0.6] },
+  担心: { sad: 0.75, wide: 0.25, smile: -0.3, look: [-0.35, 0.1] },
+  心疼: { sad: 0.8, squint: 0.25, smile: 0.65, blush: 0.55, look: [0, 0.7] },
+  惊: { wide: 1, open: 0.5, round: 0.8, smile: -0.1 },
+  吓一跳: { wide: 1, sad: 0.3, open: 0.75, round: 0.3, smile: -0.4 },
+  使劲: { fierce: 1, squint: 0.6, smile: -0.2, teeth: 1, open: 0.1 },
+  坚定: { fierce: 0.7, squint: 0.2, smile: -0.15 },
+  犹豫: { sad: 0.5, squint: 0.2, smile: -0.2, wobble: 0.2, look: [0.85, 0.5] },
   闭眼: { blink: 1, smile: 0.25 },
-  哼歌: { blink: 1, happy: 0.4, smile: 0.4, open: 0.18, blush: 0.6 },
-  仰望: { look: [0, -1], smile: 0, wide: 0.2 },
-  心疼: { sad: 0.7, smile: 0.25, look: [0, 0.8], blush: 0.5 },
+  哼歌: { blink: 1, happy: 0.4, smile: 0.5, open: 0.22, round: 0.5, blush: 0.6 },
+  释然: { happy: 1, smile: 0.75, blush: 0.6 },
+  仰望: { wide: 0.3, smile: 0, look: [0, -1] },
+  低头看: { blink: 0.3, smile: 0.1, look: [0, 1] },
+  嘘: { wide: 0.35, smile: 0, round: 1, open: 0.12, look: [-0.4, 0] },
 };
 
 // ——— 按关节角度摆姿势的参数（资源面板里调的就是它；角色在上面加自己的物品开关） ———
@@ -1726,7 +1812,7 @@ export const figureOptions = z.object({
   headTurn: z.number().min(-1).max(1).default(0).describe("头比身体多转多少（正 = 更朝向侧面）"),
 
   expression: z
-    .enum(["平常", "笑", "哭着笑", "难过", "惊", "使劲", "闭眼", "哼歌", "仰望", "心疼"])
+    .enum(["平常", "微笑", "笑", "哭着笑", "含泪", "忍着哭", "难过", "担心", "心疼", "惊", "吓一跳", "使劲", "坚定", "犹豫", "闭眼", "哼歌", "释然", "仰望", "低头看", "嘘"])
     .default("平常")
     .describe("表情；下面几项可以在它上面再调"),
   blink: z.number().min(0).max(1).optional().describe("闭眼（0..1，不写用表情里的值）"),
@@ -1740,6 +1826,10 @@ export const figureOptions = z.object({
   lookY: z.number().min(-1).max(1).optional().describe("眼珠往上（−）下（+）看"),
   blush: z.number().min(0).max(1).optional().describe("腮红（0..1，不写用表情里的值）"),
   tears: z.number().min(0).max(1).optional().describe("眼泪（0..1，不写用表情里的值）"),
+  squint: z.number().min(0).max(1).optional().describe("眯眼：下眼皮推上来一点（0..1，不写用表情里的值）"),
+  round: z.number().min(0).max(1).optional().describe("小圆嘴：惊讶、「哦」（0..1，不写用表情里的值）"),
+  teeth: z.number().min(0).max(1).optional().describe("咬紧牙（0..1，不写用表情里的值）"),
+  wobble: z.number().min(0).max(1).optional().describe("嘴发抖：忍着哭（0..1，不写用表情里的值）"),
 
   neck: z.number().min(-60).max(60).default(0).describe("脖子：正 = 仰头（朝左时；正面时是往画面右歪头）"),
   lean: z.number().min(-60).max(100).default(0).describe("腰：正 = 往前弯（正面时是往画面左歪）"),
@@ -1775,10 +1865,10 @@ export const figureOptions = z.object({
 export type FigureOptions = z.input<typeof figureOptions>;
 
 const RAD = Math.PI / 180;
-const EXPR_KEYS = ["blink", "happy", "sad", "fierce", "wide", "smile", "open", "blush", "tears"] as const;
+const EXPR_KEYS = ["blink", "happy", "sad", "fierce", "wide", "smile", "open", "blush", "tears", "squint", "round", "teeth", "wobble"] as const;
 
-/** 参数 → 姿势（drawFigure 用的 PoseIn，可以再和动作、关键帧混合）。t：时间（呼吸、眨眼、飘的摆动）。look：脚踩地按这个角色算。 */
-export function figurePose(options: FigureOptions = {}, t = 0, look: Look = BASE_LOOK): PoseIn {
+/** 参数 → 姿势（drawFigure 用的 PoseIn，可以再和动作、关键帧混合）。t：时间（呼吸、眨眼、飘的摆动）。look、items：脚踩地按这个角色和她穿的鞋算。 */
+export function figurePose(options: FigureOptions = {}, t = 0, look: Look = BASE_LOOK, items?: Items): PoseIn {
   const o = figureOptions.parse(options);
   const expr: Expr = { ...NEUTRAL, ...EXPRESSIONS[o.expression] };
   for (const k of EXPR_KEYS) if (o[k] !== undefined) expr[k] = o[k];
@@ -1803,11 +1893,9 @@ export function figurePose(options: FigureOptions = {}, t = 0, look: Look = BASE
     // 风按画面方向给：朝右时整套镜像，这里先反过来
     drag: [o.face > 0 ? -o.wind : o.wind, 0],
   };
-  let y = DEFAULT_POSE.hip[1];
-  if (o.ground) {
-    const rig = figureRig({ ...pose, hip: [0, 0] }, look);
-    y = -BODY.ankleBare - Math.max(rig.legs.L.end[1], rig.legs.R.end[1]);
-  }
+  // 物品（角色的）先放进去：穿不穿鞋影响哪里着地
+  if (items) pose.items = items;
+  const y = o.ground ? groundHip(pose, look) : DEFAULT_POSE.hip[1];
   pose.hip = [0, y - o.lift];
   return pose;
 }
@@ -1842,13 +1930,15 @@ export const resources = defineResources({
       "figure(ctx, x, y, s, { face, expression, shoulderL, … }, t, look)  // (x, y) 两脚之间的地面，s = 1 全身约 590 高；做新角色：写一个 Look（colors、backHair / frontHair 发型、overTorso 外衣、shoe / overLeg 鞋…），drawFigure(ctx, pose, look)",
     params: figureOptions,
     presets: {
-      "3/4 朝左": { face: -1, shoulderL: -5, elbowL: 16, wristL: 15, shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
-      "3/4 朝右": { face: 1, shoulderL: -5, elbowL: 16, wristL: 15, shoulderR: 8, elbowR: 18, wristR: -15, hipL: 6, kneeL: -15, ankleL: 9, hipR: 8, kneeR: -15, ankleR: 7 },
+      "3/4 朝左": { face: -1, hipL: 7, kneeL: -9, ankleL: 2, hipR: -4, kneeR: -2, ankleR: 6, shoulderL: -5, elbowL: 14, wristL: 8, shoulderR: 7, elbowR: 16, wristR: -4, lean: 2 },
+      "3/4 朝右": { face: 1, hipL: 7, kneeL: -9, ankleL: 2, hipR: -4, kneeR: -2, ankleR: 6, shoulderL: -5, elbowL: 14, wristL: 8, shoulderR: 7, elbowR: 16, wristR: -4, lean: 2 },
       笑: { expression: "笑" },
-      抱臂: { shoulderL: -17, elbowL: 115, wristL: -14, shoulderR: 17, elbowR: -99, wristR: 6 },
-      坐: { face: -1, neck: -3, lean: 5, shoulderL: 20, elbowL: 34, wristL: 15, shoulderR: 26, elbowR: 37, wristR: -15, hipL: 88, kneeL: -95, ankleL: 7, hipR: 88, kneeR: -99, ankleR: 12, lookX: -0.4, lookY: 0.3 },
+      哭着笑: { expression: "哭着笑" },
+      抱臂: { face: 0, shoulderL: -17, elbowL: 115, wristL: -14, shoulderR: 17, elbowR: -99, wristR: 6 },
+      坐: { face: -1, hipL: 86, kneeL: -76, ankleL: -6, hipR: 80, kneeR: -96, ankleR: 20, lean: 8, neck: -4, shoulderL: 34, elbowL: 40, wristL: 10, shoulderR: 30, elbowR: 44, lookX: -0.4, lookY: 0.2 },
       呼吸眨眼: { idle: true },
     },
+
     preview: {
       width: 640,
       height: 960,
