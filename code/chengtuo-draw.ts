@@ -450,8 +450,10 @@ export function drawChengtuo(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, 
     drawLegs(ctx, rig, ink);
     const behind = front ? (["R", "L"] as const).filter((side) => !farBack(side)) : [];
     for (const side of behind) drawUpperArm(ctx, rig, side, ink);
+    // 围脖：绕到脖子后面的半圈在脖子后面，前面的半圈压在脖子前面
+    if (pose.items.scarf) drawScarfWrap(ctx, rig, ink, "back");
     drawTorso(ctx, rig, ink, behind);
-    if (pose.items.scarf) drawScarfWrap(ctx, rig, ink);
+    if (pose.items.scarf) drawScarfWrap(ctx, rig, ink, "front");
     drawHead(ctx, rig, ink);
   });
   // 前面的手臂和围巾垂下来那头：围巾挂在胸前，垂在身边、举起来的手臂在它后面（风把围巾吹过手臂时压在手臂上），
@@ -1241,15 +1243,32 @@ function scarfMaps(rig: Rig) {
   return { endMap, wrapMap };
 }
 
-/** 绕脖子的一圈（画在头前面，下巴压在它上面） */
-function drawScarfWrap(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
+/**
+ * 绕脖子的一圈（下巴压在它上面），按上沿那道弧（SCARF_FOLDS[2]）分成前后两半：
+ * 弧上面是绕到脖子后面的半圈，画在脖子后面（仰头时能看到脖子，后半圈只从脖子两边露出来）；
+ * 弧下面是前面的半圈，压在脖子前面，那道弧就是它的上边。
+ */
+function drawScarfWrap(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, part: "back" | "front") {
   const { wrapMap } = scarfMaps(rig);
-  drawPart(ctx, cubicPath(SCARF_WRAP, wrapMap), K.scarf, K.scarfShade, ink, ink.lw * 0.8);
+  const wrap = cubicPath(SCARF_WRAP, wrapMap);
+  // 分界：上沿那道弧，两头水平往外接到围脖外面
+  const arc = bezierPolyline(SCARF_FOLDS[2], 12, false);
+  const [a0, a1] = [arc[0], arc[arc.length - 1]];
+  const lower = polylinePath([[a0[0] - 40, a0[1]], ...arc, [a1[0] + 40, a1[1]], [a1[0] + 40, a1[1] + 60], [a0[0] - 40, a0[1] + 60]], wrapMap);
+  ctx.save();
+  ctx.clip(part === "front" ? lower : outside(lower), part === "front" ? "nonzero" : "evenodd");
+  drawPart(ctx, wrap, K.scarf, K.scarfShade, ink, ink.lw * 0.8);
+  ctx.restore();
+  if (part === "back") return;
   ctx.strokeStyle = K.line;
-  ctx.lineWidth = ink.lw * 0.5;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  for (const fold of SCARF_FOLDS) ctx.stroke(cubicPath(fold, wrapMap, false));
+  // 前半圈的上边（压在脖子、后半圈上）
+  ctx.lineWidth = ink.lw * 0.8;
+  ctx.stroke(cubicPath(SCARF_FOLDS[2], wrapMap, false));
+  // 两边的小折痕
+  ctx.lineWidth = ink.lw * 0.5;
+  for (const fold of SCARF_FOLDS.slice(0, 2)) ctx.stroke(cubicPath(fold, wrapMap, false));
 }
 
 /**
