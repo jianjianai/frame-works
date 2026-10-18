@@ -439,3 +439,26 @@ export function polylinePath(pts: V2[], map: (p: V2) => V2 = (p) => p, path = ne
   path.closePath();
   return path;
 }
+
+// ——— 风：循环动画 ———
+/** 风的循环周期（秒）：随风抖动的频率都是它的整数倍，循环播放（资源预览 4 秒）首尾接得上 */
+export const WIND_LOOP = 4;
+/** 以 WIND_LOOP 为周期的正弦：一个周期里 k 圈 */
+export const loopSin = (t: number, k: number, phase = 0) => Math.sin((2 * Math.PI * k * t) / WIND_LOOP + phase);
+/** 风一阵一阵的：横向的受力按周期起伏 */
+export const gusty = (f: V2, t: number): V2 => [f[0] * (1 + 0.2 * loopSin(t, 1) + 0.1 * loopSin(t, 3, 1.3)), f[1]];
+
+/**
+ * 一条头发 / 布条从根往下逐段算转角（0 = 原来的方向，正 = 往画面左转）：每段转向受力方向 φ，dα = k·sin(φ − α)。
+ * 用正弦而不是直接取角度：受力怎么转都连续。受力正好朝上是不稳的平衡，tilt 给一个往外的偏转决定从哪一侧翻上去。
+ * k(i)：第 i 段转得多快；tilt(i)：到第 i 段为止累计的往外偏转。返回 steps + 1 个转角（根部到末端）。
+ */
+export function bendAlong(phi: number, steps: number, k: (i: number) => number, tilt: (i: number) => number = () => 0): number[] {
+  let a = tilt(0);
+  const out = [a];
+  for (let i = 1; i <= steps; i++) {
+    a += k(i) * Math.sin(phi - a) + tilt(i) - tilt(i - 1);
+    out.push(a);
+  }
+  return out;
+}
