@@ -234,7 +234,15 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const restX = (s: number, y: number) => turn(hairRestX(s, y), y);
   // 风把整头头发往下风处推：头顶不动，越往下推得越多，到披下来的地方（耳朵）推满，下面几缕整个跟着挪——
   // 不然耳朵以上还竖着、下面却横着飘，迎风那边鼓出一块、下风那边折出一个角（用户 2026-10-18：face 1 wind 2 不自然）
-  const push = Math.max(-2, Math.min(2, f[0])) * 5;
+  const push = Math.max(-2, Math.min(2, f[0])) * 4;
+  // 推的量随高度：头顶（y = -50）不动，越往下越快（二次），过了耳朵不停住、接着以同样的斜率往下推，再用 40 慢慢平下来：
+  // 迎风那边的轮廓一直往里弯，不会在耳朵那一行变回竖直、再顺着线稿往外加宽，扭成 S
+  const slope = 2 / (P + 50);
+  const leanK = (y: number) => {
+    if (y <= P) return ((Math.max(-50, y) + 50) / (P + 50)) ** 2;
+    const d = Math.min(y - P, 40);
+    return 1 + slope * d - (slope * d * d) / 80;
+  };
   /**
    * 风推的横向位移（x, y 是没受力时的位置，头顶和下面几缕用同一个，接缝处不会错开）：整头往下风处推；
    * 下风那边耳朵上下再往外鼓出一块，把头顶顺着接到飘出去的那股头发上（不在耳朵旁折出一个往里凹的角）
@@ -242,7 +250,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const windDx = (x: number, y: number) => {
     const side = smooth01(0.25, 1, (x * Math.sign(push)) / 60);
     const bell = smooth01(-40, P, y) * (1 - smooth01(P, P + 60, y));
-    return push * (smooth01(-50, P, y) + 1.6 * side * bell);
+    return push * (leanK(y) + 2 * side * bell);
   };
   const n = HAIR_TIPS.length;
   const N = HAIR_ROWS.length - 1;
