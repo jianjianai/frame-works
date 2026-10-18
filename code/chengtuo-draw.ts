@@ -444,17 +444,28 @@ export function drawChengtuo(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, 
     const behind = front ? (["R", "L"] as const).filter((side) => !farBack(side)) : [];
     for (const side of behind) drawUpperArm(ctx, rig, side, ink);
     drawTorso(ctx, rig, ink, behind);
-    if (pose.items.scarf) drawScarf(ctx, rig, ink);
+    if (pose.items.scarf) drawScarfWrap(ctx, rig, ink);
     drawHead(ctx, rig, ink);
+  });
+  // 前面的手臂和围巾垂下来那头：围巾挂在胸前，垂在身边、举起来的手臂在它后面（风把围巾吹过手臂时压在手臂上），
+  // 横在胸前的前臂（抱臂、递东西、抱人）压在围巾上面
+  const fronts = (["R", "L"] as const).filter((side) => !farBack(side));
+  const drawFront = (side: "L" | "R") => (front ? drawForearm(ctx, rig, side, ink, opts) : drawArm(ctx, rig, side, ink, opts));
+  scoped(() => {
+    for (const side of fronts) if (!crossesChest(rig, side)) drawFront(side);
+    if (pose.items.scarf) drawScarfEnd(ctx, rig, ink);
   });
   opts.beforeFrontArms?.(ctx);
   scoped(() => {
-    for (const side of ["R", "L"] as const) {
-      if (farBack(side)) continue;
-      if (front) drawForearm(ctx, rig, side, ink, opts);
-      else drawArm(ctx, rig, side, ink, opts);
-    }
+    for (const side of fronts) if (crossesChest(rig, side)) drawFront(side);
   });
+}
+
+/** 前臂横在胸前（朝身体中线那边伸）：抱臂、递东西、抱人。按前臂在胸口坐标里朝里的分量判断 */
+function crossesChest(rig: Rig, side: "L" | "R") {
+  const limb = rig.arms[side];
+  const d = rotateV(sub(limb.end, limb.mid), -rig.chest.a);
+  return (side === "L" ? -d[0] : d[0]) / BODY.foreArm > 0.35;
 }
 
 // ——— 头发（后面那一大片） ———
@@ -1162,7 +1173,8 @@ function drawTorso(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L
 }
 
 // ——— 围巾 ———
-function drawScarf(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
+/** 围巾放到现在的姿势上：绕脖子那圈、垂下来那头各自的映射 */
+function scarfMaps(rig: Rig) {
   const { chest, th, pose, field } = rig;
   const { fx } = bodyFns(th);
   const br = pose.breath * 1.6;
@@ -1200,22 +1212,39 @@ function drawScarf(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     const dy = y - PIV[1];
     return chest.p(PIV[0] + dx * c - dy * s, PIV[1] + dx * s + dy * c - br);
   };
+  const wrapMap = ([x, y]: V2): V2 => chest.p(wrapX(x), y - br);
+  return { endMap, wrapMap };
+}
+
+/** 绕脖子的一圈（画在头前面，下巴压在它上面） */
+function drawScarfWrap(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
+  const { wrapMap } = scarfMaps(rig);
+  drawPart(ctx, cubicPath(SCARF_WRAP, wrapMap), K.scarf, K.scarfShade, ink, ink.lw * 0.8);
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw * 0.5;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  for (const fold of SCARF_FOLDS) ctx.stroke(cubicPath(fold, wrapMap, false));
+}
+
+/**
+ * 垂下来的一头（和手臂排前后，见 drawChengtuo）：裁掉绕脖子那圈盖住的地方，看上去还是塞在围脖下面；
+ * 也裁掉脸（失重时从外侧翻上来，贴着脸边，不盖住脸）
+ */
+function drawScarfEnd(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
+  const { endMap, wrapMap } = scarfMaps(rig);
+  ctx.save();
+  ctx.clip(outside(cubicPath(SCARF_WRAP, wrapMap)), "evenodd");
+  ctx.clip(outside(facePathOf(rig)), "evenodd");
   // 流苏先画（压在垂下来那头的下沿后面）
   for (const fr of SCARF_FRINGE) drawPart(ctx, cubicPath(fr, endMap), K.scarf, K.scarfShade, ink, ink.lw * 0.6);
-  const endPath = cubicPath(SCARF_END, endMap);
-  fillShaded(ctx, endPath, K.scarf, K.scarfShade, ink);
+  fillShaded(ctx, cubicPath(SCARF_END, endMap), K.scarf, K.scarfShade, ink);
   ctx.strokeStyle = K.line;
   ctx.lineWidth = ink.lw * 0.8;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   ctx.stroke(cubicPath(SCARF_END, endMap, false));
-
-  // 绕脖子的一圈压在上面
-  const wrapMap = ([x, y]: V2): V2 => chest.p(wrapX(x), y - br);
-  drawPart(ctx, cubicPath(SCARF_WRAP, wrapMap), K.scarf, K.scarfShade, ink, ink.lw * 0.8);
-  ctx.strokeStyle = K.line;
-  ctx.lineWidth = ink.lw * 0.5;
-  for (const fold of SCARF_FOLDS) ctx.stroke(cubicPath(fold, wrapMap, false));
+  ctx.restore();
 }
 
 // ——— 头 ———
@@ -1376,6 +1405,14 @@ function windBangs(pts: V2[], field: V2, pose: Pose): V2[] {
   });
 }
 
+/** 脸现在的轮廓（转身时从正面线稿过渡到侧面线稿） */
+function faceOf(rig: Rig): V2[] {
+  return lerpPts(...FACE_TURN, -rig.thh / 0.62);
+}
+function facePathOf(rig: Rig): Path2D {
+  return polylinePath(faceOf(rig), ([x, y]) => rig.head.p(x, y));
+}
+
 function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const { head, thh, pose, field } = rig;
   const e = pose.expr;
@@ -1385,8 +1422,8 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const thin = ink.lw * 0.6;
 
   // 脸：正面线稿 → 侧面线稿
-  const face = lerpPts(...FACE_TURN, uh);
-  const facePath = polylinePath(face, ([x, y]) => H(x, y));
+  const face = faceOf(rig);
+  const facePath = facePathOf(rig);
   // 贴着脸边的东西（耳朵、两边的头发）跟着脸的左右边走：每一行按正面脸的左右边 → 现在脸的左右边横向映射
   const [fy0, fy1] = [Math.min(...face.map((p) => p[1])) + 1, Math.max(...face.map((p) => p[1])) - 1];
   const place = ([x, y]: V2): V2 => {
