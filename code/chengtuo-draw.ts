@@ -274,7 +274,7 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     const ang = bendAlong(
       // （飘出去时朝风向那边的边在上：往右吹 s = 1 在上，往左吹 s = 0 在上；两种都是 -fan 让上面几缕弯得更多）
       // 失重时中间几缕往中间偏：从头后面往上飘、在头顶上方露出来，是背后的头发（用户 2026-10-18）；外面几缕还是往两边翻
-      phi + fan * (up * 0.7 - gust * 0.2) - Math.sign(fan) * up * 0.28 * (1 - Math.abs(fan)) ** 2,
+      phi + fan * (up * 0.55 - gust * 0.2) - Math.sign(fan) * up * 0.28 * (1 - Math.abs(fan)) ** 2,
       N,
       (i) => {
         const y = (i - 0.5) * HAIR_DY;
@@ -283,8 +283,9 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
         // （发根附近翻上来的那一下按飘的程度算，不因为受力小就变慢：不然失重 0.75 时中间几缕绕到头两侧，头顶上又空了）
         return 0.03 * HAIR_DY * (strength * (1 + 0.5 * gust) * ramp + 3 * up * Math.max(strength, up) * (1 - smooth01(20, 70, y)));
       },
-      // （中间几缕一开始就偏得多：在发根附近就翻上来、藏在头后面往上飘，不先垂一段再绕到头的两侧）
-      (i) => -Math.sign(fan) * up * (0.25 + 0.2 * Math.abs(fan) + 1.6 * (1 - Math.abs(fan)) ** 3) * smooth01(0, 20, i * HAIR_DY),
+      // （中间几缕一开始就偏得多：在发根附近就翻上来、藏在头后面往上飘，不先垂一段再绕到头的两侧；
+      // 从中间到两边慢慢变，相邻几缕翻得差不多快，不会一个先翻、一个后翻岔开一道缝）
+      (i) => -Math.sign(fan) * up * (0.25 + 0.2 * Math.abs(fan) + 1.1 * (1 - Math.abs(fan)) ** 1.5) * smooth01(0, 20, i * HAIR_DY),
     );
     // 抖：风里一绺一绺地抖，失重时像在水里慢慢漾；越往发梢越大
     const a = ang.map((v, i) => {
@@ -304,7 +305,8 @@ function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
       const tt = Math.max(0, Math.min(N - 0.001, (y - P) / HAIR_DY));
       const i = Math.floor(tt);
       const f = tt - i;
-      return add(lerpV(C[i], C[i + 1], f), rotateV([restX(s, y) - restX(sc, y), 0], lerp(a[i], a[i + 1], f)));
+      // 失重时每缕宽一点，和旁边的叠住，飘起来以后各缕之间不留大空隙（用户 2026-10-18：「头发之间间距太大了」）
+      return add(lerpV(C[i], C[i + 1], f), rotateV([(restX(s, y) - restX(sc, y)) * (1 + 0.35 * up), 0], lerp(a[i], a[i + 1], f)));
     };
     return { s0, s1, at };
   });
