@@ -315,6 +315,8 @@ export function bodyFns(th: number) {
 
 /** 头转到 3/4 时往后挪多少（正面 0，3/4 时脸的中线比身子靠前约 10） */
 const HEAD_SIDE_BACK = 8;
+/** 头转到 3/4 时后面那只耳朵往脸这边收多少（用户 2026-10-18：耳朵离脸太远）；盖在耳根上的鬓发要跟着收同样多 */
+export const EAR_SIDE_IN = 5;
 
 export function figureRig(pIn: PoseIn | Pose, look: Look = BASE_LOOK): Rig {
   const pose = resolvePose(pIn as PoseIn, look);
@@ -1462,7 +1464,7 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     if (k < 0.12) continue;
     const map = ([x, y]: V2): V2 => {
       const edge = s * faceHW(y);
-      return place([edge + (x - edge) * k, y]);
+      return place([edge + (x - edge) * k - (s > 0 ? EAR_SIDE_IN * uh : 0), y]);
     };
     const earPath = cubicPath(ear, map);
     drawPart(ctx, earPath, K.skin, null, ink, thin);
