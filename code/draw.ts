@@ -1,6 +1,7 @@
 /**
  * s0rrow 手绘涂鸦风的基础库：设计坐标 1080×1920（竖屏），所有图形都带“抖动线条”（每秒换 8 次，designScene 自动 setBoil）。
- * 形状 blob/curve/poly/oval/rbox、上色 paint/shaded/hatch、文字 text/measure/writeOn（字体 F，loadFonts 从素材库加载完整字体）、
+ * 形状 blob/curve/poly/oval/rbox、上色 paint/shaded/hatch、文字 text/measure/writeOn（字体 F，loadFonts 从素材库加载完整字体；
+ * 外语版本用 LOCALE 把库里画死的字换成译文，例如课本封面「物理」→ PHYSICS）、
  * 节拍 beatAt/barAt/pulse/sinceBeat（作品 project.ts 的 tempo）、镜头 camera/handheld/shake/smear/zoomBlur、
  * 离屏 buffer/blit/filtered、光影 figureMask/onFigure/rimLight/rimFigure/castShadow/groundShadow/lightShaft/motes/bloom/grade、
  * 回忆 oldFilm/oldScreenCut。每一幕用 designScene(options, t0, draw) 创建，draw 拿到绝对时间 abs。
@@ -304,7 +305,12 @@ export interface TextStyle {
 export function font(size: number, family = F.cn, weight: number | string = 400) {
   return `${weight} ${Math.round(size * 100) / 100}px ${family}`;
 }
+/** Translations of the words the library draws itself (book covers, signs, the milk carton, phone UI labels…), for a
+ *  work in another language: the work fills it once before drawing (`Object.assign(LOCALE, { 物理: "PHYSICS" })`);
+ *  text() and measure() look every string up, exact match. Empty by default — nothing changes. */
+export const LOCALE: Record<string, string> = Object.create(null);
 export function text(ctx: Ctx, s: string, x: number, y: number, st: TextStyle) {
+  s = LOCALE[s] ?? s;
   ctx.save();
   ctx.font = font(st.size, st.font ?? F.cn, st.weight ?? 400);
   ctx.textAlign = st.align ?? "center";
@@ -329,7 +335,7 @@ export function text(ctx: Ctx, s: string, x: number, y: number, st: TextStyle) {
 export function measure(ctx: Ctx, s: string, size: number, family = F.cn, weight: number | string = 400) {
   ctx.save();
   ctx.font = font(size, family, weight);
-  const w = ctx.measureText(s).width;
+  const w = ctx.measureText(LOCALE[s] ?? s).width;
   ctx.restore();
   return w;
 }
