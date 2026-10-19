@@ -14,6 +14,8 @@ import {
   drawFigure,
   eyeAt,
   figureJoints,
+  legPaths,
+  polyPath,
   rotateV,
 } from "./figure";
 import { bootSoles, coatPanels, drawBoot, drawCoat } from "./chengtuo-draw";
@@ -207,7 +209,7 @@ const SNEAKER_TOE: P[] = [[-38, 55, 1], [-40, 47], [-50, 42], [-58, 46], [-59, 5
 const SNEAKER_INSIDE: P[] = [[18, 25, 1], [2, 25], [-11, 21], [-6, 26], [8, 29]];
 /** 皮鞋：前掌一条薄底、后面一个鞋跟（中间足弓那里空着） */
 const LEATHER_SOLE: P[] = [[-8, 57, 1], [-8, 62, 1], [-52, 63], [-62, 61], [-61, 56, 1]];
-const LEATHER_HEEL: P[] = [[22, 56, 1], [22, 67, 1], [2, 67, 1], [1, 56, 1]];
+const LEATHER_HEEL: P[] = [[21, 56, 1], [21, 67, 1], [4, 67, 1], [3, 56, 1]];
 /** 布鞋：厚厚的千层底 */
 const CLOTH_SOLE: P[] = [[23, 53, 1], [23, 63], [19, 67], [-47, 67], [-57, 63], [-58, 55], [-53, 53, 1]];
 /** 袜子 / 脚踝：从裤脚下面到鞋口（再往下一截，藏在鞋里） */
@@ -301,6 +303,21 @@ function drawShoe(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink:
     ctx.restore();
     stroke(s);
   }
+  // 裤脚压在袜子、鞋口上面：把小腿最下面一截再画一遍（和原来一样先描两倍粗的边再填色，接缝看不出来）。
+  // 脚尖朝下、脚踝弯得很厉害时（飘着），袜子的上角、鞋跟不会从裤脚边上戳出来
+  const limb = rig.legs[side];
+  const shin = legPaths(rig, side)[1];
+  const at = new Frame(limb.end[0], limb.end[1], limb.a2);
+  const col = { ...BASE_COLORS, ...rig.look.colors };
+  ctx.save();
+  ctx.clip(polyPath([[-90, -36], [90, -36], [90, 26], [-90, 26]], ([x, y]) => at.p(x, y)));
+  ctx.strokeStyle = ink.line;
+  ctx.lineWidth = ink.lw * 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.stroke(shin);
+  fillShaded(ctx, shin, col.bottom, col.bottomShade, ink);
+  ctx.restore();
 }
 
 // ——— 人物配置 ———
