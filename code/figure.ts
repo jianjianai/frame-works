@@ -654,7 +654,10 @@ function reflectOnHead(rig: Rig, v: V2): V2 {
 export function crossesChest(rig: Rig, side: "L" | "R") {
   const limb = rig.arms[side];
   const d = rotateV(sub(limb.end, limb.mid), -rig.chest.a);
-  return (side === "L" ? -d[0] : d[0]) / BODY.foreArm > 0.35;
+  // 还要前臂离竖直超过 55°（往下的分量 < cos55°）：走路、站着时手臂顺着身子前后摆（3/4 时往前摆的前臂朝里的分量也有 0.4–0.75，
+  // 但前臂离竖直最多约 49°）不算横在胸前；不然一步里两次跨过门槛，围巾垂下来那头在手臂前后来回跳
+  // （《引力》用户 2026-10-19：「走路时围巾一会被手臂遮挡一会不被手臂遮挡」）。抱人、递东西、摸头的前臂都在 60° 以上。
+  return (side === "L" ? -d[0] : d[0]) / BODY.foreArm > 0.35 && d[1] / BODY.foreArm < Math.cos((55 * Math.PI) / 180);
 }
 
 // ——— 头（用户亲手画的线稿，2026-10-17，`public/ref/秤砣-线稿.svg` 的「头部」图层） ———
