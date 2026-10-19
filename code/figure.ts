@@ -95,6 +95,8 @@ export interface ArmPose {
   shape: HandShape;
   /** 画在身体后面还是前面（默认 3/4 时远侧的手在后） */
   layer?: "back" | "front";
+  /** 和挂在胸前的东西（围巾垂下来那头）谁在前：over 手臂压在上面，under 手臂在它后面；不写按前臂横没横在胸前自动判断（crossesChest） */
+  chest?: "over" | "under";
   /** 拇指朝哪边（手的局部 x 方向，±1） */
   thumb?: number;
 }
@@ -634,13 +636,19 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   // 横在胸前的前臂（抱臂、递东西、抱人）压在它上面
   const fronts = (["R", "L"] as const).filter((side) => !farBack(side));
   const drawFront = (side: "L" | "R") => (front ? drawForearm(ctx, rig, side, ink, opts) : drawArm(ctx, rig, side, ink, opts));
+  // 姿势里写了 chestL / chestR 就照写的（over 压在围巾上、under 在围巾后），没写按前臂横没横在胸前判断。
+  // 自动判断在一个动作的半路会翻（《引力》伸手进靴筒、走路摆臂），用户 2026-10-19：「加一个参数来控制前面还是后面，手动控制」
+  const overChest = (side: "L" | "R") => {
+    const c = (side === "L" ? pose.armL : pose.armR).chest;
+    return c ? c === "over" : crossesChest(rig, side);
+  };
   scoped(() => {
-    for (const side of fronts) if (!crossesChest(rig, side)) drawFront(side);
+    for (const side of fronts) if (!overChest(side)) drawFront(side);
     look.chest?.(ctx, rig, ink);
   });
   opts.beforeFrontArms?.(ctx);
   scoped(() => {
-    for (const side of fronts) if (crossesChest(rig, side)) drawFront(side);
+    for (const side of fronts) if (overChest(side)) drawFront(side);
   });
 }
 
@@ -1872,11 +1880,13 @@ export const figureOptions = z.object({
   wristL: z.number().min(-120).max(120).default(15).describe("L 手腕（相对前臂）"),
   handL: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("L 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 平托"),
   layerL: z.enum(["auto", "front", "back"]).default("auto").describe("L 手臂画在身体前面还是后面（auto：3/4 时远侧的在后）"),
+  chestL: z.enum(["auto", "over", "under"]).default("auto").describe("L 手臂和胸前挂的东西（围巾垂下来那头）谁在前：over 手臂压在上面，under 手臂在它后面，auto 按前臂横没横在胸前自动判断（动作里要稳定就手动写）"),
   shoulderR: z.number().min(-180).max(180).default(15).describe("R 肩：0 垂下；正面时往外张是正"),
   elbowR: z.number().min(-170).max(170).default(1).describe("R 肘（相对上臂）"),
   wristR: z.number().min(-120).max(120).default(-15).describe("R 手腕（相对前臂）"),
   handR: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("R 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 平托"),
   layerR: z.enum(["auto", "front", "back"]).default("auto").describe("R 手臂画在身体前面还是后面"),
+  chestR: z.enum(["auto", "over", "under"]).default("auto").describe("R 手臂和胸前挂的东西谁在前（同 chestL）"),
 
   hipL: z.number().min(-150).max(150).default(-6).describe("L 胯：0 腿竖直；往前抬是正"),
   kneeL: z.number().min(-170).max(170).default(-1).describe("L 膝（相对大腿）：往后弯是负"),
@@ -1915,8 +1925,8 @@ export function figurePose(options: FigureOptions = {}, t = 0, look: Look = BASE
     rot: o.rot * RAD,
     breath: o.idle ? breathAt(t) : 0,
     t,
-    armL: { a: o.shoulderL * RAD, b: o.elbowL * RAD, h: o.wristL * RAD, to: undefined, shape: o.handL, layer: auto(o.layerL) },
-    armR: { a: o.shoulderR * RAD, b: o.elbowR * RAD, h: o.wristR * RAD, to: undefined, shape: o.handR, layer: auto(o.layerR) },
+    armL: { a: o.shoulderL * RAD, b: o.elbowL * RAD, h: o.wristL * RAD, to: undefined, shape: o.handL, layer: auto(o.layerL), chest: o.chestL === "auto" ? undefined : o.chestL },
+    armR: { a: o.shoulderR * RAD, b: o.elbowR * RAD, h: o.wristR * RAD, to: undefined, shape: o.handR, layer: auto(o.layerR), chest: o.chestR === "auto" ? undefined : o.chestR },
     legL: { a: o.hipL * RAD, b: o.kneeL * RAD, f: o.ankleL * RAD, thighK: o.thighL, to: undefined },
     legR: { a: o.hipR * RAD, b: o.kneeR * RAD, f: o.ankleR * RAD, thighK: o.thighR, to: undefined },
     expr,
