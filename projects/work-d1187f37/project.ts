@@ -22,5 +22,6 @@ const project: AnimationProject = {
   loadAudioDocument: () => import("./audio.json"),
   loadAudio: () => import("./audio"),
   posterTime: 0.6,
+  status: "abandoned",
 };
 export default project;
