@@ -17,5 +17,6 @@ const project: AnimationProject = {
   credits: [],
   load: () => import("./scene"),
   loadVisual: () => import("./visual.json"),
+  status: "abandoned",
 };
 export default project;
