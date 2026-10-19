@@ -1,33 +1,57 @@
 // 《unhappy》· 同一段聊天两个视角：两部手机上的字、聊天记录、打字删字和拇指的动作（屏幕坐标 600×1280），几幕共用。
 // 画面（房间、人物、手机镜头）在 world.ts / shots.ts。
+// YouTube 版：全部英文。「嗯」→ "k"（英语里最典型的冷淡回复），最后的「嗯！！」→ "ok!!"；林夏 → Summer，周屿 → Leo，
+// 小美 → Mia；12 小时制、英文日期；聊天是 Instagram 私信样式（dm.ts）。
 import { clamp, phase, smooth } from "@frame/engine/math";
 import { Ctx, Pt, hash } from "@materials/s0rrow/code/draw";
 import { strawberryMilk } from "@materials/s0rrow/code/places";
-import { ChatItem, ChatView, homeScreen } from "@materials/s0rrow/code/chat";
+import { ChatItem, ChatView, homeScreen } from "./dm";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
 import { EV } from "./timeline";
 
-export const HIM = "周屿";
-export const HER = "林夏";
-export const HIS_LONG = "今天那道物理大题我想了一晚上，终于做出来了！明天讲给你听？对了，明天降温，记得多穿点，别又感冒了";
-export const HIS_DRAFT = "林夏，我是不是哪里惹你不开心了？我们以前不是这样的……";
-export const GIVE_UP = "以后不打扰你了";
-export const HER_REPLY_DRAFT = "哇！！你也太厉害了吧！！明天一定要讲给我听！还有你也要多穿点，别光顾着说我";
-export const HER_NIGHT_DRAFT = "才不是这样的！！我每天都在等你的消息，每次都写了好多好多，又怕你嫌我烦，就全删了。其实我……";
-/** what she finally sends at 00:58: the night draft, edited — the hesitant ending cut, a line added, the last words
- *  typed, deleted and typed again */
-export const HER_CONFESSION = "才不是这样的！！我每天都在等你的消息，每次都写了好多好多，又怕你嫌我烦，就全删了。你发的每一条我都看了好多遍。其实，我喜欢你，很久很久了。";
-const CONF_BASE = "才不是这样的！！我每天都在等你的消息，每次都写了好多好多，又怕你嫌我烦，就全删了。";
-/** her editing at 00:52 (times are fractions of the editing window EV.type4 = 40.45–42.35): 「其实我……」 out, a line
- *  in; then from the cut to the close-up (41.47) 「其实，我喜欢你」, 「喜欢你」 back out on the delete sound (41.74), a
- *  breath, and in again with the rest — done by 42.16, so the highlight has time before her face (42.50) */
+export const HIM = "Leo";
+export const HER = "Summer";
+export const MEI = "Mia";
+/** the grey line under the name in the chat header */
+export const HANDLE: Record<string, string> = { [HIM]: "leo.zhou", [HER]: "summer.lin", [MEI]: "mia.li" };
+/** the cold reply (「嗯」) — and the warm one at the end (「嗯！！」) */
+export const UM = "k";
+export const UM_JOY = "ok!!";
+export const HIS_LONG = "I FINALLY solved that physics problem!! took me all night lol. want me to explain it tomorrow? also it's getting cold, wear a jacket. don't get sick again";
+export const HIS_DRAFT = "Summer, did I do something to upset you? we never used to be like this…";
+export const GIVE_UP = "I won't bother you anymore.";
+export const HER_REPLY_DRAFT = "WAIT you actually solved it?? you're so smart!! yes explain it tomorrow!! and YOU wear a jacket too, stop worrying about me";
+const CONF_BASE = "That's not true!! I wait for your texts every day. I always write so much, then delete it all so I don't seem annoying. ";
+export const HER_NIGHT_DRAFT = CONF_BASE + "The truth is I…";
+const CONF_ADD = "I've read all your texts like 100 times.";
+/** what she finally sends at 12:58: the night draft, edited — the hesitant ending cut, a line added, the last words
+ *  typed, deleted and typed again (she puts the last two lines on lines of their own) */
+export const HER_CONFESSION = CONF_BASE + CONF_ADD + "\nThe truth is, I like you.\nFor a long, long time.";
+/** the words she finally dares to say (the highlighter in her input box) and their sentence (on his phone) */
+export const LOVE = "I like you";
+export const LOVE_LINE = "The truth is, I like you.";
+/** her editing at 12:52 (times are fractions of the editing window EV.type4 = 40.45–42.35): "The truth is I…" out, a
+ *  line in, and "The truth is, "; then from the cut to the close-up (41.47) "I like you", "like you" back out on the
+ *  delete sound (41.74), a breath, and in again with the rest — done by 42.16, so the highlight has time before her
+ *  face (42.50) */
 export const CONFESSION_EDITS: { u0: number; u1: number; to: string }[] = [
   { u0: 0.0, u1: 0.1, to: CONF_BASE },
-  { u0: 0.1, u1: 0.53, to: CONF_BASE + "你发的每一条我都看了好多遍。" },
-  { u0: 0.54, u1: 0.675, to: CONF_BASE + "你发的每一条我都看了好多遍。其实，我喜欢你" },
-  { u0: 0.68, u1: 0.75, to: CONF_BASE + "你发的每一条我都看了好多遍。其实，我" },
+  { u0: 0.1, u1: 0.53, to: CONF_BASE + CONF_ADD + "\nThe truth is, " },
+  { u0: 0.54, u1: 0.675, to: CONF_BASE + CONF_ADD + "\nThe truth is, I like you" },
+  { u0: 0.68, u1: 0.75, to: CONF_BASE + CONF_ADD + "\nThe truth is, I " },
   { u0: 0.79, u1: 0.9, to: HER_CONFESSION },
 ];
+/** her paragraph as it sits in the input box, broken at phrases (user: 「文字重排一下」): each line fits the box without
+ *  wrapping, "The truth is, I like you." on a line of its own. Joined with "\n" it is the confession with some spaces
+ *  turned into line breaks. */
+const CONF_LINES = ["That's not true!!", "I wait for your texts", "every day. I always", "write so much, then", "delete it all so I", "don't seem annoying.", "I've read all your texts", "like 100 times.", "The truth is, I like you.", "For a long, long time."];
+const CONF_SHOWN = CONF_LINES.join("\n");
+/** a draft laid out with those line breaks, as far as it agrees with the confession (the rest just wraps) */
+export function laidOut(draft: string) {
+  let same = 0;
+  while (same < draft.length && draft[same] === HER_CONFESSION[same]) same++;
+  return CONF_SHOWN.slice(0, same) + draft.slice(same);
+}
 
 /** A draft being edited: each step goes from the current text to its target by deleting back to their common
  *  prefix (twice as fast) and then typing the rest, within its [u0, u1] slice of [t0, t1]. */
@@ -53,57 +77,58 @@ export function editing(abs: number, t0: number, t1: number, start: string, step
   }
   return cur;
 }
-export const ASK_AGAIN = "那周末一起去图书馆？";
+export const ASK_AGAIN = "so… library this weekend?";
 /** what she sends while she waits for an answer that never comes (his phone is off) */
-export const LATE1 = "你睡了吗？";
-export const LATE2 = "晚安。";
+export const LATE1 = "are you asleep?";
+export const LATE2 = "goodnight.";
 
-/** everything after her 「嗯」 that night, on either phone: his 「以后不打扰你了」, her paragraph at 00:58, and her two
- *  messages while she waited (01:30, 03:00). `upto` cuts it off at a moment of the night (pops as they arrive). */
+/** everything after her "k" that night, on either phone: his "I won't bother you anymore.", her paragraph at 12:58,
+ *  and her two messages while she waited (1:30, 3:00). `upto` cuts it off at a moment of the night (pops as they arrive). */
 export function afterNight(side: "his" | "hers", abs = 99, popAt: { conf?: number; late1?: number; late2?: number } = {}): ChatItem[] {
   const mine = side === "hers";
   const items: ChatItem[] = [];
-  items.push({ t: "msg", me: mine, text: "嗯" });
+  items.push({ t: "msg", me: mine, text: UM });
   items.push({ t: "msg", me: !mine, text: GIVE_UP });
-  items.push({ t: "time", text: "00:58" });
+  items.push({ t: "time", text: "12:58 AM" });
   items.push({ t: "msg", me: mine, text: HER_CONFESSION, pop: popAt.conf !== undefined ? pop(abs, popAt.conf, 0.25) : 1 });
   if (popAt.late1 === undefined || abs >= popAt.late1) {
-    items.push({ t: "time", text: "01:30" });
+    items.push({ t: "time", text: "1:30 AM" });
     items.push({ t: "msg", me: mine, text: LATE1, pop: popAt.late1 !== undefined ? pop(abs, popAt.late1) : 1 });
   }
   if (popAt.late2 === undefined || abs >= popAt.late2) {
-    items.push({ t: "time", text: "03:00" });
+    items.push({ t: "time", text: "3:00 AM" });
     items.push({ t: "msg", me: mine, text: LATE2, pop: popAt.late2 !== undefined ? pop(abs, popAt.late2) : 1 });
   }
   return items;
 }
-export const FRIEND_ADVICE = "别回太快！回个嗯就行，显得你没那么在意";
-export const MEI = "小美";
-/** what she had told 小美 the moment his message came in (above 小美’s advice in their chat) */
-export const MEI_FIRST = "他给我发了好长一段！！";
+export const FRIEND_ADVICE = `don't reply so fast!! just say "${UM}". play it cool`;
+/** the part of Mia's advice that gets the highlighter */
+export const ADVICE_MARK = `just say "${UM}"`;
+/** what she had told Mia the moment his message came in (above Mia’s advice in their chat) */
+export const MEI_FIRST = "HE SENT ME A WHOLE PARAGRAPH!!";
 
 /** three months of chatting: long and lively in July, short by October */
 export const HISTORY: ChatItem[] = [
-  { t: "time", text: "7月12日 23:41" },
-  { t: "msg", text: "哈哈哈哈哈哈哈你也太好笑了吧！！" },
-  { t: "msg", me: true, text: "真的！我当时差点笑出声，老师还看了我一眼" },
-  { t: "msg", text: "明天我也要去！！带我一个！" },
+  { t: "time", text: "Jul 12, 11:41 PM" },
+  { t: "msg", text: "HAHAHAHA you're so funny omg" },
+  { t: "msg", me: true, text: "for real! I almost laughed out loud and the teacher looked right at me" },
+  { t: "msg", text: "I wanna come tomorrow too!! take me with you!" },
   { t: "voice", secs: 52 },
-  { t: "msg", text: "对了我最喜欢草莓牛奶了，记住！！" },
+  { t: "msg", text: "btw strawberry milk is my favorite. remember that!!" },
   { t: "sticker", me: true, kind: "cat" },
-  { t: "time", text: "8月20日 00:13" },
-  { t: "msg", text: "你睡了吗？我睡不着" },
-  { t: "msg", me: true, text: "没睡，在想你说的那部电影" },
-  { t: "msg", text: "那我们周末一起看吧～" },
-  { t: "time", text: "9月18日 22:30" },
-  { t: "msg", me: true, text: "你今天是不是不开心？" },
-  { t: "msg", text: "没有啦" },
-  { t: "time", text: "10月6日 23:05" },
-  { t: "msg", me: true, text: "周末要不要一起去图书馆？" },
-  { t: "msg", text: "嗯" },
-  { t: "msg", me: true, text: "那家草莓牛奶出新口味了！" },
-  { t: "msg", text: "哦" },
-  { t: "time", text: "23:12" },
+  { t: "time", text: "Aug 20, 12:13 AM" },
+  { t: "msg", text: "are you asleep? I can't sleep" },
+  { t: "msg", me: true, text: "nope, thinking about that movie you told me about" },
+  { t: "msg", text: "let's watch it together this weekend~" },
+  { t: "time", text: "Sep 18, 10:30 PM" },
+  { t: "msg", me: true, text: "you seemed sad today. you okay?" },
+  { t: "msg", text: "I'm fine" },
+  { t: "time", text: "Oct 6, 11:05 PM" },
+  { t: "msg", me: true, text: "wanna go to the library this weekend?" },
+  { t: "msg", text: UM },
+  { t: "msg", me: true, text: "that strawberry milk has a new flavor now!" },
+  { t: "msg", text: "oh" },
+  { t: "time", text: "11:12 PM" },
   { t: "msg", me: true, text: HIS_LONG },
 ];
 
@@ -120,6 +145,9 @@ export const deleted = (s: string, abs: number, t0: number, t1: number) => {
   return ch.slice(0, Math.round((1 - clamp((abs - t0) / (t1 - t0))) * ch.length)).join("");
 };
 export const inWin = (abs: number, w: readonly [number, number]) => abs >= w[0] && abs < w[1];
+/** their typing bubble during any of these windows (0..1: it pops up quickly and drops away quickly) */
+export const typingK = (abs: number, ws: readonly (readonly [number, number])[]) =>
+  Math.max(0, ...ws.map((w) => smooth(clamp((abs - w[0]) / 0.07)) * (1 - smooth(clamp((abs - w[1]) / 0.08)))));
 
 /** pop-in progress for something that appears at t */
 export const pop = (abs: number, t: number, d = 0.18) => clamp((abs - t) / d);
@@ -165,7 +193,7 @@ export function herHome(c: Ctx, abs: number, time: string, o: { press?: number; 
 /** his phone at night, given the moment */
 export function hisNightChat(abs: number, extra: Partial<ChatView> = {}): ChatView {
   const items: ChatItem[] = [...HISTORY];
-  if (abs >= EV.um1) items.push({ t: "msg", text: "嗯", pop: pop(abs, EV.um1) });
+  if (abs >= EV.um1) items.push({ t: "msg", text: UM, pop: pop(abs, EV.um1) });
   if (abs >= EV.send1) items.push({ t: "msg", me: true, text: GIVE_UP, pop: pop(abs, EV.send1) });
-  return { title: HER, time: abs < 20 ? "23:12" : "00:47", me: "boy", them: "girl", items, dark: true, ...extra };
+  return { title: HER, handle: HANDLE[HER], time: abs < 20 ? "11:12" : "12:47", me: "boy", them: "girl", items, dark: true, ...extra };
 }

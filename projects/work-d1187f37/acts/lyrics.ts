@@ -1,4 +1,6 @@
-// 中英歌词层 + 开头钩子 + 视角标签 + 结尾的点赞和评论引导。歌词用素材库的卡拉 OK 歌词层（英文逐词点亮，中文按词对应）。
+// 歌词层 + 开头钩子 + 视角标签 + 结尾的点赞和评论引导。YouTube 版：歌词只留英文逐词卡拉 OK（素材库歌词层的 cn: false，
+// 字号 58 → 68，一句折行时两行一样宽），钩子用第三人称（第一人称会被当成作者本人），标签和引导都是英文。
+import "./locale";
 import type { SceneOptions } from "@frame/engine/types";
 import { phase, smooth } from "@frame/engine/math";
 import { C, Ctx, F, W, backOut, easeOut, measure, rr, sinceBeat, text } from "@materials/s0rrow/code/draw";
@@ -6,46 +8,10 @@ import { heart } from "@materials/s0rrow/code/sets";
 import { createLyricsScene, lyricLines } from "@materials/s0rrow/code/lyrics";
 import { LYRIC_WORDS } from "./krc";
 import { BEAT, END, EV } from "./timeline";
+import { UM } from "./story";
 
-/** 每句中文拆成和英文单词数相同的词，第 i 个中文词用第 i 个英文单词的时间点亮。 */
-const CN: string[][] = [
-  // Every day we talk a little less
-  ["每", "天", "我们 ", "聊得", "越", "来越", "少"],
-  // It looks like you are losing interest
-  ["看", "起来 ", "你", "对我", "渐渐", "没了", "兴趣"],
-  // These feelings I have for you
-  ["这份", "心意 ", "我", "只", "给", "你"],
-  // But you don't feel the same
-  ["可", "你", "却", "不", "这么", "想"],
-  // So I'll pack all my things
-  ["所以", "我会 ", "收拾", "好", "我的", "行李"],
-  // And go run far away
-  ["然后", "逃", "得", "远", "远的"],
-  // You are, you are very pretty
-  ["你", "是 ", "你", "是", "那么", "漂亮"],
-  // I'm so very ugly
-  ["我", "却", "那么", "丑"],
-  // Will you even love me, anymore
-  ["你", "还", "会", "爱", "我", "吗"],
-  // (love me)
-  ["爱", "我"],
-  // You can, you can live without me
-  ["你", "可以 ", "你", "可以 ", "没有", "我", "也能活"],
-  // That makes me unhappy
-  ["这", "让", "我", "不开心"],
-  // I should get a piercing through my heart
-  ["我", "该", "让", "针 ", "刺", "穿", "我的", "心"],
-  // What do you even want me to be
-  ["你", "到底", "想", "要 ", "我", "变成", "什么", "样"],
-  // You never ever pay attention to me
-  ["你", "从来", "都", "不", "在意", "过", "我"],
-  // So I'll close my blinds in misery
-  ["所以", "我", "拉上", "了", "窗帘 ", "独自", "难过"],
-  // And I'll wait for you for a couple of weeks
-  ["然后", "我", "会", "等", "你 ", "等", "上", "几", "个", "星期"],
-];
-
-const LINES = lyricLines(LYRIC_WORDS, CN);
+/** English only: no Chinese words to light (every English word gets an empty one) */
+const LINES = lyricLines(LYRIC_WORDS, LYRIC_WORDS.map((l) => l.map(() => "")));
 /** 最后一句歌词最晚在这里消失 */
 const LYRICS_END = 49.1;
 /** 段落样式：副歌粉色（bridge），全片最大的一句，主歌2 暖黄 */
@@ -79,12 +45,12 @@ function hook(ctx: Ctx, abs: number) {
     ctx.globalAlpha = 1 - shrink;
     ctx.translate(W / 2, 300);
     ctx.scale(k, k);
-    text(ctx, "我发了一大段", 0, -50, { size: 88, font: F.cn, fill: "#fff", stroke: C.ink, lw: 14 });
+    text(ctx, "He sent a whole paragraph.", 0, -50, { size: 78, font: F.en, fill: "#fff", stroke: C.ink, lw: 14 });
     const bump = abs > EV.um1 && abs < EV.um1 + 0.35 ? Math.sin(phase(abs, EV.um1, EV.um1 + 0.35) * Math.PI) * 0.18 : 0;
     ctx.save();
-    ctx.translate(0, 74);
+    ctx.translate(0, 70);
     ctx.scale(1 + bump * 0.3, 1 + bump * 0.3);
-    parts(ctx, 0, [["她只回了一个", 88, F.cn, "#fff"], ["「嗯」", 112, F.cn, "#ffd166"]]);
+    parts(ctx, 0, [["She just replied ", 78, F.en, "#fff"], [`\u201c${UM}\u201d`, 104, F.en, "#ffd166"]]);
     ctx.restore();
     ctx.restore();
   }
@@ -98,12 +64,12 @@ function hook(ctx: Ctx, abs: number) {
     ctx.translate(W / 2, 214);
     ctx.scale(1, Math.abs(Math.cos(flip * Math.PI)) || 0.001);
     // plain markers of whose side we are on (the numbered labels didn’t match anything on screen)
-    const label = stage === 0 ? "他的视角" : stage === 1 ? "她的视角" : "第二天";
-    const w = measure(ctx, label, 38, F.cn) + 70;
+    const label = stage === 0 ? "His side" : stage === 1 ? "Her side" : "Next morning";
+    const w = measure(ctx, label, 44, F.en) + 70;
     ctx.fillStyle = stage === 1 ? "rgba(255,170,200,0.94)" : "rgba(12,12,18,0.62)";
     rr(ctx, -w / 2, -36, w, 72, 36);
     ctx.fill();
-    text(ctx, label, 0, 2, { size: 38, font: F.cn, fill: stage === 1 ? C.ink : "#fff" });
+    text(ctx, label, 0, 2, { size: 44, font: F.en, fill: stage === 1 ? C.ink : "#fff" });
     ctx.restore();
   }
 }
@@ -135,8 +101,9 @@ function caption(ctx: Ctx, abs: number, a0: number, a1: number, l1: [string, num
 }
 
 /** the end card, over the street: a like prompt (a double tap on the screen — two ripples and a big heart — then
- *  「点赞的人，喜欢的人都会秒回你」, tied to the story: a quick reply instead of a slow 「嗯」) and a comment prompt (the
- *  rewatch question with something to type: 「答案打在评论区」). Both stay to the last frame. */
+ *  "Like this and your crush / will text you back instantly", tied to the story: a quick reply instead of a slow "k")
+ *  and a comment prompt (the rewatch question with something to type: "Answer in the comments"). Both stay to the last
+ *  frame. */
 function captions(ctx: Ctx, abs: number) {
   // the double tap lands on the two sixteenths after the downbeat (54.89, 55.02); the second one pops the heart
   const t0 = EV.outside + BEAT / 4,
@@ -179,27 +146,31 @@ function captions(ctx: Ctx, abs: number) {
     ctx.save();
     ctx.globalAlpha *= lk;
     ctx.translate(0, 24 * (1 - lk));
-    text(ctx, "点赞的人，喜欢的人都会秒回你", W / 2, 580, { size: 58, font: F.cn, fill: "#fff", stroke: C.ink, lw: 12 });
+    text(ctx, "Like this and your crush", W / 2, 610, { size: 60, font: F.en, fill: "#fff", stroke: C.ink, lw: 12 });
+    text(ctx, "will text you back instantly", W / 2, 680, { size: 60, font: F.en, fill: "#fff", stroke: C.ink, lw: 12 });
     ctx.restore();
   }
   // 2) comment: the rewatch question, and what to do with the answer
   const ck = smooth(phase(abs, t0 + 0.5, t0 + 0.8));
   if (ck > 0) {
-    const l1 = "回看第 1 秒：「对方正在输入...」闪了几次？",
-      l2 = "答案打在评论区";
-    const w = Math.max(measure(ctx, l1, 38, F.cn), measure(ctx, l2, 46, F.cn) + 60) + 64;
+    // (kept narrow: Shorts' buttons run down the right edge)
+    const l0 = "Rewatch the first second:",
+      l1 = "how many times did she start typing?",
+      l2 = "Answer in the comments";
+    const w = Math.max(measure(ctx, l1, 40, F.en), measure(ctx, l2, 48, F.en) + 60) + 64;
     ctx.save();
     ctx.globalAlpha *= ck;
     ctx.translate(0, 30 * (1 - ck));
     ctx.fillStyle = "rgba(12,12,18,0.72)";
-    rr(ctx, W / 2 - w / 2, 1250, w, 160, 36);
+    rr(ctx, W / 2 - w / 2, 1228, w, 214, 36);
     ctx.fill();
-    text(ctx, l1, W / 2, 1300, { size: 38, font: F.cn, fill: "#fff" });
-    const w2 = measure(ctx, l2, 46, F.cn);
-    text(ctx, l2, W / 2 - 22, 1366, { size: 46, font: F.cn, fill: "#ffd166" });
+    text(ctx, l0, W / 2, 1276, { size: 40, font: F.en, fill: "#fff" });
+    text(ctx, l1, W / 2, 1326, { size: 40, font: F.en, fill: "#fff" });
+    const w2 = measure(ctx, l2, 48, F.en);
+    text(ctx, l2, W / 2 - 22, 1392, { size: 48, font: F.en, fill: "#ffd166" });
     // a little arrow pointing down at the comments, nudging on the beat
     const ax = W / 2 - 22 + w2 / 2 + 34,
-      ay = 1362 + 6 * Math.exp(-7 * sinceBeat(abs));
+      ay = 1388 + 6 * Math.exp(-7 * sinceBeat(abs));
     ctx.strokeStyle = "#ffd166";
     ctx.lineWidth = 6;
     ctx.lineCap = "round";
@@ -216,5 +187,5 @@ function captions(ctx: Ctx, abs: number) {
 }
 
 export function createScene(options: SceneOptions) {
-  return createLyricsScene(options, { lines: LINES, end: LYRICS_END, style: lineStyle, before: (ctx, abs) => hook(ctx, abs), after: (ctx, abs) => captions(ctx, abs) });
+  return createLyricsScene(options, { lines: LINES, end: LYRICS_END, style: lineStyle, cn: false, enSize: 68, before: (ctx, abs) => hook(ctx, abs), after: (ctx, abs) => captions(ctx, abs) });
 }

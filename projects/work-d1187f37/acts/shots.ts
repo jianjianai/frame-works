@@ -151,10 +151,10 @@ export function vignette(c: Ctx, a: number, x = W / 2, y = H / 2, r0 = 380, r1 =
   c.fillRect(-60, -60, W + 120, H + 120);
 }
 
-/** Time card (top left), faded in and out. */
-export function timeCard(c: Ctx, abs: number, s: string, a0: number, a1: number) {
+/** Time card (top left — or top right, out of the way of a face), faded in and out. */
+export function timeCard(c: Ctx, abs: number, s: string, a0: number, a1: number, right = false) {
   const a = clamp((abs - a0) / 0.2) * clamp((a1 - abs) / 0.25);
-  if (a > 0) card(c, s, 60, 330, a, 42);
+  if (a > 0) card(c, s, right ? W - 60 : 60, 330, a, 42, right ? "right" : "left");
 }
 
 /** A jolt: 1 at t, decaying with time constant `tau`. */

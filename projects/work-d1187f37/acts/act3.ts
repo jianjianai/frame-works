@@ -9,16 +9,18 @@
 //  D 44.80–46.33 那条街：她的灯也灭了，夜色延时到早晨，推进他的窗
 //  E 46.33–48.63 07:10 他开机：锁屏掉下三条消息 → 点开 → 荧光笔划出「其实，我喜欢你」
 //  F 48.63–     他的脸：愣住（接到第四幕的笑开）
+import "./locale";
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase, smooth } from "@frame/engine/math";
 import { C, Ctx, F, H, Pt, W, backOut, bloom, camera, card, designScene, fillBg, filtered, glow, inkLine, litFigure, measure, oldFilm, oldScreenCut, oval, paint, pulse, rimFigure, rr, text } from "@materials/s0rrow/code/draw";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { bookFingers, deskFront, strawberryMilk, textbook } from "@materials/s0rrow/code/places";
 import { classroom, heart } from "@materials/s0rrow/code/sets";
-import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, draftLines, markAt, sendButtonAt } from "@materials/s0rrow/code/chat";
+import { bootScreen } from "@materials/s0rrow/code/chat";
+import { APP_AT, BACKSPACE_AT, ChatItem, ChatView, appWindow, bubbleAt, chatScreen2, draftBox, markAt, notification, scrollTo, sendButtonAt } from "./dm";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
-import { SH, SW, lockScreen, notification } from "@materials/s0rrow/code/phone";
-import { CONFESSION_EDITS, FRIEND_ADVICE, GIVE_UP, HER, HER_CONFESSION, HER_NIGHT_DRAFT, HER_REPLY_DRAFT, HIM, HISTORY, LATE1, LATE2, MEI, MEI_FIRST, REST_L, REST_R, afterNight, deleted, editing, fromHer, herHome, inWin, pop, typed, typingThumbs } from "./story";
+import { SH, SW, lockScreen } from "@materials/s0rrow/code/phone";
+import { ADVICE_MARK, CONFESSION_EDITS, FRIEND_ADVICE, GIVE_UP, HANDLE, HER, HER_CONFESSION, HER_NIGHT_DRAFT, HER_REPLY_DRAFT, HIM, HISTORY, LATE1, LATE2, LOVE, LOVE_LINE, MEI, MEI_FIRST, REST_L, REST_R, UM, afterNight, deleted, editing, fromHer, herHome, inWin, laidOut, pop, typed, typingThumbs } from "./story";
 import { BAR, BEAT, EV, beatAt } from "./timeline";
 import { PhoneSpec, aim, aimLerp, drawPhone, kick, lerp, pulseRings, timeCard, vignette } from "./shots";
 import { HER_SIT, HIS_WIN, SIT, Z_IN, chairBack, classFromSeat, herBokeh, herDuvet, herInBed, herPhoneBack, herRoomNight, hisBokeh, hisDuvet, hisInBed, hisPhoneBack, hisRoom, nightStreet, winC } from "./world";
@@ -33,10 +35,10 @@ function herItems(abs: number, upto: "replay" | "present"): ChatItem[] {
   if (upto === "replay") {
     const last = items.pop()!;
     if (abs >= EV.ding2) items.push({ ...last, pop: pop(abs, EV.ding2) } as ChatItem);
-    if (abs >= EV.send2) items.push({ t: "msg", me: true, text: "嗯", pop: pop(abs, EV.send2) });
+    if (abs >= EV.send2) items.push({ t: "msg", me: true, text: UM, pop: pop(abs, EV.send2) });
     return items;
   }
-  items.push({ t: "msg", me: true, text: "嗯" });
+  items.push({ t: "msg", me: true, text: UM });
   items.push({ t: "msg", text: GIVE_UP });
   if (abs >= EV.send3) items.push({ t: "msg", me: true, text: HER_CONFESSION, pop: pop(abs, EV.send3, 0.25) });
   return items;
@@ -97,37 +99,53 @@ const backOutish = (t: number) => {
   return 1 + 2.9 * Math.pow(v - 1, 3) + 1.9 * Math.pow(v - 1, 2);
 };
 
-/** after she sends the 「嗯」 the camera pushes in on its bubble and brings it towards the middle */
-function umSpot(abs: number) {
+/** her phone in the replay: his long message comes in, she types (and deletes) her reply, and sends "k" */
+function replayView(abs: number, umTyped = Infinity): ChatView {
+  let draft = "";
+  if (abs < EV.del3[0]) draft = typed(HER_REPLY_DRAFT, abs, EV.type3[0], EV.type3[1]);
+  else if (abs < EV.del3[1]) draft = deleted(HER_REPLY_DRAFT, abs, EV.del3[0], EV.del3[1]);
+  else if (abs < EV.send2) draft = abs > umTyped ? UM : "";
+  return { title: HIM, handle: HANDLE[HIM], time: "11:13", me: "girl", them: "boy", items: herItems(abs, "replay"), dark: true, draft: abs < EV.send2 ? draft : "", caret: abs < EV.send2, keyboard: true, sendHot: abs > EV.send2 - 0.08 && abs < EV.send2 ? 1 : 0 };
+}
+/** her "k" once it's sent (screen units) */
+function sentUm(c: Ctx): Pt {
+  const v = replayView(EV.send2 + 0.3);
+  const b = bubbleAt(c, v, v.items.length - 1) ?? { x: 518, y: 626, w: 64, h: 86 };
+  return [b.x + b.w / 2, b.y + b.h / 2];
+}
+/** after she sends the "k" the camera pushes in on its bubble and brings it towards the middle (the phone sits at
+ *  (540, 960), scale 1, until then) */
+function umSpot(abs: number, um: Pt) {
   const zk = smooth(phase(abs, EV.send2 + 0.08, EV.send2 + 0.55));
-  return { ux: 694 + (590 - 694) * zk, uy: 942 + (880 - 942) * zk, zs: 1.0 + 0.38 * zk };
+  const x0 = 540 + (um[0] - 300),
+    y0 = 960 + (um[1] - 640);
+  return { ux: x0 + (590 - x0) * zk, uy: y0 + (880 - y0) * zk, zs: 1.0 + 0.38 * zk };
 }
 /** types a long happy reply → 小美's message drops in → she opens it and reads 「回个嗯就行」 → back to his chat →
  *  deletes all of it → types just 「嗯」 → sends; the camera holds on that 「嗯」 (the one he got at 0:01.86) */
 function shotReplay(c: Ctx, abs: number) {
   const umTyped = EV.del3[1] + 0.04;
-  let draft = "";
-  if (abs < EV.del3[0]) draft = typed(HER_REPLY_DRAFT, abs, EV.type3[0], EV.type3[1]);
-  else if (abs < EV.del3[1]) draft = deleted(HER_REPLY_DRAFT, abs, EV.del3[0], EV.del3[1]);
-  else if (abs < EV.send2) draft = abs > umTyped ? "嗯" : "";
-  const view = { title: HIM, time: "23:13", me: "girl" as const, them: "boy" as const, items: herItems(abs, "replay"), dark: true, draft: abs < EV.send2 ? draft : "", caret: abs < EV.send2, keyboard: true, sendHot: abs > EV.send2 - 0.08 && abs < EV.send2 ? 1 : 0 };
+  const view = replayView(abs, umTyped);
   const meiK = smooth(phase(abs, EV.openNote, EV.openNote + 0.25)) * (1 - smooth(phase(abs, EV.backToHim, EV.backToHim + 0.25)));
-  const meiView = {
+  // her chat with Mia: the three lines sit at the top, under the header
+  const meiBase: ChatView = {
     title: MEI,
-    time: "23:13",
-    me: "girl" as const,
-    them: "mei" as const,
+    handle: HANDLE[MEI],
+    time: "11:13",
+    me: "girl",
+    them: "mei",
     items: [
-      { t: "time", text: "23:12" },
+      { t: "time", text: "11:12 PM" },
       { t: "msg", me: true, text: MEI_FIRST },
-      { t: "msg", text: FRIEND_ADVICE, mark: "回个嗯就行", markK: smooth(phase(abs, EV.openNote + 0.35, EV.openNote + 0.7)) },
-    ] as ChatItem[],
+      { t: "msg", text: FRIEND_ADVICE, mark: ADVICE_MARK, markK: smooth(phase(abs, EV.openNote + 0.35, EV.openNote + 0.7)) },
+    ],
     dark: true,
-    scroll: -470,
   };
-  const { ux, uy, zs } = umSpot(abs);
-  let cx = ux - (454 - 300) * zs,
-    cy = uy - (622 - 640) * zs,
+  const meiView = { ...meiBase, scroll: scrollTo(c, meiBase, 0, 176) };
+  const um = sentUm(c);
+  const { ux, uy, zs } = umSpot(abs, um);
+  let cx = ux - (um[0] - 300) * zs,
+    cy = uy - (um[1] - 640) * zs,
     s = zs;
   const rd = smooth(phase(abs, EV.openNote + 0.15, EV.openNote + 0.55)) * (1 - smooth(phase(abs, EV.backToHim, EV.backToHim + 0.3)));
   const mk = rd > 0 ? markAt(c, meiView) : null;
@@ -148,7 +166,7 @@ function shotReplay(c: Ctx, abs: number) {
     const k = ((abs - EV.del3[0]) * 12) % 1;
     hands = { right: { x: BACKSPACE_AT[0], y: BACKSPACE_AT[1], touch: k < 0.5 ? 1 : 0.4 }, left: REST_L };
   } else if (abs > EV.del3[1] && abs < EV.send2 + 0.12) {
-    const sb = sendButtonAt(c, { ...view, draft: "嗯" });
+    const sb = sendButtonAt(c, { ...view, draft: UM });
     const onKey = abs < umTyped + 0.05;
     hands = { right: { x: onKey ? 300 : sb[0], y: onKey ? 1000 : sb[1], touch: (abs > umTyped - 0.04 && abs < umTyped + 0.03) || (abs > EV.send2 - 0.06 && abs < EV.send2 + 0.08) ? 1 : 0 }, left: REST_L };
   }
@@ -172,7 +190,7 @@ function shotReplay(c: Ctx, abs: number) {
     if (nk > 0) {
       q.save();
       q.translate(0, -160 * (1 - nk));
-      notification(q, 24, 84, 552, { title: MEI, body: FRIEND_ADVICE, time: "现在" }, nk);
+      notification(q, 24, 84, 552, { title: MEI, body: FRIEND_ADVICE, time: "now" }, nk);
       q.restore();
     }
   }, { thumbs: [hands.right, hands.left], haloRgb: "255,180,210" });
@@ -317,11 +335,12 @@ function shotMilk(c: Ctx, abs: number) {
 /** over her memory, outside the film: the time cards, and round the sent 「嗯」 two yellow pulses (like the hook) and
  *  a red-pen note — everything else was deleted */
 function memoryNotes(c: Ctx, abs: number) {
-  timeCard(c, abs, "10月6日 23:12", BAR(16) + 0.4, EV.type3[0]);
-  timeCard(c, abs, "那天上课", EV.hide2 + 0.05, EV.afterClass);
-  timeCard(c, abs, "放学后", EV.afterClass + 0.05, EV.now);
+  timeCard(c, abs, "Oct 6, 11:12 PM", BAR(16) + 0.4, EV.type3[0]);
+  timeCard(c, abs, "That day in class", EV.hide2 + 0.05, EV.afterClass);
+  // (on the right: the English card is wider and would cover her sunflower hair clip)
+  timeCard(c, abs, "After school", EV.afterClass + 0.05, EV.now, true);
   if (abs <= EV.send2 || abs >= EV.umHold) return;
-  const { ux, uy, zs } = umSpot(abs);
+  const { ux, uy, zs } = umSpot(abs, sentUm(c));
   pulseRings(c, abs, ux, uy, 64 * zs, 46 * zs, [EV.send2 + 0.12, EV.send2 + 0.48]);
 }
 function memoryShot(c: Ctx, abs: number) {
@@ -370,35 +389,18 @@ function shotWipe(c: Ctx, abs: number) {
       grip: (q) => herPhoneBack(q, 0, 236, 92, 176, 0),
     },
   });
-  timeCard(c, abs, "00:52", EV.now + 0.05, EV.phoneAgain + 2);
+  timeCard(c, abs, "12:52 AM", EV.now + 0.05, EV.phoneAgain + 2);
 }
 /** C after the tears: she goes back to him — a shot for each thing she does (user: the whole stretch was one phone
  *  picture), the cuts on beats; the send and the waiting are one shot (user: the cut between them was jarring). */
 const C_LOVE = beatAt(81), // 41.47 the input box, close: 「其实，我喜欢你」
   C_FACE = beatAt(83); // 42.50 her face: the send — then back into her room, waiting, falling asleep (one shot)
-/** her confession as it sits in the input box: broken at phrases (user: 「文字重排一下」) — never a comma at the start
- *  of a line, 「其实，我喜欢你，」 on a line of its own (each line fits the box without wrapping) */
-const CONF_LINES = ["才不是这样的！！", "我每天都在等你的", "消息，每次都写了", "好多好多，又怕你", "嫌我烦，就全删了。", "你发的每一条我都", "看了好多遍。", "其实，我喜欢你，", "很久很久了。"];
-const CONF_BREAKS = CONF_LINES.slice(0, -1).reduce<number[]>((a, l) => [...a, (a[a.length - 1] ?? 0) + Array.from(l).length], []);
-/** the draft with those line breaks, as far as it agrees with the confession (the rest just wraps) */
-function laidOut(draft: string) {
-  const d = Array.from(draft),
-    full = Array.from(HER_CONFESSION);
-  let same = 0;
-  while (same < d.length && d[same] === full[same]) same++;
-  let out = "";
-  d.forEach((ch, i) => {
-    if (i > 0 && i <= same && CONF_BREAKS.includes(i)) out += "\n";
-    out += ch;
-  });
-  return out;
-}
-/** her phone at 00:58 → 03:00 (the chat with the draft being edited, or after the send) */
-function herNightView(abs: number) {
+/** her phone at 12:58 → 3:00 (the chat with the draft being edited, or after the send) */
+function herNightView(abs: number): ChatView {
   const draft = abs < EV.send3 ? laidOut(editing(abs, EV.type4[0], EV.type4[1], HER_NIGHT_DRAFT, CONFESSION_EDITS)) : "";
   const items = abs < EV.send3 ? herItems(abs, "present") : [...fromHer(HISTORY), ...afterNight("hers", abs, { conf: EV.send3, late1: EV.late1, late2: EV.late2 })];
-  const time = abs < EV.late1 ? "00:58" : abs < EV.late2 ? "01:30" : "03:00";
-  return { title: HIM, time, me: "girl" as const, them: "boy" as const, items, dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
+  const time = abs < EV.late1 ? "12:58" : abs < EV.late2 ? "1:30" : "3:00";
+  return { title: HIM, handle: HANDLE[HIM], time, me: "girl", them: "boy", items, dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
 }
 /** C1 · 39.94 → 41.47 her phone: home screen → she taps 微信 and it opens on the paragraph she left; the camera comes
  *  down with her eyes onto the phone, then — once it's open — leans in on the draft as she cuts 「其实我……」 and types
@@ -409,7 +411,7 @@ function shotOpenApp(c: Ctx, abs: number) {
   if (inWin(abs, EV.type4)) hands = typingThumbs(abs, EV.type4[0], EV.type4[1], 41);
   else if (abs < EV.openApp + 0.06) {
     const land = smooth(phase(abs, EV.phoneAgain + 0.02, EV.openApp - 0.06));
-    hands = { right: { x: WECHAT_AT[0], y: WECHAT_AT[1] + 40 * (1 - land), touch: abs > EV.openApp - 0.08 ? 1 : 0 }, left: hands.left };
+    hands = { right: { x: APP_AT[0], y: APP_AT[1] + 40 * (1 - land), touch: abs > EV.openApp - 0.08 ? 1 : 0 }, left: hands.left };
   }
   const tap = abs > EV.openApp - 0.08 && abs < EV.openApp + 0.06 ? 1 : 0;
   const appK = smooth(phase(abs, EV.openApp, EV.openApp + 0.3));
@@ -420,8 +422,8 @@ function shotOpenApp(c: Ctx, abs: number) {
   p = aimLerp(p, aim(300, sb[1] - 120, 540, 960, 1.3), lean);
   herBokeh(c, abs, { dark: 0.2 + 0.1 * lean, shift: [0, (1 - arrive) * -200 + (p.cy - 960) * 0.1] });
   drawPhone(c, abs, p, (q) => {
-    if (appK < 1) herHome(q, abs, "00:58", { press: tap, zoom: 1 + 0.08 * appK });
-    appWindow(q, appK, WECHAT_AT, (a) => chatScreen2(a, abs, view));
+    if (appK < 1) herHome(q, abs, "12:58", { press: tap, zoom: 1 + 0.08 * appK });
+    appWindow(q, appK, APP_AT, (a) => chatScreen2(a, abs, view));
   }, { thumbs: [hands.right, hands.left], haloRgb: "255,180,210" });
   vignette(c, 0.35, 540, 900, 380, 1200);
 }
@@ -442,27 +444,24 @@ function shotLoveLine(c: Ctx, abs: number) {
   const creep = smooth(phase(abs, C_LOVE, C_FACE));
   const hit = kick(abs, retyped + 0.12, 0.14);
   // the box once it holds seven lines (screen units): top 454, bottom 838; her line at y 732
-  let p = aimLerp(aim(250, 650, 540, 760, 2.08, 0.02), aim(255, 660, 540, 770, 2.2, 0.005), creep);
+  let p = aimLerp(aim(284, 650, 540, 760, 2.08, 0.02), aim(290, 660, 540, 770, 2.2, 0.005), creep);
   p = { ...p, s: p.s * (1 + 0.015 * j + 0.012 * hit), cy: p.cy + 5 * press + 10 * j };
   herBokeh(c, abs, { dark: 0.35 });
   drawPhone(c, abs, p, (q) => {
     chatScreen2(q, abs, view);
-    if (mark > 0) loveMark(q, view.draft, mark);
+    if (mark > 0) loveMark(q, view, mark);
   }, { haloRgb: "255,180,210" });
   vignette(c, 0.45, 540, 780, 360, 1150);
 }
-/** the yellow highlighter over 「我喜欢你」 in the input box (screen units; the box's own layout, keyboard up) */
-function loveMark(q: Ctx, draft: string, k: number) {
-  const lines = draftLines(q, draft);
-  const show = lines.slice(Math.max(0, lines.length - 7));
-  const j = show.findIndex((l) => l.startsWith("其实，我喜欢你"));
+/** the yellow highlighter over "I like you" in the input box (screen units; the box's own layout, keyboard up) */
+function loveMark(q: Ctx, view: ChatView, k: number) {
+  const box = draftBox(q, view);
+  const j = box.lines.findIndex((l) => l.startsWith(LOVE_LINE));
   if (j < 0) return;
-  const LH = 50,
-    FS = 37;
-  const inputTop = SH - 420 - (48 + show.length * LH + 30);
-  const y = inputTop + 50 + j * LH;
-  const x0 = 84 + 16 + measure(q, "其实，", FS, F.ui);
-  const w = measure(q, "我喜欢你", FS, F.ui);
+  const FS = 37;
+  const y = box.y(j);
+  const x0 = box.x + measure(q, box.lines[j].slice(0, box.lines[j].indexOf(LOVE)), FS, F.ui);
+  const w = measure(q, LOVE, FS, F.ui);
   q.save();
   q.beginPath();
   q.rect(x0 - 8, y - 30, (w + 16) * k, 60);
@@ -474,7 +473,7 @@ function loveMark(q: Ctx, draft: string, k: number) {
   q.lineTo(x0 + w + 6, y + 24);
   q.lineTo(x0 - 6, y + 26);
   q.fill();
-  text(q, "我喜欢你", x0, y, { size: FS, font: F.ui, fill: "#1a1a1a", align: "left" });
+  text(q, LOVE, x0, y, { size: FS, font: F.ui, fill: "#1a1a1a", align: "left" });
   q.restore();
 }
 /** C3 · 42.50 → 44.80 one shot, no cut. Her face over the phone, in her room: her thumb is over 发送 — she holds her
@@ -580,7 +579,7 @@ function shotHerSend(c: Ctx, abs: number) {
     c.restore();
   }
   vignette(c, 0.42 + 0.12 * creep * (sent ? 0 : 1) - 0.18 * clamp(relief) * (1 - lonely) + 0.25 * lonely, 540, lerp(910, 860, w), 360, lerp(1250, 1200, w));
-  for (const [label, t0, t1] of [["01:30", EV.late1, EV.late2], ["03:00", EV.late2, EV.nightFalls]] as [string, number, number][]) timeCard(c, abs, label, t0 + 0.02, t1);
+  for (const [label, t0, t1] of [["1:30 AM", EV.late1, EV.late2], ["3:00 AM", EV.late2, EV.nightFalls]] as [string, number, number][]) timeCard(c, abs, label, t0 + 0.02, t1);
 }
 function shotSend(c: Ctx, abs: number) {
   if (abs < C_LOVE) shotOpenApp(c, abs);
@@ -619,11 +618,10 @@ function shotNight(c: Ctx, abs: number) {
     hisRoom: (q) => hisRoomDawn(q, abs, day, abs > 45.9),
     herRoom: (q) => herRoomAsleep(q, abs, abs < EV.herLightOff ? 1 : 0),
   });
-  timeCard(c, abs, "07:10", EV.intoHis[0] + 0.15, EV.boot + 1);
+  timeCard(c, abs, "7:10 AM", EV.intoHis[0] + 0.15, EV.boot + 1);
 }
 
 // ---------------------------------------------------------------- E · the next morning, his phone
-const LOVE_LINE = "其实，我喜欢你，很久很久了。";
 const NOTE_Y = 360;
 /** his phone: off — he holds the power key — the logo — her three messages drop onto the lock screen a sixteenth
  *  apart (a jolt each) — he taps the first — the chat opens out of the banner and the camera speeds up into the last
@@ -635,7 +633,7 @@ function shotDawn(c: Ctx, abs: number) {
   const s = 1.0 + 0.5 * read;
   const hk = smooth(phase(abs, EV.tapNote + 0.55, EV.tapNote + 0.85));
   const items = [...HISTORY.slice(-3), ...afterNight("his")].map((it) => (it.t === "msg" && it.text === HER_CONFESSION ? ({ ...it, mark: LOVE_LINE, markK: hk } as ChatItem) : it));
-  const view = { title: HER, time: "07:10", me: "boy" as const, them: "girl" as const, items, dark: false };
+  const view: ChatView = { title: HER, handle: HANDLE[HER], time: "7:10", me: "boy", them: "girl", items, dark: false };
   const mk = markAt(c, view) ?? { x: 116, y: 580, w: 330, h: 90 };
   const ax = mk.x + mk.w / 2,
     ay = mk.y + mk.h / 2;
@@ -644,9 +642,9 @@ function shotDawn(c: Ctx, abs: number) {
   const cx = px - (ax - 300) * s,
     cy = py - (ay - 640) * s;
   const notes = [
-    { title: HER, body: HER_CONFESSION, time: "00:58" },
-    { title: HER, body: LATE1, time: "01:30" },
-    { title: HER, body: LATE2, time: "03:00" },
+    { title: HER, body: HER_CONFESSION, time: "6h ago" },
+    { title: HER, body: LATE1, time: "5h ago" },
+    { title: HER, body: LATE2, time: "4h ago" },
   ];
   let firstH = 166;
   const thumb: FingerPos = abs > EV.tapNote - 0.2 && abs < EV.tapNote + 0.08 ? { x: 300, y: NOTE_Y + 80 + 30 * (1 - smooth(phase(abs, EV.tapNote - 0.2, EV.tapNote - 0.04))), touch: abs > EV.tapNote - 0.05 ? 1 : 0 } : { ...REST, touch: 0 };
@@ -669,7 +667,7 @@ function shotDawn(c: Ctx, abs: number) {
       return;
     }
     if (appK < 1) {
-      lockScreen(q, { time: "07:10", airplane: false, battery: 0.21 }, { date: "10月7日 星期二" });
+      lockScreen(q, { time: "7:10", airplane: false, battery: 0.21 }, { date: "Tuesday, October 7" });
       let y = NOTE_Y;
       notes.forEach((n, i) => {
         const k = pop(abs, EV.um2 + (i * BEAT) / 4, 0.2);

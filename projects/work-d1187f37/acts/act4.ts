@@ -1,24 +1,25 @@
 // 第四幕（49.14 – 57.0）· 尾奏（重置版：剧情和时间点不变，画面、镜头、光影按最新标准重做）
 //  A 49.14–49.91 他的脸：尾奏重拍上暖光一闪，他哭着笑开（第三幕的同一个镜头接过来）
-//  B 49.91–54.76 一个不切的手机镜头：「我也是」→「那周末一起去图书馆？」→「对方正在输入…」（黄圈）→「嗯！！」→ 爱心
+//  B 49.91–54.76 一个不切的手机镜头："me too" → "so… library this weekend?" → 她的「正在输入」气泡（黄圈）→ "ok!!" → 爱心
 //  C 54.76–57.00 早晨的那条街：两扇窗都照着太阳，两人各在窗里笑，爱心飘到街中间；镜头往后拉，淡出
+import "./locale";
 import type { SceneOptions } from "@frame/engine/types";
 import { phase, smooth } from "@frame/engine/math";
 import { Ctx, Pt, W, H, bloom, designScene, flash, glow, pulse } from "@materials/s0rrow/code/draw";
 import { heart } from "@materials/s0rrow/code/sets";
-import { ChatItem, bubbleAt, chatScreen2, sendButtonAt } from "@materials/s0rrow/code/chat";
-import { ASK_AGAIN, HER, HISTORY, REST_L, REST_R, afterNight, inWin, pop, typed, typingThumbs } from "./story";
+import { ChatItem, ChatView, bubbleAt, chatScreen2, sendButtonAt, typingAt } from "./dm";
+import { ASK_AGAIN, HANDLE, HER, HISTORY, REST_L, REST_R, UM_JOY, afterNight, inWin, pop, typed, typingK, typingThumbs } from "./story";
 import { BAR, END, EV } from "./timeline";
 import { clueGlow, drawPhone, pulseRings, vignette } from "./shots";
 import { HER_WIN, HIS_WIN, herDuvet, herInBed, herPhoneBack, herRoomNight, hisBokeh, hisDuvet, hisInBed, hisPhoneBack, hisRoom, nightStreet, winC } from "./world";
 import { hisFaceReading } from "./act3";
 
-const ME_TOO = "我也是";
-const UM = "嗯！！";
+const ME_TOO = "me too";
+const UM = UM_JOY;
 
 function hisItems(abs: number): ChatItem[] {
   const items: ChatItem[] = [...HISTORY.slice(-3), ...afterNight("his")];
-  items.push({ t: "time", text: "07:11" });
+  items.push({ t: "time", text: "7:11 AM" });
   if (abs >= EV.send5) items.push({ t: "msg", me: true, text: ME_TOO, pop: pop(abs, EV.send5) });
   if (abs >= EV.send6) items.push({ t: "msg", me: true, text: ASK_AGAIN, pop: pop(abs, EV.send6) });
   if (abs >= EV.um3) items.push({ t: "msg", text: UM, pop: pop(abs, EV.um3) });
@@ -27,15 +28,28 @@ function hisItems(abs: number): ChatItem[] {
 }
 
 // ---------------------------------------------------------------- B · his phone, one continuous shot
-/** No cutaways: he sends 「我也是」 and 「那周末一起去图书馆？」 (each send a little bounce and the room warms), 「对方正在
- *  输入...」 comes up (the camera holds its breath and leans in — this time it ends in an answer), 「嗯！！」 lands with the
- *  hook's yellow pulses (a rush onto it), then a heart. The keyboard stays up so the conversation never jumps; once her
- *  answer is in, the camera settles on the newest messages. */
+/** No cutaways: he sends "me too" and "so… library this weekend?" (each send a little bounce and the room warms), her
+ *  typing bubble comes up under it (the camera holds its breath and leans in — this time it ends in an answer), "ok!!"
+ *  lands in its place with the hook's yellow pulses (a rush onto it), then a heart. The keyboard stays up so the
+ *  conversation never jumps; once her answer is in, the camera settles on the newest messages. */
 function shotChat(c: Ctx, abs: number) {
   let draft = "";
   if (abs >= EV.type6[0] && abs < EV.send5) draft = typed(ME_TOO, abs, EV.type6[0], EV.type6[1]);
   else if (abs >= EV.type7[0] && abs < EV.send6) draft = typed(ASK_AGAIN, abs, EV.type7[0], EV.type7[1]);
-  const view = { title: HER, time: "07:11", me: "boy" as const, them: "girl" as const, items: hisItems(abs), typing: inWin(abs, EV.typingC), draft, caret: true, keyboard: true };
+  const typingNow = abs < EV.um3;
+  const view: ChatView = {
+    title: HER,
+    handle: HANDLE[HER],
+    time: "7:11",
+    me: "boy",
+    them: "girl",
+    items: hisItems(abs),
+    typing: typingNow ? typingK(abs, [EV.typingC]) : 0,
+    typingRoom: typingNow ? smooth(phase(abs, EV.typingC[0], EV.typingC[0] + 0.15)) : 0,
+    draft,
+    caret: true,
+    keyboard: true,
+  };
   let hands = { right: REST_R, left: REST_L };
   if (inWin(abs, EV.type6)) hands = typingThumbs(abs, EV.type6[0], EV.type6[1], 61);
   else if (inWin(abs, EV.type7)) hands = typingThumbs(abs, EV.type7[0], EV.type7[1], 71);
@@ -58,9 +72,10 @@ function shotChat(c: Ctx, abs: number) {
   drawPhone(c, abs, { cx, cy, s, rot: 0 }, (q) => chatScreen2(q, abs, view), { thumbs: [hands.right, hands.left], haloRgb: "255,226,190", halo: 0.8 });
   const at = (x: number, y: number): Pt => [cx + (x - 300) * s, cy + (y - 640) * s];
   if (inWin(abs, EV.typingC)) {
-    const [tx, ty] = at(300, 120);
-    clueGlow(c, tx, ty, 220 * s, smooth(phase(abs, EV.typingC[0], EV.typingC[0] + 0.12)));
-    pulseRings(c, abs, tx, ty, 150 * s, 40 * s, [EV.typingC[0] + 0.02]);
+    const dots = typingAt(c, view);
+    const [tx, ty] = at(dots.x + dots.w / 2, dots.y + dots.h / 2);
+    clueGlow(c, tx, ty, 190 * s, smooth(phase(abs, EV.typingC[0], EV.typingC[0] + 0.12)));
+    pulseRings(c, abs, tx, ty, (dots.w / 2 + 26) * s, (dots.h / 2 + 16) * s, [EV.typingC[0] + 0.02]);
   }
   if (abs >= EV.um3) {
     const b = bubbleAt(c, view, view.items.findIndex((it) => it.t === "msg" && it.text === UM));

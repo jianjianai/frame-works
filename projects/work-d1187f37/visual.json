@@ -68,7 +68,7 @@
     },
     {
       "id": "lyrics",
-      "name": "中英歌词 + 钩子",
+      "name": "英文歌词 + 钩子 + 引导",
       "source": {
         "kind": "scene",
         "module": "lyrics",

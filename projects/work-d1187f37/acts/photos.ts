@@ -172,7 +172,7 @@ export function selfiePhoto(c: Ctx) {
     b.save();
     b.shadowColor = "rgba(255,110,160,0.9)";
     b.shadowBlur = 24;
-    text(b, "甜甜奶茶", 300, 90, { size: 54, font: F.pen, fill: "#ffd0e0" });
+    text(b, "Boba Bar", 300, 90, { size: 60, font: F.pen, fill: "#ffd0e0" });
     b.restore();
     // string lights
     for (let k = 0; k < 9; k++) {

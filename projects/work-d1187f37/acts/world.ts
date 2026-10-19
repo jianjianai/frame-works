@@ -16,12 +16,12 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const ROOM = His.ROOM;
 export const SIT = His.HIS_SIT;
 export const { hisDuvet, hisInBed, hisPhoneBack, hisBokeh } = His;
-const clockAt = (dawn = 0) => (dawn > 0.5 ? "07:10" : "23:12");
+const clockAt = (dawn = 0) => (dawn > 0.5 ? "7:10" : "11:12");
 export function hisRoom(c: Ctx, abs: number, o: His.HisRoomOptions = {}) {
   His.hisRoom(c, abs, { clock: clockAt(o.dawn), ...o });
 }
 export function hisRoomCurled(c: Ctx, abs: number, lamp: number) {
-  His.hisRoomCurled(c, abs, lamp, { clock: "00:52" });
+  His.hisRoomCurled(c, abs, lamp, { clock: "12:52" });
 }
 
 // ---------------------------------------------------------------- behind a phone close-up
@@ -530,7 +530,7 @@ export function classFromSeat(c: Ctx, abs: number, o: { sun?: number; students?:
   poly(c, [[-38, -56], [38, -56], [38, 0], [-38, 0]], 84043, 0.8);
   paint(c, null, chalk, 3.5);
   c.restore();
-  text(c, "第3题", 440, 370, { size: 40, font: F.pen, fill: chalk });
+  text(c, "Q3", 440, 370, { size: 44, font: F.pen, fill: chalk });
   text(c, "F = ma", 860, 440, { size: 60, font: F.marker, fill: chalk });
   text(c, "a = ?", 850, 545, { size: 52, font: F.marker, fill: chalk });
   inkLine(c, [[770, 600], [950, 596]], 84044, 3, chalk);

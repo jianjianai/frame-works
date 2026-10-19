@@ -1,21 +1,23 @@
 // 第二幕（16.43 – 32.79）· 副歌1（重置版：剧情和时间点不变，画面、镜头、光影按最新标准重做）
 //  A 16.43–21.54 三个画面：手机升上来、按拍翻她的相册 → 他的脸被她照片的光照着（颜色随照片变，到向日葵那张变暖、笑了一下）→
 //                向日葵头像铺满画面（pretty）→ 熄屏，他的倒影浮在她脸的位置（ugly）→ 低头
-//  B 21.54–24.61 倒影的脸在同一位置变成他流泪的脸（身后是黑屋子）→ 镜头冲进他的眼睛 → 手机：聚光在「嗯」上，「对方正在输入…」
-//                闪两次（黄圈给观众）→ 沉进「嗯」
+//  B 21.54–24.61 倒影的脸在同一位置变成他流泪的脸（身后是黑屋子）→ 镜头冲进他的眼睛 → 手机：聚光在 "k"（「嗯」）上，
+//                她的「正在输入」气泡在下面闪两次（黄圈给观众）→ 沉进 "k"
 //  C 24.61–26.40 从「嗯」里猛地收回、一下划掉关机 → 俯拍：他攥着被子边一把拉过头（月光）→ 同一构图的被子里流泪
 //  D 26.40–28.10 一镜：退出他的窗 → 唱到 me 灯灭 → 甩过街 → 推进她亮着彩灯的窗
 //  E 28.10–29.72 穿过玻璃：她也在哭，镜头一路慢推到她的脸，背景虚化、四周压暗
 //  F 29.72–32.79 她的手机：整段话；拇指按住「发送」不松 → 划回主页（草莓牛奶壁纸）
+import "./locale";
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase, smooth } from "@frame/engine/math";
 import { C, Ctx, H, Pt, W, blob, bloom, camera, card, designScene, easeOut, fillBg, filtered, glow, hash, inkLine, litFigure, oval, paint, poly, pulse, rr, sinceBeat, vgrad, zoomBlur } from "@materials/s0rrow/code/draw";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { paneLight } from "@materials/s0rrow/code/sets";
-import { WECHAT_AT, appWindow, chatScreen2, powerOffScreen, profileScreen, sendButtonAt } from "@materials/s0rrow/code/chat";
+import { powerOffScreen, profileScreen } from "@materials/s0rrow/code/chat";
+import { APP_AT, appWindow, bubbleAt, chatScreen2, sendButtonAt, typingAt, typingOnly } from "./dm";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
 import { SH, SW } from "@materials/s0rrow/code/phone";
-import { GIVE_UP, HER_NIGHT_DRAFT, HIM, HISTORY, REST_R, fromHer, herHome, hisNightChat, inWin } from "./story";
+import { GIVE_UP, HANDLE, HER_NIGHT_DRAFT, HIM, HISTORY, REST_R, UM, fromHer, herHome, hisNightChat, inWin, laidOut, typingK } from "./story";
 import { BAR, EV, beatAt } from "./timeline";
 import { HER_ALBUM } from "./photos";
 import { PhoneSpec, clueGlow, drawPhone, lerp, pulseRings, touchDot, vignette } from "./shots";
@@ -192,9 +194,18 @@ const EYE_DX = 52,
   EYE_DY = 36;
 const EYE_DIVE = beatAt(43);
 
-/** his phone at night, her 「嗯」 (screen 145, 948) held at (ux, uy) under a spotlight that closes to darkness `dk`; it
- *  glows cold on every beat and sends out a thin white ring (what he's staring at); the clue he misses — 「对方正在输入...」
- *  in the title bar — gets the film's yellow pulse, for us. */
+/** his chat while she types (and until he powers off): it keeps room for her typing bubble the whole time, so her "k"
+ *  never moves while the dots come and go under his last message */
+const typingView = (abs: number) => hisNightChat(abs, { typing: typingK(abs, [EV.typingA, EV.typingB]), typingRoom: 1 });
+/** her "k" that night (index in his chat) and where it is on his screen */
+const UM_AT = HISTORY.length;
+function umOnScreen(c: Ctx): Pt {
+  const b = bubbleAt(c, typingView(23), UM_AT) ?? { x: 84, y: 900, w: 64, h: 86 };
+  return [b.x + b.w / 2, b.y + b.h / 2];
+}
+/** his phone at night, her "k" held at (ux, uy) under a spotlight that closes to darkness `dk`; it glows cold on
+ *  every beat and sends out a thin white ring (what he's staring at); the clue he misses — her typing bubble under his
+ *  last message — gets the film's yellow pulse, for us. */
 /** the dark closing round her 「嗯」 at (ux, uy): `dk` 0..1 how far it has closed, `zs` the phone's scale */
 function umSpotlight(c: Ctx, ux: number, uy: number, zs: number, dk: number) {
   const r0 = (110 - 64 * dk) * zs;
@@ -205,7 +216,7 @@ function umSpotlight(c: Ctx, ux: number, uy: number, zs: number, dk: number) {
   c.fillRect(-60, -60, W + 120, H + 120);
 }
 function typingPhone(c: Ctx, abs: number, dk: number, zs: number, rot: number, ux = 390, uy = 1182) {
-  const typing = inWin(abs, EV.typingA) || inWin(abs, EV.typingB);
+  const view = typingView(abs);
   const cos = Math.cos(rot),
     sin = Math.sin(rot);
   const at = (x: number, y: number): Pt => {
@@ -213,11 +224,12 @@ function typingPhone(c: Ctx, abs: number, dk: number, zs: number, rot: number, u
       dy = (y - 640) * zs;
     return [dx * cos - dy * sin, dx * sin + dy * cos];
   };
-  const [ox, oy] = at(145, 948);
+  const [mx, my] = umOnScreen(c);
+  const [ox, oy] = at(mx, my);
   const zx = ux - ox,
     zy = uy - oy;
   hisBokeh(c, abs, { dark: 0.9 });
-  drawPhone(c, abs, { cx: zx, cy: zy, s: zs, rot }, (k) => chatScreen2(k, abs, hisNightChat(abs, { typing })), { halo: 1 - dk * 0.6 });
+  drawPhone(c, abs, { cx: zx, cy: zy, s: zs, rot }, (k) => chatScreen2(k, abs, view), { halo: 1 - dk * 0.6 });
   umSpotlight(c, ux, uy, zs, dk);
   const beat = pulse(abs, 6);
   c.save();
@@ -235,24 +247,36 @@ function typingPhone(c: Ctx, abs: number, dk: number, zs: number, rot: number, u
     c.stroke();
     c.restore();
   }
-  const [qx, qy] = at(300, 120);
+  const dots = typingAt(c, view);
+  const [qx, qy] = at(dots.x + dots.w / 2, dots.y + dots.h / 2);
   const tx = zx + qx,
     ty = zy + qy;
   const on = Math.max(...[EV.typingA, EV.typingB].map((w) => smooth(phase(abs, w[0], w[0] + 0.1)) * (1 - smooth(phase(abs, w[1], w[1] + 0.1)))));
-  clueGlow(c, tx, ty, 220 * zs, on);
-  pulseRings(c, abs, tx, ty, 150 * zs, 40 * zs, [EV.typingA[0] + 0.02, EV.typingA[0] + 0.2, EV.typingB[0] + 0.02, EV.typingB[0] + 0.2], rot);
+  // the dots themselves stay out of the dark (the audience has to be able to read them)
+  if (on > 0) {
+    c.save();
+    c.translate(zx, zy);
+    c.rotate(rot);
+    c.scale(zs, zs);
+    c.translate(-SW / 2, -SH / 2);
+    c.globalAlpha = 0.9;
+    typingOnly(c, abs, view);
+    c.restore();
+  }
+  clueGlow(c, tx, ty, 190 * zs, on);
+  pulseRings(c, abs, tx, ty, (dots.w / 2 + 26) * zs, (dots.h / 2 + 16) * zs, [EV.typingA[0] + 0.02, EV.typingA[0] + 0.2, EV.typingB[0] + 0.02, EV.typingB[0] + 0.2], rot);
 }
-/** 22.56 → 24.61 out of his pupil onto her 「嗯」. Three speeds, one move:
- *  · he stares (22.56 → 23.59): a slow, straight, linear push (8%) on the 「嗯」 and a slight dutch tilt creeping in, the dark
- *    closing round it; the clue — 「对方正在输入...」 flickering twice in the title bar — gets the yellow pulse at the
- *    edge of the frame, and the camera doesn't so much as twitch towards it (he doesn't see it).
+/** 22.56 → 24.61 out of his pupil onto her "k". Three speeds, one move:
+ *  · he stares (22.56 → 23.59): a slow, straight, linear push (8%) on the "k" and a slight dutch tilt creeping in, the
+ *    dark closing round it; the clue — her typing bubble coming up twice under his last message — gets the yellow
+ *    pulse, and the camera doesn't so much as twitch towards it (he doesn't see it). The "k" sits high enough that the
+ *    dots stay above the lyrics (and above YouTube's caption at the bottom).
  *  · the moment it stops for good (23.59) he's pulled in: faster and faster (pow 2.2) right into the 「嗯」, arriving
  *    on the echoed "love me" (24.30); the tilt straightens as it goes.
  *  · then it barely moves, the word alone in the dark — until the next shot snaps back out of it. */
 const UM_IN = 24.3;
 function umPlacement(abs: number): { zs: number; rot: number; ux: number; uy: number; dk: number } {
   const stare = phase(abs, T2[1], SINK);
-  // (8%: the title bar, where the clue flickers, has to stay clear of the label at the top)
   const z0 = 1.0 + 0.08 * stare;
   const d = Math.pow(phase(abs, SINK, UM_IN), 2.2);
   const z1 = 4.6 * (1 + 0.05 * smooth(phase(abs, UM_IN, BAR(12))));
@@ -263,7 +287,7 @@ function umPlacement(abs: number): { zs: number; rot: number; ux: number; uy: nu
     zs,
     rot: (-0.025 - 0.025 * stare) * (1 - d),
     ux: lerp(400, 540, w),
-    uy: lerp(1215, 880, w),
+    uy: lerp(850, 880, w),
     dk: Math.min(0.98, 0.45 + 0.45 * smooth(stare) + 0.08 * d),
   };
 }
@@ -524,16 +548,17 @@ function shotOff(c: Ctx, abs: number) {
     const back = easeOut(phase(abs, BAR(12), BAR(12) + 0.24));
     const zs = um.zs * Math.pow(1 / um.zs, back);
     const w = (1 / um.zs - 1 / zs) / (1 / um.zs - 1);
-    const ux = lerp(um.ux, 540 + (145 - 300), w),
-      uy = lerp(um.uy, 960 + (948 - 640), w);
+    const [mx, my] = umOnScreen(c);
+    const ux = lerp(um.ux, 540 + (mx - 300), w),
+      uy = lerp(um.uy, 960 + (my - 640), w);
     const jolt = Math.exp(-Math.max(0, abs - BAR(12)) / 0.1) * (1 - back);
     const jx = Math.sin(abs * 97) * 11 * jolt,
       jy = Math.cos(abs * 83) * 8 * jolt;
-    const p: PhoneSpec = { cx: ux - (145 - 300) * zs + jx, cy: uy - (948 - 640) * zs + jy, s: zs, rot: 0 };
+    const p: PhoneSpec = { cx: ux - (mx - 300) * zs + jx, cy: uy - (my - 640) * zs + jy, s: zs, rot: 0 };
     const dim = smooth(phase(abs, BAR(12), BAR(12) + 0.1));
     hisBokeh(c, abs, { dark: 0.85 + 0.15 * black });
     drawPhone(c, abs, p, (k) => {
-      chatScreen2(k, abs, hisNightChat(abs));
+      chatScreen2(k, abs, typingView(abs));
       k.save();
       k.globalAlpha = dim;
       powerOffScreen(k, abs, slide);
@@ -601,7 +626,7 @@ function shotWindows(c: Ctx, abs: number) {
   }
   const lit = abs < EV.hisLightOff;
   nightStreet(c, abs, cam, Z, { day: 0, hisLit: lit, herLit: true, hisRoom: (k) => hisRoomCurled(k, abs, lit ? 1 : 0), herRoom: (k) => herRoomTears(k, abs) });
-  card(c, "00:52", 70, 330, smooth(phase(abs, EV.leaveRoom + 0.1, EV.leaveRoom + 0.35)) * (1 - phase(abs, EV.twist - 0.3, EV.twist - 0.1)), 42);
+  card(c, "12:52 AM", 70, 330, smooth(phase(abs, EV.leaveRoom + 0.1, EV.leaveRoom + 0.35)) * (1 - phase(abs, EV.twist - 0.3, EV.twist - 0.1)), 42);
   void HIS_F0;
   void HIS_M0;
   void SIT;
@@ -632,9 +657,9 @@ function shotHerTears(c: Ctx, abs: number) {
 // ---------------------------------------------------------------- F · the paragraph she can't send
 function herNightView(draft: string) {
   const items = fromHer(HISTORY);
-  items.push({ t: "msg", me: true, text: "嗯" });
+  items.push({ t: "msg", me: true, text: UM });
   items.push({ t: "msg", text: GIVE_UP });
-  return { title: HIM, time: "00:52", me: "girl" as const, them: "boy" as const, items, dark: true, draft, caret: true, keyboard: true };
+  return { title: HIM, handle: HANDLE[HIM], time: "12:52", me: "girl" as const, them: "boy" as const, items, dark: true, draft, caret: true, keyboard: true };
 }
 /** tears landing on the glass, in screen units */
 function tearDrops(c: Ctx, abs: number, t0: number, n = 3) {
@@ -661,7 +686,7 @@ function tearDrops(c: Ctx, abs: number, t0: number, n = 3) {
  *  reading). 31.25 her thumb comes down on 发送 and stays there — she never lets go, so it never sends; 32.02 she swipes
  *  the app away (it shrinks back into 微信 on her home screen) — and on into her memory. */
 export function shotHesitate(c: Ctx, abs: number) {
-  const view = herNightView(HER_NIGHT_DRAFT);
+  const view = herNightView(laidOut(HER_NIGHT_DRAFT));
   const sb = sendButtonAt(c, view);
   const land = smooth(phase(abs, EV.pressSend - 0.22, EV.pressSend));
   const down = abs >= EV.pressSend && abs < EV.toHome + 0.06;
@@ -676,8 +701,8 @@ export function shotHesitate(c: Ctx, abs: number) {
     fy = lerp(lerp(606, 636, k) + 16 * smooth(phase(abs, EV.hesitate, 30.5)), 640, e);
   herBokeh(c, abs, { dark: 0.15, zoom: lerp(1.25, 1, e) });
   drawPhone(c, abs, { cx: 540 - (fx - 300) * s, cy: lerp(930, 960, e) - (fy - 640) * s, s, rot: 0 }, (q) => {
-    if (appK < 1) herHome(q, abs, "00:52", { zoom: 1 + 0.08 * appK });
-    appWindow(q, appK, WECHAT_AT, (a) => {
+    if (appK < 1) herHome(q, abs, "12:52", { zoom: 1 + 0.08 * appK });
+    appWindow(q, appK, APP_AT, (a) => {
       chatScreen2(a, abs, { ...view, sendHot: down ? 1 : 0 });
       tearDrops(a, abs, 31.45, 2);
     });

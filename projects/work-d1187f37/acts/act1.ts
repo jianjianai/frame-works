@@ -1,11 +1,13 @@
 // 第一幕（0 – 16.43）· 主歌1 · 他的视角（重置版：剧情和时间点不变，画面、镜头、构图、光影按最新标准重做）
 //  A 0–0.84    首帧先拍他：深夜坐在床上，刚把那一大段发出去（屏幕光在脸上一跳），屏住呼吸等 → 顺着视线往下甩
-//  B 0.84–2.88 手机：「对方正在输入…」闪两次（镜头屏息往前凑、又退回）→ 1.86「嗯」到达：回弹急推、震、黄圈 → 愣住慢推、四周压暗
+//  B 0.84–2.88 手机：她的「正在输入」三个点的气泡闪两次（镜头屏息往前凑、又退回）→ 1.86 "k" 落在同一个位置：回弹急推、震、
+//              黄圈 → 愣住慢推、四周压暗（YouTube 版：「嗯」= "k"，聊天是 Instagram 私信，见 dm.ts）
 //  C 2.88–4.16 他的脸：急推一震 → 愣住 → 难过、低头、慢推、歪、光变冷
 //  D 4.16–8.25 手机：往上翻到 7 月，停住时镜头落到近处读 → 点她 7 月消息旁的头像 → 朋友圈滑进来，镜头跟着弹到动态上，几乎不动、红圈「5分钟前」→ 越推越快进合照
 //  E 8.25–12.34 回忆（老式屏幕竖线）：越过他的课桌看她 → 她转身 → 课本挡脸 → 他低头 → 放学他的主观镜头递牛奶，她被小美拉走 → 牛奶留在空桌上
 //  F 12.34–16.43 手机上打一大段 → 输入框特写：全删、只打出「以后不打扰你了」→ 一镜到底：他的脸，按下发送，屏幕的光
 //                一跳 → 镜头从脸上直接拉回整个房间，他把手机扣在被子上、伸手关灯 → 黑暗里又拿起手机
+import "./locale";
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase, smooth } from "@frame/engine/math";
 import { C, Ctx, H, Pt, W, backOut, blob, bloom, camera, designScene, easeOut, fillBg, filtered, glow, inkLine, lightShaft, motes, oldFilm, oldScreenCut, oval, paint, poly, rbox, rimFigure, rr, shake, shaded, smearV, text, F, tubePts, vgrad } from "@materials/s0rrow/code/draw";
@@ -13,10 +15,10 @@ import { drawHand, drawKid } from "@materials/s0rrow/code/kid";
 import { CAST, drawPerson } from "@materials/s0rrow/code/people";
 import { bookFingers, classroomBoard, deskFront, strawberryMilk, textbook } from "@materials/s0rrow/code/places";
 import { classroom, paneLight } from "@materials/s0rrow/code/sets";
-import { bubbleAt, chatScreen2, momentsScreen } from "@materials/s0rrow/code/chat";
+import { POST, avatarAt, bubbleAt, chatScreen2, postScreen, scrollTo, typingAt } from "./dm";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
 import { SH, SW } from "@materials/s0rrow/code/phone";
-import { GIVE_UP, HIS_DRAFT, deleted, hisNightChat, inWin, typed, typingThumbs } from "./story";
+import { GIVE_UP, HIS_DRAFT, deleted, hisNightChat, inWin, typed, typingK, typingThumbs } from "./story";
 import { BAR, EV } from "./timeline";
 import { SELFIE_FACE, fitPhoto, photoPoint, selfiePhoto } from "./photos";
 import { PhoneSpec, aim, aimLerp, clueGlow, drawPhone, kick, lerp, onPhone, pulseRings, softStart, spotlight, tapAt, timeCard, vignette, whip } from "./shots";
@@ -93,22 +95,28 @@ function shotSent(c: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- B · 0.84 → 2.88
-/** his phone at night for the hook (keyboard still up from typing the long message) */
-const hookView = (abs: number) => hisNightChat(abs, { typing: inWin(abs, EV.typing1) || inWin(abs, EV.typing2), keyboard: true });
-const TITLE: Pt = [300, 120];
-/** The chat with the keyboard up. The camera holds its breath and leans toward the title each time 「对方正在输入…」
- *  shows (and backs off when it goes); her 「嗯」 lands: a jolt and a rush onto it, two yellow rings; then it hardly
- *  moves — a 6% creep — while everything round the 「嗯」 slowly goes dark. */
-function hookPlacement(c: Ctx, abs: number): { p: PhoneSpec; um: Pt } {
+/** his phone at night for the hook (keyboard still up from typing the long message). Her typing bubble shows twice;
+ *  the chat makes room for it the first time and keeps the room, so her "k" lands right where the dots were. */
+const hookView = (abs: number) =>
+  hisNightChat(abs, {
+    typing: abs < EV.um1 ? typingK(abs, [EV.typing1, EV.typing2]) : 0,
+    typingRoom: abs < EV.um1 ? smooth(phase(abs, EV.typing1[0], EV.typing1[0] + 0.15)) : 0,
+    keyboard: true,
+  });
+/** The chat with the keyboard up. The camera holds its breath and leans toward her typing bubble each time it shows
+ *  (and backs off when it goes); her "k" lands in its place: a jolt and a rush onto it, two yellow rings; then it
+ *  hardly moves — a 6% creep — while everything round the "k" slowly goes dark. */
+function hookPlacement(c: Ctx, abs: number): { p: PhoneSpec; um: Pt; dots: { x: number; y: number; w: number; h: number } } {
   const view = hookView(Math.max(abs, EV.um1 + 0.2));
   const idx = view.items.length - 1;
-  const b = bubbleAt(c, view, idx) ?? { x: 106, y: 700, w: 90, h: 86 };
+  const b = bubbleAt(c, view, idx) ?? { x: 84, y: 626, w: 64, h: 86 };
   const um: Pt = [b.x + b.w / 2, b.y + b.h / 2];
-  // under the hook text: the title bar just below it, the newest bubble around y 1000, the keyboard off the bottom
+  const dots = typingAt(c, hookView(EV.typing2[0] + 0.1));
+  // under the hook text: the newest bubble low in the frame, the keyboard off the bottom
   const base = aim(300, 640, 540, 1110, 1.0);
   const breath = (w: readonly [number, number]) => smooth(phase(abs, w[0], w[0] + 0.2)) * (1 - smooth(phase(abs, w[1], w[1] + 0.28)));
   const lean = breath(EV.typing1) + breath(EV.typing2);
-  let p = aimLerp(base, aim(TITLE[0], TITLE[1], 540, 600, 1.07), 0.6 * lean);
+  let p = aimLerp(base, aim(dots.x + dots.w / 2, dots.y + dots.h / 2, 430, 1090, 1.08), 0.6 * lean);
   if (abs >= EV.um1) {
     const hit = backOut(phase(abs, EV.um1, EV.um1 + 0.16));
     const creep = smooth(phase(abs, EV.um1 + 0.2, EV.hisFace));
@@ -119,21 +127,21 @@ function hookPlacement(c: Ctx, abs: number): { p: PhoneSpec; um: Pt } {
     const j = kick(abs, EV.um1, 0.12);
     p = { ...p, cx: p.cx + Math.sin(abs * 90) * 16 * j, cy: p.cy + Math.cos(abs * 77) * 12 * j };
   }
-  return { p, um };
+  return { p, um, dots };
 }
 function shotHook(c: Ctx, abs: number) {
   const [off, sm] = whip(abs, EV.whip1, -1150, 0.15, 0.24);
   smearV(c, (k) => {
-    const { p, um } = hookPlacement(k, abs);
+    const { p, um, dots } = hookPlacement(k, abs);
     const after = smooth(phase(abs, EV.um1 + 0.2, EV.hisFace));
     hisBokeh(k, abs, { shift: [0, off * 0.2], dark: 0.3 * after });
     k.save();
     k.translate(0, off);
     drawPhone(k, abs, p, (s) => chatScreen2(s, abs, hookView(abs)), { halo: 1, buzz: abs >= EV.um1 ? 1 - phase(abs, EV.um1, EV.um1 + 0.25) : 0 });
-    // the clue at the top, for the audience (his eyes stay on the bottom of the screen)
-    const [tx, ty] = onPhone(p, TITLE[0], TITLE[1]);
-    for (const w of [EV.typing1, EV.typing2]) clueGlow(k, tx, ty, 260 * p.s, inWin(abs, w) ? 1 : 0);
-    pulseRings(k, abs, tx, ty, 170 * p.s, 40 * p.s, [EV.typing1[0], EV.typing2[0]], p.rot ?? 0);
+    // the clue, for the audience: her typing bubble, twice
+    const [tx, ty] = onPhone(p, dots.x + dots.w / 2, dots.y + dots.h / 2);
+    for (const w of [EV.typing1, EV.typing2]) clueGlow(k, tx, ty, 200 * p.s, inWin(abs, w) ? 1 : 0);
+    pulseRings(k, abs, tx, ty, (dots.w / 2 + 26) * p.s, (dots.h / 2 + 16) * p.s, [EV.typing1[0], EV.typing2[0]], p.rot ?? 0);
     const [ux, uy] = onPhone(p, um[0], um[1]);
     pulseRings(k, abs, ux, uy, 64 * p.s, 46 * p.s, [EV.um1 + 0.05, EV.um1 + 0.45], p.rot ?? 0);
     // the room closes in round her 「嗯」
@@ -184,18 +192,17 @@ function shotFace(c: Ctx, abs: number) {
 }
 
 // ---------------------------------------------------------------- D · 4.16 → 8.25
-/** how far back he scrolls: July, with 「7月12日 23:41」 just under the title bar */
-const JULY = 2230;
-/** her 「对了我最喜欢草莓牛奶了」 in July (index in the chat) — he taps her avatar beside it */
+/** how far back he scrolls: July, with its date just under the header */
+const julyScroll = (c: Ctx) => scrollTo(c, hisNightChat(4.5), 0, 172);
+/** her "btw strawberry milk is my favorite" in July (index in the chat) — he taps her avatar beside it */
 const MILK_MSG = 5;
-/** the 朋友圈 photo: the selfie fitted into the post's 400×400 frame (kept a little above centre: the faces and the
- *  cups), and where her face lands on the screen */
-const POST_PHOTO = { x: 112, y: 596, w: 400, h: 400, fy: 0.45 };
+/** the post's photo: the selfie fitted into the post's square (kept a little above centre: the faces and the cups),
+ *  and where her face lands on the screen */
+const POST_PHOTO = { ...POST.photo, fy: 0.45 };
 const PHOTO_FACE: Pt = photoPoint(POST_PHOTO.x, POST_PHOTO.y, POST_PHOTO.w, POST_PHOTO.h, SELFIE_FACE[0], SELFIE_FACE[1], 0.5, POST_PHOTO.fy);
-/** her avatar beside the July 「我最喜欢草莓牛奶了」 (screen coordinates, chat scrolled back to July) */
+/** her avatar beside the July "strawberry milk" message (screen coordinates, chat scrolled back to July) */
 function julyAvatar(c: Ctx): Pt {
-  const b = bubbleAt(c, hisNightChat(4.5, { scroll: JULY }), MILK_MSG) ?? { x: 106, y: 900, w: 300, h: 100 };
-  return [56, b.y + 34];
+  return avatarAt(c, hisNightChat(4.5, { scroll: julyScroll(c) }), MILK_MSG) ?? [44, 900];
 }
 /** The lyric "It looks like you are losing interest", one phone, the camera moving with what he does (user: stop on
  *  July, no flick back down, straight into her 朋友圈). Rhythm: quick on his actions, still on what hurts.
@@ -212,8 +219,9 @@ function historyPlacement(abs: number, avatar: Pt): PhoneSpec {
   let p = aimLerp(read, aim(300, 640, 540, 940, 1.12), look);
   const land = backOut(phase(abs, EV.scrollUp[1] - 0.06, EV.scrollUp[1] + 0.22));
   const drift = smooth(phase(abs, EV.scrollUp[1] + 0.22, EV.tapAvatar - 0.3));
-  const julyTop = aim(300, 600, 540, 900, 1.7, -0.015);
-  const julyEnd = aim(300, 880, 540, 840, 1.78, -0.01);
+  // (English messages run longer: a little wider than the Chinese 1.7, the July date just under the label)
+  const julyTop = aim(300, 206, 540, 330, 1.55, -0.015);
+  const julyEnd = aim(300, avatar[1] - 30, 540, 840, 1.78, -0.01);
   p = aimLerp(p, aimLerp(julyTop, julyEnd, drift), land);
   // toward the avatar he's about to tap, then a jolt on the tap
   const toTap = smooth(phase(abs, EV.tapAvatar - 0.3, EV.tapAvatar));
@@ -231,7 +239,7 @@ function historyPlacement(abs: number, avatar: Pt): PhoneSpec {
 }
 function historyScreen(c: Ctx, abs: number) {
   const su = smooth(phase(abs, EV.scrollUp[0], EV.scrollUp[1]));
-  const scroll = JULY * su;
+  const scroll = julyScroll(c) * su;
   const push = smooth(phase(abs, EV.pagePush[0], EV.pagePush[1]));
   const mark = smooth(phase(abs, 6.95, 7.3));
   if (push < 1) {
@@ -247,7 +255,7 @@ function historyScreen(c: Ctx, abs: number) {
   if (push > 0) {
     c.save();
     c.translate(SW * (1 - push), 0);
-    momentsScreen(c, abs, { dark: true, mark, photo: (k, x, y, w, h) => fitPhoto(k, x, y, w, h, selfiePhoto, 0.5, POST_PHOTO.fy) });
+    postScreen(c, abs, { dark: true, mark, photo: (k, x, y, w, h) => fitPhoto(k, x, y, w, h, selfiePhoto, 0.5, POST_PHOTO.fy) });
     c.fillStyle = "rgba(0,0,0,0.35)";
     c.fillRect(-14, 0, 14, SH);
     c.restore();
@@ -445,7 +453,7 @@ export function herBag(c: Ctx, x: number, y: number, s: number, rot = -0.05) {
   paint(c, "#5d8fc9", C.ink, 4.5);
   rbox(c, -92, -96, 184, 22, 4, 3814, 0.6);
   paint(c, "#e8524a", C.ink, 3);
-  text(c, "物理", 0, -38, { size: 40, font: F.cn, fill: "#fff" });
+  text(c, "PHYSICS", 0, -38, { size: 40, font: F.cn, fill: "#fff" });
   c.restore();
   shaded(c, () => rbox(c, -136, -40, 272, 180, 44, 3815, 1), "#34477a", () => {
     oval(c, 70, 110, 140, 90, 3816, 1);
@@ -614,7 +622,7 @@ function shotMilk(c: Ctx, abs: number) {
       }, -1, -0.3, "rgb(255,232,190)", 0.55, 9), "himFg");
   c.restore();
   const bell = 1 - phase(abs, 10.85, 11.05);
-  if (abs >= BAR(5) && bell > 0) text(c, "叮铃铃～", 250, 360, { size: 60, font: F.cn, fill: "#fff", stroke: C.ink, lw: 10, alpha: bell * clamp((abs - BAR(5)) / 0.08) });
+  if (abs >= BAR(5) && bell > 0) text(c, "RIIING!", 250, 360, { size: 60, font: F.cn, fill: "#fff", stroke: C.ink, lw: 10, alpha: bell * clamp((abs - BAR(5)) / 0.08) });
 }
 
 /** E4 · 11.83 → 12.34: he puts the milk down on her empty desk and his hand pulls back out of frame */
@@ -646,7 +654,7 @@ function shotClass(c: Ctx, abs: number) {
 /** the class today, through the old screen; a time card */
 function memory(c: Ctx, abs: number) {
   oldFilm(c, abs, (k) => shotClass(k, abs), "memory");
-  timeCard(c, abs, "今天 · 物理课", BAR(4) + 0.15, EV.classFace - 0.05);
+  timeCard(c, abs, "Today · Physics class", BAR(4) + 0.15, EV.classFace - 0.05);
 }
 /** D → E: the push into the photo carries on through the old-screen cut; her face in the photo becomes her, in class */
 function intoMemory(c: Ctx, abs: number) {
