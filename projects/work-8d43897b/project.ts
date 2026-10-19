@@ -23,7 +23,7 @@ const project: AnimationProject = {
     "注意力",
     "原创"
   ],
-  "status": "film",
+  "status": "abandoned",
   "beats": [
     {
       "id": "opening",
