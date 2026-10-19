@@ -10,6 +10,7 @@ import {
   type Palette,
   type PoseIn,
   type Rig,
+  BASE_COLORS,
   drawFigure,
   eyeAt,
   figureJoints,
@@ -178,10 +179,39 @@ function drawHat(ctx: CanvasRenderingContext2D, h: HeadView, hat: HatSpec, ink: 
   }
 }
 
-// ——— 鞋：铁底的鞋（城里人的鞋底都是铁的） ———
-/** 鞋在脚踝的局部坐标里（画面左边那只，脚尖朝画面左），另一只镜像 */
-const SHOE: P[] = [[-8, 12], [12, 16], [15, 40], [15, 58], [-38, 58], [-42, 50], [-34, 38], [-18, 30]];
-const SOLE: P[] = [[17, 57, 1], [17, 66], [-44, 66], [-45, 57, 1]];
+// ——— 鞋 ———
+// 矮帮的鞋：鞋口在脚踝下面一截，裤脚到鞋口之间露出一段袜子（不给袜子就是脚踝）；后跟、鞋头、整条鞋底分清楚。
+// （2026-10-19 重画。原来的鞋是一坨圆包、鞋底像垫在下面的一块板，鞋口离裤脚还空着一截，用户：「鞋子没做好」。
+//   鞋口直接接到裤脚、整只鞋盖住脚踝的话，人物的脚踝离地很高，鞋就成了又方又笨的高筒靴。）
+// 坐标：脚的坐标系（原点在脚踝，+y 顺着小腿往下，脚尖朝 −x；地面在 y ≈ 66），画面左边那只，另一只镜像。
+export type ShoeStyle = "sneaker" | "leather" | "cloth";
+/** sneaker 帆布鞋（白橡胶底、包头、鞋带）、leather 皮鞋（薄底 + 鞋跟、鞋头一道高光，默认）、cloth 布鞋（厚白千层底、一圈针脚） */
+export interface ShoeSpec {
+  color: string;
+  shade: string;
+  /** 鞋底的颜色（皮鞋默认铁灰，帆布鞋、布鞋默认米白） */
+  sole?: string;
+  style?: ShoeStyle;
+  /** 袜子的颜色；不给就露出脚踝（皮肤色） */
+  sock?: string;
+}
+
+const SHOE_UPPER: Record<ShoeStyle, P[]> = {
+  sneaker: [[18, 25, 1], [22, 33], [23, 50], [21, 58, 1], [-50, 58, 1], [-57, 53], [-56, 44], [-46, 39], [-32, 35], [-22, 27], [-17, 19], [-11, 21], [2, 25]],
+  leather: [[18, 27, 1], [22, 35], [22, 52], [20, 59, 1], [-52, 59, 1], [-60, 55], [-58, 47], [-46, 42], [-30, 38], [-20, 30], [-14, 26], [2, 28]],
+  cloth: [[18, 30, 1], [22, 37], [22, 52], [20, 57, 1], [-50, 57, 1], [-57, 52], [-55, 44], [-43, 40], [-26, 36], [-14, 31], [2, 31]],
+};
+/** 帆布鞋：白橡胶底（前头微微翘起来）、橡胶包头、鞋口里面露出来的一小块里子 */
+const SNEAKER_SOLE: P[] = [[24, 54, 1], [24, 63], [20, 67], [-48, 67], [-57, 64], [-59, 57], [-55, 54, 1]];
+const SNEAKER_TOE: P[] = [[-38, 55, 1], [-40, 47], [-50, 42], [-58, 46], [-59, 53], [-56, 55, 1]];
+const SNEAKER_INSIDE: P[] = [[18, 25, 1], [2, 25], [-11, 21], [-6, 26], [8, 29]];
+/** 皮鞋：前掌一条薄底、后面一个鞋跟（中间足弓那里空着） */
+const LEATHER_SOLE: P[] = [[-8, 57, 1], [-8, 62, 1], [-52, 63], [-62, 61], [-61, 56, 1]];
+const LEATHER_HEEL: P[] = [[22, 56, 1], [22, 67, 1], [2, 67, 1], [1, 56, 1]];
+/** 布鞋：厚厚的千层底 */
+const CLOTH_SOLE: P[] = [[23, 53, 1], [23, 63], [19, 67], [-47, 67], [-57, 63], [-58, 55], [-53, 53, 1]];
+/** 袜子 / 脚踝：从裤脚下面到鞋口（再往下一截，藏在鞋里） */
+const SOCK: P[] = [[-13, 0, 1], [16, -1, 1], [17, 40, 1], [-15, 40, 1]];
 
 function shoeMap(rig: Rig, side: "L" | "R") {
   const limb = rig.legs[side];
@@ -189,11 +219,88 @@ function shoeMap(rig: Rig, side: "L" | "R") {
   return ([x, y]: V2): V2 => limb.tip.p(x * fx, y);
 }
 
-function drawShoe(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, color: string, shade: string, sole: string) {
+function shoeLine(ctx: CanvasRenderingContext2D, pts: V2[], m: (p: V2) => V2, color: string, lw: number) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  pts.forEach((p, i) => {
+    const q = m(p);
+    if (i) ctx.lineTo(q[0], q[1]);
+    else ctx.moveTo(q[0], q[1]);
+  });
+  ctx.stroke();
+}
+
+function drawShoe(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, shoe: ShoeSpec) {
+  const style = shoe.style ?? "leather";
   const m = shoeMap(rig, side);
   const path = (pts: P[]) => smoothPath(pts.map(([x, y, c]) => [...m([x, y]), ...(c ? [c] : [])] as P));
-  drawPart(ctx, path(SHOE), color, shade, ink, ink.lw * 0.8);
-  drawPart(ctx, path(SOLE), sole, null, ink, ink.lw * 0.8);
+  const lw = ink.lw * 0.8;
+  const stroke = (p: Path2D, w = lw) => {
+    ctx.strokeStyle = ink.line;
+    ctx.lineWidth = w;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.stroke(p);
+  };
+  // 袜子或者脚踝：只描两边（上沿接着裤脚）
+  fillShaded(ctx, path(SOCK), shoe.sock ?? rig.look.colors?.skin ?? BASE_COLORS.skin, null, ink);
+  shoeLine(ctx, [[-13, 1], [-14, 36]], m, ink.line, lw);
+  shoeLine(ctx, [[16, 0], [17, 36]], m, ink.line, lw);
+  const upper = path(SHOE_UPPER[style]);
+  fillShaded(ctx, upper, shoe.color, shoe.shade, ink);
+  ctx.save();
+  ctx.clip(upper);
+  if (style === "sneaker") {
+    ctx.fillStyle = "rgba(60,50,60,0.28)";
+    ctx.fill(path(SNEAKER_INSIDE));
+    // 鞋带：脚背上两道
+    shoeLine(ctx, [[-20, 28], [-11, 31]], m, ink.line, ink.lw * 0.55);
+    shoeLine(ctx, [[-27, 32], [-18, 35]], m, ink.line, ink.lw * 0.55);
+  } else if (style === "leather") {
+    // 鞋头一道高光、脚背上系带的那一块
+    shoeLine(ctx, [[-36, 44], [-45, 46], [-52, 49]], m, "rgba(255,255,255,0.35)", ink.lw * 1.3);
+    shoeLine(ctx, [[-16, 30], [-22, 36], [-30, 40]], m, ink.line, ink.lw * 0.5);
+  } else {
+    // 布鞋：鞋口到鞋头一道中缝
+    shoeLine(ctx, [[-16, 34], [-26, 39], [-36, 42]], m, ink.line, ink.lw * 0.5);
+  }
+  ctx.restore();
+  stroke(upper);
+  const sole = shoe.sole ?? (style === "leather" ? "#4a4d57" : "#f6f2ea");
+  if (style === "sneaker") {
+    const s = path(SNEAKER_SOLE);
+    fillShaded(ctx, s, sole, null, ink);
+    // 底下一道浅灰的大底
+    ctx.save();
+    ctx.clip(s);
+    ctx.fillStyle = "rgba(120,110,100,0.22)";
+    ctx.fill(path([[-70, 63, 1], [40, 63, 1], [40, 80, 1], [-70, 80, 1]]));
+    ctx.restore();
+    stroke(s);
+    const toe = path(SNEAKER_TOE);
+    fillShaded(ctx, toe, sole, null, ink);
+    stroke(toe, lw * 0.9);
+  } else if (style === "leather") {
+    const h = path(LEATHER_HEEL);
+    fillShaded(ctx, h, sole, null, ink);
+    stroke(h);
+    const s = path(LEATHER_SOLE);
+    fillShaded(ctx, s, sole, null, ink);
+    stroke(s);
+  } else {
+    const s = path(CLOTH_SOLE);
+    fillShaded(ctx, s, sole, null, ink);
+    // 千层底中间一圈针脚
+    ctx.save();
+    ctx.clip(s);
+    ctx.setLineDash([3, 4]);
+    shoeLine(ctx, [[19, 60], [-44, 60], [-53, 58]], m, "rgba(90,80,70,0.55)", ink.lw * 0.45);
+    ctx.restore();
+    stroke(s);
+  }
 }
 
 // ——— 人物配置 ———
@@ -212,8 +319,8 @@ export interface CastSpec {
   coat?: { color: string; shade: string; size?: number; long?: number; hem?: string };
   /** 领带（西装） */
   tie?: string;
-  /** 鞋：铁底的鞋；"boots" 是和秤砣一样的大铁靴；"bare" 光脚 */
-  shoes: { color: string; shade: string; sole?: string } | "boots" | "bare";
+  /** 鞋（帆布鞋、皮鞋、布鞋，见 ShoeSpec）；"boots" 是和秤砣一样的大铁靴；"bare" 光脚 */
+  shoes: ShoeSpec | "boots" | "bare";
   /** 铁靴相对身子放大多少（七岁的她穿着妈妈的大铁靴） */
   bootScale?: number;
   glasses?: string;
@@ -350,7 +457,7 @@ export function castLook(spec: CastSpec): Look {
           drawBoot(ctx, rig, side, { ...ink, lw: ink.lw / k });
           ctx.restore();
         }
-      } else if (shoes !== "bare" && lp.boot) drawShoe(ctx, rig, side, ink, shoes.color, shoes.shade, shoes.sole ?? "#4a4d57");
+      } else if (shoes !== "bare" && lp.boot) drawShoe(ctx, rig, side, ink, shoes);
       if (spec.bell) drawBell(ctx, rig, side, ink);
     },
   };
@@ -483,7 +590,7 @@ export const CAST = {
     hairColor: "#2f2e33",
     coat: { color: "#6b7d9c", shade: "#5a6b88", size: 1.02 },
     tie: "#3f63a8",
-    shoes: { color: "#2d2a31", shade: "#232027", sole: "#55585f" },
+    shoes: { color: "#2d2a31", shade: "#232027", sole: "#3c3940", style: "leather", sock: "#3a3741" },
   } as CastSpec,
   /** 称重员：全城最厚的铁靴、藏蓝制服帽；也是轻的 */
   称重员: {
@@ -510,7 +617,7 @@ export const CAST = {
     hairShade: "#d6d4cc",
     glasses: "#5a4a40",
     wrinkles: true,
-    shoes: { color: "#5a4636", shade: "#4b3a2d" },
+    shoes: { color: "#5a4636", shade: "#4b3a2d", style: "leather", sock: "#4a4650" },
   } as CastSpec,
   /** 小石头：7 岁，绿外套、脚踝上一只铃铛 */
   小石头: {
@@ -522,7 +629,7 @@ export const CAST = {
     hairColor: "#2f2e33",
     coat: { color: "#68a86f", shade: "#57925e" },
     bell: true,
-    shoes: { color: "#c9574a", shade: "#b0473b" },
+    shoes: { color: "#c9574a", shade: "#b0473b", style: "sneaker", sock: "#f7f3ee" },
   } as CastSpec,
   /** 小石头裹着妈妈的橘色外套（大一号、下摆缝了一圈铅）：副歌一以后一直穿着 */
   小石头穿妈妈的外套: {
@@ -534,7 +641,7 @@ export const CAST = {
     hairColor: "#2f2e33",
     coat: { color: "#f29a4a", shade: "#de8538", size: 1.32, long: 70, hem: "#8a6a5a" },
     bell: true,
-    shoes: { color: "#c9574a", shade: "#b0473b" },
+    shoes: { color: "#c9574a", shade: "#b0473b", style: "sneaker", sock: "#f7f3ee" },
   } as CastSpec,
   /** 小石头的妈妈：年轻的轻户，橘色外套（下摆缝了一圈铅）、低马尾 */
   小石头的妈妈: {
@@ -545,7 +652,7 @@ export const CAST = {
     hairColor: "#5b3f33",
     hairShade: "#4c342a",
     coat: { color: "#f29a4a", shade: "#de8538", long: 30, hem: "#8a6a5a" },
-    shoes: { color: "#7a5a4a", shade: "#674b3d" },
+    shoes: { color: "#7a5a4a", shade: "#674b3d", style: "leather" },
   } as CastSpec,
   /** 千斤：16 岁，红毛衣、黄发卡、齐肩短发 */
   千斤: {
@@ -555,7 +662,7 @@ export const CAST = {
     hair: "bob",
     hairColor: "#2c2a30",
     hairclip: "#f2c94c",
-    shoes: { color: "#6b4a3f", shade: "#5a3d33" },
+    shoes: { color: "#6b4a3f", shade: "#5a3d33", style: "sneaker", sock: "#f7f3ee" },
   } as CastSpec,
   /** 千斤的妈妈：紫衣服、盘发，在哑铃厂打两份工 */
   千斤的妈妈: {
@@ -565,7 +672,7 @@ export const CAST = {
     hair: "bun",
     hairColor: "#3a3036",
     coat: { color: "#8e6bbf", shade: "#7a59a8", long: 40 },
-    shoes: { color: "#4a3f52", shade: "#3d3445" },
+    shoes: { color: "#4a3f52", shade: "#3d3445", style: "leather" },
   } as CastSpec,
   /** 阿满：四十多岁的压锭工，绿帽子、棕夹克 */
   阿满: {
@@ -577,7 +684,7 @@ export const CAST = {
     hairColor: "#3a3539",
     hat: { kind: "beanie", color: "#5c9a64", shade: "#4c8554" },
     coat: { color: "#8c6a4c", shade: "#77593e" },
-    shoes: { color: "#3e3a3f", shade: "#322f33" },
+    shoes: { color: "#3e3a3f", shade: "#322f33", style: "leather", sock: "#3a3741" },
   } as CastSpec,
   /** 窗口的老太太（千斤用砖救下的） */
   老太太: {
@@ -588,7 +695,7 @@ export const CAST = {
     hairColor: "#dcdad4",
     hairShade: "#c6c3bb",
     wrinkles: true,
-    shoes: { color: "#5a4f60", shade: "#4b4150" },
+    shoes: { color: "#3a3540", shade: "#2e2a33", style: "cloth", sock: "#f7f3ee" },
   } as CastSpec,
   /** 周磊拽下来的年轻人 */
   年轻人: {
@@ -598,7 +705,7 @@ export const CAST = {
     collar: false,
     hair: "kid",
     hairColor: "#3b3035",
-    shoes: { color: "#f0ede6", shade: "#dcd8cf" },
+    shoes: { color: "#f0ede6", shade: "#dcd8cf", sole: "#e9e3d8", style: "sneaker" },
   } as CastSpec,
   /** 秤砣的妈妈（锈红色）：只在回忆和白里出现 */
   秤砣的妈妈: {
@@ -632,7 +739,15 @@ export const CAST = {
   } as CastSpec,
 };
 
-/** 路人（打伞走过、链上后来跑来的人）：几种衣服和发型轮着用 */
+/** 路人的鞋：黑皮鞋、白帆布鞋、棕皮鞋、藏蓝帆布鞋轮着穿 */
+const PASSERBY_SHOES: ShoeSpec[] = [
+  { color: "#3e3a3f", shade: "#322f33", style: "leather", sock: "#3a3741" },
+  { color: "#f2efe8", shade: "#ddd8ce", sole: "#e8e2d6", style: "sneaker", sock: "#e9e6df" },
+  { color: "#5a4636", shade: "#4b3a2d", style: "leather", sock: "#45414b" },
+  { color: "#4e5a78", shade: "#424d68", style: "sneaker", sock: "#f2efe8" },
+];
+
+/** 路人（打伞走过、链上后来跑来的人）：几种衣服、发型、鞋轮着用 */
 export function passerby(i: number): CastSpec {
   const tops = ["#9ccbd8", "#f2b8a2", "#c6d89a", "#e7c9e9", "#f4d58a", "#a9b8e8", "#e8a7a7", "#a8d8c0"];
   const coats = ["#6f8fb5", "#c47a6a", "#7aa56f", "#9a7ab8", "#c9a24f", "#5f7f9a", "#b56b80", "#5f9a88"];
@@ -648,7 +763,7 @@ export function passerby(i: number): CastSpec {
     hair: hairs[j],
     hairColor: hc[j],
     coat: i % 2 ? { color: coats[(k + 3) % 8], shade: coats[(k + 3) % 8], long: (i * 13) % 40 } : undefined,
-    shoes: { color: "#3e3a3f", shade: "#322f33" },
+    shoes: PASSERBY_SHOES[((i * 5) % 4 + 4) % 4],
   };
 }
 
