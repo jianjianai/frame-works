@@ -21,5 +21,6 @@ const project: AnimationProject = {
   tempo: {"bpm":120,"firstBeat":0,"beatsPerBar":4},
   posterTime: 3.5,
   loadAudioDocument: () => import("./audio.json"),
+  status: "abandoned",
 };
 export default project;
