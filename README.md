@@ -13,10 +13,12 @@
 - 角色、场景、道具、手机界面、效果和转场、歌词层、颗粒层、合成音效和字体都在素材库里，**直接导入，不拷进作品**（`@materials/s0rrow/code/…`）。函数、参数和用法不记在这里：用 `resources_search` 找、`resource_view` 看（带预览图），工作台「素材 → 资源」里也能预览。素材库自己的说明（目录、用法、字体许可）在它的 README.md。
 - 节拍写在作品 project.ts 的 `tempo`，字体是完整的，音效直接 `audio_place`；新作品从素材库 `templates/` 起步。
 - `reference/` 是几支片子的分镜代码（镜头写法参考，只看不拷，说明在 reference/README.md）。
+- 英文版（YouTube）：`code/english.ts` 的 `useEnglish()` 换掉素材库自己画的中文，`code/dm.ts` 是 Instagram 私信样式的英文手机界面，歌词层 `cn: false`，排英文用 `tools/measure-text.mjs`（`下一支视频流程.md`「发布和海外版」）。
 
 ## 作品
 片名、作品 id、剧情和复盘结论在「剧情音乐短片」的 `作品.md`。和这个库有关的：
 - 《i have no friends》：第一支，`reference/` 里是它的分镜代码。重置版重画了光影、开头三镜和回忆的匹配剪辑（`reference/no-friends-remake/`）；YouTube 版是英文本地化。
+- 《unhappy》YouTube 版（b1e36583）：英文本地化，画了 Instagram 私信界面 `code/dm.ts` 和译文表 `code/english.ts`。
 - 《unhappy》：聊天版的双视角聊天、打字删字、教室、女主房间在 `reference/unhappy-chat/`；被否的小狗版留下了狗、雨夜、医院（`reference/unhappy/`）。重置版（bbb593a6）画了他的精细卧室（开灯 / 关灯月光 / 早上、坐在床上的打光、手机后面的虚化房间），在 `code/his-room.ts`。
 - 《mirrors》：`code/mirrors`、`reference/mirrors`。
 - 《屏蔽》：爸爸（夜班保安）、门卫室和雪在 `code/blocked/`，夜晚宿舍在 `code/dorm-night.ts`，人物打光 `litFigure` 在 draw.ts。用户从五个一句话备选里选了这个亲情反转（没选 AI 男友、角膜移植、偷看连成一圈、求救手势）；第一轮被否的剧情（「这几个都不太行」）：他一年前死在去接她的雨夜、鬼魂偷看她的动态；失忆的他嫉妒的「另一个男生」是失忆前的自己；她合照里看的一直是拍照的他。
