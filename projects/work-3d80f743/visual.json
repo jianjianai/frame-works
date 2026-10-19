@@ -1,5 +1,13 @@
 {
   "schemaVersion": 1,
   "background": "#0d0e11",
-  "clips": []
+  "clips": [
+    {
+      "id": "act1",
+      "name": "第一幕 最沉的人",
+      "source": { "kind": "scene", "module": "act1", "engine": "canvas" },
+      "start": 0,
+      "duration": 16.02
+    }
+  ]
 }

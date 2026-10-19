@@ -1,0 +1,1 @@
+- public/fonts/LongCang-Regular.ttf: Long Cang 龙藏体（Chen Xiaomin），SIL Open Font License 1.1，来自 Google Fonts（github.com/google/fonts/tree/main/ofl/longcang）
