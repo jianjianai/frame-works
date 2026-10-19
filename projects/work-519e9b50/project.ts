@@ -19,5 +19,6 @@ const project: AnimationProject = {
   loadVisual: () => import("./visual.json"),
   materials: ["三维示例"],
   posterTime: 9.5,
+  status: "abandoned",
 };
 export default project;
