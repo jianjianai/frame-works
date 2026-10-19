@@ -249,6 +249,8 @@ function layout(ctx: Ctx, v: ChatView): Layout {
     const avatar: Pt | undefined = theirs(it) && !sameSide(it, next) ? [AV_X, y + h - AV / 2 - 2] : undefined;
     slots.push({ i, y, h, box, lines, avatar });
   }
+  // while they type after their own message, their picture moves down to the dots
+  if (tk > 0.5 && theirs(last) && slots.length) slots[0].avatar = undefined;
   slots.reverse();
   return { slots, typing, typingK: tk, inputTop, inputH, kb, draftShown };
 }
