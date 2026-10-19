@@ -16,7 +16,7 @@ const project: AnimationProject = { ...{
   "poster": "films/work-0560feb5/poster.png",
   "posterTime": 5,
   "tags": ["知识科普","AI","Agent","原创音乐","3D","中文旁白","科技 · AI 原理"],
-  "status": "film",
+  "status": "abandoned",
   "beats": [
     {
       "id": "opening",
