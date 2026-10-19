@@ -72,3 +72,4 @@
 - `code/blocked/dad.ts`：来源 为作品 work-73c8f9bc《屏蔽》原创绘制；许可 自制
 - `code/his-room.ts`：来源 为作品 bbb593a6《【重置版】unhappy》原创绘制的男生卧室精细版（台灯、月光、早上），复用 s0rrow 的 draw / kid / phone / sets / places；许可 自制
 - `code/dm.ts`：来源 为作品 frame-works/b1e36583《unhappy》YouTube 版编写（Instagram 私信风格的英文手机界面）；许可 自制
+- `code/english.ts`：来源 为作品 frame-works/b1e36583《unhappy》YouTube 版编写（素材库文字的英文译文）；许可 自制
