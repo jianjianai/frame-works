@@ -17,7 +17,7 @@ import { drawKid } from "@materials/s0rrow/code/kid";
 import { bookFingers, deskFront, strawberryMilk, textbook } from "@materials/s0rrow/code/places";
 import { classroom, heart } from "@materials/s0rrow/code/sets";
 import { bootScreen } from "@materials/s0rrow/code/chat";
-import { APP_AT, BACKSPACE_AT, ChatItem, ChatView, appWindow, bubbleAt, chatScreen2, draftBox, markAt, notification, scrollTo, sendButtonAt } from "./dm";
+import { APP_AT, BACKSPACE_AT, ChatItem, ChatView, appWindow, bubbleAt, chatScreen2, draftBox, markAt, notification, scrollTo, sendButtonAt } from "@materials/s0rrow/code/dm";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
 import { SH, SW, lockScreen } from "@materials/s0rrow/code/phone";
 import { ADVICE_MARK, CONFESSION_EDITS, FRIEND_ADVICE, GIVE_UP, HANDLE, HER, HER_CONFESSION, HER_NIGHT_DRAFT, HER_REPLY_DRAFT, HIM, HISTORY, LATE1, LATE2, LOVE, LOVE_LINE, MEI, MEI_FIRST, REST_L, REST_R, UM, afterNight, deleted, editing, fromHer, herHome, inWin, laidOut, pop, typed, typingThumbs } from "./story";

@@ -1,11 +1,11 @@
 // 《unhappy》· 同一段聊天两个视角：两部手机上的字、聊天记录、打字删字和拇指的动作（屏幕坐标 600×1280），几幕共用。
 // 画面（房间、人物、手机镜头）在 world.ts / shots.ts。
 // YouTube 版：全部英文。「嗯」→ "k"（英语里最典型的冷淡回复），最后的「嗯！！」→ "ok!!"；林夏 → Summer，周屿 → Leo，
-// 小美 → Mia；12 小时制、英文日期；聊天是 Instagram 私信样式（dm.ts）。
+// 小美 → Mia；12 小时制、英文日期；聊天是 Instagram 私信样式（素材库 dm.ts）。
 import { clamp, phase, smooth } from "@frame/engine/math";
 import { Ctx, Pt, hash } from "@materials/s0rrow/code/draw";
 import { strawberryMilk } from "@materials/s0rrow/code/places";
-import { ChatItem, ChatView, homeScreen } from "./dm";
+import { ChatItem, ChatView, homeScreen } from "@materials/s0rrow/code/dm";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
 import { EV } from "./timeline";
 
@@ -145,9 +145,6 @@ export const deleted = (s: string, abs: number, t0: number, t1: number) => {
   return ch.slice(0, Math.round((1 - clamp((abs - t0) / (t1 - t0))) * ch.length)).join("");
 };
 export const inWin = (abs: number, w: readonly [number, number]) => abs >= w[0] && abs < w[1];
-/** their typing bubble during any of these windows (0..1: it pops up quickly and drops away quickly) */
-export const typingK = (abs: number, ws: readonly (readonly [number, number])[]) =>
-  Math.max(0, ...ws.map((w) => smooth(clamp((abs - w[0]) / 0.07)) * (1 - smooth(clamp((abs - w[1]) / 0.08)))));
 
 /** pop-in progress for something that appears at t */
 export const pop = (abs: number, t: number, d = 0.18) => clamp((abs - t) / d);

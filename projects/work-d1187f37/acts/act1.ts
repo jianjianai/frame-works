@@ -1,7 +1,7 @@
 // 第一幕（0 – 16.43）· 主歌1 · 他的视角（重置版：剧情和时间点不变，画面、镜头、构图、光影按最新标准重做）
 //  A 0–0.84    首帧先拍他：深夜坐在床上，刚把那一大段发出去（屏幕光在脸上一跳），屏住呼吸等 → 顺着视线往下甩
 //  B 0.84–2.88 手机：她的「正在输入」三个点的气泡闪两次（镜头屏息往前凑、又退回）→ 1.86 "k" 落在同一个位置：回弹急推、震、
-//              黄圈 → 愣住慢推、四周压暗（YouTube 版：「嗯」= "k"，聊天是 Instagram 私信，见 dm.ts）
+//              黄圈 → 愣住慢推、四周压暗（YouTube 版：「嗯」= "k"，聊天是素材库 dm.ts 的 Instagram 私信）
 //  C 2.88–4.16 他的脸：急推一震 → 愣住 → 难过、低头、慢推、歪、光变冷
 //  D 4.16–8.25 手机：往上翻到 7 月，停住时镜头落到近处读 → 点她 7 月消息旁的头像 → 朋友圈滑进来，镜头跟着弹到动态上，几乎不动、红圈「5分钟前」→ 越推越快进合照
 //  E 8.25–12.34 回忆（老式屏幕竖线）：越过他的课桌看她 → 她转身 → 课本挡脸 → 他低头 → 放学他的主观镜头递牛奶，她被小美拉走 → 牛奶留在空桌上
@@ -15,10 +15,10 @@ import { drawHand, drawKid } from "@materials/s0rrow/code/kid";
 import { CAST, drawPerson } from "@materials/s0rrow/code/people";
 import { bookFingers, classroomBoard, deskFront, strawberryMilk, textbook } from "@materials/s0rrow/code/places";
 import { classroom, paneLight } from "@materials/s0rrow/code/sets";
-import { POST, avatarAt, bubbleAt, chatScreen2, postScreen, scrollTo, typingAt } from "./dm";
+import { POST, avatarAt, bubbleAt, chatScreen2, postScreen, scrollTo, typingAt, typingWindows } from "@materials/s0rrow/code/dm";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
 import { SH, SW } from "@materials/s0rrow/code/phone";
-import { GIVE_UP, HIS_DRAFT, deleted, hisNightChat, inWin, typed, typingK, typingThumbs } from "./story";
+import { GIVE_UP, HIS_DRAFT, deleted, hisNightChat, inWin, typed, typingThumbs } from "./story";
 import { BAR, EV } from "./timeline";
 import { SELFIE_FACE, fitPhoto, photoPoint, selfiePhoto } from "./photos";
 import { PhoneSpec, aim, aimLerp, clueGlow, drawPhone, kick, lerp, onPhone, pulseRings, softStart, spotlight, tapAt, timeCard, vignette, whip } from "./shots";
@@ -99,7 +99,7 @@ function shotSent(c: Ctx, abs: number) {
  *  the chat makes room for it the first time and keeps the room, so her "k" lands right where the dots were. */
 const hookView = (abs: number) =>
   hisNightChat(abs, {
-    typing: abs < EV.um1 ? typingK(abs, [EV.typing1, EV.typing2]) : 0,
+    typing: abs < EV.um1 ? typingWindows(abs, [EV.typing1, EV.typing2]) : 0,
     typingRoom: abs < EV.um1 ? smooth(phase(abs, EV.typing1[0], EV.typing1[0] + 0.15)) : 0,
     keyboard: true,
   });

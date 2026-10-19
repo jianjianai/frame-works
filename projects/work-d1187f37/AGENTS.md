@@ -7,14 +7,15 @@
 - **对应关系**（改这些先看这里）：
   - 「嗯」→ **“k”**（英语里最典型的冷淡回复），最后的「嗯！！」→ **“ok!!”**（同一个词这次带感叹号，首尾对称）；常量在 `story.ts` 的 `UM` / `UM_JOY`。
   - 人名：林夏 → Summer（她的向日葵、签名「happy summer」正好对上），周屿 → Leo，小美 → Mia；用户名 summer.lin / leo.zhou / mia.li（`HANDLE`）。
-  - 微信 → Instagram 私信样式（`acts/dm.ts`，接口和素材库 chat.ts 一样）：我的消息紫到蓝渐变、对方灰气泡 + 圆头像；朋友圈 → 她的帖子页 `postScreen`（「best day ever~」「5 minutes ago」红圈）；主页上「微信」那格换成 Instagram 图标；通知是 Instagram 图标、按单词换行、两行放不下加省略号，锁屏通知时间写 6h / 5h / 4h ago。
+  - 微信 → Instagram 私信样式（素材库 s0rrow 的 `code/dm.ts`，接口和 chat.ts 一样；原来是这个作品的 acts/dm.ts，2026-10-19 用户要求「把可复用素材整理进素材库」后搬进素材库）：我的消息紫到蓝渐变、对方灰气泡 + 圆头像；朋友圈 → 她的帖子页 `postScreen`（「best day ever~」「5 minutes ago」红圈）；主页上「微信」那格换成 Instagram 图标；通知是 Instagram 图标、按单词换行、两行放不下加省略号，锁屏通知时间写 6h / 5h / 4h ago。
   - 「对方正在输入...」（微信标题栏）→ 她头像旁边三个点在跳的**正在输入气泡**，出现在最后一条消息下面；`typingRoom` 让聊天第一次就让出位置并保持，所以 “k” / “ok!!” 落在三个点的同一个位置，不跳。22.56–23.59 他盯着 “k” 那一镜，三个点画在压暗之上（`typingOnly`），镜头把 “k” 放高（uy 850），让三个点在歌词上方、不进 YouTube 底部的标题区。
   - 钩子用第三人称：「He sent a whole paragraph. / She just replied “k”」（Gochi Hand 78px，“k” 104px 黄色）；标签 His side → Her side（粉）→ Next morning；时间卡英文（Today · Physics class、Oct 6, 11:12 PM、That day in class、After school（放右上，免得压住她的向日葵发卡）、12:52 AM、1:30 AM、3:00 AM、7:10 AM）；状态栏和闹钟 12 小时制（11:12、12:52、7:10）；锁屏 Tuesday, October 7。
   - 她的长段话按句子断行（`story.ts` 的 `CONF_LINES` / `laidOut`）：「The truth is, I like you.」单独一行，荧光笔只划「I like you」；发出去的消息里最后两句前面有换行，早上他手机上划的是整句「The truth is, I like you.」。
   - 结尾：「Like this and your crush / will text you back instantly」；评论卡「Rewatch the first second: / how many times did she start typing? / Answer in the comments ↓」（卡片收窄，避开 Shorts 右边那列按钮）。
-- **素材库里画死的中文**（课本 PHYSICS / GRADE 11、牛奶盒 MILK、黑板 Q3、门牌 CLASS 11B、资料页 Summer / happy summer / Message、关机 slide to power off、主页图标名……）在 `acts/locale.ts` 的翻译表里：素材库 draw.ts 的 `LOCALE`，`text()` / `measure()` 按整句查表；同一个文件把 `F.cn`、`F.pen` 换成 Gochi Hand 打头。每一幕和歌词层都先 `import "./locale"`。
+- **素材库里画死的中文**（课本 PHYSICS / GRADE 11、牛奶盒 MILK、黑板 Q3、门牌 CLASS 11B、资料页 Summer / happy summer / Message、关机 slide to power off、主页图标名……）：`acts/locale.ts` 调用素材库 `code/english.ts` 的 `useEnglish()`（译文表 `EN` → draw.ts 的 `LOCALE`，`text()` / `measure()` 按整句查表；`F.cn`、`F.pen` 换成 Gochi Hand 打头）。每一幕和歌词层都先 `import "./locale"`。这支片子自己的字（人名、聊天、时间卡）在 `story.ts` 和各幕里。
 - 歌词只留英文逐词卡拉 OK：素材库歌词层的 `cn: false`、`enSize: 68`（一句折行时两行一样宽）。
-- 英文比中文长，英文聊天字号仍是 37px：长消息 7–10 行。量字宽可以用 Noto Sans SC / Gochi Hand 的字体文件算（这次用 Python 读 TTF 的 hmtx 表），改文案后逐处看全尺寸截图。
+- 英文比中文长，英文聊天字号仍是 37px：长消息 7–10 行。改文案前先用素材库的 `tools/measure-text.mjs`（读 TTF 量字宽、按单词模拟换行）算好，改完逐处看全尺寸截图。
+- 搬进素材库前后对过 24 个时刻的画面指纹，完全一样。
 
 ## 重置版（2026-10-18）
 - 这是原版《unhappy》（d1187f37）的副本。用户：「按照最新的经验和方法，把这个视频重置一下」，强调「情绪运镜要看，这个很重要」；我先提了改剧情的方案，用户纠正：「我的意思是重做一遍，画面镜头构图光影等都按照最新的标准」。所以**剧情、镜头顺序、时间点、歌词和音乐剪辑不变**，画面、镜头、构图、光影全部重画（每段的做法见 `分镜表.md`）。

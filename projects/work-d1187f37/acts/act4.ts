@@ -7,8 +7,8 @@ import type { SceneOptions } from "@frame/engine/types";
 import { phase, smooth } from "@frame/engine/math";
 import { Ctx, Pt, W, H, bloom, designScene, flash, glow, pulse } from "@materials/s0rrow/code/draw";
 import { heart } from "@materials/s0rrow/code/sets";
-import { ChatItem, ChatView, bubbleAt, chatScreen2, sendButtonAt, typingAt } from "./dm";
-import { ASK_AGAIN, HANDLE, HER, HISTORY, REST_L, REST_R, UM_JOY, afterNight, inWin, pop, typed, typingK, typingThumbs } from "./story";
+import { ChatItem, ChatView, bubbleAt, chatScreen2, sendButtonAt, typingAt, typingWindows } from "@materials/s0rrow/code/dm";
+import { ASK_AGAIN, HANDLE, HER, HISTORY, REST_L, REST_R, UM_JOY, afterNight, inWin, pop, typed, typingThumbs } from "./story";
 import { BAR, END, EV } from "./timeline";
 import { clueGlow, drawPhone, pulseRings, vignette } from "./shots";
 import { HER_WIN, HIS_WIN, herDuvet, herInBed, herPhoneBack, herRoomNight, hisBokeh, hisDuvet, hisInBed, hisPhoneBack, hisRoom, nightStreet, winC } from "./world";
@@ -44,7 +44,7 @@ function shotChat(c: Ctx, abs: number) {
     me: "boy",
     them: "girl",
     items: hisItems(abs),
-    typing: typingNow ? typingK(abs, [EV.typingC]) : 0,
+    typing: typingNow ? typingWindows(abs, [EV.typingC]) : 0,
     typingRoom: typingNow ? smooth(phase(abs, EV.typingC[0], EV.typingC[0] + 0.15)) : 0,
     draft,
     caret: true,

@@ -13,11 +13,10 @@ import { clamp, phase, smooth } from "@frame/engine/math";
 import { C, Ctx, H, Pt, W, blob, bloom, camera, card, designScene, easeOut, fillBg, filtered, glow, hash, inkLine, litFigure, oval, paint, poly, pulse, rr, sinceBeat, vgrad, zoomBlur } from "@materials/s0rrow/code/draw";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { paneLight } from "@materials/s0rrow/code/sets";
-import { powerOffScreen, profileScreen } from "@materials/s0rrow/code/chat";
-import { APP_AT, appWindow, bubbleAt, chatScreen2, sendButtonAt, typingAt, typingOnly } from "./dm";
+import { APP_AT, appWindow, bubbleAt, chatScreen2, powerOffScreen, profileScreen, sendButtonAt, typingAt, typingOnly, typingWindows } from "@materials/s0rrow/code/dm";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
 import { SH, SW } from "@materials/s0rrow/code/phone";
-import { GIVE_UP, HANDLE, HER_NIGHT_DRAFT, HIM, HISTORY, REST_R, UM, fromHer, herHome, hisNightChat, inWin, laidOut, typingK } from "./story";
+import { GIVE_UP, HANDLE, HER_NIGHT_DRAFT, HIM, HISTORY, REST_R, UM, fromHer, herHome, hisNightChat, inWin, laidOut } from "./story";
 import { BAR, EV, beatAt } from "./timeline";
 import { HER_ALBUM } from "./photos";
 import { PhoneSpec, clueGlow, drawPhone, lerp, pulseRings, touchDot, vignette } from "./shots";
@@ -196,7 +195,7 @@ const EYE_DIVE = beatAt(43);
 
 /** his chat while she types (and until he powers off): it keeps room for her typing bubble the whole time, so her "k"
  *  never moves while the dots come and go under his last message */
-const typingView = (abs: number) => hisNightChat(abs, { typing: typingK(abs, [EV.typingA, EV.typingB]), typingRoom: 1 });
+const typingView = (abs: number) => hisNightChat(abs, { typing: typingWindows(abs, [EV.typingA, EV.typingB]), typingRoom: 1 });
 /** her "k" that night (index in his chat) and where it is on his screen */
 const UM_AT = HISTORY.length;
 function umOnScreen(c: Ctx): Pt {
