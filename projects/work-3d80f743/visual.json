@@ -5,34 +5,9 @@
     {
       "id": "act1",
       "name": "第一幕 最沉的人",
-      "source": {
-        "kind": "scene",
-        "module": "act1",
-        "engine": "canvas"
-      },
+      "source": { "kind": "scene", "module": "act1", "engine": "canvas" },
       "start": 0,
-      "duration": 16.53,
-      "offset": 0,
-      "phase": 0,
-      "rate": 1,
-      "fit": "contain",
-      "blend": "source-over"
-    },
-    {
-      "id": "act2",
-      "name": "第二幕 千斤",
-      "source": {
-        "kind": "scene",
-        "module": "act2",
-        "engine": "canvas"
-      },
-      "start": 16.513,
-      "duration": 23.5,
-      "offset": 16.513,
-      "phase": 0,
-      "rate": 1,
-      "fit": "contain",
-      "blend": "source-over"
+      "duration": 16.02
     }
   ]
 }

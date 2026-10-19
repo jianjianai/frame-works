@@ -9,7 +9,7 @@ import { assetUrl } from "@frame/engine/types";
 import { clamp01 } from "./cam";
 
 export const HAND_FONT = "LongCang";
-export const NOTE_FONT = "NoteSerif";
+const NOTE_FONT = "NoteSerif";
 
 let loading: Promise<void> | null = null;
 export function loadHandFont() {

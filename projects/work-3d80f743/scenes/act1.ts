@@ -67,7 +67,6 @@ import { type Walker, drawPerson, walkerAt } from "../lib/people";
 import { type Num, ARMS, LIMP, SMOOTH, fade, hitch, live, ring, smoothTrack, withDrag } from "../lib/motion";
 import { CHEN, KID, WAVE_R, ZHONG, ZHOU as ZP, armL, armR, legL, legR } from "../lib/poses";
 import { WOMAN_LOOK, WOMAN_SCALE } from "../lib/woman";
-import { SHOP_CAM, SHOP_T, createShopScene } from "../lib/shopScene";
 
 const ZHOU = CAST.周磊;
 const STONE = CAST.小石头;
@@ -128,8 +127,6 @@ function timeline() {
     /** 停在整座城上 */
     wide: b(28),
     end: b(32),
-    /** 人声进来：从整座城上顺着最高那栋楼扎下去，落在楼脚的哑铃店门口（第二幕从这一帧接着） */
-    dive: SHOP_T.land,
     beat: (k: number) => b(k),
   };
 }
@@ -204,7 +201,6 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const grain = makeGrain();
   prepareCity();
   const T = timeline();
-  const shop = createShopScene();
 
   // 同一时刻的姿势会被镜头、画面、拖影反复用到：按时间记住最近的结果（返回的东西不要改）
   const memoT = <R,>(fn: (t: number) => R) => {
@@ -908,11 +904,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     return { startCam, A, s0: toScreen(startCam, A[0], A[1]) };
   })();
   const DRUM_KICK = (t: number) => (t < T.drum ? 1 : 1 + 0.045 * Math.exp(-(t - T.drum) / 0.22) * (1 - Math.exp(-(t - T.drum) / 0.04)));
-  // ⑪ 扎下去（16.0–16.51，接第二幕）：人声一进来，镜头顺着最高那栋楼越扎越快（pow 2.2），落在楼脚的哑铃店门口、冲过 4%
-  const DIVE_TO: Cam = { ...SHOP_CAM, z: SHOP_CAM.z * 1.04 };
-  const diveCam = (t: number, city: (t: number) => Cam): Cam => camLerp(city(T.end), DIVE_TO, Math.pow(ph(t, T.end, T.dive), 2.2));
-  const camBase = (t: number): Cam => (t > T.end ? diveCam(t, camCity) : camCity(t));
-  const camCity = (t: number): Cam => {
+  const camBase = (t: number): Cam => {
     if (t < T.cut) return camS1(t);
     if (t < T.her) return arriveCam(t);
     if (t < CASE_CUT) return herCam(t);
@@ -1072,7 +1064,6 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     vig += 0.08 * fade(t, CASE_CUT, T.slam) * (1 - fade(t, T.slam + 0.2, T.slam + 0.6));
     vig += 0.12 * fade(t, T.land + 0.3, T.pull) * (1 - fade(t, T.take, T.take + 0.5));
     vig -= 0.1 * fade(t, T.r0, T.wide);
-    vig += 0.1 * fade(t, T.end, T.dive);
     if (t < T.cut) vig = 0.04;
     const warm = 0.9 + 0.25 * fade(t, T.take, T.take + 0.5) * (1 - fade(t, T.walk0 + 1, T.walk0 + 2.5));
     const haze = 0.32 * clamp01((cam.z - 1.6) / 0.6) * (t > T.land ? 1 : 0);
@@ -1159,8 +1150,6 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       drawHouseWindowFront(g, HOUSE);
     }
     drawStreet(g, cam);
-    // 楼脚的哑铃店（扎下去时落在这里，和第二幕的第一帧一样画在街面上）
-    if (t > T.end && TOWER.x < view.x1 && TOWER.x + TOWER.w > view.x0 && view.y1 > -1000) shop.draw(g, t, cam.z);
     // 跟着她跑：镜头横着走得很快，背景按 1/48 秒快门拖一下；盯着公文包往下坠时竖着拖。人物、公文包画在拖影后面，保持清楚
     const [smx, smy] = trackSmear(t);
     if (Math.hypot(smx, smy) > 3) {
@@ -1293,8 +1282,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     puff(c.x - 150, T_BRAKE, 10, 13, 0.6, 120, 50, 12, 0.45);
     puff(chenAt(T.launch).x, T.launch, 10, 17, 0.6, 140, 40, 13, 0.4);
     if (t >= T.land) puff(chenAt(T.land).x, T.land, 14, 19, 0.9, 200, 70, 16, 0.45);
-    // 近景：比人离镜头更近的一层（扎下去时不画：第二幕的店门口没有它）
-    if (t >= T.cut && t < T.end) {
+    // 近景：比人离镜头更近的一层
+    if (t >= T.cut) {
       applyCam(g, base, cam, FG_D, sh);
       const fv = viewOf(cam, FG_D);
       for (const f of FOREGROUND) {
@@ -1444,7 +1433,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       const c1 = camAt(t);
       const c0 = cutFrame ? camAt(t + 1 / 30) : camAt(t0);
       const dy = (cutFrame ? c0.y - c1.y : c1.y - c0.y) * c1.z;
-      const falling = (t > T.whip && t < T.cut + 0.25) || (t > T.end + 0.05 && t < T.dive + 0.02);
+      const falling = t > T.whip && t < T.cut + 0.25;
       const blur = !falling ? 0 : Math.min(260, Math.max(0, Math.abs(dy) - 30) * 0.9);
       if (blur < 4) {
         drawFrame(ctx, t);

@@ -14,7 +14,7 @@
 
 import type { Angles } from "@materials/剪纸角色/code/chengtuo";
 
-export type Hand = "relax" | "open" | "fist" | "grip" | "point" | "pinky" | "flat";
+type Hand = "relax" | "open" | "fist" | "grip" | "point" | "pinky" | "flat";
 
 /** 一条腿：胯（大腿往前抬为正）、膝（往后弯为负）、脚对地面的角度 */
 export const legL = (hip: number, knee: number, foot = 0): Angles => ({ hipL: hip, kneeL: knee, ankleL: foot - hip - knee });
@@ -35,7 +35,7 @@ export const armR = (up: number, elbow: number, wrist: number, hand: Hand, lean:
 });
 
 /** 写一个姿势：先定 lean，手臂按画面方向给 */
-export function pose(lean: number, rest: Omit<Angles, "lean">, arms: (lean: number) => Angles): Angles {
+function pose(lean: number, rest: Omit<Angles, "lean">, arms: (lean: number) => Angles): Angles {
   return { lean, ...rest, ...arms(lean) };
 }
 
@@ -55,7 +55,7 @@ const RUN_FACE: Angles = { face: -1, ground: false, neck: 12, expression: "坚�
 /** 单膝跪的腿：前腿 R 大腿放平、小腿立着，大腿按「朝着镜头伸出来」压短到 0.65（thighR），前脚收到身前约 43，跪的高度不变
  *  （用户 2026-10-19：「大腿不是有一个参数可以说短吗？缩短一点，近处拿」；原来前脚伸出去很远，靴筒就在他跟前，拿和递在一个地方）；
  *  后膝 L 着地、在胯后面，后脚靴尖点地 */
-export const KNEEL = { ...legR(96, -98), ...legL(-6, -134, -140), thighR: 0.65 };
+const KNEEL = { ...legR(96, -98), ...legL(-6, -134, -140), thighR: 0.65 };
 // 注意：关键帧没写的参数接着上一帧，跪完站起来（起身）要把 thighR 写回 1，不然后面走路一条大腿短一截（用户 2026-10-19：「后面腿一长一短了」）
 
 export const CHEN = {
