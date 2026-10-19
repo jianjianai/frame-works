@@ -3,6 +3,7 @@
  * （第 i 个中文词用第 i 个英文词的时间），太宽时在最平衡的空格处换行；某一句可以被红笔改写（划掉英文词和中文、在下面手写改写）。
  * 歌词数据由作品给：lyricLines(逐词时间, 中文分词, 红笔改写)。段落样式（桥段粉色、全片最大的一句、尾段暖黄）、钩子标题、
  * 大字幕 caption 和结尾引导由作品通过 style / before / after 加进来；音乐剪过时用 songTime 把作品时间换成歌曲时间。
+ * 海外版（英语观众）：cn: false 只显示英文（不留中文那一行的位置），enSize 加大字号，一句要折行时各行尽量一样宽。
  */
 import { z } from "zod";
 import type { Scene, SceneOptions } from "@frame/engine/types";
@@ -82,6 +83,11 @@ export interface LyricsOptions {
   before?: (ctx: Ctx, abs: number, t: number) => void;
   /** drawn after the lyrics (big captions, the end prompts) */
   after?: (ctx: Ctx, abs: number, t: number) => void;
+  /** false: English only, no Chinese row (a version for an English-speaking audience); a line that needs two rows is
+   *  split as evenly as it can be */
+  cn?: boolean;
+  /** size of the English words (default 58; the film's biggest line grows with it) */
+  enSize?: number;
 }
 
 interface CnRow {
@@ -136,20 +142,34 @@ interface Placed {
   w: number;
   row: number;
 }
-/** Word positions per line and size (lines are the caller's objects: cached by identity). */
-const layoutCache = new WeakMap<Line, Map<number, { placed: Placed[]; rows: number }>>();
-function layout(ctx: Ctx, line: Line, size: number) {
+/** Word positions per line and size (lines are the caller's objects: cached by identity). `balanced`: a line that
+ *  needs more than one row keeps that many rows but makes them as even as it can (the widest as narrow as possible),
+ *  instead of filling each row before starting the next. */
+const layoutCache = new WeakMap<Line, Map<string, { placed: Placed[]; rows: number }>>();
+function layout(ctx: Ctx, line: Line, size: number, balanced = false) {
   let sizes = layoutCache.get(line);
   if (!sizes) layoutCache.set(line, (sizes = new Map()));
-  const cached = sizes.get(size);
+  const key = balanced ? `${size}b` : `${size}`;
+  const cached = sizes.get(key);
   if (cached) return cached;
   ctx.font = font(size, F.en);
   const space = ctx.measureText(" ").width;
-  const rows: Placed[][] = [[]];
+  const ws = line.words.map((word) => ctx.measureText(word[2]).width);
+  let breaks: number[] = [];
   let rowW = 0;
-  line.words.forEach((word, index) => {
-    const w = ctx.measureText(word[2]).width;
+  ws.forEach((w, i) => {
     if (rowW > 0 && rowW + space + w > MAX_W) {
+      breaks.push(i);
+      rowW = 0;
+    }
+    rowW += (rowW > 0 ? space : 0) + w;
+  });
+  if (balanced && breaks.length) breaks = evenBreaks(ws, space, breaks.length + 1);
+  const rows: Placed[][] = [[]];
+  rowW = 0;
+  line.words.forEach((word, index) => {
+    const w = ws[index];
+    if (breaks.includes(index)) {
       rows.push([]);
       rowW = 0;
     }
@@ -163,8 +183,31 @@ function layout(ctx: Ctx, line: Line, size: number) {
     for (const p of r) placed.push({ ...p, x: W / 2 - total / 2 + p.x });
   }
   const res = { placed, rows: rows.length };
-  sizes.set(size, res);
+  sizes.set(key, res);
   return res;
+}
+/** where to break words of widths `ws` into `n` rows so that the widest row is as narrow as possible (word indexes
+ *  that start a new row) */
+function evenBreaks(ws: number[], space: number, n: number): number[] {
+  const N = ws.length;
+  const width = (a: number, b: number) => ws.slice(a, b).reduce((s, w) => s + w, 0) + space * (b - a - 1);
+  const memo = new Map<string, [number, number[]]>();
+  // [widest row, breaks] for words i.. laid out in k rows
+  const best = (i: number, k: number): [number, number[]] => {
+    if (k === 1) return [width(i, N), []];
+    const key = `${i},${k}`;
+    const hit = memo.get(key);
+    if (hit) return hit;
+    let res: [number, number[]] = [Infinity, []];
+    for (let j = i + 1; j <= N - (k - 1); j++) {
+      const [rest, br] = best(j, k - 1);
+      const m = Math.max(width(i, j), rest);
+      if (m < res[0]) res = [m, [j, ...br]];
+    }
+    memo.set(key, res);
+    return res;
+  };
+  return best(0, n)[1];
 }
 
 function strike(ctx: Ctx, x1: number, x2: number, y: number, p: number, seed: number, lw = 7) {
@@ -186,11 +229,14 @@ export function drawLyric(ctx: Ctx, o: LyricsOptions, li: number, abs: number) {
   const aOut = 1 - phase(abs, hideAt - 0.16, hideAt);
   const alpha = aIn * aOut;
   const { bridge, big, outro } = o.style?.(li) ?? {};
-  const size = big ? 84 : EN_SIZE;
-  const { placed, rows } = layout(ctx, line, size);
-  const rowH = big ? 96 : ROW_H;
-  const cnCount = cnLines(ctx, line.cn, big ? 76 : CN_SIZE).length;
-  const blockH = (rows - 1) * rowH + (big ? 104 : 88) + (cnCount - 1) * CN_ROW_H;
+  // English only (a foreign version): no Chinese row, the English block centred where the two languages were
+  const enOnly = o.cn === false;
+  const k = (o.enSize ?? EN_SIZE) / EN_SIZE;
+  const size = (big ? 84 : EN_SIZE) * k;
+  const { placed, rows } = layout(ctx, line, size, enOnly);
+  const rowH = (big ? 96 : ROW_H) * k;
+  const cnCount = enOnly ? 0 : cnLines(ctx, line.cn, big ? 76 : CN_SIZE).length;
+  const blockH = enOnly ? (rows - 1) * rowH : (rows - 1) * rowH + (big ? 104 : 88) + (cnCount - 1) * CN_ROW_H;
   const top = (line.fix ? 1290 : 1335) - blockH / 2 + (1 - aIn) * 24;
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -208,7 +254,7 @@ export function drawLyric(ctx: Ctx, o: LyricsOptions, li: number, abs: number) {
     ctx.save();
     ctx.translate(p.x + p.w / 2, y - (active ? 3 * (1 - phase(abs, ws, ws + 0.3)) : 0));
     ctx.scale(sc, sc);
-    ctx.lineWidth = 11;
+    ctx.lineWidth = 11 * k;
     ctx.lineJoin = "round";
     ctx.strokeStyle = "rgba(14,12,18,0.92)";
     ctx.strokeText(word, -p.w / 2, 0);
@@ -222,6 +268,19 @@ export function drawLyric(ctx: Ctx, o: LyricsOptions, li: number, abs: number) {
     const sp = phase(abs, line.fix.at, line.fix.at + 0.35);
     for (const p of placed)
       if (line.fix.en.includes(p.index)) strike(ctx, p.x, p.x + p.w, top + p.row * rowH + 2, sp, 40 + p.index);
+  }
+  if (enOnly) {
+    // the red pen writes its note under the English
+    const np = line.fix ? phase(abs, line.fix.at + 0.45, line.fix.at + 1.25) : 0;
+    if (line.fix && np > 0) {
+      ctx.save();
+      ctx.translate(W / 2 + 10, top + (rows - 1) * rowH + 86 * k);
+      ctx.rotate(-0.035 + jit(5, 0.004));
+      text(ctx, writeOn(line.fix.note, np), 0, 0, { size: 70, font: F.pen, fill: "#ff3b3b", stroke: "#fff", lw: 12 });
+      ctx.restore();
+    }
+    ctx.restore();
+    return;
   }
   // Chinese (wraps at the space nearest the middle when a line is too wide); each character
   // lights up while the English words it translates are being sung
@@ -388,6 +447,7 @@ export const resources = defineResources({
     params: z.object({
       style: z.enum(["normal", "bridge", "big", "outro"]).default("normal").describe("段落样式"),
       fix: z.boolean().default(true).describe("第二句的红笔改写"),
+      english: z.boolean().default(false).describe("只显示英文（海外版：cn: false、enSize: 68）"),
     }),
     preview: {
       width: 1080,
@@ -401,7 +461,7 @@ export const resources = defineResources({
         ctx.translate(0, -1000);
         const lines = lyricLines(SAMPLE_WORDS, SAMPLE_CN, p.fix ? SAMPLE_FIX : {});
         const style = p.style === "normal" ? {} : { [p.style]: true };
-        drawLyrics(ctx, t, { lines, end: 5, style: () => style });
+        drawLyrics(ctx, t, { lines, end: 5, style: () => style, ...(p.english ? { cn: false, enSize: 68 } : {}) });
       },
     },
   }),
