@@ -283,7 +283,18 @@ export function live(keys: MoveKey[], opts: LiveOpts) {
   };
 
   // ——— 根：标了 plant 的那段那只脚钉在地上（按没加小动作的腿算，腿不加小动作就不会滑） ———
-  const rawPose = (t: number) => figurePose(sample(F, t) as Angles, t, look, itemsAt(t));
+  // figurePose 每次都要把全部参数校验一遍（很慢）：同一时刻只算一次
+  const rawMemo = new Map<number, PoseIn>();
+  const rawPose = (t: number) => {
+    const k = Math.round(t * 1e4);
+    let p = rawMemo.get(k);
+    if (!p) {
+      p = figurePose(sample(F, t) as Angles, t, look, itemsAt(t));
+      if (rawMemo.size > 400) rawMemo.clear();
+      rawMemo.set(k, p);
+    }
+    return p;
+  };
   const footX = (pose: PoseIn, side: "L" | "R") => figureRig({ ...pose, hip: [0, 0] }, look).legs[side].end[0];
   // 每一帧开始时根在哪（只算一次）
   const xKey: number[] = [F[0].x];
@@ -323,20 +334,31 @@ export function live(keys: MoveKey[], opts: LiveOpts) {
     return x0;
   };
 
+  const frameMemo = new Map<number, LiveFrame>();
   const frame = (t: number): LiveFrame => {
-    const o = optionsAt(t);
-    const pose = figurePose(o as Angles, t, look, itemsAt(t));
-    pose.squash = squashAt(t);
-    return { pose, x: rootX(t), options: o as Angles };
+    const k = Math.round(t * 1e4);
+    let f = frameMemo.get(k);
+    if (!f) {
+      const o = optionsAt(t);
+      const pose = figurePose(o as Angles, t, look, itemsAt(t));
+      pose.squash = squashAt(t);
+      f = { pose, x: rootX(t), options: o as Angles };
+      if (frameMemo.size > 400) frameMemo.clear();
+      frameMemo.set(k, f);
+    }
+    return f;
   };
 
   return (t: number): LiveFrame => {
-    const now = frame(t);
+    // 记住的那一帧不能改：拷一份再加头发甩动、眨眼、呼吸
+    const f = frame(t);
+    const now: LiveFrame = { ...f, pose: { ...f.pose, expr: { ...(f.pose.expr as object) } } };
     const follow = opts.follow ?? 1;
     if (follow > 0) {
-      // 速度按 0.08 秒取平均：逐帧差分会把每一步落地的小起伏都甩进头发里
-      const dt = 0.08;
-      const prev = frame(t - dt);
+      // 速度按约 0.1 秒取平均（逐帧差分会把每一步落地的小起伏都甩进头发里）；前一个时刻取在 1/30 秒的格子上，播放时和前几帧共用
+      const tp = Math.round((t - 0.1) * 30) / 30;
+      const dt = Math.max(0.05, t - tp);
+      const prev = frame(tp);
       const v: V2 = [(now.x - prev.x) / dt, ((now.pose.hip as V2)[1] - (prev.pose.hip as V2)[1]) / dt];
       withDrag(now.pose, v, follow);
     }

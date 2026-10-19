@@ -1,12 +1,13 @@
-// 城：暖光电影感的老城区（样张 sheets/画风.ts）。六层居民楼、防盗窗（片子里的防飘栏）、空调外机、晾衣杆、花盆、
-// 电线和梧桐；傍晚的暖光从左上斜着照进来，空气里飘着发亮的浮尘（就是灰），天顶是发光的「白」。
-// 近处的东西和人物一样：深色描边、平涂、右下一道阴影；越远越只剩剪影，被暖色的空气冲淡。
+// 城：暖光电影感的老城区。六层居民楼、防飘栏（窗外的铁笼）、空调外机、太阳能热水器、晾衣杆、电线、梧桐；
+// 傍晚的太阳在左上方，斜着照进来：楼和街上有一道道斜的影子（楼缝里漏下来的光），影子是偏紫的暖灰，不压暗、不发黑；
+// 空气里飘着发亮的浮尘（就是「灰」），越远的楼越淡、越暖，只剩剪影和几点亮着的窗；天顶是发光的「白」，下沿一圈肥皂泡似的彩光。
+// 近处的东西和人物一样：深色描边、平涂、右下一道阴影。
 // 坐标：世界单位和人物一样（人 s = 1 时 590 高），街面 y = 0，往上是负；远处的层按 D 投影（见 cam.ts）。
 
 import { seeded } from "@frame/engine/math";
 import { type Cam, H, W, applyCam, clamp01, toScreen, viewOf } from "./cam";
 
-export const INK = "#2b2630";
+export const INK = "#2e2530";
 /** 白的下沿（世界 y） */
 export const Y_WHITE = -9200;
 
@@ -35,33 +36,82 @@ export function part(g: CanvasRenderingContext2D, path: Path2D, fill: string, sh
   }
 }
 
-const rect = (x: number, y: number, w: number, h: number) => {
+export const rectPath = (x: number, y: number, w: number, h: number) => {
   const p = new Path2D();
   p.rect(x, y, w, h);
   return p;
 };
 
-// ——— 天：地面是暖的杏色，越往上越淡，最上面是白 ———
+/** 往路径里加一个椭圆（先挪到它的起点：直接 ellipse 会从上一个点连一条直线过来） */
+export function addEllipse(p: Path2D | CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, rot = 0) {
+  p.moveTo(cx + rx * Math.cos(rot), cy + rx * Math.sin(rot));
+  p.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2);
+}
+
+// ——— 小贴图（只做一次）———
+function sprite(size: number, stops: [number, string][]) {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = size;
+  const g = cv.getContext("2d")!;
+  const gr = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  for (const [k, c] of stops) gr.addColorStop(k, c);
+  g.fillStyle = gr;
+  g.fillRect(0, 0, size, size);
+  return cv;
+}
+let GLOW: HTMLCanvasElement | null = null;
+/** 一团暖光（用 lighter 叠：亮着的窗、路灯、人身上的光） */
+export const glowSprite = () =>
+  (GLOW ??= sprite(128, [
+    [0, "rgba(255,226,170,1)"],
+    [0.22, "rgba(255,210,150,0.55)"],
+    [0.55, "rgba(255,190,140,0.16)"],
+    [1, "rgba(255,180,140,0)"],
+  ]));
+let MOTE: HTMLCanvasElement | null = null;
+export const moteSprite = () =>
+  (MOTE ??= sprite(48, [
+    [0, "rgba(255,250,236,1)"],
+    [0.25, "rgba(255,240,215,0.75)"],
+    [1, "rgba(255,236,210,0)"],
+  ]));
+
+/** 在 (x, y) 叠一团光，r 是半径（当前坐标系），a 透明度 */
+export function drawGlow(g: CanvasRenderingContext2D, x: number, y: number, r: number, a: number) {
+  if (a <= 0.003 || r <= 0) return;
+  const op = g.globalCompositeOperation;
+  const ga = g.globalAlpha;
+  g.globalCompositeOperation = "lighter";
+  g.globalAlpha = Math.min(1, a);
+  g.drawImage(glowSprite(), x - r, y - r, r * 2, r * 2);
+  g.globalAlpha = ga;
+  g.globalCompositeOperation = op;
+}
+
+// ——— 天：街上是暖的杏色，越往上越淡，最上面是白 ———
+// 越往上越靠近光：空气是发亮的杏金色（不是白），白的边才亮得出来；白下面那一圈眩光在 drawWhite 里叠
 const SKY: [number, number[]][] = [
-  [0, [239, 196, 165]],
-  [0.1, [242, 214, 193]],
-  [0.32, [236, 226, 222]],
-  [0.7, [247, 240, 233]],
-  [0.93, [253, 250, 245]],
-  [1, [255, 255, 255]],
+  [0, [244, 197, 160]],
+  [0.07, [247, 210, 176]],
+  [0.2, [249, 221, 194]],
+  [0.45, [250, 227, 204]],
+  [0.75, [250, 224, 200]],
+  [0.92, [249, 219, 194]],
+  [1, [250, 222, 198]],
 ];
-export function skyAt(y: number) {
+export function skyRGB(y: number): number[] {
   const k = clamp01(y / Y_WHITE);
   for (let i = 1; i < SKY.length; i++) {
     if (k <= SKY[i][0]) {
       const [a, ca] = SKY[i - 1];
       const [b, cb] = SKY[i];
       const u = (k - a) / (b - a);
-      return `rgb(${ca.map((v, j) => Math.round(v + (cb[j] - v) * u)).join(",")})`;
+      return ca.map((v, j) => Math.round(v + (cb[j] - v) * u));
     }
   }
-  return "rgb(255,255,255)";
+  return [255, 255, 252];
 }
+export const skyAt = (y: number) => `rgb(${skyRGB(y).join(",")})`;
 
 /** 天色（按人这一层的高度换算到画面上）；alpha < 1 时当作空气蒙在远处的楼上 */
 export function drawSky(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, alpha = 1) {
@@ -69,7 +119,7 @@ export function drawSky(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, al
   const yTop = c.y - H / 2 / c.z;
   const yBot = c.y + H / 2 / c.z;
   const gr = g.createLinearGradient(0, 0, 0, H);
-  for (let i = 0; i <= 8; i++) gr.addColorStop(i / 8, skyAt(yTop + ((yBot - yTop) * i) / 8));
+  for (let i = 0; i <= 6; i++) gr.addColorStop(i / 6, skyAt(yTop + ((yBot - yTop) * i) / 6));
   g.globalAlpha = alpha;
   g.fillStyle = gr;
   g.fillRect(-40, -40, W + 80, H + 80);
@@ -86,156 +136,466 @@ export interface Block {
   seed: number;
   /** 一层多高（层坐标） */
   fh: number;
+  /** 一楼是铺面（卷帘门、遮阳棚、招牌） */
+  shop?: string;
+  /** 楼顶只有女儿墙和水箱（不要天线、太阳能热水器：离镜头很近的矮房子，楼顶的东西会显得很大） */
+  plainRoof?: boolean;
 }
 
-/**
- * 一栋老居民楼（层坐标，地面 y = 0）：每层几户，窗外凸出来的防盗窗，有的挂空调外机、伸出晾衣杆晾着衣服、摆着花盆，
- * 傍晚有几扇亮着暖灯。detail：0 只有剪影和窗影，1 描边和窗，2 全部细节。按画面上一层有多高自动降细节。
- */
-export function drawBlock(g: CanvasRenderingContext2D, b: Block, c: Cam, D: number, detail: number, lw: number, shadow = true) {
+interface Laundry {
+  x: number;
+  y: number;
+  len: number;
+  items: { dx: number; kind: number; color: string; shade: string }[];
+}
+interface Geom {
+  w: number;
+  top: number;
+  body: Path2D;
+  slabs: Path2D;
+  glass: Path2D;
+  lit: Path2D;
+  litAt: P[];
+  sheen: Path2D;
+  frames: Path2D;
+  cageShadow: Path2D;
+  cages: Path2D;
+  bars: Path2D;
+  shelves: Path2D;
+  pots: Path2D;
+  leaves: Path2D;
+  acs: Path2D;
+  fans: Path2D;
+  drips: Path2D;
+  laundry: Laundry[];
+  roofFill: Path2D;
+  roofLines: Path2D;
+  solar: Path2D | null;
+  solarTubes: Path2D | null;
+  dots: Path2D;
+  dotsLit: Path2D;
+  shopFront: { x: number; w: number; awning: string; open: number }[];
+}
+const GEOMS = new WeakMap<Block, Geom>();
+
+const LAUNDRY = [
+  ["#f3efe6", "#ddd7cb"],
+  ["#c9705c", "#b35f4c"],
+  ["#93b1c6", "#7f9db3"],
+  ["#e8c76a", "#d4b258"],
+  ["#d9d3c8", "#c4bdb1"],
+  ["#7f93a8", "#6d8196"],
+];
+
+/** 楼的几何按楼自己的坐标算一次（一层 128 高、宽 w/u），画的时候缩放 u = fh/128 */
+function geomOf(b: Block): Geom {
+  const hit = GEOMS.get(b);
+  if (hit) return hit;
   const u = b.fh / 128;
-  const s = c.z / D;
-  const px = b.fh * s;
-  if (px < 64) detail = Math.min(detail, 1);
-  if (px < 20) detail = 0;
-  const v = viewOf(c, D);
-  g.save();
-  g.translate(b.x, 0);
-  g.scale(u, u);
   const w = b.w / u;
   const top = -b.floors * 128 - 60;
-  const L = lw / u;
-  const body = rect(0, top, w, -top + 3000);
-  if (shadow && detail > 0) {
-    g.save();
-    g.translate(12 / (s * u), 9 / (s * u));
-    g.fillStyle = "rgba(90,50,50,0.16)";
-    g.fill(body);
-    g.restore();
-  }
-  part(g, body, b.wall, detail > 0 ? b.wallShade : null, detail > 0 ? L : 0, [14, 10]);
   const r = seeded(b.seed);
-  const tx = w * (0.15 + r() * 0.55);
-  part(g, rect(tx, top - 70, 90, 70), b.wallShade, null, detail > 0 ? L : 0);
-  if (detail > 0 && r() < 0.5) {
-    g.strokeStyle = INK;
-    g.lineWidth = L * 0.8;
-    g.beginPath();
-    g.moveTo(w * 0.8, top);
-    g.lineTo(w * 0.8, top - 180);
-    g.moveTo(w * 0.8 - 30, top - 130);
-    g.lineTo(w * 0.8 + 30, top - 130);
-    g.stroke();
-  }
-  // 看得见的楼层（层坐标 → 楼的局部）
-  const yMin = (v.y0 - 0) / u;
-  const yMax = (v.y1 - 0) / u;
+  const body = rectPath(0, top, w, -top + 3000);
+  const slabs = new Path2D();
+  const glass = new Path2D();
+  const lit = new Path2D();
+  const litAt: P[] = [];
+  const sheen = new Path2D();
+  const frames = new Path2D();
+  const cageShadow = new Path2D();
+  const cages = new Path2D();
+  const bars = new Path2D();
+  const shelves = new Path2D();
+  const pots = new Path2D();
+  const leaves = new Path2D();
+  const acs = new Path2D();
+  const fans = new Path2D();
+  const drips = new Path2D();
+  const laundry: Laundry[] = [];
+  const dots = new Path2D();
+  const dotsLit = new Path2D();
   const units = Math.max(2, Math.round(w / 150));
   const uw = (w - 40) / units;
-  if (detail === 0) {
-    // 太远太小时连窗影也不画（只剩剪影）
-    if (px < 10) {
-      g.restore();
-      return;
-    }
-    g.fillStyle = "rgba(150,110,115,0.16)";
-    for (let f = 0; f < b.floors; f++) {
-      const y = top + 70 + f * 128;
-      if (y > yMax || y + 80 < yMin) continue;
-      for (let i = 0; i < units; i++) g.fillRect(20 + uw * i + uw * 0.2, y, uw * 0.6, 60);
-    }
-    g.restore();
-    return;
-  }
+  const floorsDrawn = b.shop ? b.floors - 1 : b.floors;
   for (let f = 0; f < b.floors; f++) {
     const y = top + 70 + f * 128;
     const rr = seeded(b.seed * 131 + f * 7);
-    if (y - 60 > yMax || y + 140 < yMin) continue;
-    if (detail > 1) {
-      g.strokeStyle = "rgba(43,38,48,0.22)";
-      g.lineWidth = L * 0.6;
-      g.beginPath();
-      g.moveTo(0, y - 14);
-      g.lineTo(w, y - 14);
-      g.stroke();
+    if (f > 0) {
+      slabs.moveTo(0, y - 16);
+      slabs.lineTo(w, y - 16);
     }
     for (let i = 0; i < units; i++) {
       const wx = 20 + uw * i + uw * 0.18;
       const ww = uw * 0.64;
       const wh = 74;
       const kind = rr();
-      const lit = rr() < 0.16;
-      if (detail === 1) {
-        g.fillStyle = lit ? "#ffd99a" : "#8a8f9b";
-        g.fillRect(wx, y, ww, wh);
-        if (kind < 0.7) {
-          g.strokeStyle = INK;
-          g.lineWidth = L * 0.6;
-          g.strokeRect(wx - 6, y - 6, ww + 12, wh + 16);
-        }
-        continue;
+      const isLit = rr() < 0.17;
+      // 远看只剩一格格窗
+      (isLit ? dotsLit : dots).rect(wx, y, ww, wh);
+      if (f >= floorsDrawn) continue;
+      (isLit ? lit : glass).rect(wx, y, ww, wh);
+      if (isLit) litAt.push([wx + ww / 2, y + wh / 2]);
+      else {
+        // 玻璃上一道斜的反光
+        sheen.moveTo(wx + ww * 0.12, y + wh);
+        sheen.lineTo(wx + ww * 0.42, y);
+        sheen.lineTo(wx + ww * 0.62, y);
+        sheen.lineTo(wx + ww * 0.32, y + wh);
+        sheen.closePath();
       }
-      part(g, rect(wx, y, ww, wh), lit ? "#ffd99a" : "#7f8796", lit ? "#f4c27a" : "#6c7382", L * 0.8, [5, 5]);
-      // 防盗窗：凸出来的铁笼
-      if (kind < 0.7) {
-        g.strokeStyle = INK;
-        g.lineWidth = L * 0.9;
-        g.strokeRect(wx - 8, y - 8, ww + 16, wh + 22);
-        g.lineWidth = L * 0.55;
-        g.beginPath();
+      frames.rect(wx - 4, y - 4, ww + 8, wh + 8);
+      // 防飘栏：凸出来的铁笼，底下一块托板，影子落在右下的墙上
+      if (kind < 0.72) {
+        cageShadow.rect(wx - 8 + 12, y - 8 + 12, ww + 16, wh + 22);
+        cages.rect(wx - 8, y - 8, ww + 16, wh + 22);
         for (let k = 1; k < 6; k++) {
           const bx = wx - 8 + ((ww + 16) * k) / 6;
-          g.moveTo(bx, y - 8);
-          g.lineTo(bx, y + wh + 14);
+          bars.moveTo(bx, y - 8);
+          bars.lineTo(bx, y + wh + 14);
         }
-        g.stroke();
-        part(g, rect(wx - 12, y + wh + 12, ww + 24, 10), "#a39a96", null, L * 0.7);
-        if (rr() < 0.45) {
-          const pot = new Path2D();
-          pot.moveTo(wx + 6, y + wh + 12);
-          pot.lineTo(wx + 34, y + wh + 12);
-          pot.lineTo(wx + 30, y + wh - 12);
-          pot.lineTo(wx + 10, y + wh - 12);
-          pot.closePath();
-          part(g, pot, "#c77b5a", null, L * 0.6);
-          const leaf = new Path2D();
-          leaf.ellipse(wx + 20, y + wh - 26, 22, 16, 0, 0, Math.PI * 2);
-          part(g, leaf, "#7e9b62", "#6a8652", L * 0.6, [4, 3]);
+        bars.moveTo(wx - 8, y + wh * 0.45);
+        bars.lineTo(wx + ww + 8, y + wh * 0.45);
+        shelves.rect(wx - 12, y + wh + 12, ww + 24, 10);
+        if (rr() < 0.5) {
+          const px = wx + 4 + rr() * (ww - 40);
+          pots.moveTo(px, y + wh + 12);
+          pots.lineTo(px + 28, y + wh + 12);
+          pots.lineTo(px + 24, y + wh - 12);
+          pots.lineTo(px + 4, y + wh - 12);
+          pots.closePath();
+          // 一丛：三团叶子挤在一起（单独一个圆像棒棒糖）
+          const lx = px + 14;
+          const ly = y + wh - 20;
+          addEllipse(leaves, lx - 11, ly - 4, 13, 9, -0.6);
+          addEllipse(leaves, lx + 11, ly - 5, 13, 9, 0.6);
+          addEllipse(leaves, lx, ly - 15, 11, 12, 0);
+          if (rr() < 0.5) addEllipse(leaves, lx + 22, ly - 18, 9, 7, 0.9);
         }
       }
-      // 空调外机
+      // 空调外机：底下拖一道锈水印
       if (kind > 0.55 && i === units - 1) {
-        part(g, rect(wx + ww + 14, y + 26, 58, 44), "#e9e4dc", "#d6cfc4", L * 0.8, [4, 4]);
-        g.strokeStyle = INK;
-        g.lineWidth = L * 0.5;
-        g.beginPath();
-        g.arc(wx + ww + 43, y + 48, 14, 0, Math.PI * 2);
-        g.stroke();
+        const ax = wx + ww + 14;
+        acs.rect(ax, y + 26, 60, 44);
+        fans.moveTo(ax + 45 + 14, y + 48);
+        fans.arc(ax + 45, y + 48, 14, 0, Math.PI * 2);
+        fans.moveTo(ax + 8, y + 34);
+        fans.lineTo(ax + 24, y + 34);
+        fans.moveTo(ax + 8, y + 42);
+        fans.lineTo(ax + 24, y + 42);
+        drips.rect(ax + 10, y + 70, 5, 40 + rr() * 50);
       }
-      // 晾衣杆
+      // 晾衣杆：伸出窗外，挂着衣服
       if (kind > 0.8 && i < units - 1) {
-        const py = y - 2;
-        g.strokeStyle = INK;
-        g.lineWidth = L * 0.7;
-        g.beginPath();
-        g.moveTo(wx + ww, py);
-        g.lineTo(wx + ww + 110, py - 6);
-        g.stroke();
-        const colors = ["#e8eef3", "#d77f6a", "#8fb2c9", "#f2d38a"];
-        for (let k = 0; k < 3; k++) {
-          const cx = wx + ww + 14 + k * 32;
-          const cloth = new Path2D();
-          cloth.moveTo(cx, py - 2);
-          cloth.lineTo(cx + 24, py - 3);
-          cloth.lineTo(cx + 22, py + 40 + (k % 2) * 10);
-          cloth.lineTo(cx + 2, py + 42);
-          cloth.closePath();
-          part(g, cloth, colors[(k + b.seed + f) % 4], null, L * 0.6);
+        const items: Laundry["items"] = [];
+        const n = 2 + Math.floor(rr() * 2);
+        for (let k = 0; k < n; k++) {
+          const c = LAUNDRY[Math.floor(rr() * LAUNDRY.length)];
+          items.push({ dx: 16 + k * 36, kind: Math.floor(rr() * 3), color: c[0], shade: c[1] });
         }
+        laundry.push({ x: wx + ww, y: y - 2, len: 40 + n * 36, items });
       }
     }
   }
+  // 楼顶：女儿墙、水箱、天线，有的楼顶有太阳能热水器
+  const roofFill = new Path2D();
+  const roofLines = new Path2D();
+  roofFill.rect(-6, top - 18, w + 12, 20);
+  const tx = w * (0.12 + r() * 0.4);
+  roofFill.rect(tx, top - 86, 96, 68);
+  roofFill.rect(tx + 10, top - 96, 76, 12);
+  if (r() < 0.6 && !b.plainRoof) {
+    const ax = w * (0.6 + r() * 0.3);
+    roofLines.moveTo(ax, top - 18);
+    roofLines.lineTo(ax, top - 210);
+    roofLines.moveTo(ax - 34, top - 170);
+    roofLines.lineTo(ax + 34, top - 166);
+    roofLines.moveTo(ax - 24, top - 140);
+    roofLines.lineTo(ax + 24, top - 137);
+  }
+  let solar: Path2D | null = null;
+  let solarTubes: Path2D | null = null;
+  if (r() < 0.55 && !b.plainRoof) {
+    const sx = w * (0.5 + r() * 0.25);
+    solar = new Path2D();
+    solar.moveTo(sx, top - 18);
+    solar.lineTo(sx + 40, top - 110);
+    solar.lineTo(sx + 170, top - 110);
+    solar.lineTo(sx + 130, top - 18);
+    solar.closePath();
+    solarTubes = new Path2D();
+    for (let k = 1; k < 7; k++) {
+      const q = k / 7;
+      solarTubes.moveTo(sx + 130 * q, top - 18);
+      solarTubes.lineTo(sx + 40 + 130 * q, top - 110);
+    }
+    solarTubes.moveTo(sx + 40, top - 118);
+    solarTubes.lineTo(sx + 170, top - 118);
+  }
+  const shopFront: Geom["shopFront"] = [];
+  if (b.shop) {
+    const n = Math.max(1, Math.round(w / 300));
+    const sw = w / n;
+    for (let k = 0; k < n; k++) shopFront.push({ x: k * sw + 14, w: sw - 28, awning: k % 2 ? b.shop : "#6f8f86", open: r() });
+  }
+  const geom: Geom = {
+    w,
+    top,
+    body,
+    slabs,
+    glass,
+    lit,
+    litAt,
+    sheen,
+    frames,
+    cageShadow,
+    cages,
+    bars,
+    shelves,
+    pots,
+    leaves,
+    acs,
+    fans,
+    drips,
+    laundry,
+    roofFill,
+    roofLines,
+    solar,
+    solarTubes,
+    dots,
+    dotsLit,
+    shopFront,
+  };
+  GEOMS.set(b, geom);
+  return geom;
+}
+
+/** 开场前把所有楼的几何算好（第一次画到时才算的话，镜头拉出全城那一下会卡住） */
+export function prepareCity() {
+  for (const L of LAYERS) for (const b of L.blocks) geomOf(b);
+  geomOf(TOWER);
+}
+
+/** 一件晾着的衣服（衣架坐标：挂在 (0,0)，往下垂），sway 被风吹的角度 */
+function cloth(g: CanvasRenderingContext2D, kind: number, color: string, shade: string, sway: number, L: number) {
+  const p = new Path2D();
+  if (kind === 0) {
+    // 短袖衫
+    p.moveTo(-16, 0);
+    p.lineTo(16, 0);
+    p.lineTo(28, 12);
+    p.lineTo(22, 22);
+    p.lineTo(15, 17);
+    p.lineTo(15, 48);
+    p.lineTo(-15, 48);
+    p.lineTo(-15, 17);
+    p.lineTo(-22, 22);
+    p.lineTo(-28, 12);
+    p.closePath();
+  } else if (kind === 1) {
+    // 裤子
+    p.moveTo(-13, 0);
+    p.lineTo(13, 0);
+    p.lineTo(14, 58);
+    p.lineTo(3, 58);
+    p.lineTo(0, 16);
+    p.lineTo(-3, 58);
+    p.lineTo(-14, 58);
+    p.closePath();
+  } else {
+    // 毛巾
+    p.rect(-12, 0, 24, 40);
+  }
+  g.save();
+  g.rotate(sway);
+  part(g, p, color, shade, L * 0.6, [3, 3]);
   g.restore();
+}
+
+/**
+ * 一栋老居民楼（层坐标，地面 y = 0）。detail：0 只有剪影和窗影，1 描边和窗，2 全部细节；按画面上一层有多高自动降细节。
+ * t：时间（晾的衣服被风吹）。
+ */
+export function drawBlock(g: CanvasRenderingContext2D, b: Block, c: Cam, D: number, detail: number, lw: number, t = 0) {
+  const u = b.fh / 128;
+  const s = c.z / D;
+  const px = b.fh * s;
+  if (px < 60) detail = Math.min(detail, 1);
+  if (px < 16) detail = 0;
+  const G = geomOf(b);
+  g.save();
+  g.translate(b.x, 0);
+  g.scale(u, u);
+  const L = lw / u;
+  if (detail === 0) {
+    g.fillStyle = b.wall;
+    g.fill(G.body);
+    g.fill(G.roofFill);
+    if (px > 6) {
+      g.fillStyle = "rgba(140,96,104,0.22)";
+      g.fill(G.dots);
+      g.fillStyle = "rgba(255,214,150,0.85)";
+      g.fill(G.dotsLit);
+    }
+    g.restore();
+    return;
+  }
+  // 楼身：右下落一块影子在后面的楼上
+  g.save();
+  g.translate(14 / (s * u), 10 / (s * u));
+  g.fillStyle = "rgba(110,64,80,0.14)";
+  g.fill(G.body);
+  g.restore();
+  g.fillStyle = b.wall;
+  g.fill(G.body);
+  // 光：左上亮、右下暗（像有体积）
+  const shade = g.createLinearGradient(0, G.top, G.w, 0);
+  shade.addColorStop(0, "rgba(255,244,222,0.30)");
+  shade.addColorStop(0.45, "rgba(255,244,222,0)");
+  shade.addColorStop(1, "rgba(120,72,96,0.14)");
+  g.fillStyle = shade;
+  g.fill(G.body);
+  // 楼顶
+  g.fillStyle = b.wallShade;
+  g.fill(G.roofFill);
+  if (detail > 1 && G.solar && G.solarTubes) {
+    g.fillStyle = "#7f8fa6";
+    g.fill(G.solar);
+    g.strokeStyle = "rgba(230,236,245,0.7)";
+    g.lineWidth = L * 0.6;
+    g.stroke(G.solarTubes);
+    g.strokeStyle = INK;
+    g.lineWidth = L * 0.8;
+    g.stroke(G.solar);
+  }
+  g.strokeStyle = INK;
+  g.lineWidth = L * 0.8;
+  g.stroke(G.roofFill);
+  g.stroke(G.roofLines);
+  if (detail === 1) {
+    g.fillStyle = "#7d8597";
+    g.fill(G.glass);
+    g.fillStyle = "#ffd99a";
+    g.fill(G.lit);
+    g.strokeStyle = INK;
+    g.lineWidth = L * 0.6;
+    g.stroke(G.cages);
+    g.lineWidth = L;
+    g.stroke(G.body);
+    g.restore();
+    return;
+  }
+  // 楼层之间一道线
+  g.strokeStyle = "rgba(60,40,50,0.16)";
+  g.lineWidth = L * 0.7;
+  g.stroke(G.slabs);
+  // 锈水印
+  g.fillStyle = "rgba(140,92,70,0.16)";
+  g.fill(G.drips);
+  // 窗：深色玻璃上一道斜的反光；亮着的窗是暖黄的
+  g.fillStyle = "#5f6a7f";
+  g.fill(G.glass);
+  g.fillStyle = "rgba(196,206,222,0.28)";
+  g.fill(G.sheen);
+  g.fillStyle = "#ffd896";
+  g.fill(G.lit);
+  g.strokeStyle = "#f1e8db";
+  g.lineWidth = L * 1.6;
+  g.stroke(G.frames);
+  g.strokeStyle = INK;
+  g.lineWidth = L * 0.6;
+  g.stroke(G.frames);
+  // 防飘栏
+  g.fillStyle = "rgba(100,58,76,0.16)";
+  g.fill(G.cageShadow);
+  g.strokeStyle = INK;
+  g.lineWidth = L * 0.95;
+  g.stroke(G.cages);
+  g.lineWidth = L * 0.55;
+  g.stroke(G.bars);
+  part(g, G.shelves, "#b3a9a3", null, L * 0.7);
+  // 花盆
+  part(g, G.pots, "#c4775a", null, L * 0.6);
+  part(g, G.leaves, "#7f9b5c", "#69844b", L * 0.6, [4, 3]);
+  // 空调外机
+  part(g, G.acs, "#ece7df", "#d6cfc4", L * 0.8, [4, 4]);
+  g.strokeStyle = INK;
+  g.lineWidth = L * 0.5;
+  g.stroke(G.fans);
+  // 晾衣杆、衣服（被风吹）
+  for (const ln of G.laundry) {
+    g.strokeStyle = INK;
+    g.lineWidth = L * 1.4;
+    g.beginPath();
+    g.moveTo(ln.x, ln.y);
+    g.lineTo(ln.x + ln.len, ln.y - 6);
+    g.stroke();
+    g.strokeStyle = "#c8beb2";
+    g.lineWidth = L * 0.7;
+    g.stroke();
+    for (const it of ln.items) {
+      g.save();
+      g.translate(ln.x + it.dx, ln.y - (6 * it.dx) / ln.len);
+      cloth(g, it.kind, it.color, it.shade, 0.1 + 0.07 * Math.sin(t * 1.7 + it.dx * 0.13 + b.seed), L);
+      g.restore();
+    }
+  }
+  // 一楼的铺面：卷帘门、门里的暖光、遮阳棚
+  for (const sf of G.shopFront) {
+    const y0 = -150;
+    const inner = rectPath(sf.x, y0 + 22, sf.w, -y0 - 22);
+    g.fillStyle = "#4e4048";
+    g.fill(inner);
+    // 屋里亮着灯
+    g.fillStyle = "rgba(255,200,130,0.55)";
+    g.fillRect(sf.x + 6, y0 + 22 + (-y0 - 22) * (1 - sf.open) * 0.55, sf.w - 12, (-y0 - 22) * 0.5);
+    // 卷帘拉下来一半
+    const sh = (-y0 - 22) * (0.25 + 0.4 * (1 - sf.open));
+    g.fillStyle = "#b9b4ae";
+    g.fillRect(sf.x, y0 + 22, sf.w, sh);
+    g.strokeStyle = "rgba(60,50,56,0.35)";
+    g.lineWidth = L * 0.5;
+    g.beginPath();
+    for (let yy = y0 + 30; yy < y0 + 22 + sh; yy += 9) {
+      g.moveTo(sf.x, yy);
+      g.lineTo(sf.x + sf.w, yy);
+    }
+    g.stroke();
+    g.strokeStyle = INK;
+    g.lineWidth = L * 0.8;
+    g.stroke(inner);
+    // 遮阳棚
+    const aw = new Path2D();
+    aw.moveTo(sf.x - 10, y0 + 8);
+    aw.lineTo(sf.x + sf.w + 10, y0 + 8);
+    aw.lineTo(sf.x + sf.w + 24, y0 + 40);
+    aw.lineTo(sf.x - 24, y0 + 40);
+    aw.closePath();
+    part(g, aw, sf.awning, null, L * 0.8);
+    g.save();
+    g.clip(aw);
+    g.fillStyle = "rgba(255,250,240,0.55)";
+    for (let xx = sf.x - 24; xx < sf.x + sf.w + 24; xx += 36) g.fillRect(xx, y0, 16, 50);
+    g.restore();
+  }
+  g.strokeStyle = INK;
+  g.lineWidth = L;
+  g.stroke(G.body);
+  g.restore();
+}
+
+/** 亮着的窗冒出一团暖光（画在空气后面也行：远的楼窗光就是一个个小暖点） */
+export function drawBlockGlow(g: CanvasRenderingContext2D, b: Block, c: Cam, D: number, a = 1) {
+  const s = c.z / D;
+  if (b.fh * s < 34) return;
+  const G = geomOf(b);
+  const u = b.fh / 128;
+  const v = viewOf(c, D);
+  for (const [x, y] of G.litAt) {
+    const wx = b.x + x * u;
+    const wy = y * u;
+    if (wx < v.x0 || wx > v.x1 || wy < v.y0 || wy > v.y1) continue;
+    drawGlow(g, wx, wy, 90 * u, 0.45 * a);
+  }
 }
 
 interface Layer {
@@ -247,13 +607,14 @@ interface Layer {
   blocks: Block[];
 }
 
-function row(seed: number, x0: number, x1: number, wMin: number, wMax: number, fMin: number, fMax: number, fh: number, walls: [string, string][], gaps: [number, number][] = []): Block[] {
+function row(seed: number, x0: number, x1: number, wMin: number, wMax: number, fMin: number, fMax: number, fh: number, walls: [string, string][], gaps: [number, number][] = [], shop?: string[]): Block[] {
   const r = seeded(seed);
   const out: Block[] = [];
   for (let x = x0; x < x1; ) {
     const w = wMin + r() * (wMax - wMin);
     const [wall, wallShade] = walls[Math.floor(r() * walls.length)];
     const b: Block = { x, w, floors: fMin + Math.floor(r() * (fMax - fMin + 1)), wall, wallShade, seed: Math.floor(r() * 9999), fh };
+    if (shop && r() < 0.75) b.shop = shop[Math.floor(r() * shop.length)];
     if (!gaps.some(([a, c]) => b.x + b.w > a && b.x < c)) out.push(b);
     x += w + 30 + r() * 90;
   }
@@ -261,21 +622,21 @@ function row(seed: number, x0: number, x1: number, wMin: number, wMax: number, f
 }
 
 export const LAYERS: Layer[] = [
-  { D: 4, haze: 0.55, detail: 0, lw: 0, ground: "#dcc3b6", blocks: row(11, -14000, 14000, 500, 900, 8, 19, 190, [["#ddc8c4", "#d3bdb9"], ["#e3cfc6", "#d8c2b9"], ["#d9c6c8", "#cfbcbe"]]) },
+  { D: 4, haze: 0.5, detail: 0, lw: 0, ground: "#e0c2b2", blocks: row(11, -14000, 14000, 500, 900, 8, 19, 190, [["#ead2c3", "#dfc4b6"], ["#e8d6c6", "#dccabb"], ["#e4cdc6", "#d8c0b9"]]) },
   {
     D: 2.2,
-    haze: 0.3,
+    haze: 0.26,
     detail: 1,
     lw: 2.4,
-    ground: "#cdb7ab",
-    blocks: row(12, -9000, 9000, 420, 760, 6, 13, 190, [["#cfb9ae", "#c3aca1"], ["#d8c0b0", "#ccb2a2"], ["#c9b7b0", "#bca9a2"], ["#dcc6a8", "#cfb796"]]),
+    ground: "#d3b7a8",
+    blocks: row(12, -9000, 9000, 420, 760, 6, 13, 190, [["#dcb6a4", "#cfa796"], ["#e2c2aa", "#d5b29a"], ["#d8b8ae", "#cba99f"], ["#e4cba0", "#d6ba8e"]]),
   },
   {
     D: 1.5,
-    haze: 0.07,
+    haze: 0.05,
     detail: 2,
     lw: 3.2,
-    ground: "#bfb1a5",
+    ground: "#c9b3a2",
     blocks: row(
       14,
       -6200,
@@ -285,85 +646,209 @@ export const LAYERS: Layer[] = [
       5,
       9,
       190,
-      [["#e9d6bd", "#dcc5a8"], ["#d99f86", "#c98b72"], ["#ead9a8", "#dcc890"], ["#dcb1a6", "#cf9f93"], ["#cfcbb5", "#c0bba3"]],
+      [["#efd8b8", "#e1c6a2"], ["#e7ac92", "#d6987e"], ["#ecd09a", "#dcbd84"], ["#e3b2a4", "#d39f91"], ["#d2d0b2", "#c2bf9f"], ["#dcc5b6", "#cdb3a3"]],
       [[-430, 520]],
+      ["#c96a52", "#d9a441", "#6f8f86", "#9b6a8a"],
     ),
   },
 ];
 
 /** 全城最高那栋楼（和人在同一层）：一栋三十层的老塔楼，楼顶差一点碰到白，她住在顶层 */
-export const TOWER: Block = { x: 430, w: 980, floors: 28, wall: "#f1e3cb", wallShade: "#e2cfb0", seed: 77, fh: 300 };
+export const TOWER: Block = { x: 430, w: 980, floors: 28, wall: "#f1e1c6", wallShade: "#e0ccac", seed: 77, fh: 300 };
 
-/** 梧桐、电线杆（D = 1.25，人身后、对面楼前） */
-const TREES = [-1500, 380, 1700];
-const POLES = [-420, 1250, -2300, 3000];
-
-function planeTree(g: CanvasRenderingContext2D, x: number, t: number, lw: number) {
-  const s = 1.4;
-  const trunk = new Path2D();
-  trunk.moveTo(x - 16 * s, 40);
-  trunk.lineTo(x - 10 * s, -300 * s);
-  trunk.lineTo(x - 50 * s, -420 * s);
-  trunk.lineTo(x - 34 * s, -430 * s);
-  trunk.lineTo(x + 2 * s, -330 * s);
-  trunk.lineTo(x + 40 * s, -440 * s);
-  trunk.lineTo(x + 54 * s, -430 * s);
-  trunk.lineTo(x + 14 * s, -300 * s);
-  trunk.lineTo(x + 18 * s, 40);
-  trunk.closePath();
-  part(g, trunk, "#b9a58d", "#9f8a72", lw, [6, 4]);
-  const blobs: [number, number, number][] = [[-130, -520, 120], [10, -600, 140], [140, -510, 115], [-40, -450, 110], [80, -440, 100]];
-  const sway = 4 * Math.sin(t * 0.7 + x);
-  for (const [bx, by, r] of blobs) {
-    const p = new Path2D();
-    const n = 9;
-    const cx = x + bx * s + sway;
-    const cy = by * s;
-    for (let i = 0; i <= n; i++) {
-      const a = (i / n) * Math.PI * 2;
-      const rr = r * s * (0.9 + 0.12 * Math.sin(i * 2.7 + bx));
-      const px = cx + Math.cos(a) * rr;
-      const py = cy + Math.sin(a) * rr * 0.82;
-      if (i === 0) p.moveTo(px, py);
-      else p.quadraticCurveTo(cx + Math.cos(a - Math.PI / n) * rr * 1.15, cy + Math.sin(a - Math.PI / n) * rr * 0.95, px, py);
-    }
-    p.closePath();
-    part(g, p, "#93ac6a", "#7a9457", lw, [16, 12]);
-    g.save();
-    g.clip(p);
-    g.fillStyle = "rgba(255,228,150,0.45)";
+// ——— 斜照的光：楼缝里漏下来的阳光，在楼面和地上落成一道道斜的影子（影子偏紫的暖灰，用 multiply，不发黑） ———
+const BAND_SLOPE = 0.62;
+/** 每一层自己的影子带（层坐标里固定，镜头动时有视差） */
+function bandsOf(D: number): [number, number][] {
+  const r = seeded(Math.round(D * 100) + 7);
+  const out: [number, number][] = [];
+  for (let x = -16000; x < 16000; ) {
+    const w = 380 + r() * 700;
+    out.push([x, w]);
+    x += w + 420 + r() * 1100;
+  }
+  return out;
+}
+const BANDS = new Map<number, [number, number][]>();
+export function drawLightBands(g: CanvasRenderingContext2D, c: Cam, D: number, clip: Path2D | null, strength = 1) {
+  let bands = BANDS.get(D);
+  if (!bands) BANDS.set(D, (bands = bandsOf(D)));
+  const v = viewOf(c, D, 1.1);
+  const nx = 1 / Math.hypot(1, BAND_SLOPE);
+  const ny = -BAND_SLOPE * nx;
+  g.save();
+  if (clip) g.clip(clip);
+  g.globalCompositeOperation = "multiply";
+  for (const [x0, w] of bands) {
+    // 带子在可见范围里吗（带子是斜的：上面往左偏）
+    const xa = x0 + BAND_SLOPE * v.y0;
+    const xb = x0 + w + BAND_SLOPE * v.y1;
+    if (xb < v.x0 || xa > v.x1) continue;
+    const span = w * nx;
+    const gr = g.createLinearGradient(x0, 0, x0 + nx * span, ny * span);
+    const col = (a: number) => `rgba(176,128,150,${a * strength})`;
+    gr.addColorStop(0, col(0));
+    gr.addColorStop(0.16, col(0.5));
+    gr.addColorStop(0.84, col(0.5));
+    gr.addColorStop(1, col(0));
+    g.fillStyle = gr;
     g.beginPath();
-    g.arc(cx - r * s * 0.45, cy - r * s * 0.4, r * s * 0.6, 0, Math.PI * 2);
+    g.moveTo(x0 + BAND_SLOPE * v.y0 - 40, v.y0);
+    g.lineTo(x0 + w + BAND_SLOPE * v.y0 + 40, v.y0);
+    g.lineTo(x0 + w + BAND_SLOPE * v.y1 + 40, v.y1);
+    g.lineTo(x0 + BAND_SLOPE * v.y1 - 40, v.y1);
+    g.closePath();
+    g.fill();
+  }
+  g.restore();
+}
+
+// ——— 梧桐、电线杆、电线（D = 1.25，对面人行道上） ———
+export const TREES = [-2900, -1500, 380, 1700, 3100];
+const POLES = [-420, 1250, -2300, 3000, -4200];
+const ST_D = 1.25;
+
+function planeTree(g: CanvasRenderingContext2D, x: number, t: number, lw: number, seed: number, px = 1) {
+  const s = 1.4;
+  // 画面上很小的时候不画树皮的斑、叶子的碎影
+  const fine = px > 0.45;
+  const r = seeded(seed);
+  const trunk = new Path2D();
+  trunk.moveTo(x - 18 * s, 40);
+  trunk.lineTo(x - 11 * s, -300 * s);
+  trunk.lineTo(x - 54 * s, -430 * s);
+  trunk.lineTo(x - 36 * s, -440 * s);
+  trunk.lineTo(x + 2 * s, -336 * s);
+  trunk.lineTo(x + 42 * s, -452 * s);
+  trunk.lineTo(x + 58 * s, -440 * s);
+  trunk.lineTo(x + 15 * s, -300 * s);
+  trunk.lineTo(x + 20 * s, 40);
+  trunk.closePath();
+  part(g, trunk, "#c2ad94", "#a48f78", lw, [7, 5]);
+  // 梧桐的树皮：一块块浅色斑
+  if (fine) {
+    g.save();
+    g.clip(trunk);
+    g.fillStyle = "rgba(240,230,210,0.55)";
+    g.beginPath();
+    for (let i = 0; i < 9; i++) addEllipse(g, x + (r() - 0.5) * 26 * s, -r() * 420 * s, 8 + r() * 9, 14 + r() * 16);
+    g.fill();
+    g.fillStyle = "rgba(120,98,82,0.35)";
+    g.beginPath();
+    for (let i = 0; i < 6; i++) addEllipse(g, x + (r() - 0.5) * 26 * s, -r() * 420 * s, 5 + r() * 6, 10 + r() * 10);
     g.fill();
     g.restore();
   }
+  // 树冠：几团，左上被太阳照亮，右下暗
+  const blobs: [number, number, number][] = [
+    [-150, -520, 120],
+    [10, -610, 145],
+    [150, -510, 118],
+    [-60, -440, 112],
+    [90, -430, 104],
+    [-200, -430, 80],
+    [220, -440, 84],
+  ];
+  const sway = 5 * Math.sin(t * 0.8 + x * 0.01);
+  const canopy = new Path2D();
+  const lights: [number, number, number][] = [];
+  for (const [bx, by, rad] of blobs) {
+    const n = 10;
+    const cx = x + bx * s + sway * (0.6 + rad / 300);
+    const cy = by * s;
+    const R = rad * s;
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const rr = R * (0.88 + 0.14 * Math.sin(i * 2.7 + bx));
+      const px = cx + Math.cos(a) * rr;
+      const py = cy + Math.sin(a) * rr * 0.82;
+      if (i === 0) canopy.moveTo(px, py);
+      else canopy.quadraticCurveTo(cx + Math.cos(a - Math.PI / n) * rr * 1.16, cy + Math.sin(a - Math.PI / n) * rr * 0.96, px, py);
+    }
+    canopy.closePath();
+    lights.push([cx, cy, R]);
+  }
+  g.strokeStyle = INK;
+  g.lineWidth = lw * 2;
+  g.lineJoin = "round";
+  g.stroke(canopy);
+  g.fillStyle = "#6f8c4d";
+  g.fill(canopy);
+  g.save();
+  g.clip(canopy);
+  // 中间调
+  g.fillStyle = "#86a35a";
+  for (const [cx, cy, R] of lights) {
+    g.beginPath();
+    g.ellipse(cx - R * 0.18, cy - R * 0.16, R * 0.78, R * 0.62, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  // 被太阳照亮的那一侧
+  g.fillStyle = "rgba(214,222,128,0.75)";
+  for (const [cx, cy, R] of lights) {
+    g.beginPath();
+    g.ellipse(cx - R * 0.42, cy - R * 0.4, R * 0.42, R * 0.3, -0.4, 0, Math.PI * 2);
+    g.fill();
+  }
+  // 叶子的小碎影
+  g.fillStyle = "rgba(70,96,52,0.35)";
+  if (fine) for (const [cx, cy, R] of lights) {
+    for (let k = 0; k < 4; k++) {
+      const a = k * 1.7 + cx * 0.01;
+      g.beginPath();
+      g.ellipse(cx + Math.cos(a) * R * 0.5 + R * 0.2, cy + Math.sin(a) * R * 0.4 + R * 0.25, R * 0.16, R * 0.1, a, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.restore();
 }
 
 function drawStreetLife(g: CanvasRenderingContext2D, c: Cam, t: number) {
-  const D = 1.25;
-  const v = viewOf(c, D);
+  const v = viewOf(c, ST_D);
   const lw = 3.2;
-  // 电线：相邻两根杆之间垂下来的弧
   const poles = [...POLES].sort((a, b) => a - b);
+  // 电线：相邻两根杆之间垂下来的弧，上面停着几只麻雀
   g.strokeStyle = INK;
   g.lineWidth = 2.6;
   for (let i = 0; i + 1 < poles.length; i++) {
     const a = poles[i];
     const b = poles[i + 1];
     if (b < v.x0 || a > v.x1) continue;
-    for (const [dy, sag] of [[0, 150], [10, 220], [40, 120]] as const) {
+    for (const [dy, sag] of [[0, 150], [12, 230], [44, 120]] as const) {
       g.beginPath();
       g.moveTo(a, -1180 + dy);
       g.quadraticCurveTo((a + b) / 2, -1180 + dy + sag * 2, b, -1180 + dy);
       g.stroke();
     }
+    // 麻雀：停在最上面那根线上（二次曲线 y = -1180 + 2·sag·u(1−u)·2，sag 150）
+    const r = seeded(i * 31 + 5);
+    g.fillStyle = INK;
+    for (let k = 0; k < 3; k++) {
+      const u = 0.2 + r() * 0.6;
+      const bx = a + (b - a) * u;
+      const yy = -1180 + 600 * u * (1 - u);
+      const bob = Math.sin(t * 3 + k * 2.1 + i) > 0.96 ? -4 : 0;
+      g.beginPath();
+      addEllipse(g, bx, yy - 12 + bob, 13, 10);
+      addEllipse(g, bx - 10, yy - 22 + bob, 7, 7);
+      g.fill();
+      g.beginPath();
+      g.moveTo(bx + 10, yy - 14 + bob);
+      g.lineTo(bx + 24, yy - 6 + bob);
+      g.lineTo(bx + 10, yy - 8 + bob);
+      g.fill();
+    }
   }
   for (const x of poles) {
     if (x < v.x0 - 100 || x > v.x1 + 100) continue;
-    part(g, rect(x - 13, -1240, 26, 1300), "#8d8580", "#77706b", lw, [5, 4]);
-    part(g, rect(x - 80, -1200, 160, 16), "#8d8580", null, lw);
+    part(g, rectPath(x - 13, -1240, 26, 1300), "#8f8681", "#77706b", lw, [5, 4]);
+    part(g, rectPath(x - 80, -1200, 160, 16), "#8f8681", null, lw);
+    part(g, rectPath(x - 60, -1160, 22, 30), "#e8e2d8", null, lw * 0.7);
+    part(g, rectPath(x + 38, -1160, 22, 30), "#e8e2d8", null, lw * 0.7);
   }
-  for (const x of TREES) if (x > v.x0 - 500 && x < v.x1 + 500) planeTree(g, x, t, lw);
+  TREES.forEach((x, i) => {
+    if (x > v.x0 - 500 && x < v.x1 + 500) planeTree(g, x, t, lw, i * 17 + 3, c.z / ST_D);
+  });
 }
 
 function drawGround(g: CanvasRenderingContext2D, c: Cam, D: number, color: string, lw: number) {
@@ -382,32 +867,73 @@ function drawGround(g: CanvasRenderingContext2D, c: Cam, D: number, color: strin
 
 /**
  * 远处几层城（D > 1），每画完一层蒙一层空气（越远越淡）；between(D) 在蒙空气之前画这一层的人（远处飘着的人、对面街上走的人）。
+ * light：楼上的斜影子有多重（0..1）；haze：额外的空气（推近成近景时，背景淡一点、像虚了焦）。
  */
-export function drawCity(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, t: number, between?: (D: number) => void, sh: [number, number] = [0, 0]) {
+export function drawCity(
+  g: CanvasRenderingContext2D,
+  base: DOMMatrix,
+  c: Cam,
+  t: number,
+  between?: (D: number) => void,
+  sh: [number, number] = [0, 0],
+  o: { light?: number; haze?: number } = {},
+) {
+  const light = o.light ?? 1;
+  const extra = o.haze ?? 0;
   for (const L of LAYERS) {
     applyCam(g, base, c, L.D, sh);
     const v = viewOf(c, L.D);
     drawGround(g, c, L.D, L.ground, L.lw);
+    const clip = new Path2D();
+    clip.rect(v.x0, 0, v.x1 - v.x0, 8000);
     for (const b of L.blocks) {
       if (b.x + b.w < v.x0 || b.x > v.x1 || -b.floors * b.fh - 300 > v.y1) continue;
-      drawBlock(g, b, c, L.D, L.detail, L.lw);
+      drawBlock(g, b, c, L.D, L.detail, L.lw, t);
+      clip.rect(b.x, -b.floors * b.fh - 80, b.w, b.floors * b.fh + 80);
+    }
+    if (L.D < 3 && light > 0) drawLightBands(g, c, L.D, clip, light * (L.D > 2 ? 0.6 : 1));
+    for (const b of L.blocks) {
+      if (b.x + b.w < v.x0 || b.x > v.x1) continue;
+      drawBlockGlow(g, b, c, L.D, L.D > 3 ? 0.6 : 1);
     }
     between?.(L.D);
-    drawSky(g, base, c, L.haze);
+    drawSky(g, base, c, Math.min(1, L.haze + extra * (L.D > 2 ? 0.5 : 1)));
   }
-  // 梧桐、电线（对面楼前）
-  applyCam(g, base, c, 1.25, sh);
-  drawGround(g, c, 1.25, "#c4b6aa", 3.2);
+  // 梧桐、电线（对面人行道）
+  applyCam(g, base, c, ST_D, sh);
+  drawGround(g, c, ST_D, "#c7b3a3", 3.2);
+  {
+    // 马路：一道路沿、路面上的斜影
+    const v = viewOf(c, ST_D);
+    g.fillStyle = "#b8a294";
+    g.fillRect(v.x0, 0, v.x1 - v.x0, 18);
+    g.strokeStyle = INK;
+    g.lineWidth = 2.6;
+    g.beginPath();
+    g.moveTo(v.x0, 18);
+    g.lineTo(v.x1, 18);
+    g.stroke();
+    const road = new Path2D();
+    road.rect(v.x0, 0, v.x1 - v.x0, 8000);
+    if (light > 0) drawLightBands(g, c, ST_D, road, light * 0.8);
+  }
   drawStreetLife(g, c, t);
-  between?.(1.25);
+  between?.(ST_D);
+  if (extra > 0) drawSky(g, base, c, extra * 0.7);
 }
 
-/** 人这一层的街面：街沿一道窄边，往下是人行道（地砖缝按透视往下越来越疏、往两边斜开，看得出是平躺的地面） */
+/** 人这一层的街面：人行道（地砖缝按透视往下越来越疏、往两边斜开，看得出是平躺的地面） */
 export function drawStreet(g: CanvasRenderingContext2D, c: Cam) {
   const v = viewOf(c, 1);
-  g.fillStyle = "#cbbdb0";
+  g.fillStyle = "#dcc7b0";
   g.fillRect(v.x0, 0, v.x1 - v.x0, 8000);
-  g.fillStyle = "#b8aa9d";
+  // 越往下（离镜头越近）越暖、越亮一点
+  const gr = g.createLinearGradient(0, 0, 0, 900);
+  gr.addColorStop(0, "rgba(150,110,120,0.16)");
+  gr.addColorStop(1, "rgba(255,236,210,0.12)");
+  g.fillStyle = gr;
+  g.fillRect(v.x0, 0, v.x1 - v.x0, 900);
+  g.fillStyle = "#bea996";
   g.fillRect(v.x0, 0, v.x1 - v.x0, 22);
   g.strokeStyle = INK;
   g.lineWidth = 3;
@@ -417,7 +943,7 @@ export function drawStreet(g: CanvasRenderingContext2D, c: Cam) {
   g.moveTo(v.x0, 22);
   g.lineTo(v.x1, 22);
   g.stroke();
-  g.strokeStyle = "rgba(43,38,48,0.16)";
+  g.strokeStyle = "rgba(60,40,50,0.14)";
   g.lineWidth = 2.2;
   g.beginPath();
   for (let i = 1, y = 22; i < 9; i++) {
@@ -437,23 +963,43 @@ export function drawStreet(g: CanvasRenderingContext2D, c: Cam) {
 export const whiteEdge = (x: number, t: number) => Y_WHITE + 34 * Math.sin(x / 520 + t * 0.6) + 18 * Math.sin(x / 190 - t * 0.9);
 
 /**
- * 天上的白：下沿以上是发光的白，下沿一层肥皂泡一样的彩光（离得近时更宽、里面也流动着彩色），往下一点柔和的眩光。
+ * 天上的白：下沿以上是发光的白，下沿一层肥皂泡一样的彩光（离得近时更宽、里面也流动着彩色），往下一片柔和的眩光和光柱。
  * flash 是有人被吸进去时整个画面亮一下。
  */
 export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, t: number, flash = 0) {
   const [, yEdge] = toScreen(c, 0, Y_WHITE);
   g.setTransform(base);
-  const glare = 1400 * c.z;
+  const glare = 1500 * c.z;
   if (yEdge + glare > 0) {
     g.save();
     g.globalCompositeOperation = "screen";
     const gr = g.createLinearGradient(0, yEdge, 0, yEdge + glare);
-    gr.addColorStop(0, "rgba(255,252,246,0.6)");
-    gr.addColorStop(0.15, "rgba(255,248,238,0.22)");
-    gr.addColorStop(0.5, "rgba(255,246,235,0.05)");
-    gr.addColorStop(1, "rgba(255,246,235,0)");
+    gr.addColorStop(0, "rgba(255,252,246,0.75)");
+    gr.addColorStop(0.12, "rgba(255,246,232,0.32)");
+    gr.addColorStop(0.45, "rgba(255,240,226,0.08)");
+    gr.addColorStop(1, "rgba(255,240,226,0)");
     g.fillStyle = gr;
     g.fillRect(0, Math.max(-10, yEdge - 200), W, glare + 220);
+    // 白往下打的光柱（一根根很淡的斜光，慢慢地挪）
+    const k = clamp01(1 - (yEdge - 0) / (H * 1.6)) * clamp01((yEdge + glare) / 600);
+    if (k > 0.01) {
+      for (let i = 0; i < 7; i++) {
+        const x = ((i * 233 + 80 + t * 9 * (i % 2 ? 1 : -1) - c.x * c.z * 0.15) % (W + 400)) - 200;
+        const wd = 60 + ((i * 97) % 110);
+        const ray = g.createLinearGradient(0, yEdge, 0, yEdge + glare * 0.8);
+        const a = 0.13 * k * (0.7 + 0.3 * Math.sin(t * 0.7 + i * 1.9));
+        ray.addColorStop(0, `rgba(255,250,238,${a})`);
+        ray.addColorStop(1, "rgba(255,250,238,0)");
+        g.fillStyle = ray;
+        g.beginPath();
+        g.moveTo(x, yEdge);
+        g.lineTo(x + wd, yEdge);
+        g.lineTo(x + wd * 2.2 + 220, yEdge + glare * 0.8);
+        g.lineTo(x + 220, yEdge + glare * 0.8);
+        g.closePath();
+        g.fill();
+      }
+    }
     g.restore();
   }
   if (yEdge > -400) {
@@ -476,9 +1022,8 @@ export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, 
       const a = 0.1 + 0.08 * near;
       g.save();
       g.translate(0, band * (0.3 + 0.6 * i) + (6 / c.z) * Math.sin(t * 0.7 + i * 1.7));
-      // 三层越来越宽、越来越淡的线叠出柔边（比模糊滤镜快）
       for (const [kw, ka] of [[2.4, 0.45], [1.5, 0.75], [0.8, 1]] as const) {
-        g.strokeStyle = `hsla(${hue}, 80%, ${84 + 3 * Math.sin(t * 1.3 + i * 2)}%, ${a * ka})`;
+        g.strokeStyle = `hsla(${hue}, 82%, ${84 + 3 * Math.sin(t * 1.3 + i * 2)}%, ${a * ka})`;
         g.lineWidth = band * kw;
         g.stroke(path);
       }
@@ -513,30 +1058,32 @@ export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, 
   }
 }
 
-/** 碰到白的一下：一圈圈彩色光环往外扩（大小按画面像素算），中间一团白 */
+/** 碰到白的一下：一圈圈彩色光环往外扩（大小按画面像素算），中间一团白，碎光往四周散 */
 export function drawBurst(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, x: number, y: number, age: number, scale = 1) {
-  if (age < 0 || age > 1.6) return;
+  if (age < 0 || age > 1.8) return;
   const [sx, sy] = toScreen(c, x, y);
+  if (sx < -900 * scale || sx > W + 900 * scale || sy < -900 * scale || sy > H + 900 * scale) return;
   g.setTransform(base);
   g.save();
+  // 一圈像肥皂泡的边一样的彩色冲击波（越扩越淡、越细），后面跟一圈更淡的
   const hues = [330, 35, 60, 160, 200, 270];
-  for (let i = 0; i < 4; i++) {
-    const a = age - i * 0.09;
+  for (let i = 0; i < 2; i++) {
+    const a = age - i * 0.14;
     if (a <= 0) continue;
-    const k = 1 - Math.exp(-a / 0.28);
-    const rad = (50 + 480 * k) * scale;
-    const alpha = Math.max(0, 1 - a / 1.1) * 0.6;
+    const k = 1 - Math.exp(-a / 0.3);
+    const rad = (60 + 520 * k) * scale;
+    const alpha = Math.max(0, 1 - a / 1.2) * (i ? 0.35 : 0.7);
     for (let j = 0; j < hues.length; j++) {
-      g.strokeStyle = `hsla(${hues[(j + i) % hues.length]}, 85%, 74%, ${alpha / 2})`;
-      g.lineWidth = (9 + 12 * (1 - k)) * scale;
+      g.strokeStyle = `hsla(${hues[j]}, 90%, 74%, ${alpha * 0.5})`;
+      g.lineWidth = (6 + 12 * (1 - k)) * scale;
       g.beginPath();
-      g.arc(sx, sy, rad + j * 5 * scale, 0, Math.PI * 2);
+      g.arc(sx, sy, rad + (j - 2.5) * 4.5 * scale, 0, Math.PI * 2);
       g.stroke();
     }
   }
   const core = Math.max(0, 1 - age / 0.5);
   if (core > 0) {
-    const R = 260 * scale;
+    const R = 280 * scale;
     const gr = g.createRadialGradient(sx, sy, 0, sx, sy, R);
     gr.addColorStop(0, `rgba(255,252,246,${core})`);
     gr.addColorStop(0.4, `rgba(255,236,226,${core * 0.5})`);
@@ -544,25 +1091,58 @@ export function drawBurst(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, 
     g.fillStyle = gr;
     g.fillRect(sx - R, sy - R, R * 2, R * 2);
   }
+  // 碎光：往四周散开，慢慢落下来变成灰
+  const r = seeded(Math.round(x) * 7 + 3);
+  g.globalCompositeOperation = "lighter";
+  const spr = moteSprite();
+  for (let i = 0; i < 26; i++) {
+    const ang = r() * Math.PI * 2;
+    const sp = (120 + r() * 340) * scale;
+    const k = 1 - Math.exp(-age / 0.35);
+    const px = sx + Math.cos(ang) * sp * k;
+    const py = sy + Math.sin(ang) * sp * k * 0.7 + 90 * scale * age * age;
+    const s = (10 + r() * 16) * scale * (1 - age / 2);
+    g.globalAlpha = Math.max(0, 1 - age / 1.8) * (0.6 + 0.4 * Math.sin(age * 9 + i));
+    g.drawImage(spr, px - s, py - s, s * 2, s * 2);
+  }
+  g.restore();
+}
+
+/** 碰到白以后，他化成的灰像雪一样慢慢落下来（大小、散开按画面像素算，跟着那一点走），持续约 4 秒 */
+export function drawAshFall(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, x: number, y: number, age: number, scale = 1) {
+  if (age < 0.1 || age > 4.2) return;
+  const [sx, sy] = toScreen(c, x, y);
+  if (sx < -600 || sx > W + 600 || sy < -400 || sy > H + 200) return;
+  g.setTransform(base);
+  g.save();
+  const r = seeded(Math.round(x) * 13 + 7);
+  const spr = moteSprite();
+  const fade = Math.min(1, (4.2 - age) / 1.2) * Math.min(1, age / 0.4);
+  for (let i = 0; i < 40; i++) {
+    const ang = r() * Math.PI * 2;
+    const sp = (30 + r() * 170) * scale;
+    const k = 1 - Math.exp(-age / 0.6);
+    const fall = (26 + r() * 40) * scale * age + 10 * scale * age * age;
+    const px = sx + Math.cos(ang) * sp * k + 14 * scale * Math.sin(age * 1.4 + i * 1.7);
+    const py = sy + Math.abs(Math.sin(ang)) * sp * k * 0.4 + fall;
+    const sz = (2.2 + r() * 3.2) * scale;
+    const tw = 0.6 + 0.4 * Math.sin(age * 5 + i);
+    g.globalAlpha = fade * tw * 0.85;
+    g.fillStyle = i % 3 ? "#cdb6c6" : "#f3e2d0";
+    g.beginPath();
+    g.arc(px, py, sz, 0, Math.PI * 2);
+    g.fill();
+    if (i % 4 === 0) {
+      g.globalCompositeOperation = "lighter";
+      g.globalAlpha = fade * tw * 0.5;
+      g.drawImage(spr, px - sz * 4, py - sz * 4, sz * 8, sz * 8);
+      g.globalCompositeOperation = "source-over";
+    }
+  }
   g.restore();
 }
 
 // ——— 灰：光里发亮的浮尘，一直在慢慢落 ———
-let MOTE: HTMLCanvasElement | null = null;
-export function moteSprite() {
-  if (MOTE) return MOTE;
-  const cv = document.createElement("canvas");
-  cv.width = cv.height = 48;
-  const g = cv.getContext("2d")!;
-  const gr = g.createRadialGradient(24, 24, 0, 24, 24, 24);
-  gr.addColorStop(0, "rgba(255,248,232,1)");
-  gr.addColorStop(0.25, "rgba(255,240,215,0.75)");
-  gr.addColorStop(1, "rgba(255,236,210,0)");
-  g.fillStyle = gr;
-  g.fillRect(0, 0, 48, 48);
-  return (MOTE = cv);
-}
-
 const TILE = 1200;
 const MOTES = (() => {
   const r = seeded(21);
@@ -571,8 +1151,10 @@ const MOTES = (() => {
 
 /** 浮尘（世界里一块块平铺；D 是这一层的远近，size 让近处的大一些） */
 export function drawMotes(g: CanvasRenderingContext2D, c: Cam, t: number, D = 1, size = 1, alpha = 1) {
-  const v = viewOf(c, D, 1.05);
   const k = c.z / D;
+  // 拉得很远时浮尘小得看不见，不画（满画面几百颗也很慢）
+  if (k < 0.32) return;
+  const v = viewOf(c, D, 1.05);
   const spr = moteSprite();
   g.save();
   g.globalCompositeOperation = "screen";
@@ -580,11 +1162,10 @@ export function drawMotes(g: CanvasRenderingContext2D, c: Cam, t: number, D = 1,
   const tx1 = Math.floor(v.x1 / TILE);
   const ty0 = Math.floor(v.y0 / TILE);
   const ty1 = Math.floor(v.y1 / TILE);
+  const n = Math.max(4, Math.round(MOTES.length * Math.min(1, k / 0.6)));
   for (let ty = ty0; ty <= ty1; ty++) {
     for (let tx = tx0; tx <= tx1; tx++) {
-      const shift = ((tx * 7 + ty * 13) % 5 + 5) % 5;
-      // 拉远时每块少画几颗（画面上本来就小，数量照旧会太密、也太慢）
-      const n = Math.max(4, Math.round(MOTES.length * Math.min(1, k / 0.6)));
+      const shift = (((tx * 7 + ty * 13) % 5) + 5) % 5;
       for (let i = 0; i < n; i++) {
         const m = MOTES[(i + shift * 3) % MOTES.length];
         const y = ty * TILE + ((m.y + t * m.v) % TILE);
@@ -598,34 +1179,38 @@ export function drawMotes(g: CanvasRenderingContext2D, c: Cam, t: number, D = 1,
   g.restore();
 }
 
-/** 远处往上飘的人：逆光的小剪影（层坐标，h 是身高） */
-export function drawSilhouette(g: CanvasRenderingContext2D, x: number, y: number, h: number, t: number, ph: number, alpha = 0.6) {
+/** 远处往上飘的人：逆光的小剪影（层坐标，h 是身高）：张着手、腿软软地垂着 */
+export function drawSilhouette(g: CanvasRenderingContext2D, x: number, y: number, h: number, t: number, ph: number, alpha = 0.6, col = "132,98,110") {
   const s = h / 140;
   g.save();
   g.translate(x, y);
-  g.rotate(0.14 * Math.sin(t * 0.8 + ph));
+  g.rotate(0.12 * Math.sin(t * 0.8 + ph));
   g.scale(s, s);
-  const col = `rgba(132,98,110,${alpha})`;
-  g.fillStyle = col;
-  g.strokeStyle = col;
+  const c = `rgba(${col},${alpha})`;
+  g.fillStyle = c;
+  g.strokeStyle = c;
   g.lineCap = "round";
-  g.lineWidth = 12;
+  g.lineJoin = "round";
   const sw = Math.sin(t * 1.2 + ph);
+  g.lineWidth = 9;
   g.beginPath();
-  g.moveTo(-8, 40);
-  g.lineTo(-14 + sw * 3, 92);
-  g.moveTo(8, 40);
-  g.lineTo(12 - sw * 3, 94);
-  g.moveTo(-16, -6);
-  g.lineTo(-48, -46 + sw * 4);
-  g.moveTo(16, -6);
-  g.lineTo(48, -46 - sw * 4);
+  // 腿
+  g.moveTo(-6, 34);
+  g.quadraticCurveTo(-10, 60, -9 + sw * 3, 86);
+  g.moveTo(6, 34);
+  g.quadraticCurveTo(10, 62, 12 - sw * 3, 84);
+  // 手：往上张开
+  g.moveTo(-12, -14);
+  g.quadraticCurveTo(-30, -24, -42, -52 + sw * 4);
+  g.moveTo(12, -14);
+  g.quadraticCurveTo(30, -24, 42, -52 - sw * 4);
   g.stroke();
+  // 身子、头
   g.beginPath();
-  g.roundRect(-20, -16, 40, 60, 12);
+  g.roundRect(-14, -20, 28, 58, 11);
   g.fill();
   g.beginPath();
-  g.ellipse(0, -46, 22, 30, 0, 0, Math.PI * 2);
+  g.ellipse(0, -36, 13, 15, 0, 0, Math.PI * 2);
   g.fill();
   g.restore();
 }
@@ -638,43 +1223,52 @@ export function drawSunbeams(g: CanvasRenderingContext2D, base: DOMMatrix, c: Ca
   g.save();
   g.globalCompositeOperation = "screen";
   const shift = -((c.x * c.z) / 6) % 1400;
-  const beams: [number, number, number][] = [[-500, 420, 0.13], [-60, 300, 0.09], [300, 260, 0.07], [900, 360, 0.1]];
+  const beams: [number, number, number][] = [
+    [-520, 440, 0.15],
+    [-80, 300, 0.1],
+    [300, 260, 0.08],
+    [880, 380, 0.12],
+  ];
   for (const [x0, w, a] of beams) {
     const kk = k * a * (0.85 + 0.15 * Math.sin(t * 0.6 + x0));
     const x = x0 + shift;
     const p = new Path2D();
     p.moveTo(x, -100);
     p.lineTo(x + w, -100);
-    p.lineTo(x + w + 1500, H);
-    p.lineTo(x + 1500, H);
+    p.lineTo(x + w + 1300, H);
+    p.lineTo(x + 1300, H);
     p.closePath();
     const gr = g.createLinearGradient(0, 0, 0, H);
-    gr.addColorStop(0, `rgba(255,236,200,${kk})`);
-    gr.addColorStop(1, "rgba(255,236,200,0)");
+    gr.addColorStop(0, `rgba(255,234,196,${kk})`);
+    gr.addColorStop(0.7, `rgba(255,226,190,${kk * 0.35})`);
+    gr.addColorStop(1, "rgba(255,226,190,0)");
     g.fillStyle = gr;
     g.fill(p);
   }
   g.restore();
 }
 
-/** 暖光（soft-light：只把亮处提暖，不把人染色）、纸的颗粒、很轻的暗角 */
+/** 暖光（soft-light：只把亮处提暖，不把人染色）、纸的颗粒、很轻的暗角（vig 是暗角，warm 是暖光的强度） */
 export function drawGrade(g: CanvasRenderingContext2D, base: DOMMatrix, grain: HTMLCanvasElement, warm = 1, vig = 0.16) {
   g.setTransform(base);
   g.save();
   g.globalCompositeOperation = "soft-light";
-  const sun = g.createRadialGradient(60, 300, 0, 60, 300, 1800);
-  sun.addColorStop(0, `rgba(255,200,130,${0.75 * warm})`);
-  sun.addColorStop(1, "rgba(255,200,130,0)");
+  const sun = g.createRadialGradient(40, 220, 0, 40, 220, 1900);
+  sun.addColorStop(0, `rgba(255,198,126,${0.8 * warm})`);
+  sun.addColorStop(0.6, `rgba(255,190,130,${0.25 * warm})`);
+  sun.addColorStop(1, "rgba(200,150,170,0)");
   g.fillStyle = sun;
   g.fillRect(0, 0, W, H);
-  g.globalAlpha = 0.28;
+  g.globalAlpha = 0.26;
   g.drawImage(grain, 0, 0, W, H);
   g.restore();
-  const v = g.createRadialGradient(W / 2, H / 2, 520, W / 2, H / 2, 1250);
-  v.addColorStop(0, "rgba(60,30,40,0)");
-  v.addColorStop(1, `rgba(60,30,40,${vig})`);
-  g.fillStyle = v;
-  g.fillRect(0, 0, W, H);
+  if (vig > 0) {
+    const v = g.createRadialGradient(W / 2, H / 2, 560, W / 2, H / 2, 1280);
+    v.addColorStop(0, "rgba(70,36,54,0)");
+    v.addColorStop(1, `rgba(70,36,54,${vig})`);
+    g.fillStyle = v;
+    g.fillRect(0, 0, W, H);
+  }
 }
 
 export function makeGrain() {
