@@ -447,3 +447,160 @@ export function nightStreet(c: Ctx, abs: number, cam: Pt, Z: number, o: StreetOp
   void phase;
   void smooth;
 }
+
+// ---------------------------------------------------------------- the classroom, from his seat (his memory of today)
+/** a classmate seen from behind at his/her desk: head and hair, the school uniform (white, blue shoulders), the chair
+ *  back in front of the lower back, the desk's corners showing either side */
+function backStudent(c: Ctx, x: number, y: number, s: number, hair: string, seed: number, girl = false) {
+  c.save();
+  c.translate(x, y);
+  c.scale(s, s);
+  // desk corners (in front of them, so mostly hidden by the body)
+  poly(c, [[-210, 150], [210, 150], [230, 190], [-230, 190]], seed, 0.8);
+  paint(c, "#c99a62", C.ink, 4);
+  // shoulders and back
+  blob(c, [[-120, 70], [-60, 30], [60, 30], [120, 70], [140, 260], [-140, 260]], seed + 1, 1);
+  paint(c, "#f2f2ee", C.ink, 5);
+  blob(c, [[-120, 70], [-60, 30], [-40, 60], [-110, 120]], seed + 2, 0.6);
+  paint(c, "#3d6fae", null);
+  blob(c, [[120, 70], [60, 30], [40, 60], [110, 120]], seed + 3, 0.6);
+  paint(c, "#3d6fae", null);
+  // head
+  oval(c, 0, -30, 68, 74, seed + 4, 1.2);
+  paint(c, hair, C.ink, 5);
+  if (girl) {
+    blob(c, [[-62, 0], [-70, 70], [70, 70], [62, 0]], seed + 5, 1);
+    paint(c, hair, C.ink, 4);
+  }
+  inkLine(c, [[-30, -70], [-10, -30], [20, -60]], seed + 6, 3, "rgba(255,255,255,0.18)");
+  // the chair back
+  rbox(c, -150, 200, 300, 56, 12, seed + 7, 0.8);
+  paint(c, "#b98a55", C.ink, 4);
+  c.restore();
+}
+
+/** The classroom seen from his seat: the blackboard with the physics problem he stayed up for, the clock, a big bank of
+ *  windows on the left wall (sky, the tree outside, curtains), the late-morning sun slanting across the room in
+ *  shafts with dust, panes of light on the desks and the floor, two rows of classmates from behind (near ones bigger).
+ *  The middle of the frame is left clear for her. Draw it out of focus behind the people. */
+export function classFromSeat(c: Ctx, abs: number, o: { sun?: number; students?: boolean } = {}) {
+  const sun = o.sun ?? 1;
+  fillBg(c, vgrad(c, 0, H, [[0, "#efe6cf"], [0.6, "#e6dbbd"], [1, "#d9c9a4"]]));
+  // ceiling and its lights
+  poly(c, [[-60, -60], [1140, -60], [1140, 160], [-60, 175]], 84000, 1.2);
+  paint(c, "#f6f2e6", C.ink, 5);
+  for (const [a, b] of [[220, 470], [640, 890]]) inkLine(c, [[a, 92], [b, 90]], 84001 + a, 12, "#fffbe8");
+  // the windows on the left wall, in perspective: sky, the tree outside, white frames, a curtain tied back
+  const wins: [number, number][] = [[-70, 120], [130, 300]];
+  wins.forEach(([x0, x1], i) => {
+    const t0 = 180 + i * 50,
+      t1 = 230 + i * 44,
+      b0 = 1090 - i * 50,
+      b1 = 1040 - i * 44;
+    const q: Pt[] = [[x0, t0], [x1, t1], [x1, b1], [x0, b0]];
+    poly(c, q, 84010 + i, 0.8);
+    paint(c, vgrad(c, t0, b0, [[0, "#bfe2f5"], [0.6, "#e6f4fa"], [1, "#fff6dc"]]), C.ink, 5);
+    c.save();
+    poly(c, q, 84010 + i, 0.8);
+    c.clip();
+    for (let k = 0; k < 6; k++) {
+      oval(c, x0 + (x1 - x0) * (0.2 + 0.15 * k), t0 + 120 + (k % 3) * 70, 70, 56, 84020 + i * 10 + k, 1.4);
+      paint(c, k % 2 ? "#8fc27a" : "#a7d18b", null);
+    }
+    c.fillStyle = "rgba(255,255,255,0.35)";
+    c.fillRect(x0, t0, x1 - x0, b0 - t0);
+    c.restore();
+    inkLine(c, [[(x0 + x1) / 2, (t0 + t1) / 2], [(x0 + x1) / 2, (b0 + b1) / 2]], 84030 + i, 7, "#f4f2ea");
+    inkLine(c, [[x0, t0 + (b0 - t0) * 0.42], [x1, t1 + (b1 - t1) * 0.42]], 84032 + i, 7, "#f4f2ea");
+    // the curtain bunched at the far edge
+    blob(c, [[x1 - 10, t1 - 10], [x1 + 34, t1 - 6], [x1 + 26, (t1 + b1) / 2], [x1 + 40, b1 + 20], [x1 - 4, b1 + 24], [x1 + 6, (t1 + b1) / 2]], 84034 + i, 1);
+    paint(c, "#cfe0c4", C.ink, 3.5);
+  });
+  // the blackboard in its frame, the physics problem in chalk
+  rbox(c, 300, 290, 720, 460, 12, 84040, 1);
+  paint(c, "#8a6844", C.ink, 6);
+  rbox(c, 320, 310, 680, 420, 6, 84041, 0.8);
+  paint(c, "#2f4a3c", C.ink, 4);
+  const chalk = "rgba(238,242,234,0.88)";
+  poly(c, [[380, 680], [660, 680], [380, 510]], 84042, 0.8);
+  paint(c, null, chalk, 4);
+  c.save();
+  c.translate(520, 600);
+  c.rotate(Math.atan2(170, 280));
+  poly(c, [[-38, -56], [38, -56], [38, 0], [-38, 0]], 84043, 0.8);
+  paint(c, null, chalk, 3.5);
+  c.restore();
+  text(c, "第3题", 440, 370, { size: 40, font: F.pen, fill: chalk });
+  text(c, "F = ma", 860, 440, { size: 60, font: F.marker, fill: chalk });
+  text(c, "a = ?", 850, 545, { size: 52, font: F.marker, fill: chalk });
+  inkLine(c, [[770, 600], [950, 596]], 84044, 3, chalk);
+  rbox(c, 310, 742, 700, 18, 4, 84045, 0.8);
+  paint(c, "#7a5a3a", C.ink, 4);
+  // the clock above it, a little class flag
+  oval(c, 660, 222, 40, 40, 84046, 0.8);
+  paint(c, "#fbfaf4", C.ink, 4);
+  inkLine(c, [[660, 222], [660, 196]], 84047, 4, C.ink);
+  inkLine(c, [[660, 222], [680, 230]], 84048, 4, C.ink);
+  poly(c, [[930, 200], [1010, 210], [1000, 260], [928, 252]], 84049, 0.8);
+  paint(c, "#e8524a", C.ink, 3);
+  // the right wall: a notice board with pinned sheets
+  poly(c, [[1030, 360], [1140, 340], [1140, 780], [1030, 760]], 84050, 0.8);
+  paint(c, "#c9a77a", C.ink, 4);
+  for (let k = 0; k < 4; k++) {
+    poly(c, [[1045, 380 + k * 95], [1110, 372 + k * 95], [1110, 440 + k * 95], [1045, 448 + k * 95]], 84051 + k, 0.6);
+    paint(c, ["#fff4c8", "#d8ecff", "#ffe0e8", "#e6f6dc"][k], C.ink, 2.5);
+  }
+  // the floor: boards running away to the board
+  poly(c, [[-60, 1120], [1140, 1110], [1140, 2000], [-60, 2000]], 84060, 1);
+  paint(c, "#c8a676", C.ink, 5);
+  for (let k = -6; k < 12; k++) inkLine(c, [[560 + (k - 3) * 40, 1115], [560 + (k - 3) * 240, 2000]], 84061 + k, 2, "rgba(110,80,40,0.25)", 0.5);
+  // the classmates in the two rows ahead (her own desk is in the middle, left clear)
+  if (o.students !== false) {
+    backStudent(c, 230, 1000, 0.36, "#2a2220", 84100);
+    backStudent(c, 850, 990, 0.34, "#3a2a20", 84110, true);
+    backStudent(c, 470, 960, 0.3, "#1f1a18", 84120);
+    backStudent(c, 90, 1150, 0.5, "#2c221c", 84130, true);
+    backStudent(c, 990, 1140, 0.5, "#241c18", 84140);
+  } else
+    // after class: empty desks and chairs, a schoolbag left on one
+    for (const [x, y, sc] of [[230, 1100, 0.36], [850, 1090, 0.34], [90, 1250, 0.5], [990, 1240, 0.5]] as [number, number, number][]) {
+      c.save();
+      c.translate(x, y);
+      c.scale(sc, sc);
+      poly(c, [[-210, 0], [210, 0], [230, 50], [-230, 50]], 84160 + x, 0.8);
+      paint(c, "#c99a62", C.ink, 4);
+      rbox(c, -150, 60, 300, 56, 12, 84170 + x, 0.8);
+      paint(c, "#b98a55", C.ink, 4);
+      c.restore();
+    }
+  // the sun from the windows: shafts across the room, panes of light on the desks and the floor, dust
+  if (sun > 0) {
+    lightShaft(c, [[0, 230], [300, 300], [1040, 1500], [520, 1640]], 150, 300, 800, 1600, "255,232,180", 0.22 * sun, 34, "classA");
+    lightShaft(c, [[0, 640], [240, 660], [820, 1820], [420, 1900]], 120, 660, 640, 1850, "255,232,180", 0.14 * sun, 30, "classB");
+    paneLight(c, [[260, 1180], [700, 1190], [980, 1700], [380, 1680]], "255,226,170", 0.22 * sun, 8, "classPanes");
+    glow(c, 60, 560, 700, "rgba(255,244,210,0.35)", sun);
+    motes(c, abs, 420, 900, 380, 520, 26, 84150, "255,240,205", 0.55 * sun, 2.6);
+  }
+  // the far right of the room in a little shade
+  const sh = c.createLinearGradient(700, 0, 1140, 0);
+  sh.addColorStop(0, "rgba(90,70,40,0)");
+  sh.addColorStop(1, "rgba(90,70,40,0.16)");
+  c.fillStyle = sh;
+  c.fillRect(700, 0, 440, H);
+}
+
+/** her chair's back, in front of her lower back (she sits in the row in front of him); (x, y) = the middle of the top rail */
+export function chairBack(c: Ctx, x: number, y: number, s: number) {
+  c.save();
+  c.translate(x, y);
+  c.scale(s, s);
+  for (const px of [-150, 150]) {
+    rbox(c, px - 14, 0, 28, 220, 8, 84200 + px, 0.6);
+    paint(c, "#a67a48", C.ink, 4);
+  }
+  rbox(c, -175, -10, 350, 74, 16, 84203, 0.8);
+  paint(c, vgrad(c, -10, 64, [[0, "#c99a62"], [1, "#a67a48"]]), C.ink, 5);
+  inkLine(c, [[-150, 8], [150, 4]], 84204, 3, "rgba(255,236,200,0.5)");
+  inkLine(c, [[-140, 40], [120, 44]], 84205, 2, "rgba(110,70,30,0.35)");
+  c.restore();
+}

@@ -1,25 +1,29 @@
 // 第三幕（32.79 – 49.14）· 主歌2 · 她的视角 → 第二天（重置版：剧情和时间点不变，画面、镜头、光影按最新标准重做）
 //  A 32.79–37.39 回忆（老式屏幕竖线，进回忆两拍竖线转场）：23:12 收到他那一大段，她捂着脸笑 → 打了一大段 → 小美的消息
-//               → 点进去「回个嗯就行」→ 返回、全删 → 只发「嗯」（黄圈、红笔「删掉了 37 个字」）
-//  B 37.39–39.43 那天上课：课本一下举起来，她从书后偷看、脸红冒烟、心跳 → 放学后她偷偷拿走他留下的草莓牛奶
-//  C 39.43–44.80 回到 00:52：她擦掉眼泪 → 从主页点开微信 → 改完那段话发出去 → 01:30、03:00 又发两句 → 屏幕熄灭
+//               → 点进去「回个嗯就行」→ 返回、全删 → 只发「嗯」（黄圈）
+//  B 37.39–39.43 重放他回忆里的同一组画面、揭开她这边：从他座位看，她转身、课本一下举起（和 9.27 一样）→ 书放低一点，
+//               她从书后看着他、脸红冒烟、心跳 → 放学后：他留在她空桌上的牛奶（和 11.83 一样），她的手拿起来贴到脸上笑
+//  C 39.43–44.80 回到 00:52：她擦掉眼泪 → 点开微信、镜头凑近那段话 → 输入框特写：「我喜欢你」打了、删了、又打上 →
+//               一镜到底：她的脸，按下发送，屏幕的光在脸上一跳，松一口气 → 镜头从她脸上退回房间、一直往后退：01:30、03:00
+//               又发两句，困得睡着
 //  D 44.80–46.33 那条街：她的灯也灭了，夜色延时到早晨，推进他的窗
 //  E 46.33–48.63 07:10 他开机：锁屏掉下三条消息 → 点开 → 荧光笔划出「其实，我喜欢你」
 //  F 48.63–     他的脸：愣住（接到第四幕的笑开）
 import type { SceneOptions } from "@frame/engine/types";
 import { clamp, phase, smooth } from "@frame/engine/math";
-import { C, Ctx, F, H, Pt, W, bloom, camera, card, designScene, fillBg, filtered, glow, inkLine, litFigure, oldFilm, oldScreenCut, paint, pulse, rimFigure, rr, text, writeOn } from "@materials/s0rrow/code/draw";
+import { C, Ctx, F, H, Pt, W, backOut, bloom, camera, card, designScene, fillBg, filtered, glow, inkLine, litFigure, measure, oldFilm, oldScreenCut, oval, paint, pulse, rimFigure, rr, text } from "@materials/s0rrow/code/draw";
 import { drawKid } from "@materials/s0rrow/code/kid";
-import { bookFingers, strawberryMilk, textbook } from "@materials/s0rrow/code/places";
+import { bookFingers, deskFront, strawberryMilk, textbook } from "@materials/s0rrow/code/places";
 import { classroom, heart } from "@materials/s0rrow/code/sets";
-import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, markAt, sendButtonAt } from "@materials/s0rrow/code/chat";
+import { BACKSPACE_AT, ChatItem, WECHAT_AT, appWindow, bootScreen, chatScreen2, draftLines, markAt, sendButtonAt } from "@materials/s0rrow/code/chat";
 import type { FingerPos } from "@materials/s0rrow/code/hand";
 import { SH, SW, lockScreen, notification } from "@materials/s0rrow/code/phone";
 import { CONFESSION_EDITS, FRIEND_ADVICE, GIVE_UP, HER, HER_CONFESSION, HER_NIGHT_DRAFT, HER_REPLY_DRAFT, HIM, HISTORY, LATE1, LATE2, MEI, MEI_FIRST, REST_L, REST_R, afterNight, deleted, editing, fromHer, herHome, inWin, pop, typed, typingThumbs } from "./story";
-import { BAR, BEAT, EV } from "./timeline";
-import { PhoneSpec, drawPhone, lerp, pulseRings, softStart, timeCard, vignette } from "./shots";
-import { HER_SIT, HIS_WIN, SIT, Z_IN, herBokeh, herDuvet, herInBed, herPhoneBack, herRoomNight, hisBokeh, hisDuvet, hisInBed, hisPhoneBack, hisRoom, nightStreet, winC } from "./world";
+import { BAR, BEAT, EV, beatAt } from "./timeline";
+import { PhoneSpec, aim, aimLerp, drawPhone, kick, lerp, pulseRings, timeCard, vignette } from "./shots";
+import { HER_SIT, HIS_WIN, SIT, Z_IN, chairBack, classFromSeat, herBokeh, herDuvet, herInBed, herPhoneBack, herRoomNight, hisBokeh, hisDuvet, hisInBed, hisPhoneBack, hisRoom, nightStreet, winC } from "./world";
 import { shotHesitate } from "./act2";
+import { herBag, hisDesk } from "./act1";
 
 const REST: FingerPos = REST_R;
 
@@ -138,7 +142,7 @@ function shotReplay(c: Ctx, abs: number) {
   let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
   const tap = (t: number, x: number, y: number): FingerPos => ({ x, y: y + 30 * (1 - smooth(phase(abs, t - 0.14, t - 0.03))), touch: abs > t - 0.04 ? 1 : 0 });
   if (inWin(abs, EV.type3)) hands = typingThumbs(abs, EV.type3[0], EV.type3[1], 31);
-  else if (abs >= EV.openNote - 0.14 && abs < EV.openNote + 0.06) hands = { right: tap(EV.openNote, 300, 100), left: REST_L };
+  else if (abs >= EV.openNote - 0.14 && abs < EV.openNote + 0.06) hands = { right: tap(EV.openNote, 300, 160), left: REST_L };
   else if (abs >= EV.backToHim - 0.14 && abs < EV.backToHim + 0.06) hands = { right: tap(EV.backToHim, 42, 118), left: REST_L };
   else if (inWin(abs, EV.del3)) {
     const k = ((abs - EV.del3[0]) * 12) % 1;
@@ -168,78 +172,145 @@ function shotReplay(c: Ctx, abs: number) {
     if (nk > 0) {
       q.save();
       q.translate(0, -160 * (1 - nk));
-      notification(q, 24, 24, 552, { title: MEI, body: FRIEND_ADVICE, time: "现在" }, nk);
+      notification(q, 24, 84, 552, { title: MEI, body: FRIEND_ADVICE, time: "现在" }, nk);
       q.restore();
     }
   }, { thumbs: [hands.right, hands.left], haloRgb: "255,180,210" });
 }
 
 // ---------------------------------------------------------------- B · class, her side
-/** behind the book: it comes up fast, then the camera pushes in on her eyes peeking over it; sunlight from the
- *  window, the classroom soft behind; a pounding heart on the beat */
+/** B1 · 37.39 → 38.41 that class, from her side — the same picture as his memory (8.76–9.79: from his seat, over his
+ *  desk, her chair back in front of her, the sun from the windows), so we know the moment: she has turned round and
+ *  the book snaps up in front of her face, exactly as he saw it. Then what he couldn't see: the book comes down just
+ *  far enough for her eyes to peek over it — at him (at us) — bright red, smoking, little hearts rising from her head.
+ *  The camera: the same jolt as his on the snap, then it's drawn in towards her eyes faster and faster (pow 2.2),
+ *  throbbing with her heartbeat. */
 function shotBook(c: Ctx, abs: number) {
-  const p = phase(abs, EV.hide2, EV.afterClass);
-  const up = 1 - smooth(phase(abs, EV.hide2, EV.hide2 + 0.16));
+  const gx = 540,
+    gy = 860,
+    gs = 1.05;
+  const snap = backOut(phase(abs, EV.hide2, EV.hide2 + 0.16));
+  const peek = smooth(phase(abs, EV.peek, EV.peek + 0.22));
+  const pull = Math.pow(phase(abs, EV.peek, EV.afterClass), 2.2);
   const beat = pulse(abs, 6);
+  const z = (1.1 + 0.05 * snap) * (1 + 0.16 * pull) * (1 + 0.012 * beat * peek);
+  // her eyes (where the push goes)
+  const ey = gy + 36 * gs;
+  filtered(c, "blur(3.2px)", (b) => {
+    camera(b, 540, 900, 1.13 + 0.06 * pull, 0, 0, -30);
+    classFromSeat(b, abs, { sun: 1 });
+  }, "bookClass");
   c.save();
-  camera(c, 560, 700, 1.5);
-  filtered(c, "blur(5px)", (b) => classroom(b, abs, false), "bookBg");
-  c.restore();
-  glow(c, 120, 300, 900, "rgba(255,236,190,0.3)");
-  c.save();
-  camera(c, 540, 820, 1.0 + 0.24 * smooth(p) + 0.03 * beat);
-  glow(c, 540, 860, 800, "rgba(255,170,190,0.35)");
+  // the push centres more and more on her eyes
+  camera(c, gx, lerp(gy + 120, ey, pull), z);
+  const chairY = gy + 300 * gs;
+  // the book: snapped up over her face, then down just below her eyes
+  const by = gy + lerp(lerp(420, 110, snap), 262, peek) * gs;
+  // her arms: up at the book's sides while it covers her face, then straight down behind it (in between, bent arms
+  // would stick out from behind the book like wings)
+  const hy = peek < 0.4 ? 170 : 430;
   rimFigure(c, (q) =>
-    drawKid(q, 540, 860, 1.3, {
+    drawKid(q, gx, gy, gs, {
       who: "girl",
       outfit: "cardigan",
       body: "bust",
-      eyes: "wide",
+      eyes: peek > 0.3 ? "open" : "shut",
       brows: "worried",
       mouth: "bite",
       blush: 1,
-      look: (abs < EV.peek ? [0.3, 0.1] : [-0.45, 0.3]) as [number, number],
+      look: [0, 0.05],
       arms: "custom",
-      handL: [-128, 440],
-      handR: [128, 440],
+      handL: [-140, hy],
+      handR: [140, hy],
       shapeL: "hidden",
       shapeR: "hidden",
-    }), -1, -0.5, "rgb(255,236,200)", 0.6, 7);
-  const bookY = 860 + (66 + 196) * 1.3 + 4 * beat + 260 * up;
-  textbook(c, 546, bookY, 1.3, -0.03);
-  bookFingers(c, 546, bookY, 1.3, -0.03);
+    }), -1, -0.4, "rgb(255,236,200)", 0.6, 6);
+  chairBack(c, gx, chairY, gs);
+  const rot = -0.05 + 0.03 * Math.sin((abs - EV.hide2) * 18) * (1 - phase(abs, EV.hide2, EV.hide2 + 0.5));
+  textbook(c, gx + 6, by, gs, rot);
+  bookFingers(c, gx + 6, by, gs, rot);
+  // little hearts rising from her head as she peeks
+  littleHearts(c, abs, EV.peek + 0.1, gx + 30, gy - 140 * gs);
   c.restore();
+  // little hearts rising from her head as she peeks
+  // his desk in front, closer (moves more)
   c.save();
-  c.translate(840, 600);
-  const k = 1 + 0.3 * beat;
-  c.scale(k, k);
-  heart(c, 0, 0, 46, "#ff4d6d", 3822);
+  camera(c, 540, 1500, 1.05 + 0.1 * pull);
+  hisDesk(c, abs);
   c.restore();
-  text(c, "扑通 扑通", 820, 480, { size: 52, font: F.cn, fill: "#ff4d6d", stroke: C.ink, lw: 8, alpha: 0.6 + 0.4 * beat });
+  vignette(c, 0.25 * pull, 540, 900, 380, 1200);
 }
-/** after class: the empty classroom in the late sun; she holds his strawberry milk to her cheek, eyes shut, smiling */
+
+/** B2 · 38.41 → 39.43 after class — again his picture first (11.83: the milk he left on her empty desk, her bag beside
+ *  it, the late sun): her hand comes down and takes it; the camera rises with the carton, which she lifts to her cheek
+ *  — and there she is, standing at her desk with his strawberry milk against her face, eyes shut, smiling, red; little
+ *  hearts. (She came back for her bag and found it; that's the milk in her wallpaper and her photos.) */
 function shotMilk(c: Ctx, abs: number) {
-  const p = phase(abs, EV.afterClass, EV.now);
+  const t0 = EV.afterClass;
+  const grab = smooth(phase(abs, t0 + 0.08, t0 + 0.3));
+  const lift = smooth(phase(abs, t0 + 0.3, t0 + 0.7));
+  const hug = smooth(phase(abs, t0 + 0.6, t0 + 0.8));
+  // the camera: his picture (the desk, the milk, her bag) → it rises a little with the carton and leans in on her
+  const rise = smooth(phase(abs, t0 + 0.3, t0 + 0.85));
+  const z = (1 + 0.14 * rise) * (1 + 0.03 * smooth(phase(abs, t0 + 0.85, EV.now)));
+  const cy = lerp(960, 770, rise);
+  // the empty classroom in the late sun, out of focus, moving less
+  filtered(c, "blur(5px)", (b) => {
+    camera(b, 380, lerp(900, 820, rise), 1.6 * (1 + 0.06 * rise));
+    classroom(b, abs, false);
+  }, "milkClass");
+  glow(c, 140, 420, 1000, "rgba(255,180,110,0.4)");
   c.save();
-  camera(c, 560, 900, 1.0 + 0.08 * smooth(p));
-  filtered(c, "blur(4px)", (b) => classroom(b, abs, false), "milkBg");
-  glow(c, 120, 520, 900, "rgba(255,190,120,0.42)");
-  rimFigure(c, (q) => {
-    drawKid(q, 500, 880, 1.35, { who: "girl", outfit: "cardigan", body: "bust", eyes: "happy", mouth: "smile", blush: 0.8, tilt: 0.1 + 0.05 * smooth(p), arms: "custom", handR: [122, 228], bendR: -1, handL: [-112, 430], shapeR: "hidden", shapeL: "hidden" });
-  }, -1, -0.4, "rgb(255,214,160)", 0.65, 7);
-  const mx = 500 + 175,
-    my = 880 + 175;
-  strawberryMilk(c, mx, my, 0.95, 0.16, 3395);
-  c.save();
-  c.translate(mx, my);
-  c.rotate(0.16);
-  c.scale(0.95, 0.95);
-  for (const [fx, fy] of [[-72, 30], [-72, 62], [-72, 94], [52, 40], [52, 72]] as [number, number][]) {
-    rr(c, fx, fy, 24, 28, 12);
-    paint(c, "#f6e1c3", C.ink, 3.5);
+  camera(c, 540, cy, z, 0, 0, 960 - cy);
+  // her, standing behind her desk, a little to the left of the milk: she looks down at it — he left it — takes it
+  // with her right hand and lifts it to her cheek
+  const kx = 420,
+    ky = 400,
+    ks = 1.6;
+  const onDesk: Pt = [500, 900];
+  const atCheek: Pt = [kx + 125 * ks, ky + 115 * ks];
+  const mPos: Pt = [lerp(onDesk[0], atCheek[0], lift), lerp(onDesk[1], atCheek[1], lift)];
+  const ms = lerp(2.0, 1.05, lift); // further from us as it goes up to her face
+  const mr = lerp(0.03, 0.16, lift);
+  const hold: Pt = [mPos[0] + 30 * ms, mPos[1] + 90 * ms];
+  const rest: Pt = [kx + 118 * ks, ky + 430 * ks];
+  const hand: Pt = [lerp(rest[0], hold[0], grab), lerp(rest[1], hold[1], grab)];
+  rimFigure(c, (q) =>
+    drawKid(q, kx, ky, ks, {
+      who: "girl",
+      outfit: "cardigan",
+      body: "bust",
+      eyes: hug > 0.4 ? "happy" : "open",
+      mouth: hug > 0.4 ? "smile" : "o",
+      blush: 0.5 + 0.45 * hug,
+      look: [0.3 - 0.3 * lift, 0.9 - 0.9 * lift],
+      tilt: 0.12 * hug,
+      arms: "custom",
+      handR: [(hand[0] - kx) / ks, (hand[1] - ky) / ks],
+      bendR: -1,
+      handL: [-112, 430],
+      shapeR: "hidden",
+      shapeL: "hidden",
+    }), -1, -0.4, "rgb(255,214,160)", 0.65, 7);
+  // her desk in front of her (hides her below the waist), her bag still on it
+  deskFront(c, 540, 1180, 2.0, 3913);
+  herBag(c, 110, 940, 1.5, -0.04);
+  strawberryMilk(c, mPos[0], mPos[1], ms, mr, 3914);
+  if (grab > 0.5) {
+    // her hand round the carton: a thumb on the near edge, four fingers across the front
+    c.save();
+    c.translate(mPos[0], mPos[1]);
+    c.rotate(mr);
+    c.scale(ms, ms);
+    oval(c, -60, 70, 16, 22, 3915, 0.4);
+    paint(c, "#f6e1c3", C.ink, 4 / ms);
+    for (let j = 0; j < 4; j++) {
+      rr(c, -6 + j * 3, 30 + j * 26, 72 - j * 6, 24, 12);
+      paint(c, "#f6e1c3", C.ink, 4 / ms);
+    }
+    c.restore();
   }
-  c.restore();
-  littleHearts(c, abs, EV.afterClass + 0.12, 640, 640);
+  littleHearts(c, abs, t0 + 0.72, kx + 330, ky - 20);
   c.restore();
 }
 
@@ -252,19 +323,6 @@ function memoryNotes(c: Ctx, abs: number) {
   if (abs <= EV.send2 || abs >= EV.umHold) return;
   const { ux, uy, zs } = umSpot(abs);
   pulseRings(c, abs, ux, uy, 64 * zs, 46 * zs, [EV.send2 + 0.12, EV.send2 + 0.48]);
-  const nk = phase(abs, EV.send2 + 0.3, EV.send2 + 0.75);
-  if (nk > 0) {
-    c.save();
-    c.translate(ux - 40, uy + 150);
-    c.rotate(-0.04);
-    text(c, writeOn(`删掉了 ${Array.from(HER_REPLY_DRAFT).length} 个字`, nk), 0, 0, { size: 60, font: F.pen, fill: "#ff3b3b", stroke: "#fff", lw: 10 });
-    c.restore();
-    c.save();
-    c.globalAlpha = clamp(nk * 3);
-    inkLine(c, [[ux - 20, uy + 104], [ux - 6, uy + 70], [ux + 4, uy + 56]], 3840, 6, "#ff3b3b");
-    inkLine(c, [[ux - 16, uy + 66], [ux + 4, uy + 56], [ux + 10, uy + 78]], 3841, 6, "#ff3b3b");
-    c.restore();
-  }
 }
 function memoryShot(c: Ctx, abs: number) {
   if (abs < EV.type3[0]) shotThrilled(c, abs);
@@ -277,7 +335,15 @@ function memoryShot(c: Ctx, abs: number) {
 const MEM_IN = BAR(16) + BEAT;
 function intoMemory(c: Ctx, abs: number) {
   const p = phase(abs, BAR(16), MEM_IN);
-  oldScreenCut(c, abs, p, (k) => shotHesitate(k, Math.min(abs, BAR(16) - 0.001)), (k) => memoryShot(k, abs), 0.5);
+  // pulled into the memory: the camera speeds up into her phone (the strawberry milk on the wallpaper) as the old
+  // screen breaks up
+  const z = 1 + 1.6 * Math.pow(p, 1.6);
+  oldScreenCut(c, abs, p, (k) => {
+    k.save();
+    camera(k, 540, 1060, z);
+    shotHesitate(k, BAR(16) - 0.001);
+    k.restore();
+  }, (k) => memoryShot(k, abs), 0.5);
 }
 
 // ---------------------------------------------------------------- C · back to 00:52: she sends everything
@@ -306,41 +372,220 @@ function shotWipe(c: Ctx, abs: number) {
   });
   timeCard(c, abs, "00:52", EV.now + 0.05, EV.phoneAgain + 2);
 }
-function shotSend(c: Ctx, abs: number) {
-  const draft = abs < EV.send3 ? editing(abs, EV.type4[0], EV.type4[1], HER_NIGHT_DRAFT, CONFESSION_EDITS) : "";
+/** C after the tears: she goes back to him — a shot for each thing she does (user: the whole stretch was one phone
+ *  picture), the cuts on beats; the send and the waiting are one shot (user: the cut between them was jarring). */
+const C_LOVE = beatAt(81), // 41.47 the input box, close: 「其实，我喜欢你」
+  C_FACE = beatAt(83); // 42.50 her face: the send — then back into her room, waiting, falling asleep (one shot)
+/** her confession as it sits in the input box: broken at phrases (user: 「文字重排一下」) — never a comma at the start
+ *  of a line, 「其实，我喜欢你，」 on a line of its own (each line fits the box without wrapping) */
+const CONF_LINES = ["才不是这样的！！", "我每天都在等你的", "消息，每次都写了", "好多好多，又怕你", "嫌我烦，就全删了。", "你发的每一条我都", "看了好多遍。", "其实，我喜欢你，", "很久很久了。"];
+const CONF_BREAKS = CONF_LINES.slice(0, -1).reduce<number[]>((a, l) => [...a, (a[a.length - 1] ?? 0) + Array.from(l).length], []);
+/** the draft with those line breaks, as far as it agrees with the confession (the rest just wraps) */
+function laidOut(draft: string) {
+  const d = Array.from(draft),
+    full = Array.from(HER_CONFESSION);
+  let same = 0;
+  while (same < d.length && d[same] === full[same]) same++;
+  let out = "";
+  d.forEach((ch, i) => {
+    if (i > 0 && i <= same && CONF_BREAKS.includes(i)) out += "\n";
+    out += ch;
+  });
+  return out;
+}
+/** her phone at 00:58 → 03:00 (the chat with the draft being edited, or after the send) */
+function herNightView(abs: number) {
+  const draft = abs < EV.send3 ? laidOut(editing(abs, EV.type4[0], EV.type4[1], HER_NIGHT_DRAFT, CONFESSION_EDITS)) : "";
   const items = abs < EV.send3 ? herItems(abs, "present") : [...fromHer(HISTORY), ...afterNight("hers", abs, { conf: EV.send3, late1: EV.late1, late2: EV.late2 })];
   const time = abs < EV.late1 ? "00:58" : abs < EV.late2 ? "01:30" : "03:00";
-  const view = { title: HIM, time, me: "girl" as const, them: "boy" as const, items, dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
-  const sleep = smooth(phase(abs, EV.late2 + 0.2, EV.nightFalls));
-  const lapse = smooth(phase(abs, EV.send3 + 0.4, EV.late1));
+  return { title: HIM, time, me: "girl" as const, them: "boy" as const, items, dark: true, draft, caret: abs < EV.send3, keyboard: abs < EV.send3, sendHot: abs > EV.send3 - 0.1 && abs < EV.send3 ? 1 : 0 };
+}
+/** C1 · 39.94 → 41.47 her phone: home screen → she taps 微信 and it opens on the paragraph she left; the camera comes
+ *  down with her eyes onto the phone, then — once it's open — leans in on the draft as she cuts 「其实我……」 and types
+ *  a new line (careful, hopeful: slow). */
+function shotOpenApp(c: Ctx, abs: number) {
+  const view = herNightView(abs);
   let hands: { right: FingerPos; left: FingerPos } = { right: REST, left: REST_L };
   if (inWin(abs, EV.type4)) hands = typingThumbs(abs, EV.type4[0], EV.type4[1], 41);
-  else if (abs >= EV.type4[1] && abs < EV.send3 + 0.2) {
-    const sb = sendButtonAt(c, { ...view, draft: HER_CONFESSION });
-    const shaky = Math.sin(abs * 23) * 6;
-    hands = { right: { x: sb[0] + shaky, y: sb[1] + (abs < EV.send3 - 0.08 ? 50 : 0), touch: abs > EV.send3 - 0.08 && abs < EV.send3 + 0.12 ? 1 : 0 }, left: hands.left };
-  } else if (abs < EV.openApp + 0.06) {
+  else if (abs < EV.openApp + 0.06) {
     const land = smooth(phase(abs, EV.phoneAgain + 0.02, EV.openApp - 0.06));
     hands = { right: { x: WECHAT_AT[0], y: WECHAT_AT[1] + 40 * (1 - land), touch: abs > EV.openApp - 0.08 ? 1 : 0 }, left: hands.left };
   }
   const tap = abs > EV.openApp - 0.08 && abs < EV.openApp + 0.06 ? 1 : 0;
   const appK = smooth(phase(abs, EV.openApp, EV.openApp + 0.3));
-  // the camera: comes down with her eyes onto the phone; still while she writes; on the send, a breath back and the
-  // room warms; then the night: it drifts back and the room goes cold as the hours pass
   const arrive = 1 - Math.pow(1 - smooth(phase(abs, EV.phoneAgain, EV.phoneAgain + 0.3)), 2);
-  const sent = phase(abs, EV.send3, EV.send3 + 0.35);
-  const p: PhoneSpec = { cx: 540, cy: 960 - 30 * lapse + (1 - arrive) * -500, s: 1.0 - 0.06 * lapse + 0.03 * (1 - softStart(sent)) * (abs > EV.send3 ? 1 : 0), rot: 0 };
-  herBokeh(c, abs, { dark: 0.2 + 0.6 * lapse + 0.2 * sleep, warm: abs > EV.send3 ? 0.6 * (1 - lapse) : 0, shift: [0, (1 - arrive) * -200] });
+  const sb = sendButtonAt(c, { ...view, draft: CONF_DRAFT_FULL });
+  const lean = smooth(phase(abs, EV.openApp + 0.25, C_LOVE));
+  let p: PhoneSpec = { cx: 540, cy: 960 - 500 * (1 - arrive), s: 1.0, rot: 0 };
+  p = aimLerp(p, aim(300, sb[1] - 120, 540, 960, 1.3), lean);
+  herBokeh(c, abs, { dark: 0.2 + 0.1 * lean, shift: [0, (1 - arrive) * -200 + (p.cy - 960) * 0.1] });
   drawPhone(c, abs, p, (q) => {
     if (appK < 1) herHome(q, abs, "00:58", { press: tap, zoom: 1 + 0.08 * appK });
     appWindow(q, appK, WECHAT_AT, (a) => chatScreen2(a, abs, view));
-    if (sleep > 0) {
-      q.fillStyle = `rgba(0,0,0,${(0.9 * sleep).toFixed(3)})`;
-      q.fillRect(0, 0, SW, SH);
-    }
-  }, { thumbs: [hands.right, hands.left], haloRgb: "255,180,210", halo: 1 - 0.8 * sleep });
-  for (const [label, t0, t1] of [["01:30", EV.late1, EV.late2], ["03:00", EV.late2, EV.nightFalls]] as [string, number, number][]) timeCard(c, abs, label, t0 - 0.05, t1);
-  vignette(c, 0.35 + 0.3 * lapse, 540, 900, 380, 1200);
+  }, { thumbs: [hands.right, hands.left], haloRgb: "255,180,210" });
+  vignette(c, 0.35, 540, 900, 380, 1200);
+}
+/** the draft with everything in it (where the input box ends up) */
+const CONF_DRAFT_FULL = laidOut(HER_CONFESSION);
+/** C2 · 41.47 → 42.50 the input box, close (the whole box between the label at the top and the lyrics): 「其实，我喜欢你」
+ *  typed on its own line — she takes 「喜欢你」 back out (the picture jolts with each delete), a breath — types it again,
+ *  and the rest 「，很久很久了。」; then a yellow highlighter sweeps over 「我喜欢你」 (what she finally dares to say) with
+ *  a small push, and it holds. The camera creeps in on the line as it's written. */
+function shotLoveLine(c: Ctx, abs: number) {
+  const view = herNightView(abs);
+  const at = (u: number) => EV.type4[0] + (EV.type4[1] - EV.type4[0]) * u;
+  const del: [number, number] = [at(CONFESSION_EDITS[3].u0), at(CONFESSION_EDITS[3].u1)];
+  const retyped = at(CONFESSION_EDITS[4].u0) + (at(CONFESSION_EDITS[4].u1) - at(CONFESSION_EDITS[4].u0)) * 0.3;
+  const mark = smooth(phase(abs, retyped + 0.02, retyped + 0.24));
+  const j = kick(abs, del[0], 0.12);
+  const press = inWin(abs, del) ? (((abs - del[0]) * 10) % 1 < 0.5 ? 1 : 0) : 0;
+  const creep = smooth(phase(abs, C_LOVE, C_FACE));
+  const hit = kick(abs, retyped + 0.12, 0.14);
+  // the box once it holds seven lines (screen units): top 454, bottom 838; her line at y 732
+  let p = aimLerp(aim(250, 650, 540, 760, 2.08, 0.02), aim(255, 660, 540, 770, 2.2, 0.005), creep);
+  p = { ...p, s: p.s * (1 + 0.015 * j + 0.012 * hit), cy: p.cy + 5 * press + 10 * j };
+  herBokeh(c, abs, { dark: 0.35 });
+  drawPhone(c, abs, p, (q) => {
+    chatScreen2(q, abs, view);
+    if (mark > 0) loveMark(q, view.draft, mark);
+  }, { haloRgb: "255,180,210" });
+  vignette(c, 0.45, 540, 780, 360, 1150);
+}
+/** the yellow highlighter over 「我喜欢你」 in the input box (screen units; the box's own layout, keyboard up) */
+function loveMark(q: Ctx, draft: string, k: number) {
+  const lines = draftLines(q, draft);
+  const show = lines.slice(Math.max(0, lines.length - 7));
+  const j = show.findIndex((l) => l.startsWith("其实，我喜欢你"));
+  if (j < 0) return;
+  const LH = 50,
+    FS = 37;
+  const inputTop = SH - 420 - (48 + show.length * LH + 30);
+  const y = inputTop + 50 + j * LH;
+  const x0 = 84 + 16 + measure(q, "其实，", FS, F.ui);
+  const w = measure(q, "我喜欢你", FS, F.ui);
+  q.save();
+  q.beginPath();
+  q.rect(x0 - 8, y - 30, (w + 16) * k, 60);
+  q.clip();
+  q.fillStyle = "#ffd84a";
+  q.beginPath();
+  q.moveTo(x0 - 8, y - 22);
+  q.lineTo(x0 + w + 8, y - 25);
+  q.lineTo(x0 + w + 6, y + 24);
+  q.lineTo(x0 - 6, y + 26);
+  q.fill();
+  text(q, "我喜欢你", x0, y, { size: FS, font: F.ui, fill: "#1a1a1a", align: "left" });
+  q.restore();
+}
+/** C3 · 42.50 → 44.80 one shot, no cut. Her face over the phone, in her room: her thumb is over 发送 — she holds her
+ *  breath, the camera creeping in (careful); on "misery" she presses it: the screen's light jumps on her face (the same
+ *  flare as his at 0:00 and 15.15 — this time it's the answer), a jolt, her eyes shut; she lets the breath out and
+ *  smiles a little, the room warming, and the camera breathes out with her, back off her face — and then it just keeps
+ *  going back (alone): 01:30, she sends 「你睡了吗？」 (its light flicks on her face); 03:00, 「晚安。」 — her eyes are
+ *  closing, her head goes down, the screen dims and goes to sleep in her hands; the room comes into focus round her and
+ *  goes cold. (The next shot is her window from across the street.) */
+function shotHerSend(c: Ctx, abs: number) {
+  const sent = abs >= EV.send3;
+  const s3 = EV.send3,
+    l1 = EV.late1,
+    l2 = EV.late2;
+  // the camera, beat by beat (情绪运镜: the speed changes with what she feels)
+  // · 鼓起勇气 / 屏息: a straight, linear creep in on her eyes, a dutch tilt creeping in, the edges closing
+  const creep = phase(abs, C_FACE, s3);
+  // · 按下去: a check — 2.5% in and a jolt, the screen's light jumping on her face
+  const k = kick(abs, s3, 0.12);
+  const flare = sent ? Math.exp(-(abs - s3) / 0.25) : 0;
+  // · 发出去了 / 松一口气: it springs back (backOut, overshooting), the tilt straightens, warm light comes up
+  const relief = backOut(phase(abs, s3 + 0.08, s3 + 0.36));
+  // · 期待: she watches the screen for an answer — the camera leans back in, faster and faster
+  const hope = Math.pow(phase(abs, s3 + 0.4, l1), 2.2);
+  // · 01:30, 03:00 — nothing came: each time the clock jumps, the camera drops back a step (fast, then easing), and
+  //   between the steps it keeps drifting away; the picture sinks a little and leans (失望), the warmth drains into a
+  //   cold, greyer room (孤独) — it doesn't stop going back
+  const step1 = smooth(clamp((abs - l1) / 0.28)),
+    step2 = smooth(clamp((abs - l2) / 0.28));
+  const drift1 = phase(abs, l1 + 0.28, l2),
+    drift2 = phase(abs, l2 + 0.28, EV.nightFalls + 0.2);
+  let z = 1.72 + 0.12 * creep;
+  z *= 1 + 0.025 * k;
+  z *= Math.pow(1.6 / 1.84, relief);
+  z *= Math.pow(1.68 / 1.6, hope);
+  z *= Math.pow(1.3 / 1.68, step1) * Math.pow(1.24 / 1.3, drift1);
+  z *= Math.pow(1.06 / 1.24, step2) * Math.pow(0.96 / 1.06, drift2);
+  const zClose = 1.84,
+    zWide = 1.0;
+  // the head (where the camera holds while close) → the room (her in bed in the middle), by how much is in view
+  const w = clamp((1 / zClose - 1 / z) / (1 / zClose - 1 / zWide));
+  const lonely = clamp(0.5 * step1 + 0.5 * step2 + 0.15 * drift2);
+  const hx = HER_SIT.x,
+    hy = HER_SIT.y;
+  const ay = lerp(hy, hy + 200, w),
+    sy = lerp(790, 960, w) + 50 * lonely + Math.cos(abs * 83) * 6 * k;
+  const rot = 0.03 * creep * (1 - clamp(relief)) - 0.022 * lonely;
+  const drowsy = smooth(phase(abs, EV.late2 + 0.05, EV.nightFalls - 0.1));
+  const sleep = smooth(phase(abs, EV.late2 + 0.2, EV.nightFalls));
+  const flick = Math.max(abs >= EV.late1 ? Math.exp(-(abs - EV.late1) / 0.2) : 0, abs >= EV.late2 ? Math.exp(-(abs - EV.late2) / 0.2) : 0);
+  // her room: soft and moving less while we're close, sharp and locked to her once we're back
+  fillBg(c, "#140d1c");
+  const blur = 6 * (1 - w);
+  const zb = 1 + (z - 1) * lerp(0.45, 1, w);
+  const room = (b: Ctx) => {
+    camera(b, hx, ay, zb, rot * 0.6, 540 - hx, sy - ay);
+    herRoomNight(b, abs, { lamp: 1 });
+  };
+  if (blur > 0.2) filtered(c, `blur(${blur.toFixed(1)}px)`, room, "herSendRoom");
+  else {
+    c.save();
+    room(c);
+    c.restore();
+  }
+  c.save();
+  camera(c, hx, ay, z, rot, 540 - hx, sy - ay);
+  herInBed(c, {
+    // holding her breath → eyes shut on the press → a little smile (relief) → eyes on the screen, hoping → the hours:
+    // sad, sleepy, asleep
+    eyes: !sent ? "open" : abs < s3 + 0.35 ? "shut" : abs < s3 + 0.55 ? "happy" : drowsy > 0.6 ? "shut" : drowsy > 0.2 ? "sleepy" : "open",
+    brows: !sent ? "worried" : abs < l1 ? undefined : "sad",
+    mouth: !sent ? "bite" : abs < s3 + 0.35 ? "flat" : abs < l1 ? "smile" : "flat",
+    tears: 0.2,
+    blush: abs < l1 ? 0.45 + 0.3 * clamp(relief) : 0.4,
+    look: [0, 0.6 + 0.2 * drowsy],
+    tilt: 0.04 + 0.16 * drowsy,
+    headY: 18 * drowsy,
+    arms: "custom",
+    handL: [-50, 300 + 30 * drowsy],
+    handR: [50, 300 + 30 * drowsy],
+    shapeL: "hold",
+    shapeR: "hold",
+    thumbFlip: true,
+    grip: (q) => herPhoneBack(q, 0, 236 + 30 * drowsy, 92, 176, 0),
+  }, { lamp: 1, phone: (0.8 + 0.6 * Math.max(flare, flick)) * (1 - 0.85 * sleep) });
+  herDuvet(c, 0);
+  // the screen's light over the top of the phone, onto her face (and the flare as it sends)
+  c.globalCompositeOperation = "screen";
+  glow(c, hx, hy + (236 - 92) * HER_SIT.s, 170, `rgba(255,190,215,${((0.22 + 0.5 * Math.max(flare, 0.6 * flick)) * (1 - sleep)).toFixed(3)})`);
+  c.restore();
+  // the warmth after the send (the edges let go), giving way to the cold of the hours (the edges close again)
+  const warm = clamp(relief) * (1 - lonely);
+  if (warm > 0) glow(c, 540, 700, 1100, `rgba(255,190,150,${(0.2 * warm).toFixed(3)})`);
+  if (lonely > 0) {
+    c.save();
+    c.globalCompositeOperation = "multiply";
+    c.fillStyle = `rgba(150,160,220,${(0.3 * lonely).toFixed(3)})`;
+    c.fillRect(-60, -60, W + 120, H + 120);
+    // greyer: lay a little of the picture's own grey over it
+    c.globalCompositeOperation = "saturation";
+    c.fillStyle = `rgba(128,128,128,${(0.4 * lonely).toFixed(3)})`;
+    c.fillRect(-60, -60, W + 120, H + 120);
+    c.restore();
+  }
+  vignette(c, 0.42 + 0.12 * creep * (sent ? 0 : 1) - 0.18 * clamp(relief) * (1 - lonely) + 0.25 * lonely, 540, lerp(910, 860, w), 360, lerp(1250, 1200, w));
+  for (const [label, t0, t1] of [["01:30", EV.late1, EV.late2], ["03:00", EV.late2, EV.nightFalls]] as [string, number, number][]) timeCard(c, abs, label, t0 + 0.02, t1);
+}
+function shotSend(c: Ctx, abs: number) {
+  if (abs < C_LOVE) shotOpenApp(c, abs);
+  else if (abs < C_FACE) shotLoveLine(c, abs);
+  else shotHerSend(c, abs);
 }
 
 // ---------------------------------------------------------------- D · the night passes
