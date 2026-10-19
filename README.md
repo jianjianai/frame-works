@@ -10,7 +10,7 @@
 - **字体是完整的**（fonts/），`designScene` 和 `loadFonts` 自动加载，任何文案都不缺字，不用再取子集或补字。
 - **每一幕**：`designScene(options, t0, (ctx, abs) => …)`，在 1080×1920 的设计坐标里按绝对时间画；镜头写法看 reference/。新作品从 templates/ 开始（scene.ts、visual.json、timeline.ts、歌词层 lyrics.ts）。
 - **音效**：`audio_place` 的 `sound: "s0rrow/code/sfx.ts#slam"`，或从资源里拖到音轨；不用写进作品的 audio.ts。
-- **外语版（YouTube 等）**：素材库自己画的字（课本「物理」、牛奶盒、黑板、门牌、手机界面上的字……）由作品在 draw.ts 的 `LOCALE` 里给译文（`Object.assign(LOCALE, { 物理: "PHYSICS" })`，text() / measure() 按整句查表，不填就和原来一样）；英文手写体打头就把 `F.cn` / `F.pen` 改成 `'Gochi Hand', …`。歌词层传 `cn: false, enSize: 68` 只显示英文。例子：《unhappy》YouTube 版（b1e36583）的 acts/locale.ts。新画的东西里的字也用 text() 画，以后就能这样翻译。
+- **英文版（海外版 / YouTube）**：作品在画第一帧之前调用 `english.ts` 的 `useEnglish({ 作品自己的字 })`：素材库自己画的字（课本、牛奶盒、黑板、门牌、招牌、手机界面……）换成英文（draw.ts 的 `LOCALE`，text() / measure() 按整句查表，不调用就和原来一样），手写体换成 Gochi Hand 打头；聊天、帖子、通知、主页用 `dm.ts`（Instagram 私信样式，接口和 chat.ts 一样，换 import 就行）；歌词层传 `cn: false, enSize: 68`。排英文时先用 `tools/measure-text.mjs` 量字宽、看换行。例子：《unhappy》YouTube 版（frame-works/b1e36583）。新画的东西里的字也用 text() 画，并把译文加进 english.ts 的 `EN`。
 - **某支片子要不一样的效果**：给素材库里的函数加参数（带默认值，已有的调用不受影响），用 `material_write` 改，然后用 `resource_view` 看一眼；不要把文件拷进作品再改（拷贝的副本不会再得到改进）。新画的、以后还会用到的角色、场景、道具放进对应的文件，并在文件末尾的 `resources` 里声明（写法见 frame_guide resources）。
 
 ## 目录
@@ -24,6 +24,8 @@
 | `code/hand.ts` | 握手机的双手、触点、点击涟漪 |
 | `code/phone.ts` | 手机、锁屏（黄昏秋千壁纸）、群聊、动态、控制中心、通知、角标、手机背面 |
 | `code/chat.ts` | 微信风格聊天、朋友圈、资料页、主页、App 窗口、关机、开机、头像、贴纸、合照 |
+| `code/dm.ts` | 英文版的手机界面（Instagram 私信）：聊天和正在输入气泡、帖子页、通知、主页和 App 窗口、资料页和关机的英文版；镜头对准用的位置查询 |
+| `code/english.ts` | 英文版：`useEnglish()` 把素材库自己画的字换成英文（译文表 `EN`）、手写体换成英文手写体 |
 | `code/social.ts` | 深色社交界面线性图标、适宽按钮、手机底部手势条；600×1280 屏幕坐标 |
 | `code/screens.ts` | 《unhappy》的相册、存钱、外卖接单、便利贴、小狗照片 |
 | `code/sets.ts`、`code/shared.ts` | 《i have no friends》的场景和道具，生日书桌镜头 |
@@ -41,6 +43,7 @@
 | `fonts/` | 6 款完整字体 |
 | `templates/` | 新作品的 scene.ts、visual.json、timeline.ts、scenes/lyrics.ts |
 | `tools/fetch-krc.mjs` | 酷狗 KRC 逐词歌词时间 → 作品的 scenes/krc.ts |
+| `tools/measure-text.mjs` | 读 TTF 量字宽、按单词模拟换行（排英文用，不用开浏览器） |
 | `reference/` | 几支片子的分镜代码：镜头写法参考，只看不拷（见 reference/README.md） |
 
 不放歌曲、歌词和作品自己的混音。
