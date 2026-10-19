@@ -31,5 +31,6 @@ const project:AnimationProject={
  credits:['原创场景、乐谱、合成器与拟音：本工程自有源码','画面使用 Three.js；音乐为代码合成，成片采用 AAC 多轨；无外部视听素材'],
  load:()=>import('./scene'),
   loadAudioDocument: () => import("./audio.json"),
+  status: "abandoned",
 };
 export default project;
