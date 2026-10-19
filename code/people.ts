@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { defineResources, resource } from "@frame/engine/resources";
-import { C, Ctx, F, Pt, beginFrame, blob, curve, hash, ik2, inkLine, lerp2, loadFonts, oval, paint, poly, shaded, tubePts } from "./draw";
+import { C, Ctx, F, LOCALE, Pt, beginFrame, blob, curve, hash, ik2, inkLine, lerp2, loadFonts, oval, paint, poly, shaded, tubePts } from "./draw";
 import { HandShape, drawHand, handShape } from "./kid";
 
 const point = z.tuple([z.number(), z.number()]);
@@ -492,8 +492,9 @@ export function banner(ctx: Ctx, x: number, y: number, w: number, open: number, 
   }
 }
 
-/** Little "哈哈哈" laugh scribbles around a point. */
+/** Little "哈哈哈" laugh scribbles around a point (a foreign version translates the word in LOCALE). */
 export function hahas(ctx: Ctx, cx: number, cy: number, r: number, t: number, seed: number, fontFamily: string, count = 6) {
+  const ha = LOCALE["哈哈哈"] ?? "哈哈哈";
   ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -511,9 +512,9 @@ export function hahas(ctx: Ctx, cx: number, cy: number, r: number, t: number, se
     ctx.font = `400 ${sz}px ${fontFamily}`;
     ctx.lineWidth = 8;
     ctx.strokeStyle = C.ink;
-    ctx.strokeText("哈哈哈", 0, 0);
+    ctx.strokeText(ha, 0, 0);
     ctx.fillStyle = i % 2 ? "#ffe45c" : "#fff";
-    ctx.fillText("哈哈哈", 0, 0);
+    ctx.fillText(ha, 0, 0);
     ctx.restore();
   }
   ctx.restore();
