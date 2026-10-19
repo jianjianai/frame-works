@@ -212,13 +212,28 @@ const LEATHER_SOLE: P[] = [[-8, 57, 1], [-8, 62, 1], [-52, 63], [-62, 61], [-61,
 const LEATHER_HEEL: P[] = [[21, 56, 1], [21, 67, 1], [4, 67, 1], [3, 56, 1]];
 /** 布鞋：厚厚的千层底 */
 const CLOTH_SOLE: P[] = [[23, 53, 1], [23, 63], [19, 67], [-47, 67], [-57, 63], [-58, 55], [-53, 53, 1]];
-/** 袜子 / 脚踝：从裤脚下面到鞋口（再往下一截，藏在鞋里） */
-const SOCK: P[] = [[-13, 0, 1], [16, -1, 1], [17, 40, 1], [-15, 40, 1]];
+/** 穿着鞋时着地的点（鞋底一圈）：皮鞋前掌翘着、跟着地 */
+const SHOE_GROUND: Record<ShoeStyle, V2[]> = {
+  sneaker: [[-50, 66], [-30, 67], [0, 67], [20, 66]],
+  leather: [[-54, 62], [-30, 62.5], [5, 67], [20, 67]],
+  cloth: [[-50, 66], [-30, 67], [0, 67], [18, 66]],
+};
 
+/**
+ * 鞋绕鞋口里的一点转（脚踝顺着小腿往下 SHOE_PIVOT）：基础模型的脚踝在裤脚那里、离鞋口还有一截，
+ * 脚尖一绷（飘着、踮脚）绕它转的鞋会被一截横着的「脚脖子」挑出去。站着时和绕脚踝转一样。
+ */
+const SHOE_PIVOT = 22;
 function shoeMap(rig: Rig, side: "L" | "R") {
   const limb = rig.legs[side];
   const fx = side === "R" || rig.u >= 0.25 ? 1 : -1;
-  return ([x, y]: V2): V2 => limb.tip.p(x * fx, y);
+  const [px, py] = new Frame(limb.end[0], limb.end[1], limb.a2).p(0, SHOE_PIVOT);
+  const f = new Frame(px, py, limb.tip.a);
+  return ([x, y]: V2): V2 => f.p(x * fx, y - SHOE_PIVOT);
+}
+
+function shoeSoles(rig: Rig, side: "L" | "R", style: ShoeStyle): V2[] {
+  return SHOE_GROUND[style].map(shoeMap(rig, side));
 }
 
 function shoeLine(ctx: CanvasRenderingContext2D, pts: V2[], m: (p: V2) => V2, color: string, lw: number) {
@@ -237,6 +252,9 @@ function shoeLine(ctx: CanvasRenderingContext2D, pts: V2[], m: (p: V2) => V2, co
 
 function drawShoe(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, shoe: ShoeSpec) {
   const style = shoe.style ?? "leather";
+  const limb = rig.legs[side];
+  const fx = side === "R" || rig.u >= 0.25 ? 1 : -1;
+  const shin = new Frame(limb.end[0], limb.end[1], limb.a2);
   const m = shoeMap(rig, side);
   const path = (pts: P[]) => smoothPath(pts.map(([x, y, c]) => [...m([x, y]), ...(c ? [c] : [])] as P));
   const lw = ink.lw * 0.8;
@@ -247,10 +265,21 @@ function drawShoe(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink:
     ctx.lineCap = "round";
     ctx.stroke(p);
   };
-  // 袜子或者脚踝：只描两边（上沿接着裤脚）
-  fillShaded(ctx, path(SOCK), shoe.sock ?? rig.look.colors?.skin ?? BASE_COLORS.skin, null, ink);
-  shoeLine(ctx, [[-13, 1], [-14, 36]], m, ink.line, lw);
-  shoeLine(ctx, [[16, 0], [17, 36]], m, ink.line, lw);
+  // 袜子或者脚踝：一截能弯的软管，上头跟着小腿（藏在裤脚里），下头跟着鞋（藏在鞋口里）；只描两边
+  const tl = shin.p(-13, -2);
+  const tr = shin.p(16, -2);
+  const bl = m([-15 * fx, 38]);
+  const br = m([17 * fx, 38]);
+  const sock = new Path2D();
+  sock.moveTo(tl[0], tl[1]);
+  sock.lineTo(tr[0], tr[1]);
+  sock.lineTo(br[0], br[1]);
+  sock.lineTo(bl[0], bl[1]);
+  sock.closePath();
+  fillShaded(ctx, sock, shoe.sock ?? rig.look.colors?.skin ?? BASE_COLORS.skin, null, ink);
+  const id = (p: V2) => p;
+  shoeLine(ctx, [tl, bl], id, ink.line, lw);
+  shoeLine(ctx, [tr, br], id, ink.line, lw);
   const upper = path(SHOE_UPPER[style]);
   fillShaded(ctx, upper, shoe.color, shoe.shade, ink);
   ctx.save();
@@ -305,18 +334,16 @@ function drawShoe(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink:
   }
   // 裤脚压在袜子、鞋口上面：把小腿最下面一截再画一遍（和原来一样先描两倍粗的边再填色，接缝看不出来）。
   // 脚尖朝下、脚踝弯得很厉害时（飘着），袜子的上角、鞋跟不会从裤脚边上戳出来
-  const limb = rig.legs[side];
-  const shin = legPaths(rig, side)[1];
-  const at = new Frame(limb.end[0], limb.end[1], limb.a2);
+  const leg = legPaths(rig, side)[1];
   const col = { ...BASE_COLORS, ...rig.look.colors };
   ctx.save();
-  ctx.clip(polyPath([[-90, -36], [90, -36], [90, 26], [-90, 26]], ([x, y]) => at.p(x, y)));
+  ctx.clip(polyPath([[-90, -36], [90, -36], [90, 26], [-90, 26]], ([x, y]) => shin.p(x, y)));
   ctx.strokeStyle = ink.line;
   ctx.lineWidth = ink.lw * 2;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
-  ctx.stroke(shin);
-  fillShaded(ctx, shin, col.bottom, col.bottomShade, ink);
+  ctx.stroke(leg);
+  fillShaded(ctx, leg, col.bottom, col.bottomShade, ink);
   ctx.restore();
 }
 
@@ -460,7 +487,9 @@ export function castLook(spec: CastSpec): Look {
             const a = rig.legs[side].end;
             return bootSoles(rig, side).map(([x, y]) => [a[0] + (x - a[0]) * k, a[1] + (y - a[1]) * k] as V2);
           }
-        : undefined,
+        : shoes === "bare"
+          ? undefined
+          : (rig, side) => shoeSoles(rig, side, shoes.style ?? "leather"),
     overLeg: (ctx, rig, side, ink) => {
       const lp = side === "L" ? rig.pose.legL : rig.pose.legR;
       if (shoes === "boots") {
