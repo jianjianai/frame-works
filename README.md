@@ -10,6 +10,7 @@
 - **字体是完整的**（fonts/），`designScene` 和 `loadFonts` 自动加载，任何文案都不缺字，不用再取子集或补字。
 - **每一幕**：`designScene(options, t0, (ctx, abs) => …)`，在 1080×1920 的设计坐标里按绝对时间画；镜头写法看 reference/。新作品从 templates/ 开始（scene.ts、visual.json、timeline.ts、歌词层 lyrics.ts）。
 - **音效**：`audio_place` 的 `sound: "s0rrow/code/sfx.ts#slam"`，或从资源里拖到音轨；不用写进作品的 audio.ts。
+- **外语版（YouTube 等）**：素材库自己画的字（课本「物理」、牛奶盒、黑板、门牌、手机界面上的字……）由作品在 draw.ts 的 `LOCALE` 里给译文（`Object.assign(LOCALE, { 物理: "PHYSICS" })`，text() / measure() 按整句查表，不填就和原来一样）；英文手写体打头就把 `F.cn` / `F.pen` 改成 `'Gochi Hand', …`。歌词层传 `cn: false, enSize: 68` 只显示英文。例子：《unhappy》YouTube 版（b1e36583）的 acts/locale.ts。新画的东西里的字也用 text() 画，以后就能这样翻译。
 - **某支片子要不一样的效果**：给素材库里的函数加参数（带默认值，已有的调用不受影响），用 `material_write` 改，然后用 `resource_view` 看一眼；不要把文件拷进作品再改（拷贝的副本不会再得到改进）。新画的、以后还会用到的角色、场景、道具放进对应的文件，并在文件末尾的 `resources` 里声明（写法见 frame_guide resources）。
 
 ## 目录
@@ -34,7 +35,7 @@
 | `code/mirrors/` | 《mirrors》的场景（浴室、夜走廊和落地镜、教室、天台、客厅）、深色手机界面、速写本、胎记、伪装、红笔批注 |
 | `code/blocked/` | 《屏蔽》的爸爸（夜班保安：正面 / 背影、捧手机、一根手指打字、捂嘴、年轻时）、门卫室（雪夜厂门口、朝窗、背墙、值班桌俯拍、外景）、下雪 |
 | `code/effects.ts` | 效果和转场的预览（函数在 draw.ts）：回忆、进回忆转场、甩镜、冲镜、白场黑场、高光溢出、灰色世界、光柱、景深、手持镜头、轮廓光、人物打光、影子、时间卡 |
-| `code/lyrics.ts` | 中英卡拉 OK 歌词层（作品给歌词数据、段落样式和钩子）、两行大字幕 |
+| `code/lyrics.ts` | 中英卡拉 OK 歌词层（作品给歌词数据、段落样式和钩子；`cn: false` 只显示英文）、两行大字幕 |
 | `code/grain.ts` | 胶片颗粒和暗角（visual.json 里 overlay 叠在最上面） |
 | `code/sfx.ts` | 78 个合成音效（中文名、时长、重音时刻） |
 | `fonts/` | 6 款完整字体 |
