@@ -293,7 +293,7 @@ export function drawForegroundItem(g: CanvasRenderingContext2D, kind: FgKind, x:
 
 // ——— 最高那栋楼的楼顶（开场天上的镜头里露出一角）：栏杆、电视天线、晾着的白床单、一盆花——有人在这里过日子 ———
 export const TOWER_ROOF = (-TOWER.floors * 128 - 60) * (TOWER.fh / 128);
-export function drawRoof(g: CanvasRenderingContext2D, t: number) {
+export function drawRoof(g: CanvasRenderingContext2D, t: number, o: { sheet?: boolean } = {}) {
   const y = TOWER_ROOF;
   const x0 = TOWER.x;
   g.strokeStyle = INK;
@@ -349,7 +349,7 @@ export function drawRoof(g: CanvasRenderingContext2D, t: number) {
   sheet.quadraticCurveTo((ax + bx) / 2 + flap, y - 140 + flap * 0.4, ax + 40 + flap * 0.8, y - 120);
   sheet.quadraticCurveTo(ax + 20 + flap * 0.3, y - 200, ax + 30, y - 284);
   sheet.closePath();
-  part(g, sheet, "#f8f5ef", "#e6e0d6", 3, [6, 5]);
+  if (o.sheet !== false) part(g, sheet, "#f8f5ef", "#e6e0d6", 3, [6, 5]);
   const pot = new Path2D();
   pot.moveTo(x0 + 16, y);
   pot.lineTo(x0 + 86, y);

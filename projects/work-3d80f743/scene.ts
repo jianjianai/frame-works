@@ -5,5 +5,6 @@ import visual from "./visual.json";
 export function createScene(options: SceneOptions) {
   return createCompositionScene(options, visual, {
     act1: () => import("./scenes/act1"),
+    act2: () => import("./scenes/act2"),
   });
 }
