@@ -64,7 +64,7 @@
 - 以后改时间：先在 EV 里用 beatAt 写，再同步 audio.json 的音效 start；闷音片段跟着被子镜头（EV.muffle）走，干声片段在 muffle[0] 结束、song_b 在 leaveRoom 前 0.1 秒开始。
 
 ## 发布建议（YouTube Shorts）
-- 标题（钩子 + 暗示有结局，第三人称）：`He sent a whole paragraph. She just replied "k"… #shorts #unhappy #s0rrow`
+- 标题（钩子 + 暗示有结局，第三人称）：`He sent a whole paragraph. She just replied "k"… (wait for her side) #shorts`（「her side」对上片中的标签 Her side，告诉观众后面有她那边的反转）；备选 `He thought "k" meant she didn't care… #shorts #crush`、`Rewatch the first second: how many times did she start typing? #shorts`（把评论题放进标题）。
 - 说明：一句剧情（He thought "k" meant she didn't care. She deleted a paragraph every time.）+ 歌名歌手 + 话题 #crush #texting #lovestory。
 - 置顶评论：英文全文歌词 +「Rewatch the first second: how many times did she start typing?」，前几个小时多回评论。
 - 以下是抖音版的建议（只作参考）：

@@ -23,5 +23,6 @@ const project: AnimationProject = {
   loadAudio: () => import("./audio"),
   posterTime: 1.7,
   tempo: {"bpm":117.39,"firstBeat":0.0737,"beatsPerBar":4},
+  publishedAt: "2026-10-20T02:45:08.376Z",
 };
 export default project;
