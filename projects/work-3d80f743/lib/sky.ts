@@ -88,6 +88,11 @@ export function makeSky() {
         o.lean += 1.5 * s(0.9, 1.1);
         o.shoulderR += 3 * s(1.0, 2.4);
         o.hipR += 3 * s(0.85, 1.7);
+        // 这一镜她朝右（用户 2026-10-20：「把这个镜头她改成面朝右边」）：姿势表里是朝左写的，只翻朝向；
+        // 下一镜沉沉抱住她那一刻换回朝左（roof.ts 的 qjMove，抱住那一下一帧翻过来）
+        o.face = -o.face;
+        // 风还是往画面右边吹：她朝右以后对她来说是从身后吹（不翻的话短发被吹到脸前面、翻成一圈尖）
+        if (typeof o.wind === "number") o.wind = -o.wind;
         // 「咔」：一震
         const k = kick(t, T.click, 0.1);
         o.neck -= 6 * k;
@@ -147,16 +152,17 @@ export function makeSky() {
       if (w <= 0) return;
       const k = QJ.scale;
       const key = side === "L" ? "armL" : "armR";
-      pose[key] = { ...(pose[key] as object), to: [(p[0] - q.x) / k, (p[1] - q.y) / k], ik: Math.min(1, w) };
+      // 朝右的人 IK 目标的 x 取反
+      pose[key] = { ...(pose[key] as object), to: [(-(p[0] - q.x)) / k, (p[1] - q.y) / k], ik: Math.min(1, w) };
     };
     // 近处的手：伸到头上的发卡（头的左上），拔下来拿到胸前，再凑到锁眼上
-    const clip: V2 = [head[0] - 16, head[1] - 34];
+    const clip: V2 = [head[0] + 16, head[1] - 34];
     const chest = chestOf(q);
-    const hold: V2 = [chest[0] - 60, chest[1] + 10];
+    const hold: V2 = [chest[0] + 60, chest[1] + 10];
     const kh = keyhole(t);
-    const atLock: V2 = [kh[0] - 30, kh[1] - 12];
+    const atLock: V2 = [kh[0] + 30, kh[1] - 12];
     const twist = E.io(ph(t, T.insert, T.click - 0.03));
-    const inLock: V2 = [kh[0] - 24 + 4 * twist, kh[1] - 8 - 6 * twist];
+    const inLock: V2 = [kh[0] + 24 - 4 * twist, kh[1] - 8 - 6 * twist];
     let hl: V2 = clip;
     if (t > T.pin1) hl = lerp(clip, hold, E.io(ph(t, T.pin1, T.curl)));
     if (t > T.curl) hl = lerp(hold, atLock, E.io(ph(t, T.curl, T.insert - 0.02)));
@@ -164,7 +170,7 @@ export function makeSky() {
     reach("L", hl, fade(t, T.pin0 - 0.06, T.pin0 + 0.06) * release);
     // 远处的手：攥住锁身
     const L = lockAt(t);
-    reach("R", [L[0] + 18, L[1] + 14], fade(t, T.curl + 0.02, T.curl + 0.14) * release);
+    reach("R", [L[0] - 18, L[1] + 14], fade(t, T.curl + 0.02, T.curl + 0.14) * release);
     return { ...q, pose, spec: t >= T.pin1 - 0.06 ? QJ_NOPIN : QJ, pinTip: t >= T.insert ? kh : null };
   };
 
@@ -323,9 +329,9 @@ export function skyCam(t: number, sky: ReturnType<typeof makeSky>): Cam {
   // 推到锁上：锁在画面中间偏上
   const push = E.io(ph(t, T.curl - 0.04, T.insert + 0.08));
   if (push > 0) {
-    // 锁和她低着的脸都在画面里（脸在锁的左上）
+    // 锁和她低着的脸都在画面里（她朝右，脸在锁的右上）
     const kh = sky.keyhole(Math.min(t, T.drop));
-    const A = aim(kh[0] - 80, kh[1] - 40, 560, 900, 2.35);
+    const A = aim(kh[0] + 90, kh[1] - 40, 540, 900, 2.35);
     c = camLerp(c, A, push);
   }
   // 锁开以后：跟着她往上退开（一直跟着她的胸口，先快后稳），落在「白在最上面、楼顶在右上、她在左下往上飘」上

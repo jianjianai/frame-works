@@ -241,6 +241,11 @@ export const QIANJIN = {
     ...armL(70, 60, 0, "grip", l),
     ...armR(80, 50, 0, "grip", l),
   })),
+  /** 半空里抱住她时：腿还软软地垂着、往后拖一点（不提前折到身子底下；用户 2026-10-20：「腿不要提前收，而是落地之后收」），落地以后才跪坐下去 */
+  转身抱_垂腿: pose(2, { face: 0.6, float: 0, ground: false, rot: 0, wind: 0.2, ...legL(4, -40, -30), ...legR(16, -58, -30), neck: -18, expression: "忍着哭", blink: 0.9, tears: 1, lookY: 0.6 }, (l) => ({
+    ...armL(70, 60, 0, "grip", l),
+    ...armR(80, 50, 0, "grip", l),
+  })),
   /** 「我」哭出来：脸埋得更深，闭着眼 */
   转身抱_哭: pose(30, { face: 0.6, float: 0, ground: false, rot: 0, wind: 0.2, ...legL(84, -166, -166), ...legR(90, -166, -164), neck: -24, expression: "闭眼", sad: 0.9, smile: -0.2, tears: 1 }, (l) => ({
     ...armL(70, 60, 0, "grip", l),

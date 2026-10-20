@@ -8,7 +8,7 @@
 import { beatAt } from "@frame/engine/tempo";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import type { MoveKey, PoseIn } from "@materials/剪纸角色/code/chengtuo";
-import { type Cam, E, aim, camLerp, kick, ph } from "./cam";
+import { type Cam, E, aim, camLerp, kick, ph, toScreen } from "./cam";
 import { INK, QJ_HOME, addEllipse, drawGlow, part, rectPath } from "./world";
 import { drawPerson } from "./people";
 import { groundShadow } from "./props";
@@ -1242,7 +1242,9 @@ export function makeHome() {
   };
   /** 镜头跟着她往下坠：追她的胸口，晚一点到（每被拽一把，镜头跟着往下一沉） */
   const chestFollow = smoothTrack(qjChest, 19.9, 23, 11);
-  return { bigAt, momAt, qjAt, qjChest, chestFollow, lockAt, momChest, ankleAt, drawFront, drawPeople };
+  /** ⑤ 镜头跟着她的胸口：红线一断她往上一窜，镜头晚一点被带上去（弹簧，不是死钉在她身上） */
+  const chestFollow5 = smoothTrack(qjChest, T.taut, T.end5 + 0.4, 13);
+  return { bigAt, momAt, qjAt, qjChest, chestFollow, chestFollow5, lockAt, momChest, ankleAt, drawFront, drawPeople };
 }
 
 /** 压暗以后再叠上去的灯：门灯照在台阶和墙上的一团、窗里的光（④ 帘子拉上以后弱下去）、开着的门里漫出来的光 */
@@ -1309,7 +1311,11 @@ export function drawHomeDusk(g: CanvasRenderingContext2D, base: DOMMatrix, t: nu
 /** 门口这一场的光：比哑铃店再压一点，镜头停住以后暗角慢慢收紧（窒息）；④ 灯灭以后再暗一层 */
 export function homeLook(t: number) {
   const d = fade(t, HOME_T.dark, HOME_T.dark + 0.25);
-  return { vig: 0.24 + 0.1 * fade(t, HOME_T.rise1 - 0.3, HOME_T.end + 0.4) + 0.1 * d, warm: 0.7 - 0.1 * d };
+  // ⑤ 红线一断：憋着的那口气松开，暗角松一点
+  const free = fade(t, HOME_T.snap, HOME_T.snap + 0.5);
+  // ③「锁」扣上：再收紧一点（关上门）
+  const locked = fade(t, HOME_T.lock, HOME_T.lock + 0.3);
+  return { vig: 0.24 + 0.1 * fade(t, HOME_T.rise1 - 0.3, HOME_T.end + 0.4) + 0.05 * locked + 0.1 * d - 0.1 * free, warm: 0.7 - 0.04 * locked - 0.1 * d + 0.08 * free };
 }
 
 // ——————————————— 镜头 ———————————————
@@ -1320,12 +1326,12 @@ export function homeLook(t: number) {
  */
 export function homeCam(
   t: number,
-  h: { bigAt: (t: number) => { x: number; y: number }; qjChest: (t: number) => V2; chestFollow: (t: number) => V2; lockAt: (t: number) => V2 },
+  h: { bigAt: (t: number) => { x: number; y: number }; qjChest: (t: number) => V2; chestFollow: (t: number) => V2; chestFollow5: (t: number) => V2; lockAt: (t: number) => V2 },
   /** 溶镜头时上一镜（哑铃店）里那只哑铃在画面上的位置和倍数：这边照着它，两边的哑铃一直叠在一起 */
   match?: (t: number) => { sx: number; sy: number; z: number },
 ): Cam {
   const T = HOME_T;
-  if (t > T.end3) return cam4(t, homeCam(T.end3, h, match));
+  if (t > T.end3) return cam4(t, homeCam(T.end3, h, match), h.chestFollow5);
   let c: Cam;
   if (t <= T.dissolve1) {
     // 溶的时候跟着怀里的哑铃（她站着喘气，哑铃一起一伏）：和哑铃店那一帧的哑铃同一个位置、同样大小（店里的镜头还在往里推）
@@ -1391,12 +1397,14 @@ export function homeCam(
 
 /**
  * ④ 锁上以后：跟着走开的妈妈往左移、退开，框住门、铁桩和半空里的她（门「嘭」那一下落定）；之后几乎不动，只极慢地凑近（心酸）。
+ * 「火」灯一灭：画面往下一沉、往后退一点、微微歪过去（失望；歪着一直到⑤ 切走）。
  * 哑铃离地、她往上飘：镜头跟着往上抬、往右挪一点（越来越吃力地跟），红线绷直把她拽住的那一下一起停住、一顿；
  * 音乐空掉的那一拍屏住气不动：半空里被拽住的她、脚下吊着的哑铃、斜拉到铁桩的红线、黑了的门口。
- * ⑤ 红线一断一惊；她吊着哑铃慢慢往上飘，镜头跟着升起来、比她慢（柔和起步、一路减速），她在画面里一点点往上走，
- * 家门口沉到画面最下面——离家越来越远（漂着、微微转一点）。
+ * ⑤ 鼓整套进来、红线一断：憋着的那口气一下松开——镜头被她带着往上一冲（跟着她的胸口，晚一点到），同时一下子往后打开
+ * （先快后慢，1.1 → 0.76 倍）；之后漂着慢慢退：她一直在画面上半截，家门口一路沉到画面最下面、越来越小（不舍，离家越来越远）。
+ * 2026-10-20 按情绪运镜重做（原来⑤ 是 E.settle 柔和起步、只退到 0.92 倍，红线断了以后两秒多画面几乎不动，和鼓整套进来的那一下对不上）。
  */
-function cam4(t: number, c0: Cam): Cam {
+function cam4pre(t: number, c0: Cam): Cam {
   const T = HOME_T;
   const F = aim(-4295, 0, 540, 1700, 1.2);
   let c = camLerp(c0, F, E.io(ph(t, T.drop - 0.03, T.slam + 0.06)));
@@ -1407,11 +1415,26 @@ function cam4(t: number, c0: Cam): Cam {
   c = camLerp(c, HOLD, E.io(ph(t, T.liftOff - 0.02, T.taut + 0.03)));
   // 屏住气：极慢地凑近一点
   c = { ...c, z: c.z * (1 + 0.012 * E.soft(ph(t, T.taut, T.snap))) };
-  // ⑤ 慢慢升起来、一边退开：她一直在画面上半截（一点点往上走），门口越来越小，沉到画面最下面
-  const UP = aim(-4019, -1168, 540, 960, 0.92, -0.015);
-  c = camLerp(c, UP, E.settle(ph(t, T.snap + 0.04, T.end5 + 0.3)));
-  c = { ...c, z: c.z * (1 + 0.03 * kick(t, T.taut, 0.1) + 0.035 * kick(t, T.snap, 0.1)) };
-  return c;
+  // 「火」灯灭：往后退一点、往下一沉（失望）
+  const sag = E.out(ph(t, T.dark, T.dark + 0.5));
+  return { ...c, z: c.z * (1 - 0.03 * sag), y: c.y - (14 * sag) / c.z };
+}
+function cam4(t: number, c0: Cam, follow5: (t: number) => V2): Cam {
+  const T = HOME_T;
+  let c = cam4pre(Math.min(t, T.snap), c0);
+  if (t > T.snap) {
+    // ⑤ 对准她的胸口（弹簧跟着），只插她在画面上的位置和倍数：一断就往后打开（E.out），她在画面里只往上走、不往下掉
+    const C0 = c;
+    const p0 = toScreen(C0, ...follow5(T.snap));
+    const f = follow5(t);
+    const zu = E.out(ph(t, T.snap, T.end5 + 0.3));
+    const pu = E.io(ph(t, T.snap, T.end5 + 0.3));
+    const z = C0.z * Math.pow(0.76 / C0.z, zu);
+    c = aim(f[0], f[1], p0[0] + (560 - p0[0]) * pu, p0[1] + (Math.min(p0[1], 640) - p0[1]) * pu, z);
+  }
+  c = { ...c, z: c.z * (1 + 0.03 * kick(t, T.taut, 0.1) + 0.03 * kick(t, T.snap, 0.08)) };
+  // 灯灭以后画面一直微微歪着（失望 → 离家）
+  return { ...c, r: -0.018 * E.out(ph(t, T.dark, T.dark + 0.5)) - 0.012 * E.io(ph(t, T.snap, T.end5 + 0.3)) };
 }
 
 /** 门口这一场的抖：哑铃落地、每拽一把、锁扣上；④ 门「嘭」、哑铃被拖离地面、红线绷直；⑤ 红线绷断 */

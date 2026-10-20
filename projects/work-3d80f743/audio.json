@@ -7152,6 +7152,25 @@
       "fadeOut": 0,
       "fadeOffset": 0,
       "automation": []
+    },
+    {
+      "id": "a8_sit",
+      "track": "fx_action",
+      "source": "sx_thud",
+      "start": 30.45,
+      "duration": 0.5,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1.15,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.22,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0,
+      "fadeOut": 0,
+      "fadeOffset": 0,
+      "automation": []
     }
   ],
   "buses": [],
