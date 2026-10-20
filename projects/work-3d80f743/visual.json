@@ -5,9 +5,114 @@
     {
       "id": "act1",
       "name": "第一幕 最沉的人",
-      "source": { "kind": "scene", "module": "act1", "engine": "canvas" },
+      "source": {
+        "kind": "scene",
+        "module": "act1",
+        "engine": "canvas"
+      },
       "start": 0,
-      "duration": 16.02
+      "duration": 16.8144,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act2",
+      "name": "第二幕 千斤",
+      "source": {
+        "kind": "scene",
+        "module": "act2",
+        "engine": "canvas"
+      },
+      "start": 16.8144,
+      "duration": 22.5756,
+      "offset": 16.8144,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act3",
+      "name": "副歌一 她飘得最高",
+      "source": {
+        "kind": "scene",
+        "module": "act3",
+        "engine": "canvas"
+      },
+      "start": 39.39,
+      "duration": 32.63,
+      "offset": 39.39,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act4",
+      "name": "主歌二 夜里",
+      "source": {
+        "kind": "scene",
+        "module": "act4",
+        "engine": "canvas"
+      },
+      "start": 72.019,
+      "duration": 16.001,
+      "offset": 72.019,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act5",
+      "name": "三 明天见",
+      "source": {
+        "kind": "scene",
+        "module": "act5",
+        "engine": "canvas"
+      },
+      "start": 88.0204,
+      "duration": 17.9696,
+      "offset": 88.0204,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act6",
+      "name": "四 赤脚",
+      "source": {
+        "kind": "scene",
+        "module": "act6",
+        "engine": "canvas"
+      },
+      "start": 105.99,
+      "duration": 23.88,
+      "offset": 105.99,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act7",
+      "name": "五 引力",
+      "source": {
+        "kind": "scene",
+        "module": "act7",
+        "engine": "canvas"
+      },
+      "start": 129.87,
+      "duration": 24.13,
+      "offset": 129.87,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     }
   ]
 }

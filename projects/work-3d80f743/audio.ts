@@ -1,10 +1,10 @@
-// 《引力》的合成音效：25 个短音效和循环环境声，全部用数学合成为立体声 PCM（48 kHz），
+// 《引力》的合成音效：29 个短音效和循环环境声，全部用数学合成为立体声 PCM（48 kHz），
 // 在 audio.json 里作为 module "sfx" 的生成音源摆放（trackId 就是文件末尾 createPcmAudio 里的名字）。
 // - 每个声音有自己的固定种子：什么时候生成、按什么顺序生成，结果都一模一样。
 // - 导入时只定义函数；第一次准备音频时才计算。
 // - 峰值统一归一到约 -3 dBFS（0.7），音量用片段 gain 调；150 Hz 以下左右声道相同（低频单声道）。
 // - 主击（重音）在 0 秒；例外：whoosh 最响在 0.38 秒、flare 的「轰」在 0.55 秒、door 关上在 0.6 秒、swish 最响在 0.12 秒、
-//   skid 停住在 0.22 秒、warm 最亮在约 0.05 秒、rise 最响在 1.45 秒。
+//   skid 停住在 0.22 秒、warm 最亮在约 0.05 秒、rise 最响在 1.45 秒；iron（第二幕：夺过哑铃）、chain（抓起铁链）、snap（红线绷断）主击 0 秒；hollow（空靴筒）两下在 0 和 0.07 秒。
 // - 只生成作品里实际放了的音效（lazy）。
 // - hum / crowd / wind / tram 首尾无缝，片段可以设 loop = 素材长度（8 / 10 / 8 / 6 秒）。
 // - 生成音源不支持片段的 pitch（半音移调）；要变调用片段的 rate（同时变速）。
@@ -1696,6 +1696,145 @@ function rise(): Pcm {
   return finish(L, R, { fadeOut: 0.15 });
 }
 
+/** 26. 最大的那只哑铃被一把夺过来：两片铸铁饼在怀里一撞的闷「铛」（低沉、很快收住，不是空心的叮）+ 抱住的一下闷响。0.7 秒，主击 0 秒。 */
+function iron(): Pcm {
+  const r = prng(0x1a0d);
+  const [L, R] = stereo(0.7);
+  const len = L.length;
+  // 抱到怀里的那一下：低沉的闷响（衣服、身子吃住分量）
+  layerMono(L, R, saturate(sine(len, (t) => 58 + 30 * Math.exp(-t / 0.03), (t) => hit(t, 0.002, 0.28)), 1.6), 0.8);
+  // 铸铁饼：厚、实心，模态低、衰减快，相拍一点点
+  const plate: Mode[] = [
+    [318, 1, 0.42],
+    [604, 0.75, 0.34],
+    [933, 0.6, 0.28],
+    [1467, 0.42, 0.2],
+    [2164, 0.3, 0.14],
+    [3010, 0.18, 0.09],
+  ];
+  const ml = new Float32Array(len),
+    mr = new Float32Array(len);
+  strikes(ml, mr, [[0, 1, 0], [0.045, 0.35, 0.5]], plate, r, { width: 0.5, pairs: 0.5 });
+  layer(L, R, ml, mr, 0.7);
+  // 撞上的瞬态
+  const tl = new Float32Array(len),
+    tr = new Float32Array(len);
+  burst(tl, tr, 0, 1, 0.9, 0.012, r);
+  burst(tl, tr, 0.045, 0.3, 0.35, 0.008, r);
+  filt(tl, "bp", 1600, 0.8);
+  filt(tr, "bp", 1600, 0.8);
+  layer(L, R, tl, tr, 0.5);
+  space(L, R, { rt60: 0.6, wet: 0.16, size: 0.7, damp: 0.35, pre: 0.008, hp: 220 });
+  return finish(L, R, { fadeOut: 0.12 });
+}
+
+/** 27. 一把抓起铁链：一节节铁环互相撞的哗啦声（铸铁、闷一点），往上一提又响一串。0.5 秒，主击 0 秒。 */
+function chain(): Pcm {
+  const r = prng(0xc4a1);
+  const [L, R] = stereo(0.5);
+  const len = L.length;
+  // 铁环：小块铸铁的模态，比铃铛低、衰减快
+  const modes: Mode[] = [
+    [1180, 1, 0.09],
+    [1930, 0.7, 0.07],
+    [2870, 0.55, 0.05],
+    [4060, 0.35, 0.035],
+  ];
+  const cl = new Float32Array(len),
+    cr = new Float32Array(len),
+    hits: [number, number, number][] = [];
+  // 抓起来的一串（越来越轻），往上一提又一串
+  for (const [t0, g, n] of [
+    [0, 1, 9],
+    [0.2, 0.55, 6],
+  ] as const) {
+    let t = t0,
+      a = g;
+    for (let k = 0; k < n; k++) {
+      hits.push([t, a, 0.5]);
+      burst(cl, cr, t, a * 0.12, a * 0.12, 0.002, r);
+      t += span(r, 0.012, 0.03);
+      a *= span(r, 0.7, 0.88);
+    }
+  }
+  hits.sort((x, y) => x[0] - y[0]);
+  strikes(cl, cr, hits, modes, r, { width: 0.7, pairs: 0.4 });
+  filt(cl, "hp", 700);
+  filt(cr, "hp", 700);
+  layer(L, R, cl, cr, 1);
+  space(L, R, { rt60: 0.5, wet: 0.12, size: 0.7, damp: 0.3, pre: 0.006, hp: 500 });
+  return finish(L, R, { fadeOut: 0.08 });
+}
+
+/** 28. 一根绷紧的细线「嘣」地断了：一下尖的崩声 + 往下掉的弦音 + 线头甩出去的一点风。0.5 秒，断在 0 秒。 */
+function snap(): Pcm {
+  const r = prng(0x5a4b);
+  const [L, R] = stereo(0.5);
+  const len = L.length;
+  // 崩：极短的宽带瞬态
+  const tl = new Float32Array(len),
+    tr = new Float32Array(len);
+  burst(tl, tr, 0, 1, 0.9, 0.004, r);
+  burst(tl, tr, 0.006, 0.35, 0.4, 0.003, r);
+  filt(tl, "hp", 1800);
+  filt(tr, "hp", 1800);
+  layer(L, R, tl, tr, 0.55);
+  // 弦：绷着的线一断，音高往下掉
+  layerMono(L, R, sine(len, (t) => 260 + 620 * Math.exp(-t / 0.08), (t) => hit(t, 0.0008, 0.2)), 0.5);
+  layerMono(L, R, sine(len, (t) => 520 + 1240 * Math.exp(-t / 0.06), (t) => hit(t, 0.0005, 0.1)), 0.22, 0.1);
+  // 线头甩出去
+  layerMono(L, R, shape(level(filt(white(len, r), "bp", 2400, 0.9)), (t) => hit(t - 0.01, 0.012, 0.16)), 0.12, -0.2);
+  space(L, R, { rt60: 0.5, wet: 0.14, size: 0.6, damp: 0.3, pre: 0.006, hp: 300 });
+  return finish(L, R, { fadeOut: 0.08 });
+}
+
+/**
+ * 29. 手伸进空了的铁靴里摸到底（第二幕⑦，今天的砖全送完了）：手套碰到铁皮的两下空洞的「咚、咚」——空靴筒像一只空铁桶，
+ * 里面的空气柱（约 260 Hz）和薄铁皮的不谐和模态一起共鸣，没有砖压着，余音比铁饼长、比铃铛闷。手套是软的，没有尖的瞬态。
+ * 0.7 秒，两下在 0 和 0.07 秒（第二下轻一点）。
+ */
+function hollow(): Pcm {
+  const r = prng(0x401f);
+  const [L, R] = stereo(0.7);
+  const len = L.length;
+  const exc = new Float32Array(len);
+  pulse(exc, 0, 0.004, 1);
+  pulse(exc, 0.07, 0.004, 0.6);
+  // 靴筒里的空气柱
+  const al = new Float32Array(len),
+    ar = new Float32Array(len);
+  resonate(
+    exc,
+    [
+      [262, 1, 0.34],
+      [528, 0.38, 0.2],
+      [796, 0.18, 0.13],
+    ],
+    al,
+    ar,
+    1,
+    r,
+    0.2,
+  );
+  layer(L, R, al, ar, 0.8);
+  // 铁皮：比铸铁饼薄，模态高一点、拖得长一点，相拍
+  const shell: Mode[] = [
+    [412, 1, 0.48],
+    [687, 0.7, 0.4],
+    [1043, 0.55, 0.31],
+    [1528, 0.36, 0.22],
+    [2216, 0.22, 0.15],
+  ];
+  const ml = new Float32Array(len),
+    mr = new Float32Array(len);
+  strikes(ml, mr, [[0, 1, 0], [0.07, 0.55, 0.4]], shell, r, { width: 0.4, pairs: 0.5 });
+  layer(L, R, ml, mr, 0.42);
+  // 手套擦着铁皮的一点沙沙声
+  layerMono(L, R, shape(level(filt(white(len, r), "bp", 1800, 0.7)), (t) => hit(t, 0.01, 0.07) + 0.6 * hit(t - 0.07, 0.008, 0.05)), 0.08, 0.1);
+  space(L, R, { rt60: 0.45, wet: 0.12, size: 0.5, damp: 0.3, pre: 0.005, hp: 200 });
+  return finish(L, R, { fadeOut: 0.12 });
+}
+
 const sfx = createPcmAudio(
   {
     stomp,
@@ -1723,6 +1862,10 @@ const sfx = createPcmAudio(
     swish,
     grab,
     rise,
+    iron,
+    chain,
+    snap,
+    hollow,
   },
   SR,
   { lazy: true },

@@ -13,6 +13,97 @@ export const Y_WHITE = -9200;
 
 type P = [number, number];
 
+// ——— 黄昏到夜（第二幕⑧：千斤一个人攥着栏杆等，太阳落下去，城里的窗一扇扇亮了） ———
+// 只有⑧以后的镜头设（每帧开头 setDusk，画完 setDusk(0)），别的镜头都是 0，样子一点不变。
+let DUSK = 0;
+let LIGHTS = 0;
+/** dark：天黑了多少（0 白天 → 0.4 傍晚最红 → 1 夜里）；lights：夜里亮起来的窗（0 → 1，一组组随机亮起来） */
+export function setDusk(dark: number, lights = dark) {
+  DUSK = clamp01(dark);
+  LIGHTS = clamp01(lights);
+}
+const ss = (a: number, b: number, x: number) => {
+  const u = clamp01((x - a) / (b - a));
+  return u * u * (3 - 2 * u);
+};
+/** 傍晚的暖（升起来又退掉）、夜（0 → 1） */
+const sunsetK = () => ss(0, 0.4, DUSK) * (1 - ss(0.45, 0.95, DUSK));
+const nightK = () => ss(0.3, 1, DUSK);
+/** 白天的光（斜影子、光柱、浮尘）还剩多少 */
+export const dayLeft = () => 1 - ss(0, 0.45, DUSK);
+const mixRGB = (a: number[], b: number[], k: number) => a.map((v, i) => v + (b[i] - v) * k);
+/** 楼、人在黄昏、夜里蒙的一层色 [r, g, b, a]：傍晚偏暖的粉橙、夜里深的蓝紫；白天是 null */
+export function duskTint(): number[] | null {
+  if (DUSK <= 0.002) return null;
+  const s = sunsetK();
+  const n = nightK();
+  const col = mixRGB([238, 128, 104], [26, 28, 76], n);
+  return [...col.map(Math.round), 0.16 * s * (1 - n) + 0.64 * n];
+}
+const tintCss = (k: number[], scale = 1) => `rgba(${k[0]},${k[1]},${k[2]},${k[3] * scale})`;
+const hexRGB = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+/** 一个颜色蒙上黄昏那层色以后（平涂的地面、远处只剩剪影的楼） */
+function tinted(hex: string): string {
+  const k = duskTint();
+  if (!k) return hex;
+  const c = mixRGB(hexRGB(hex), k, k[3]).map(Math.round);
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+/** 夜里窗里的灯：大多暖黄，有的偏橙、有的偏白（按组） */
+const NIGHT_LAMPS = ["#ffd58f", "#ffc779", "#fff0cf"];
+/** 夜里会亮起来的窗分几组（每组同时亮；组按随机数排，所以满城的窗是一扇扇随机亮起来的） */
+const NG = 14;
+/** 夜里亮着的窗的比例 */
+const NIGHT_SHARE = 0.56;
+
+/**
+ * 在当前坐标系里把 draw() 画的东西蒙上黄昏那层色（只蒙它自己：先画在一张小画布上，source-atop 填色，再贴回来；不用 filter，
+ * 软件渲染时 filter 一帧要一秒）。box 是这些东西在当前坐标系里的范围 [x0, y0, x1, y1]；白天直接画。
+ */
+const TINT_CANVAS: { c: HTMLCanvasElement | null } = { c: null };
+export function drawTinted(g: CanvasRenderingContext2D, box: [number, number, number, number], draw: (cc: CanvasRenderingContext2D) => void, scale = 1) {
+  const k = duskTint();
+  if (!k || k[3] * scale < 0.004) {
+    draw(g);
+    return;
+  }
+  const M = g.getTransform();
+  const pts = [
+    [box[0], box[1]],
+    [box[2], box[1]],
+    [box[0], box[3]],
+    [box[2], box[3]],
+  ].map(([x, y]) => M.transformPoint(new DOMPoint(x, y)));
+  const cw = g.canvas.width;
+  const ch = g.canvas.height;
+  const x0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p.x))));
+  const y0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p.y))));
+  const x1 = Math.min(cw, Math.ceil(Math.max(...pts.map((p) => p.x))));
+  const y1 = Math.min(ch, Math.ceil(Math.max(...pts.map((p) => p.y))));
+  const w = x1 - x0;
+  const h = y1 - y0;
+  if (w <= 0 || h <= 0) return;
+  const cv = (TINT_CANVAS.c ??= document.createElement("canvas"));
+  if (cv.width < w || cv.height < h) {
+    cv.width = Math.max(cv.width, w);
+    cv.height = Math.max(cv.height, h);
+  }
+  const bc = cv.getContext("2d")!;
+  bc.setTransform(1, 0, 0, 1, 0, 0);
+  bc.clearRect(0, 0, w, h);
+  bc.setTransform(M.a, M.b, M.c, M.d, M.e - x0, M.f - y0);
+  draw(bc);
+  bc.setTransform(1, 0, 0, 1, 0, 0);
+  bc.globalCompositeOperation = "source-atop";
+  bc.fillStyle = tintCss(k, scale);
+  bc.fillRect(0, 0, w, h);
+  bc.globalCompositeOperation = "source-over";
+  g.save();
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.drawImage(cv, 0, 0, w, h, x0, y0, w, h);
+  g.restore();
+}
+
 /** 平涂 + 右下一道阴影 + 描边（和人物同一种画法）；lw = 0 不描边 */
 export function part(g: CanvasRenderingContext2D, path: Path2D, fill: string, shade: string | null, lw = 3.2, off: P = [8, 6]) {
   g.fillStyle = fill;
@@ -99,17 +190,43 @@ const SKY: [number, number[]][] = [
   [0.92, [249, 219, 194]],
   [1, [250, 222, 198]],
 ];
-export function skyRGB(y: number): number[] {
-  const k = clamp01(y / Y_WHITE);
-  for (let i = 1; i < SKY.length; i++) {
-    if (k <= SKY[i][0]) {
-      const [a, ca] = SKY[i - 1];
-      const [b, cb] = SKY[i];
+/** 傍晚：下面是橙粉，往上是粉紫，白下面一圈淡粉 */
+const SKY_SUNSET: [number, number[]][] = [
+  [0, [236, 150, 118]],
+  [0.2, [240, 162, 134]],
+  [0.45, [230, 160, 156]],
+  [0.75, [214, 168, 186]],
+  [0.92, [232, 204, 214]],
+  [1, [246, 230, 230]],
+];
+/** 夜里：下面被城里的灯映成暗暗的紫红，往上是深蓝，白下面一圈冷的亮 */
+const SKY_NIGHT: [number, number[]][] = [
+  [0, [86, 60, 90]],
+  [0.2, [62, 54, 100]],
+  [0.45, [44, 48, 98]],
+  [0.75, [52, 58, 114]],
+  [0.92, [118, 118, 164]],
+  [1, [210, 210, 230]],
+];
+function skyTab(tab: [number, number[]][], k: number): number[] {
+  for (let i = 1; i < tab.length; i++) {
+    if (k <= tab[i][0]) {
+      const [a, ca] = tab[i - 1];
+      const [b, cb] = tab[i];
       const u = (k - a) / (b - a);
-      return ca.map((v, j) => Math.round(v + (cb[j] - v) * u));
+      return ca.map((v, j) => v + (cb[j] - v) * u);
     }
   }
-  return [255, 255, 252];
+  return tab[tab.length - 1][1];
+}
+export function skyRGB(y: number): number[] {
+  const k = clamp01(y / Y_WHITE);
+  let c = k >= 1 ? [255, 255, 252] : skyTab(SKY, k);
+  if (DUSK > 0.002) {
+    c = mixRGB(c, skyTab(SKY_SUNSET, k), sunsetK());
+    c = mixRGB(c, skyTab(SKY_NIGHT, k), nightK());
+  }
+  return c.map(Math.round);
 }
 export const skyAt = (y: number) => `rgb(${skyRGB(y).join(",")})`;
 
@@ -140,6 +257,12 @@ export interface Block {
   shop?: string;
   /** 楼顶只有女儿墙和水箱（不要天线、太阳能热水器：离镜头很近的矮房子，楼顶的东西会显得很大） */
   plainRoof?: boolean;
+  /** 只在镜头拉开到整座城上时才从雾里浮出来（远处补的高楼：前奏街上的镜头里看不见它们，画面不变） */
+  wide?: boolean;
+  /** 后来在楼顶上加盖的层数：下面原来那些层的窗、花盆、晾衣杆一样不变（每层的随机数按原来的层号取） */
+  topFloors?: number;
+  /** [层, 第几扇]（0 是最上面一层、最左一扇）：这扇窗的防飘栏开着、玻璃不画（场景自己画窗里的屋子和开着的栏门） */
+  openCage?: [number, number];
 }
 
 interface Laundry {
@@ -175,6 +298,12 @@ interface Geom {
   dots: Path2D;
   dotsLit: Path2D;
   shopFront: { x: number; w: number; awning: string; open: number }[];
+  /** 夜里一组组亮起来的窗（玻璃、窗中心、远看的一格格窗） */
+  nightLit: Path2D[];
+  nightAt: P[][];
+  nightDots: Path2D[];
+  /** 开着防飘栏的那扇窗（楼自己的坐标） */
+  special: { x: number; y: number; w: number; h: number } | null;
 }
 const GEOMS = new WeakMap<Block, Geom>();
 
@@ -214,12 +343,18 @@ function geomOf(b: Block): Geom {
   const laundry: Laundry[] = [];
   const dots = new Path2D();
   const dotsLit = new Path2D();
+  const nightLit = Array.from({ length: NG }, () => new Path2D());
+  const nightAt: P[][] = Array.from({ length: NG }, () => []);
+  const nightDots = Array.from({ length: NG }, () => new Path2D());
+  // 夜里哪扇窗亮、什么时候亮：另一串随机数（不动原来那串，白天的窗、铁笼、花盆一样不变）
+  const rn = seeded(b.seed * 7919 + 13);
+  let special: Geom["special"] = null;
   const units = Math.max(2, Math.round(w / 150));
   const uw = (w - 40) / units;
   const floorsDrawn = b.shop ? b.floors - 1 : b.floors;
   for (let f = 0; f < b.floors; f++) {
     const y = top + 70 + f * 128;
-    const rr = seeded(b.seed * 131 + f * 7);
+    const rr = seeded(b.seed * 131 + (f - (b.topFloors ?? 0)) * 7);
     if (f > 0) {
       slabs.moveTo(0, y - 16);
       slabs.lineTo(w, y - 16);
@@ -230,12 +365,21 @@ function geomOf(b: Block): Geom {
       const wh = 74;
       const kind = rr();
       const isLit = rr() < 0.17;
+      const open = !!b.openCage && b.openCage[0] === f && b.openCage[1] === i;
+      const th = rn();
+      const ng = !isLit && !open && th < NIGHT_SHARE ? Math.min(NG - 1, Math.floor((th / NIGHT_SHARE) * NG)) : -1;
       // 远看只剩一格格窗
       (isLit ? dotsLit : dots).rect(wx, y, ww, wh);
+      if (ng >= 0) nightDots[ng].rect(wx, y, ww, wh);
       if (f >= floorsDrawn) continue;
-      (isLit ? lit : glass).rect(wx, y, ww, wh);
+      if (open) special = { x: wx, y, w: ww, h: wh };
+      else (isLit ? lit : glass).rect(wx, y, ww, wh);
+      if (ng >= 0) {
+        nightLit[ng].rect(wx, y, ww, wh);
+        nightAt[ng].push([wx + ww / 2, y + wh / 2]);
+      }
       if (isLit) litAt.push([wx + ww / 2, y + wh / 2]);
-      else {
+      else if (!open) {
         // 玻璃上一道斜的反光
         sheen.moveTo(wx + ww * 0.12, y + wh);
         sheen.lineTo(wx + ww * 0.42, y);
@@ -246,30 +390,37 @@ function geomOf(b: Block): Geom {
       frames.rect(wx - 4, y - 4, ww + 8, wh + 8);
       // 防飘栏：凸出来的铁笼，底下一块托板，影子落在右下的墙上
       if (kind < 0.72) {
-        cageShadow.rect(wx - 8 + 12, y - 8 + 12, ww + 16, wh + 22);
-        cages.rect(wx - 8, y - 8, ww + 16, wh + 22);
-        for (let k = 1; k < 6; k++) {
-          const bx = wx - 8 + ((ww + 16) * k) / 6;
-          bars.moveTo(bx, y - 8);
-          bars.lineTo(bx, y + wh + 14);
+        // （开着的那扇：铁笼的门打开了，前面的栏杆由场景画；托板和花盆照旧）
+        if (!open) {
+          cageShadow.rect(wx - 8 + 12, y - 8 + 12, ww + 16, wh + 22);
+          cages.rect(wx - 8, y - 8, ww + 16, wh + 22);
+          for (let k = 1; k < 6; k++) {
+            const bx = wx - 8 + ((ww + 16) * k) / 6;
+            bars.moveTo(bx, y - 8);
+            bars.lineTo(bx, y + wh + 14);
+          }
+          bars.moveTo(wx - 8, y + wh * 0.45);
+          bars.lineTo(wx + ww + 8, y + wh * 0.45);
         }
-        bars.moveTo(wx - 8, y + wh * 0.45);
-        bars.lineTo(wx + ww + 8, y + wh * 0.45);
         shelves.rect(wx - 12, y + wh + 12, ww + 24, 10);
         if (rr() < 0.5) {
           const px = wx + 4 + rr() * (ww - 40);
-          pots.moveTo(px, y + wh + 12);
-          pots.lineTo(px + 28, y + wh + 12);
-          pots.lineTo(px + 24, y + wh - 12);
-          pots.lineTo(px + 4, y + wh - 12);
-          pots.closePath();
-          // 一丛：三团叶子挤在一起（单独一个圆像棒棒糖）
-          const lx = px + 14;
-          const ly = y + wh - 20;
-          addEllipse(leaves, lx - 11, ly - 4, 13, 9, -0.6);
-          addEllipse(leaves, lx + 11, ly - 5, 13, 9, 0.6);
-          addEllipse(leaves, lx, ly - 15, 11, 12, 0);
-          if (rr() < 0.5) addEllipse(leaves, lx + 22, ly - 18, 9, 7, 0.9);
+          const more = rr() < 0.5;
+          // （开着的那扇不放花盆：叶子会被窗里画的屋子盖住，只剩一个空盆；随机数照样取，别的窗不变）
+          if (!open) {
+            pots.moveTo(px, y + wh + 12);
+            pots.lineTo(px + 28, y + wh + 12);
+            pots.lineTo(px + 24, y + wh - 12);
+            pots.lineTo(px + 4, y + wh - 12);
+            pots.closePath();
+            // 一丛：三团叶子挤在一起（单独一个圆像棒棒糖）
+            const lx = px + 14;
+            const ly = y + wh - 20;
+            addEllipse(leaves, lx - 11, ly - 4, 13, 9, -0.6);
+            addEllipse(leaves, lx + 11, ly - 5, 13, 9, 0.6);
+            addEllipse(leaves, lx, ly - 15, 11, 12, 0);
+            if (more) addEllipse(leaves, lx + 22, ly - 18, 9, 7, 0.9);
+          }
         }
       }
       // 空调外机：底下拖一道锈水印
@@ -364,6 +515,10 @@ function geomOf(b: Block): Geom {
     dots,
     dotsLit,
     shopFront,
+    nightLit,
+    nightAt,
+    nightDots,
+    special,
   };
   GEOMS.set(b, geom);
   return geom;
@@ -373,6 +528,9 @@ function geomOf(b: Block): Geom {
 export function prepareCity() {
   for (const L of LAYERS) for (const b of L.blocks) geomOf(b);
   geomOf(TOWER);
+  geomOf(TOWER_HOME);
+  for (const b of STREET) geomOf(b);
+  geomOf(QJ_HOME);
 }
 
 /** 一件晾着的衣服（衣架坐标：挂在 (0,0)，往下垂），sway 被风吹的角度 */
@@ -427,14 +585,19 @@ export function drawBlock(g: CanvasRenderingContext2D, b: Block, c: Cam, D: numb
   g.scale(u, u);
   const L = lw / u;
   if (detail === 0) {
-    g.fillStyle = b.wall;
+    g.fillStyle = tinted(b.wall);
     g.fill(G.body);
     g.fill(G.roofFill);
     if (px > 6) {
-      g.fillStyle = "rgba(140,96,104,0.22)";
+      g.fillStyle = DUSK > 0.002 ? `rgba(34,30,66,${0.22 + 0.22 * nightK()})` : "rgba(140,96,104,0.22)";
       g.fill(G.dots);
       g.fillStyle = "rgba(255,214,150,0.85)";
       g.fill(G.dotsLit);
+      const on = nightOn();
+      for (let i = 0; i < on; i++) {
+        g.fillStyle = NIGHT_LAMPS[i % 3];
+        g.fill(G.nightDots[i]);
+      }
     }
     g.restore();
     return;
@@ -479,6 +642,8 @@ export function drawBlock(g: CanvasRenderingContext2D, b: Block, c: Cam, D: numb
     g.strokeStyle = INK;
     g.lineWidth = L * 0.6;
     g.stroke(G.cages);
+    duskOver(g, G, L, false);
+    g.strokeStyle = INK;
     g.lineWidth = L;
     g.stroke(G.body);
     g.restore();
@@ -577,10 +742,35 @@ export function drawBlock(g: CanvasRenderingContext2D, b: Block, c: Cam, D: numb
     for (let xx = sf.x - 24; xx < sf.x + sf.w + 24; xx += 36) g.fillRect(xx, y0, 16, 50);
     g.restore();
   }
+  duskOver(g, G, L, true);
   g.strokeStyle = INK;
   g.lineWidth = L;
   g.stroke(G.body);
   g.restore();
+}
+
+/** 夜里亮起来了几组窗 */
+const nightOn = () => (DUSK > 0.002 ? Math.min(NG, Math.floor(LIGHTS * NG + 1e-6)) : 0);
+/** 黄昏、夜里：整栋楼蒙上那层色，再把亮着的窗（白天就亮着的、夜里一组组亮起来的）重新点亮，铁栏杆压在窗上 */
+function duskOver(g: CanvasRenderingContext2D, G: Geom, L: number, bars: boolean) {
+  const k = duskTint();
+  if (!k) return;
+  g.fillStyle = tintCss(k);
+  g.fill(G.body);
+  g.fill(G.roofFill);
+  if (G.solar) g.fill(G.solar);
+  g.fillStyle = "#ffd896";
+  g.fill(G.lit);
+  const on = nightOn();
+  for (let i = 0; i < on; i++) {
+    g.fillStyle = NIGHT_LAMPS[i % 3];
+    g.fill(G.nightLit[i]);
+  }
+  if (bars) {
+    g.strokeStyle = INK;
+    g.lineWidth = L * 0.55;
+    g.stroke(G.bars);
+  }
 }
 
 /** 亮着的窗冒出一团暖光（画在空气后面也行：远的楼窗光就是一个个小暖点） */
@@ -590,12 +780,25 @@ export function drawBlockGlow(g: CanvasRenderingContext2D, b: Block, c: Cam, D: 
   const G = geomOf(b);
   const u = b.fh / 128;
   const v = viewOf(c, D);
-  for (const [x, y] of G.litAt) {
+  // 天黑了窗光显得更亮
+  const al = 0.45 * a * (1 + 0.7 * nightK());
+  const glow = ([x, y]: P) => {
     const wx = b.x + x * u;
     const wy = y * u;
-    if (wx < v.x0 || wx > v.x1 || wy < v.y0 || wy > v.y1) continue;
-    drawGlow(g, wx, wy, 90 * u, 0.45 * a);
-  }
+    if (wx < v.x0 || wx > v.x1 || wy < v.y0 || wy > v.y1) return;
+    drawGlow(g, wx, wy, 90 * u, al);
+  };
+  for (const p of G.litAt) glow(p);
+  const on = nightOn();
+  for (let i = 0; i < on; i++) for (const p of G.nightAt[i]) glow(p);
+}
+
+/** 开着防飘栏的那扇窗在世界里的位置（玻璃的范围） */
+export function specialWindow(b: Block): { x: number; y: number; w: number; h: number } | null {
+  const sp = geomOf(b).special;
+  if (!sp) return null;
+  const u = b.fh / 128;
+  return { x: b.x + sp.x * u, y: sp.y * u, w: sp.w * u, h: sp.h * u };
 }
 
 interface Layer {
@@ -653,8 +856,71 @@ export const LAYERS: Layer[] = [
   },
 ];
 
-/** 全城最高那栋楼（和人在同一层）：一栋三十层的老塔楼，楼顶差一点碰到白，她住在顶层 */
-export const TOWER: Block = { x: 430, w: 980, floors: 28, wall: "#f1e1c6", wallShade: "#e0ccac", seed: 77, fh: 300 };
+// 远处高低错落的高楼（用户 2026-10-19：全城那个画面「中间有点空」）：远处两层城里各插几栋高的，天际线有起伏，城占的画面高一点。
+// 都比最高那栋楼矮得多（远处的层被透视压小）；街上的镜头里它们藏在近处的楼后面
+{
+  const far: [number, number, number, number][] = [
+    // x、宽、层数、墙色的序号
+    [-9300, 460, 34, 0],
+    [-6900, 400, 28, 1],
+    [-5500, 520, 38, 2],
+    [-2700, 420, 30, 1],
+    [900, 480, 36, 0],
+    [3300, 400, 27, 2],
+    [5600, 520, 33, 1],
+    [8100, 440, 40, 0],
+    [10900, 420, 29, 2],
+  ];
+  const walls: [string, string][] = [
+    ["#ead2c3", "#dfc4b6"],
+    ["#e8d6c6", "#dccabb"],
+    ["#e4cdc6", "#d8c0b9"],
+  ];
+  far.forEach(([x, w, floors, k], i) => LAYERS[0].blocks.push({ x, w, floors, fh: 190, wall: walls[k][0], wallShade: walls[k][1], seed: 900 + i, wide: true }));
+  const mid: [number, number, number][] = [
+    [-7200, 440, 19],
+    [-4000, 400, 17],
+    [2300, 460, 21],
+    [5400, 420, 16],
+    [7700, 480, 18],
+  ];
+  mid.forEach(([x, w, floors], i) => LAYERS[1].blocks.push({ x, w, floors, fh: 190, wall: ["#dcb6a4", "#e2c2aa", "#d8b8ae"][i % 3], wallShade: ["#cfa796", "#d5b29a", "#cba99f"][i % 3], seed: 950 + i, wide: true }));
+}
+
+/**
+ * 全城最高那栋楼（和人在同一层）：一栋三十层的老塔楼，楼顶差一点碰到白，她住在顶层，楼脚下是哑铃店。
+ * 在她往前走的方向（左边）：前奏里她救完人往家走，16 秒走到 −2370，楼就在她前面（用户 2026-10-19：「这栋楼不是主角的家，
+ * 主角的家应该在主角向前走的位置，在左边」；原来在她跑来的那边 430–1410）。
+ */
+export const TOWER: Block = { x: -3700, w: 980, floors: 28, wall: "#f1e1c6", wallShade: "#e0ccac", seed: 77, fh: 300 };
+/**
+ * 第二幕里的最高那栋楼：沉沉家（顶层最左那扇，离千斤家最近）的防飘栏开着——她穿着铁靴，用不着（故事里后来小石头替她关上）。
+ * 只在第二幕用（第一幕全城那个镜头里还是 TOWER，远得看不出来）；窗里的屋子、开着的栏门在 lib/night.ts 画。
+ */
+export const TOWER_HOME: Block = { ...TOWER, openCage: [0, 0] };
+
+/**
+ * 街这一边（和人在同一层）的一排老居民楼：最高那栋楼原来的位置换成一栋普通的大窗户老楼（前奏里她刹车、跳起来时身后还是它的下半截），
+ * 往右一路补齐到她跑来的方向；左边最高那栋楼的后面再接两栋。老钟家和它旁边的小铺子、五层楼在 scenes/act1.ts（跟着老钟的窗算）。
+ * 救周磊的那一块（−885…430）留空：那是个路口，前奏里那几个镜头身后是对面的街和城（用户 2026-10-19：「把地图的房子也补一下」）。
+ */
+export const STREET: Block[] = [
+  { x: 430, w: 980, floors: 7, wall: "#f1e1c6", wallShade: "#e0ccac", seed: 77, fh: 300 },
+  { x: 1470, w: 560, floors: 6, wall: "#e9c3a8", wallShade: "#dbb195", seed: 401, fh: 230, shop: "#c96a52" },
+  { x: 2090, w: 660, floors: 8, wall: "#e2d3b0", wallShade: "#d3c29c", seed: 402, fh: 215 },
+  { x: 2810, w: 520, floors: 5, wall: "#e6b39d", wallShade: "#d69f88", seed: 403, fh: 240, shop: "#6f8f86" },
+  { x: 3390, w: 700, floors: 7, wall: "#ecd5a6", wallShade: "#dcc290", seed: 404, fh: 220, shop: "#d9a441" },
+  { x: -5540, w: 680, floors: 6, wall: "#ecd5a6", wallShade: "#dcc290", seed: 313, fh: 220, shop: "#d9a441" },
+  { x: -6140, w: 540, floors: 4, wall: "#dcc5b6", wallShade: "#cdb3a3", seed: 314, fh: 240 },
+];
+
+/**
+ * 千斤家那栋楼：最高那栋楼左边，隔一条巷子（−4060…−3700）的一栋三十层老楼（楼顶 −7922，比最高那栋楼矮 620）。一楼是她家（门口一根拴人的铁桩），
+ * 她从门口飘起来、顺着巷子飘到最高那栋楼旁边的高空；沉沉从楼顶扑出去抱住她，两个人在天上慢慢往左飘，落在这栋楼的楼顶上。
+ * 原来二十层，用户 2026-10-19 要「左边房子加高一点」：上面加盖十层（topFloors），下面二十层一样不变。
+ * 楼顶不放天线（plainRoof）：⑦ 两个人就站在楼顶上，天线正好立在沉沉身后，细线像一个准星。
+ */
+export const QJ_HOME: Block = { x: -4800, w: 740, floors: 30, topFloors: 10, wall: "#e6cbb0", wallShade: "#d7b99b", seed: 406, fh: 260, plainRoof: true };
 
 // ——— 斜照的光：楼缝里漏下来的阳光，在楼面和地上落成一道道斜的影子（影子偏紫的暖灰，用 multiply，不发黑） ———
 const BAND_SLOPE = 0.62;
@@ -671,6 +937,8 @@ function bandsOf(D: number): [number, number][] {
 }
 const BANDS = new Map<number, [number, number][]>();
 export function drawLightBands(g: CanvasRenderingContext2D, c: Cam, D: number, clip: Path2D | null, strength = 1) {
+  strength *= dayLeft();
+  if (strength <= 0.01) return;
   let bands = BANDS.get(D);
   if (!bands) BANDS.set(D, (bands = bandsOf(D)));
   const v = viewOf(c, D, 1.1);
@@ -853,7 +1121,7 @@ function drawStreetLife(g: CanvasRenderingContext2D, c: Cam, t: number) {
 
 function drawGround(g: CanvasRenderingContext2D, c: Cam, D: number, color: string, lw: number) {
   const v = viewOf(c, D);
-  g.fillStyle = color;
+  g.fillStyle = tinted(color);
   g.fillRect(v.x0, 0, v.x1 - v.x0, 8000);
   if (lw > 0) {
     g.strokeStyle = INK;
@@ -876,10 +1144,11 @@ export function drawCity(
   t: number,
   between?: (D: number) => void,
   sh: [number, number] = [0, 0],
-  o: { light?: number; haze?: number } = {},
+  o: { light?: number; haze?: number; wide?: number } = {},
 ) {
   const light = o.light ?? 1;
   const extra = o.haze ?? 0;
+  const wide = o.wide ?? 0;
   for (const L of LAYERS) {
     applyCam(g, base, c, L.D, sh);
     const v = viewOf(c, L.D);
@@ -888,13 +1157,21 @@ export function drawCity(
     clip.rect(v.x0, 0, v.x1 - v.x0, 8000);
     for (const b of L.blocks) {
       if (b.x + b.w < v.x0 || b.x > v.x1 || -b.floors * b.fh - 300 > v.y1) continue;
+      if (b.wide) {
+        if (wide <= 0.01) continue;
+        g.globalAlpha = wide;
+        drawBlock(g, b, c, L.D, L.detail, L.lw, t);
+        g.globalAlpha = 1;
+        continue;
+      }
       drawBlock(g, b, c, L.D, L.detail, L.lw, t);
       clip.rect(b.x, -b.floors * b.fh - 80, b.w, b.floors * b.fh + 80);
     }
     if (L.D < 3 && light > 0) drawLightBands(g, c, L.D, clip, light * (L.D > 2 ? 0.6 : 1));
     for (const b of L.blocks) {
       if (b.x + b.w < v.x0 || b.x > v.x1) continue;
-      drawBlockGlow(g, b, c, L.D, L.D > 3 ? 0.6 : 1);
+      if (b.wide && wide <= 0.01) continue;
+      drawBlockGlow(g, b, c, L.D, (L.D > 3 ? 0.6 : 1) * (b.wide ? wide : 1));
     }
     between?.(L.D);
     drawSky(g, base, c, Math.min(1, L.haze + extra * (L.D > 2 ? 0.5 : 1)));
@@ -1058,6 +1335,71 @@ export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, 
   }
 }
 
+/**
+ * 拉开到整座城上时，远处天际线后面的一层暖金色余晖（画在天上、远处的城之前：远处的楼衬成剪影）。
+ * 按最远那层城的地面算它在画面上的高度，k 是强度。
+ */
+export function drawAfterglow(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, k: number) {
+  if (k <= 0.01) return;
+  const [, yFar] = toScreen(c, 0, 0, LAYERS[0].D);
+  const cy = yFar - 120;
+  g.setTransform(base);
+  g.save();
+  g.globalCompositeOperation = "screen";
+  g.translate(W / 2, cy);
+  g.scale(1, 0.34);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, 900);
+  gr.addColorStop(0, `rgba(255,206,140,${0.55 * k})`);
+  gr.addColorStop(0.45, `rgba(255,198,150,${0.28 * k})`);
+  gr.addColorStop(1, "rgba(255,190,160,0)");
+  g.fillStyle = gr;
+  g.fillRect(-900, -900, 1800, 1800);
+  g.restore();
+}
+
+/**
+ * 拉开到整座城上时，白往下打的几道宽宽的斜光（耶稣光）：从白的下沿斜着照下来，穿过满天往上飘的人，落在城上，
+ * 越往下越宽、越淡，慢慢地挪（screen：只把亮处提亮）。k：0 不画，1 拉开到整座城上。
+ */
+export function drawRays(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, t: number, k: number) {
+  if (k <= 0.01) return;
+  const [, yEdge] = toScreen(c, 0, Y_WHITE);
+  const top = Math.max(-80, yEdge - 30);
+  const len = H * 1.05 - top;
+  if (len < 200) return;
+  g.setTransform(base);
+  g.save();
+  g.globalCompositeOperation = "screen";
+  const rays: [number, number, number, number][] = [
+    // 画面上的起点 x、上沿宽、透明度、挪动的快慢
+    [40, 120, 0.22, 0.9],
+    [250, 60, 0.15, -0.6],
+    [430, 170, 0.2, 0.5],
+    [640, 80, 0.16, -0.8],
+    [780, 140, 0.19, 0.7],
+    [990, 70, 0.13, -0.5],
+  ];
+  for (const [x0, w0, a0, sp] of rays) {
+    const x = x0 + 26 * Math.sin(t * 0.21 * sp + x0) - c.x * c.z * 0.05;
+    const a = a0 * k * (0.8 + 0.2 * Math.sin(t * 0.5 + x0 * 0.01));
+    const slant = 0.32;
+    const w1 = w0 * 2.4;
+    const p = new Path2D();
+    p.moveTo(x, top);
+    p.lineTo(x + w0, top);
+    p.lineTo(x + w0 + slant * len + (w1 - w0) / 2, top + len);
+    p.lineTo(x + slant * len - (w1 - w0) / 2, top + len);
+    p.closePath();
+    const gr = g.createLinearGradient(0, top, 0, top + len);
+    gr.addColorStop(0, `rgba(255,248,232,${a})`);
+    gr.addColorStop(0.45, `rgba(255,236,206,${a * 0.6})`);
+    gr.addColorStop(1, "rgba(255,226,196,0)");
+    g.fillStyle = gr;
+    g.fill(p);
+  }
+  g.restore();
+}
+
 /** 碰到白的一下：一圈圈彩色光环往外扩（大小按画面像素算），中间一团白，碎光往四周散 */
 export function drawBurst(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, x: number, y: number, age: number, scale = 1) {
   if (age < 0 || age > 1.8) return;
@@ -1151,6 +1493,7 @@ const MOTES = (() => {
 
 /** 浮尘（世界里一块块平铺；D 是这一层的远近，size 让近处的大一些） */
 export function drawMotes(g: CanvasRenderingContext2D, c: Cam, t: number, D = 1, size = 1, alpha = 1) {
+  alpha *= 0.25 + 0.75 * dayLeft();
   const k = c.z / D;
   // 拉得很远时浮尘小得看不见，不画（满画面几百颗也很慢）
   if (k < 0.32) return;
@@ -1218,7 +1561,8 @@ export function drawSilhouette(g: CanvasRenderingContext2D, x: number, y: number
 // ——— 光 ———
 /** 斜照进来的几道暖光（画面坐标，跟着镜头横向挪一点） */
 export function drawSunbeams(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, t: number, k = 1) {
-  if (k <= 0) return;
+  k *= dayLeft();
+  if (k <= 0.005) return;
   g.setTransform(base);
   g.save();
   g.globalCompositeOperation = "screen";
@@ -1250,6 +1594,9 @@ export function drawSunbeams(g: CanvasRenderingContext2D, base: DOMMatrix, c: Ca
 
 /** 暖光（soft-light：只把亮处提暖，不把人染色）、纸的颗粒、很轻的暗角（vig 是暗角，warm 是暖光的强度） */
 export function drawGrade(g: CanvasRenderingContext2D, base: DOMMatrix, grain: HTMLCanvasElement, warm = 1, vig = 0.16) {
+  // 傍晚暖光再浓一点，夜里收掉；夜里暗角重一点
+  warm *= (1 + 0.3 * sunsetK()) * (1 - 0.85 * nightK());
+  vig += 0.14 * nightK();
   g.setTransform(base);
   g.save();
   g.globalCompositeOperation = "soft-light";

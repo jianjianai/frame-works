@@ -26,6 +26,8 @@ import { type Angles, type HoldFn, type MoveKey, type PoseIn, CHENGTUO, drawChen
 import { type Cam, E, H, W, aim, applyCam, camLerp, clamp01, kick, ph, shake, toScreen, viewOf } from "../lib/cam";
 import {
   type Block,
+  QJ_HOME,
+  STREET,
   TOWER,
   Y_WHITE,
   drawBlock,
@@ -40,6 +42,8 @@ import {
   drawSky,
   drawStreet,
   drawSunbeams,
+  drawAfterglow,
+  drawRays,
   drawWhite,
   makeGrain,
   prepareCity,
@@ -63,6 +67,7 @@ import {
   makePapers,
 } from "../lib/props";
 import { type Note, drawNote, loadHandFont } from "../lib/note";
+import { SHOP_SPAN, SHOP_T, drawShopShade, drawShopSpill, makeShop, shopCam, shopLook } from "../lib/shop";
 import { type Walker, drawPerson, walkerAt } from "../lib/people";
 import { type Num, ARMS, LIMP, SMOOTH, fade, hitch, live, ring, smoothTrack, withDrag } from "../lib/motion";
 import { CHEN, KID, WAVE_R, ZHONG, ZHOU as ZP, armL, armR, legL, legR } from "../lib/poses";
@@ -201,6 +206,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const grain = makeGrain();
   prepareCity();
   const T = timeline();
+  // 第二幕第一镜的店和人：16.0 以后镜头扎下去落在店门口，落定以后第二幕接着画（同一套，lib/shop.ts）
+  const shop = makeShop();
 
   // 同一时刻的姿势会被镜头、画面、拖影反复用到：按时间记住最近的结果（返回的东西不要改）
   const memoT = <R,>(fn: (t: number) => R) => {
@@ -611,8 +618,9 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const NEIGHBORS: Block[] = [
     { x: HOUSE.x1 + 60, w: 280, floors: 1, fh: 300, wall: "#e8c9a6", wallShade: "#d9b690", seed: 311, shop: "#c96a52", plainRoof: true },
     { x: HOUSE.x0 - 60 - 560, w: 560, floors: 5, fh: 230, wall: "#e6b39d", wallShade: "#d69f88", seed: 312, shop: "#6f8f86" },
-    { x: HOUSE.x0 - 60 - 560 - 70 - 680, w: 680, floors: 7, fh: 220, wall: "#ecd5a6", wallShade: "#dcc290", seed: 313, shop: "#d9a441" },
-    { x: HOUSE.x0 - 60 - 560 - 70 - 680 - 60 - 520, w: 520, floors: 4, fh: 240, wall: "#dcc5b6", wallShade: "#cdb3a3", seed: 314 },
+    // 再往左是最高那栋楼（她家）、隔着巷子的千斤家那栋楼和后面两栋：lib/world.ts 的 TOWER、QJ_HOME、STREET
+    ...STREET,
+    QJ_HOME,
   ];
   const zhongMove = live(
     [
@@ -685,6 +693,11 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     k: number;
   }
   const crowd: Floater[] = [];
+  /**
+   * 更远处满天往上飘的人（用户 2026-10-19：全城那个画面「中间有点空，把这个画面设计得美丽一点」）：城后面更远的天上，
+   * 一大片小小的暖光往上飘，越靠近白越密——远看像放天灯，每一盏都是一个人。只在镜头拉开以后画（不进前面的街景）。
+   */
+  const lanterns: { x: number; y0: number; D: number; v: number; h: number; ph: number; a: number }[] = [];
   /** 被吸进去的人远的时候几乎悬着，越近越快（最后一下冲上去）；其他人慢慢往上飘 */
   const crowdY = (p: Floater, t: number) => {
     if (p.tb < 1e8) {
@@ -904,6 +917,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     return { startCam, A, s0: toScreen(startCam, A[0], A[1]) };
   })();
   const DRUM_KICK = (t: number) => (t < T.drum ? 1 : 1 + 0.045 * Math.exp(-(t - T.drum) / 0.22) * (1 - Math.exp(-(t - T.drum) / 0.04)));
+  const DIVE_OVER = 0.036;
+  const diveE = (t: number) => {
+    if (t <= SHOP_T.land) return Math.pow(ph(t, T.end, SHOP_T.land), 2.2);
+    const u = ph(t, SHOP_T.land, SHOP_T.land + 0.28);
+    return 1 + DIVE_OVER * Math.sin(Math.PI * u) * (1 - u);
+  };
   const camBase = (t: number): Cam => {
     if (t < T.cut) return camS1(t);
     if (t < T.her) return arriveCam(t);
@@ -919,6 +938,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       const k = groundChain(t);
       return { ...k, z: k.z * DRUM_KICK(t) };
     }
+    // ⑪ 16.0 起扎进第二幕：从整座城上顺着最高那栋楼越扎越快地扎到楼脚的哑铃店（pow 2.2，被吸进去），落点冲过一点再回来
+    if (t > T.end) return camLerp(camBase(T.end), shopCam(t, shop.bigAt), diveE(t));
     const { A, startCam, s0 } = K;
     const x = ph(t, T.r0, T.wide);
     // 先慢慢升（余韵，柔和起步的那一小份），中间越升越快，落到整座城上时收住（第 28 拍）
@@ -941,6 +962,14 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       const sy = 420 + 1050 * Math.pow(u, 1.35);
       const [x, y] = at(-60 + r() * 1200, sy, D);
       crowd.push({ x, D, y0: y, tb: 1e9, v: 40 + 150 * (1 - u), spec: passerby(Math.floor(r() * 40)), ph: r() * 6, k: 0.36 + r() * 0.2 });
+    }
+    // 远处的一大片：三层（越远越小、越淡、飘得越慢），越往上越密
+    for (let i = 0; i < 150; i++) {
+      const D = [3.6, 4.8, 6.4][i % 3];
+      const u = Math.pow(r(), 1.7);
+      const sy = 470 + 640 * u;
+      const [x, y] = at(-40 + r() * 1160, sy, D);
+      lanterns.push({ x, y0: y, D, v: 25 + 90 * (1 - u), h: 590 * (0.26 + r() * 0.16), ph: r() * 6.28, a: (0.75 - 0.35 * u) * (D > 6 ? 0.7 : D > 4 ? 0.85 : 1) });
     }
     // 离镜头近的几个：镜头升起来时一个个从画面里掠过去（看得出是在人群里往上升）
     (
@@ -1067,6 +1096,11 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     if (t < T.cut) vig = 0.04;
     const warm = 0.9 + 0.25 * fade(t, T.take, T.take + 0.5) * (1 - fade(t, T.walk0 + 1, T.walk0 + 2.5));
     const haze = 0.32 * clamp01((cam.z - 1.6) / 0.6) * (t > T.land ? 1 : 0);
+    // 扎进哑铃店以后：第二幕这一场的光（lib/shop.ts，两边一样）
+    if (t > T.end) {
+      const s = shopLook(t);
+      return { vig: s.vig, warm: s.warm, haze };
+    }
     return { vig: Math.max(0, vig), warm, haze };
   };
 
@@ -1078,6 +1112,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const look = lookAt(t, cam);
     g.setTransform(1, 0, 0, 1, 0, 0);
     drawSky(g, base, cam);
+    // 拉开到整座城上：远处天际线后面一层暖金色的余晖，远处的楼衬成剪影
+    drawAfterglow(g, base, cam, clamp01((0.62 - cam.z) / 0.3));
     drawCity(
       g,
       base,
@@ -1105,6 +1141,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
             drawPerson(g, w.spec, s.pose, s.x, 0, zl(D));
           }
         }
+        // 对面人行道上拎着哑铃回家的人（shop.drawWalkers）第一幕不画：镜头在高处时这一层的街面被近处的楼挡着，
+        // 他们像走在半空里；落到店门口以后又被最高那栋楼挡住，第二幕里也看不见
         // 全城往上飘的人（每一层画在那一层的空气后面，越远越淡）
         if (t > T.r0 - 0.5 && D > 1) {
           for (const p of crowd) {
@@ -1120,8 +1158,28 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         }
       },
       sh,
-      { light: 1, haze: look.haze },
+      { light: 1, haze: look.haze, wide: clamp01((0.62 - cam.z) / 0.3) },
     );
+    // 更远处满天的小光点（镜头拉开到 0.6 倍以下才淡进来，扎回街上时淡出）
+    {
+      const k = clamp01((0.62 - cam.z) / 0.3);
+      if (k > 0.01) {
+        let lastD = 0;
+        for (const p of lanterns) {
+          if (p.D !== lastD) {
+            applyCam(g, base, cam, p.D, sh);
+            lastD = p.D;
+          }
+          const y = p.y0 - p.v * (t - T.wide);
+          const s = cam.z / p.D;
+          const [sx, sy] = [W / 2 + (p.x - cam.x) * s, H / 2 + (y - cam.y) * s];
+          if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) continue;
+          const tw = 0.75 + 0.25 * Math.sin(t * 2.3 + p.ph * 3);
+          drawGlow(g, p.x, y - p.h * 0.45, p.h * 1.25 + 9 / s, p.a * tw * k);
+          if (p.h * s > 4.5) drawSilhouette(g, p.x, y, p.h, t, p.ph, 0.55 * k, "112,76,94");
+        }
+      }
+    }
     applyCam(g, base, cam, 1, sh);
     const view = viewOf(cam, 1);
     // 最高那栋楼（她住在顶层）、老钟家（一楼窗后是老钟）
@@ -1130,6 +1188,10 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       drawBlockGlow(g, TOWER, cam, 1);
       if (view.y1 > TOWER_ROOF - 600 && view.y0 < TOWER_ROOF + 200) drawRoof(g, t);
     }
+    // 楼脚的哑铃店和门口排队的人：一直在（用户 2026-10-20：原来 16.0 以后才画，全城远景里左下角突然冒出来），
+    // 镜头升起来时跟着楼一起露出来；街上的镜头看不到这一段，前面的画面不变
+    const shopSeen = SHOP_SPAN.x0 < view.x1 && SHOP_SPAN.x1 > view.x0;
+    if (shopSeen) shop.drawFront(g, t);
     for (const b of NEIGHBORS) {
       if (b.x > view.x1 + 50 || b.x + b.w < view.x0 - 50) continue;
       drawBlock(g, b, cam, 1, 2, 3.2, t);
@@ -1150,6 +1212,15 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       drawHouseWindowFront(g, HOUSE);
     }
     drawStreet(g, cam);
+    if (t > T.end) {
+      drawShopShade(g, base, t);
+      applyCam(g, base, cam, 1, sh);
+    }
+    if (shopSeen) {
+      drawShopSpill(g);
+      shop.drawShadows(g, t);
+      shop.drawPeople(g, t, cam.z);
+    }
     // 跟着她跑：镜头横着走得很快，背景按 1/48 秒快门拖一下；盯着公文包往下坠时竖着拖。人物、公文包画在拖影后面，保持清楚
     const [smx, smy] = trackSmear(t);
     if (Math.hypot(smx, smy) > 3) {
@@ -1282,8 +1353,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     puff(c.x - 150, T_BRAKE, 10, 13, 0.6, 120, 50, 12, 0.45);
     puff(chenAt(T.launch).x, T.launch, 10, 17, 0.6, 140, 40, 13, 0.4);
     if (t >= T.land) puff(chenAt(T.land).x, T.land, 14, 19, 0.9, 200, 70, 16, 0.45);
-    // 近景：比人离镜头更近的一层
-    if (t >= T.cut) {
+    // 近景：比人离镜头更近的一层（扎进哑铃店以后不画：路灯杆会横在店门口）
+    if (t >= T.cut && t <= T.end) {
       applyCam(g, base, cam, FG_D, sh);
       const fv = viewOf(cam, FG_D);
       for (const f of FOREGROUND) {
@@ -1338,6 +1409,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     drawGrade(g, base, grain, look.warm, look.vig);
     // 白（不在纸上：画在颗粒之后）
     drawWhite(g, base, cam, t, 0);
+    // 拉开到整座城上：白往下打下来几道斜斜的光，穿过满天的人和城（扎回街上时退掉）
+    drawRays(g, base, cam, t, clamp01((0.62 - cam.z) / 0.3));
     // 光里的女人画在白的光晕前面（不被眩光冲淡），碰到白以后从头顶开始散成光和灰
     if (t < T.cut) {
       applyCam(g, base, cam, 1, sh);
@@ -1435,7 +1508,33 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       const dy = (cutFrame ? c0.y - c1.y : c1.y - c0.y) * c1.z;
       const falling = t > T.whip && t < T.cut + 0.25;
       const blur = !falling ? 0 : Math.min(260, Math.max(0, Math.abs(dy) - 30) * 0.9);
-      if (blur < 4) {
+      // 扎进哑铃店：按每帧镜头的推近和位移拖一下（从这一帧的样子往上一帧的样子叠 9 份，1/48 秒快门）
+      const dive = t > T.end && t < SHOP_T.land + 0.05 ? (() => {
+        const a = camAt(t);
+        const p = camAt(t - 1 / 30);
+        const r = a.z / p.z;
+        // 这一帧画面上的一点在上一帧在哪：s0 = A·s1 + B
+        const A = 1 / r;
+        const Bx = W / 2 - (W / 2 + (p.x - a.x) * a.z) / r;
+        const By = H / 2 - (H / 2 + (p.y - a.y) * a.z) / r;
+        return { A, Bx, By, k: Math.abs(1 - A) + Math.hypot(Bx, By) / 1500 };
+      })() : null;
+      if (dive && dive.k > 0.004) {
+        drawFrame(bctx, t);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.drawImage(buf, 0, 0);
+        const n = 9;
+        for (let i = 1; i < n; i++) {
+          const l = (0.5 * i) / (n - 1);
+          const m = 1 + l * (dive.A - 1);
+          ctx.globalAlpha = 1 / (i + 1);
+          ctx.setTransform(m, 0, 0, m, (l * dive.Bx * width) / W, (l * dive.By * height) / H);
+          ctx.drawImage(buf, 0, 0);
+        }
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = 1;
+      } else if (blur < 4) {
         drawFrame(ctx, t);
       } else {
         drawFrame(bctx, t);
