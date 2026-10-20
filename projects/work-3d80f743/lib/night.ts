@@ -1,11 +1,10 @@
-// 第二幕⑧「请你等等我」第二句（29.79–32.0：请 29.79 你 30.24 等 30.42 等 30.60 我 30.78–31.83；30.0–32.0 鼓停、低音悬着）：
-// 只剩千斤一个人。镜头接着⑦往后退，退到她和最高那栋楼的楼顶同框（头顶压着白）；几秒里太阳落下去：天从杏色变成橙粉、再变成深蓝，
-// 城里的窗一组组亮起来；白把她往上拽，她整个人倒过来斜着漂起来，只剩两只手攥着栏杆，像一只风筝，脸朝着那栋楼。
-// 「我」30.78 最高那栋楼顶层最左那扇窗亮了——沉沉到家了，灯下坐在桌边写砖。镜头飞过去、推进那扇窗（她家的防飘栏开着），
-// 31.97 窗里的屋子正好铺满画面，从这一刻起只画屋里（⑨「两块五的签字笔」接着在屋里）。
-// 窗里画的就是那间屋子（lib/room.ts，缩小画在玻璃里），推进去的时候屋子越来越大，铺满画面的那一帧前后一模一样。
+// 第二幕⑧「请你等等我」第二句（29.79–31.97：请 29.79 你 30.24 等 30.42 等 30.60 我 30.78–31.83；30.0–32.0 鼓停、低音悬着）的天色：
+// 2026-10-20 用户改成「两人坐在另外一栋楼上，拥抱着」（人和镜头在 lib/roof.ts 的 HUG_T）。音乐悬着的这两秒里太阳落下去：
+// 天从杏色变成橙粉、再变成深蓝，城里的窗一组组亮起来——两个人一直这样抱着。31.97 切进她的屋子（⑨「两块五的签字笔」）。
+// （原来这里是千斤一个人攥着栏杆等、沉沉家那扇窗亮了、镜头飞进窗里：nightCam，2026-10-20 换掉。）
+// 她家那扇窗里画的就是那间屋子（lib/room.ts，缩小画在玻璃里）。
 
-import { type Cam, E, aim, camLerp, ph } from "./cam";
+import { type Cam, E, ph } from "./cam";
 import { INK, TOWER_HOME, drawGlow, duskTint, rectPath, specialWindow } from "./world";
 import { drawRoom } from "./room";
 
@@ -13,17 +12,15 @@ type V2 = [number, number];
 
 export const NIGHT_T = {
   start: 29.79,
-  /** 太阳落下去：29.84 起，30.15 前后傍晚最红，30.75 天黑透 */
-  dusk0: 29.84,
-  dusk1: 30.75,
+  /** 太阳落下去：鼓一停（30.0）起，30.45 前后傍晚最红，31.35 天黑透 */
+  dusk0: 30.0,
+  dusk1: 31.35,
   /** 城里的窗一组组亮起来 */
-  lights0: 30.12,
-  lights1: 30.7,
-  /** 「我」沉沉家的灯亮了 */
-  home: 30.78,
-  /** 镜头飞过去 */
-  go: 30.9,
-  /** 窗里的屋子铺满画面：从这一刻起只画屋里 */
+  lights0: 30.4,
+  lights1: 31.3,
+  /** 沉沉家的台灯亮了（她回家写砖：切进屋子之前，楼顶上看不见） */
+  home: 31.9,
+  /** 切进她的屋子：从这一刻起只画屋里 */
   inside: 31.97,
   end: 32.05,
 };
@@ -151,45 +148,12 @@ function openCage(g: CanvasRenderingContext2D, w: { x: number; y: number; w: num
 }
 
 /**
- * ⑧ 的镜头（接着⑦往后退的那个镜头）：退到全景——左边千斤攥着栏杆，右边最高那栋楼的楼顶和她家那扇窗，头顶压着白；
- * 停在全景上看天黑下来、窗一组组亮；「我」那扇窗亮了，一拍以后飞过去推进窗里（先慢、越来越快，到窗前收一点但不停），
- * 31.97 窗铺满画面。位置按看得见的范围走（camLerp），一路朝着窗推过去。
+ * 切进屋子那一刻（⑨ 的起点）的镜头：还是世界里的镜头，对着窗的正中、窗正好铺满画面（屋子照旧用 roomMatrix 画）。
+ * 2026-10-20 起是从楼顶上抱着的两个人硬切过来（原来是飞进窗，接着那个速度慢慢停下来）
  */
-export function nightCam(t: number, base: Cam): Cam {
-  const T = NIGHT_T;
-  const WIDE = aim(-4085, -8330, 540, 960, 0.6);
-  let c = camLerp(base, WIDE, E.io(ph(t, T.start + 0.02, T.start + 0.95)));
-  // 停在全景上很慢地凑近一点（等）
-  c = { ...c, z: c.z * (1 + 0.025 * E.io(ph(t, T.start + 0.6, T.go))) };
-  const u = ph(t, T.go, T.inside);
-  if (u > 0) {
-    const w = homeWindow();
-    const IN = aim(w.x + w.w / 2, w.y + w.h / 2, 540, 960, zInside());
-    c = camLerp(c, IN, pushK(u));
-  }
-  return c;
-}
-/** 推进窗的进度：慢慢起步、越来越快，到窗前收一点但还在动（smoothstep 只取到 0.85，末速度约平均的七成） */
-const S85 = 3 * 0.85 ** 2 - 2 * 0.85 ** 3;
-function pushK(u: number) {
-  const x = 0.85 * Math.min(1, u);
-  return (3 * x * x - 2 * x * x * x) / S85;
-}
-
-/**
- * 进了屋以后（⑨ 接手之前）的镜头：还是世界里的镜头，对着窗的正中，接着推进窗的那个速度慢慢减下来
- * （屋子照旧用 roomMatrix 画，所以铺满画面那一帧前后一模一样）
- */
-export function cameraInside(t: number): Cam {
-  const T = NIGHT_T;
+export function cameraInside(_t: number): Cam {
   const w = homeWindow();
-  const zi = zInside();
-  // 推进窗末尾每秒放大多少（对数）：按 pushK 的末速度算
-  const zWide = 0.6 * 1.025;
-  const v = (Math.log(zi / zWide) * ((0.85 * (6 * 0.85 - 6 * 0.85 ** 2)) / S85)) / (T.inside - T.go);
-  const d = Math.max(0, t - T.inside);
-  const tau = 0.25;
-  return { x: w.x + w.w / 2, y: w.y + w.h / 2, z: zi * Math.exp(v * tau * (1 - Math.exp(-d / tau))), r: 0 };
+  return { x: w.x + w.w / 2, y: w.y + w.h / 2, z: zInside(), r: 0 };
 }
 
 export type { V2 };

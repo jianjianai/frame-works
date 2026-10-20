@@ -19,7 +19,7 @@ import { liftAt, stoneC4, stoneX } from "./coatoff";
 import { zhongAnkle, zhongAt } from "./morning8";
 import { STUDENT, UNCLE } from "./saved";
 import { diveHer } from "./dive";
-import { HER_LAND, LAND_T, releaseOf } from "./t55";
+import { HER_LAND, LAND_T, releaseOf, touchOf } from "./t55";
 
 type V2 = [number, number];
 const T = LINK_T;
@@ -83,6 +83,8 @@ const STAND = (f: number, lx: number): Angles =>
     ...armL(8, 24, 0, "relax", l),
     ...armR(10, 26, 0, "relax", l),
   }));
+/** 五⑤ 先落回街上：站着仰头看她抱着他往下落，哭着笑（落地那一下膝盖一弯由关键帧的 squash 给） */
+const WATCH = (f: number): Angles => ({ ...STAND(f, 0), neck: 26, expression: "哭着笑", tears: 1, lookX: 0, lookY: -1 });
 /** 走过来把手放上去（远处那只手 IK 到她肩上 / 他背上） */
 const REACH = (f: number, lx: number): Angles => ({ ...STAND(f, lx), ...armR(104, 30, 0, "open", 0) });
 
@@ -169,12 +171,16 @@ function keysOf(p: Plan, next: number | null, i: number): MoveKey[] {
   keys.push({ t: p.grab + 0.14, ease: "out", p: HANG(F) });
   const hang = next === null ? HANG(F) : PULLED(F);
   if (next !== null) keys.push({ t: next - 0.02, p: HANG(F) }, { t: next + 0.08, ease: "out", squash: -0.05, p: PULLED(F) });
-  // 五⑤ 松手往下飘；落回街上站着看她（跳过去的那几秒里换朝向、换姿势，画面里看不见）；走过来的那两个人走几步、把手放上去
+  // 五⑤ 松手往下飘（像花瓣往两边飘开）；先落回街上（吊得低的先落地），站着仰头看她抱着他落下来；她落地以后看着她笑；
+  // 走过来的那两个人走几步、把手放上去
   const r = releaseOf(i, PLANS.length);
-  keys.push({ t: r - 0.02, p: hang }, { t: r + 0.35, ease: "out", p: DRIFT(F) }, { t: 151, p: DRIFT(F) });
+  const L = touchOf(i, PLANS.length);
   const lx = p.spot[0] < -2900 ? 0.6 : -0.6;
   const st = STAND(p.spotFace, lx);
-  keys.push({ t: 153.5, ease: "inOut", p: st });
+  keys.push({ t: r - 0.02, p: hang }, { t: r + 0.35, ease: "out", p: DRIFT(F) }, { t: L - 0.55, p: DRIFT(F) });
+  keys.push({ t: L - 0.12, ease: "inOut", p: { ...WATCH(p.spotFace), ...legR(10, -24, -10), ...legL(-6, -20, -10) } });
+  keys.push({ t: L, ease: "in", squash: 0.07, p: WATCH(p.spotFace) }, { t: L + 0.22, ease: "out", p: WATCH(p.spotFace) });
+  keys.push({ t: LAND_T.land - 0.1, p: WATCH(p.spotFace) }, { t: LAND_T.land + 0.45, ease: "inOut", p: st });
   if (p.hand) {
     const w0 = LAND_T.walk0 + (p.hand.to === "kid" ? 0.15 : 0);
     keys.push({ t: w0, p: st });
@@ -184,8 +190,8 @@ function keysOf(p: Plan, next: number | null, i: number): MoveKey[] {
       a = !a;
     }
     keys.push({ t: p.hand.at - 0.12, ease: "inOut", p: st }, { t: p.hand.at + 0.12, ease: "inOut", p: REACH(p.spotFace, lx) });
-    keys.push({ t: 160, p: REACH(p.spotFace, lx) });
-  } else keys.push({ t: 160, p: st });
+    keys.push({ t: 175, p: REACH(p.spotFace, lx) });
+  } else keys.push({ t: 175, p: st });
   return keys;
 }
 /** 跑到哪一刻：一般是抓住前 0.32 秒；老太太跑到年轻人跟前站住，年轻人早一点到 */
@@ -308,13 +314,15 @@ function rootOf(i: number, t: number): V2 {
   const dir = sgn(take[0] - m.from[0]);
   const t1 = runEnd(m);
   const tUp = m.role === "boosted" ? T.lift0 : m.grab - LEAP_T;
-  // 五⑤ 松了手：天上接着松手那一刻的速度，往一边飘开、越落越快一点；落回街上以后站在自己的位置（走过来的那两个人从 from 走过来）
+  // 五⑤ 松了手：接着松手那一刻的速度，先往一边飘开（像花瓣），再越落越快、越落越慢地落到自己站的地方（走过来的那两个人
+  // 先落在 from，再走过来）；落地那一刻还带一点往下的速度（膝盖一弯）
   const rel = releaseOf(i, MEMBERS.length);
   if (t >= rel) {
-    if (t < LAND_T.street0 - 1) {
+    const L = touchOf(i, MEMBERS.length);
+    if (t < L) {
       const R = releaseAt(i);
-      const d = t - rel;
-      return [R.root[0] + R.v[0] * d + m.drift * (140 * d + 90 * d * d), R.root[1] + R.v[1] * d + 160 * d * d];
+      const to = m.hand ? m.hand.from : m.spot;
+      return hermite(R.root, [R.v[0] + m.drift * (1100 + 90 * i), R.v[1] + 60], to, [0, 260], L - rel, (t - rel) / (L - rel));
     }
     if (m.hand) {
       const w0 = LAND_T.walk0 + (m.hand.to === "kid" ? 0.15 : 0);
@@ -396,9 +404,10 @@ export function chainAt(t: number) {
 /** 人链里的人（五③起由这里画，五②站在街上时由 lib/chain.ts 画）：先抓住的先画，后面的压在前面（抓脚踝的手在上一个人的脚前面） */
 export function drawLink(g: CanvasRenderingContext2D, t: number, cam: Cam, part: "all" | "back" | "front" = "all") {
   if (t < T.start) return;
-  // 五⑤ 落回街上以后按远近画（连老钟一起）：比她靠后的先画，她和他画完再画比她靠前的（千斤放在她肩上的手、周磊放在他背上的手压在上面）
-  if (t >= LAND_T.street0 - 1) {
-    drawStreetFolk(g, t, cam, part);
+  // 五⑤ 起（老钟松手以后）连老钟一起画：她还在天上时一起画在她后面；她落地以后按远近分前后——比她靠后的先画，她和他画完
+  // 再画比她靠前的（千斤放在她肩上的手、周磊放在他背上的手压在上面）
+  if (t >= LAND_T.zhongRelease) {
+    drawStreetFolk(g, t, cam, t >= LAND_T.land - 0.15 ? part : part === "front" ? "none" : "all");
     return;
   }
   const v = viewOf(cam, 1);
@@ -428,19 +437,24 @@ export function drawLink(g: CanvasRenderingContext2D, t: number, cam: Cam, part:
   }, 0.85);
 }
 
-/** 五⑤ 落回街上的一群人（她救过的人和老钟）：back 比她（根离墙 HER_LAND[1]）靠后的，front 靠前的；离镜头近的后画 */
-function drawStreetFolk(g: CanvasRenderingContext2D, t: number, cam: Cam, part: "all" | "back" | "front") {
+/**
+ * 五⑤ 她救过的人和老钟：她还在天上时（all）全画在她后面，天上的、已经落地的一起；她落地以后 back 比她（根离墙 HER_LAND[1]）
+ * 靠后的，front 靠前的；离镜头近的后画（天上飘着的按高低：低的后画）
+ */
+function drawStreetFolk(g: CanvasRenderingContext2D, t: number, cam: Cam, part: "all" | "back" | "front" | "none") {
+  if (part === "none") return;
   const v = viewOf(cam, 1);
   const folk: { spec: CastSpec; pose: PoseIn; root: V2 }[] = MEMBERS.map((m, i) => ({ spec: m.spec, ...stateAt(i, t) }));
   const z = zhongAt(t);
   folk.push({ spec: CAST.老钟, pose: z.pose, root: z.root });
   const sel = folk
     .filter((f) => (part === "all" ? true : part === "back" ? f.root[1] <= HER_LAND[1] : f.root[1] > HER_LAND[1]))
-    .filter((f) => f.root[0] > v.x0 - 300 && f.root[0] < v.x1 + 300 && f.root[1] - 800 < v.y1)
+    .filter((f) => f.root[0] > v.x0 - 300 && f.root[0] < v.x1 + 300 && f.root[1] - 800 < v.y1 && f.root[1] + 200 > v.y0)
     .sort((a, b) => a.root[1] - b.root[1]);
   if (!sel.length) return;
   const xs = sel.map((f) => f.root[0]);
-  drawTinted(g, [Math.min(...xs) - 400, -900, Math.max(...xs) + 400, 260], (gg) => {
+  const ys = sel.map((f) => f.root[1]);
+  drawTinted(g, [Math.min(...xs) - 400, Math.min(...ys) - 900, Math.max(...xs) + 400, Math.max(260, Math.max(...ys) + 200)], (gg) => {
     for (const f of sel) drawPerson(gg, f.spec, f.pose, f.root[0], f.root[1], cam.z);
   }, 0.85);
 }

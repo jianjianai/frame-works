@@ -18,7 +18,7 @@ import { ZHONG_HOUSE, pose } from "./dawn";
 import { STOMP_T } from "./t51";
 import { CHAIN_T } from "./t52";
 import { LINK_T } from "./t53";
-import { LAND_T } from "./t55";
+import { LAND_T, ZHONG_TOUCH } from "./t55";
 import { stoneC4 } from "./coatoff";
 import { cupHold, drawHouse, drawHouseWindowFront } from "./props";
 import { drawPerson } from "./people";
@@ -83,6 +83,8 @@ const Z_STAND = pose(2, { face: -0.6, ground: false, ...legR(6, -6), ...legL(-4,
   ...armL(8, 24, 0, "relax", l),
   ...armR(10, 26, 0, "relax", l),
 }));
+/** 五⑤ 先落回街上：站着仰头看她抱着他落下来，哭着笑 */
+const Z_WATCH = { ...Z_STAND, neck: 26, expression: "哭着笑" as const, tears: 1, lookX: -0.1, lookY: -1 };
 /** 五⑤ 落回街上以后站在哪（根）：她右边靠前 */
 const Z_SPOT: V2 = [-2590, 80];
 const zhongMove = live(
@@ -107,12 +109,16 @@ const zhongMove = live(
     { t: LINK_T.grabs[0] + 0.35, ease: "inOut", p: Z_PULLED },
     { t: LINK_T.grabs[0] + 0.7, p: Z_PULLED },
     { t: LINK_T.grabs[0] + 1.05, ease: "inOut", p: Z_PULLED_UP },
-    // 五⑤ 最后一个松开手往下飘；落回街上站着（跳过去的那几秒里换的）
+    // 五⑤ 第一个松开手往下飘（往左飘开）；最后一个落回街上，站着仰头看她落下来；她落地以后看着她笑
     { t: LAND_T.zhongRelease - 0.02, p: Z_PULLED_UP },
     { t: LAND_T.zhongRelease + 0.35, ease: "out", p: Z_DRIFT },
-    { t: 151, p: Z_DRIFT },
-    { t: 153.5, ease: "inOut", p: Z_STAND },
-    { t: 160, p: Z_STAND },
+    { t: ZHONG_TOUCH - 0.55, p: Z_DRIFT },
+    { t: ZHONG_TOUCH - 0.12, ease: "inOut", p: { ...Z_WATCH, ...legR(10, -24, -10), ...legL(-6, -20, -10) } },
+    { t: ZHONG_TOUCH, ease: "in", squash: 0.07, p: Z_WATCH },
+    { t: ZHONG_TOUCH + 0.22, ease: "out", p: Z_WATCH },
+    { t: LAND_T.land - 0.1, p: Z_WATCH },
+    { t: LAND_T.land + 0.45, ease: "inOut", p: Z_STAND },
+    { t: 175, p: Z_STAND },
   ] as MoveKey[],
   { look: lookOf(OLD), base: { wind: 0 }, idle: true, seed: 81, springs: ARMS },
 );
@@ -126,18 +132,19 @@ export function zhongAt(t: number) {
   const W = ZHONG_HOUSE.win;
   const C = CHAIN_T;
   const p: PoseIn = { ...zhongMove(t).pose };
-  // 五⑤ 松了手：天上接着松手那一刻的速度往左飘开、越落越快一点；落回街上以后站在她右边靠前
+  // 五⑤ 松了手：接着松手那一刻的速度，先往左飘开，再越落越快、越落越慢地落回街上（最后一个落地），站在她右边靠前
   const L = LAND_T;
   if (t >= L.zhongRelease) {
-    if (t >= L.street0 - 1) return { pose: p, root: Z_SPOT, inside: false };
+    if (t >= ZHONG_TOUCH) return { pose: p, root: Z_SPOT, inside: false };
     ZR ??= (() => {
       const a = hangAt(L.zhongRelease);
       const b = hangAt(L.zhongRelease - 0.02);
       return { root: a, v: [(a[0] - b[0]) / 0.02, (a[1] - b[1]) / 0.02] as V2 };
     })();
-    const d = t - L.zhongRelease;
+    const D = ZHONG_TOUCH - L.zhongRelease;
+    const u = (t - L.zhongRelease) / D;
     const w = 1 - E.io(ph(t, L.zhongRelease, L.zhongRelease + 0.12));
-    const root: V2 = [ZR.root[0] + ZR.v[0] * d - (140 * d + 90 * d * d), ZR.root[1] + ZR.v[1] * d + 160 * d * d];
+    const root: V2 = [herm(ZR.root[0], ZR.v[0] - 1000, Z_SPOT[0], 0, D, u), herm(ZR.root[1], ZR.v[1] + 60, Z_SPOT[1], 260, D, u)];
     if (w > 0) {
       const a = stoneC4(t).ankleR;
       const sc = OLD.scale;
@@ -165,6 +172,12 @@ export function zhongAt(t: number) {
   return { pose: p, root, inside: t < C.sill1 };
 }
 const mix = (a: V2, b: V2, u: number): V2 => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+/** 三次 Hermite（一维）：从 a（速度 va）到 b（速度 vb），用 dt 秒，u 是 0–1 的进度 */
+function herm(a: number, va: number, b: number, vb: number, dt: number, u: number) {
+  const u2 = u * u;
+  const u3 = u2 * u;
+  return (2 * u3 - 3 * u2 + 1) * a + (u3 - 2 * u2 + u) * dt * va + (-2 * u3 + 3 * u2) * b + (u3 - u2) * dt * vb;
+}
 /** 吊在他脚下时的根（五⑤ 松手那一刻接着往下飘用） */
 function hangAt(t: number): V2 {
   const a = stoneC4(t).ankleR;
@@ -200,8 +213,8 @@ export function drawZhongHouse(g: CanvasRenderingContext2D, t: number, cam: Cam)
       drawHouseWindowFront(gg, H);
     });
   // 五② 出了窗：站在窗台上、扑出去、吊在他脚下，画在窗框前面（五③ 被人链带得比房子还高：单独蒙色，不裁在房子那一块里）
-  // 五⑤ 落回街上以后和大家一起按远近画（lib/link.ts 的 drawLink）
-  if (!z.inside && t < LAND_T.street0 - 1 && z.root[0] > v.x0 - 400 && z.root[0] < v.x1 + 400 && z.root[1] - 700 < v.y1 && z.root[1] + 150 > v.y0)
+  // 五⑤ 松手以后和大家一起画（lib/link.ts 的 drawLink）
+  if (!z.inside && t < LAND_T.zhongRelease && z.root[0] > v.x0 - 400 && z.root[0] < v.x1 + 400 && z.root[1] - 700 < v.y1 && z.root[1] + 150 > v.y0)
     drawTinted(g, [z.root[0] - 420, z.root[1] - 720, z.root[0] + 420, z.root[1] + 140], (gg) => drawPerson(gg, OLD, z.pose, z.root[0], z.root[1], cam.z));
 }
 

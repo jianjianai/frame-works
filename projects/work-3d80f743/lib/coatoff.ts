@@ -79,7 +79,7 @@ let GIVE0: { x: number; vx: number; y: number; vy: number } | null = null;
  * 停住以后很轻地浮着；抱住时被她拉进怀里（HUG_PULL）
  */
 function giveAt(t: number): V2 {
-  // 五⑤ 在她怀里，跟着她往下落、落回街上（lib/t55.ts：她胸口的路线 + 他在她胸口的哪里）
+  // 五⑤ 在她怀里，跟着她往下落、落回街上（lib/t55.ts：她胸口的路线 + 他在她胸口的哪里；一镜到底）
   if (t > LAND_T.start) {
     const c = landChest(t);
     return [c[0] + KID_REL[0], -(c[1] + KID_REL[1])];
@@ -402,7 +402,7 @@ const move = live(
     // 五⑤ 在她怀里落回街上：落地以后睁开眼，看着围过来的人笑
     { t: LAND_T.land + 0.05, p: P.被抱 },
     { t: LAND_T.land + 0.4, ease: "inOut", p: { ...P.被抱, blink: 0, neck: 8, lookX: 0.5, lookY: 0.2 } },
-    { t: 160, p: { ...P.被抱, blink: 0, neck: 8, lookX: 0.5, lookY: 0.2 } },
+    { t: 175, p: { ...P.被抱, blink: 0, neck: 8, lookX: 0.5, lookY: 0.2 } },
   ] as MoveKey[],
   { look: lookOf(STONE), base: { wind: 0.85 }, idle: true, seed: 211, springs: ARMS, follow: 0 },
 );

@@ -1,67 +1,72 @@
-// 第二幕第六镜「其实还想要说很多」（25.8–27.84，其 25.83 实 26.16 还 26.37 想 26.46 要 26.67 说 26.91 很 27.18 多 27.33）：
-// 最高那栋楼的楼顶，白就压在头顶上。沉沉一直在楼顶晾衣绳边收白床单（第五镜退开时就在右上角：用户 2026-10-19
+// 第二幕第七镜「请你等等我」（27.8–29.79，请 27.84 你 28.23 等 28.44 等 28.59 我 28.80）：
+// 2026-10-20 用户重排（「请你等等我：主角冲出来抱住她，飘到另外一栋楼」）：原来⑥这一段整个往后挪一小节（2 秒，卡的底鼓不变）。
+// 最高那栋楼的楼顶，白就压在头顶上。沉沉一直在楼顶晾衣绳边收白床单（第六镜退开时就在右上角：用户 2026-10-19
 // 「这一幕主角应该就在右上角了。不用切镜头，改为运镜」）。一扯下来就看见千斤张着手往白里飘——一惊（底鼓），
-// 床单脱手被风卷走，她踩着铁靴冲到楼边、蹬出去，在千斤的手快碰到白的地方从身后一把抱住；两个人在天上带着往左的惯性
-// 慢慢飘，落到加高了的千斤家那栋楼的楼顶（27.52，用户：「抱住她之后，在天上慢慢往左边飘，惯性飘到左边的房子上」）。
-// 镜头：第五镜往上退开的那个镜头接着走、不切；她一惊一顿；按两个人的距离推近（越近越近），抱住一震；跟着两个人往左飘，
-// 慢慢退开一点，落下来轻轻一沉。
+// 床单脱手被风卷走，她踩着铁靴冲到楼边、蹬出去，「等」在千斤的手快碰到白的地方从身后一把抱住；两个人在天上带着往左的惯性
+// 慢慢飘、慢慢往下落（用户：「抱住她之后，在天上慢慢往左边飘，惯性飘到左边的房子上」），29.51 千斤在半空里转过身来抱住她，
+// 第二句「请你等等我」刚开头（30.01）正好飘到千斤家那栋楼的楼顶，**落下来就是坐着的**（2026-10-20 用户：「两人不要站着落地，
+// 也不是蹲着，是直接落地就坐在地上」）：沉沉在半空里就把腿往前伸成坐的样子，屁股先着地、两只铁靴搁在前面。
+// 镜头：第六镜往上退开的那个镜头接着走、不切；她一惊一顿；按两个人的距离推近（越近越近），抱住一震；跟着两个人往左飘，
+// 慢慢退开一点，坐到楼顶上那一下轻轻一沉。⑧ 接着在这里抱着（还是同一个镜头）。
 
 import { beatAt } from "@frame/engine/tempo";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
-import { COLORS as CHEN_COLORS, bootMap, drawBoot, rigOf } from "@materials/剪纸角色/code/chengtuo-draw";
-import { BOOT } from "@materials/剪纸角色/code/chengtuo-costume";
-import { REST, toLocal } from "@materials/剪纸角色/code/figure";
 import { type Cam, E, aim, camLerp, kick, ph } from "./cam";
-import { INK, QJ_HOME, TOWER, part } from "./world";
+import { INK, QJ_HOME, TOWER, drawGlow, part } from "./world";
 import { drawPerson } from "./people";
-import { ARMS, LIMP, SMOOTH, fade, live, withDrag } from "./motion";
+import { ARMS, LIMP, fade, hitch, live, withDrag } from "./motion";
 import { CHEN } from "./poses";
 import { CHEN2, QIANJIN } from "./poses2";
 import { TOWER_ROOF } from "./props";
 import { type makeSky, skyCam } from "./sky";
-import { NIGHT_T } from "./night";
 import { WORD_BRICK, drawWordBrick } from "./brick";
 
 type V2 = [number, number];
 const b = beatAt;
 
 export const ROOF_T = {
-  /** 第五镜的镜头从这里交给这一镜（「其」25.83；不切镜头） */
-  cut: 25.8,
+  /** 第六镜的镜头从这里交给这一镜（「请」27.84；不切镜头） */
+  cut: 27.8,
   /** 把床单从绳子上扯下来、看见她 */
-  pull: 25.84,
-  see: 25.96,
-  /** 一惊（底鼓） */
-  shock: b(52),
+  pull: 27.84,
+  see: 27.96,
+  /** 一惊（小节线的底鼓） */
+  shock: b(56),
   /** 床单脱手、冲 */
-  letgo: 26.07,
-  run0: 26.08,
+  letgo: 28.07,
+  run0: 28.08,
   /** 蹬着楼边扑出去 */
-  jump: 26.28,
-  /** 「想」半空里从身后抱住她 */
-  catch: 26.46,
-  /** 落在千斤家那栋楼的楼顶 */
-  land: b(55),
-  /** 下一句「请你等等我」 */
-  end: 27.84,
+  jump: 28.28,
+  /** 「等」半空里从身后抱住她 */
+  catch: 28.46,
+  /** 坐着落在千斤家那栋楼的楼顶（第二句「请你等等我」刚开头、鼓停的那一下） */
+  land: b(60),
+  /** 下一句「请你等等我」（第二句） */
+  end: 29.79,
 };
 
 /**
- * ⑦「请你等等我」（27.84–29.79，请 27.84 你 28.23 等 28.44 等 28.59 我 28.80）：落地以后千斤还往上漂，沉沉一只手攥着她的手腕，
- * 弯腰把另一只手伸进靴筒掏砖——28.02（底鼓）拿出来是空的（今天的砖全送完了），一愣；「你」抬头看她；「等等」把她的两只手按到栏杆上、
- * 攥紧；「我」凑过去看着她的眼睛说「等等我」；29.02（底鼓）转身往右（她家那栋楼的方向）跑走。千斤攥着栏杆，转过来看着她，望着她跑开。
+ * ⑧「请你等等我」第二句（29.79–31.97，请 29.79 你 30.24 等 30.42 等 30.60 我 30.78–31.83；30.0–32.0 鼓停、低音悬着）：
+ * 2026-10-20 用户：「两人坐在另外一栋楼上，拥抱着」「第二句请你等等我的时候刚好飘到，两人不要站着落地，也不是蹲着，是直接落地就坐在地上」。
+ * 还是同一个镜头（⑥⑦⑧一镜到底）。29.51（底鼓）还在半空里，千斤一下转过身来抱住她，把脸埋在她胸口；两个人抱着慢慢落下来，
+ * 30.01 鼓一停正好坐到千斤家楼顶上（沉沉屁股着地、腿往前伸，千斤坐在她怀里）；「等、等、我」沉沉在她耳边轻轻说，「我」千斤哭出来。
+ * 音乐悬着的这两秒里天黑下来，城里的窗一组组亮（lib/night.ts 的 duskAt）——两个人一直这样抱着。
+ * （原来这两句「请你等等我」是空靴子、按住她的手说「等等我」、跑走、千斤像风筝一样攥着栏杆等、飞进她亮起来的窗，2026-10-20 换掉；
+ * ⑪ 她抱着砖回来时千斤还是攥着栏杆漂着的风筝，那几秒在⑨⑩ 屋里，看不见。）
  */
-export const STAY_T = {
-  start: 27.84,
-  reach: 27.98,
-  empty: b(56),
-  look: 28.23,
-  rail0: 28.34,
-  rail1: 28.52,
-  say: 28.8,
-  go: b(58),
-  end: 29.79,
+export const HUG_T = {
+  start: 29.79,
+  /** 「我」以后的底鼓：还在半空里，千斤一下转过身来（只翻朝向），抱住她 */
+  turn: b(58),
+  /** 转过来贴进她怀里、腿蜷起来 */
+  hug1: 29.4,
+  /** 「等、等、我」在她耳边说 */
+  say: [30.42, 30.6, 30.78],
+  /** 「我」千斤抬起头，靠在她身上 */
+  lean: 30.8,
+  /** 切进她的屋子（⑨） */
+  end: 31.97,
 };
 
 /**
@@ -92,27 +97,27 @@ const X_C0 = TOWER.x + 250;
 const X_EDGE = TOWER.x + 18;
 /** 抱着时千斤的胸口在沉沉胸口的哪里（她在前面、低一点） */
 const HUG: V2 = [-46, 72];
+/** ⑧ 转过身来抱着：千斤的头在沉沉的头左边多远（脸贴着脸，两张脸都露出来） */
+const CRADLE_X = -60;
 /** 落在千斤家楼顶的地方（沉沉的根） */
 const X_LAND = -4330;
-/** ⑦ 千斤两只手攥在栏杆上的地方（两只手中间） */
+/** ⑪ 千斤两只手攥在栏杆上的地方（两只手中间） */
 const GRIP_X = X_LAND - 214;
-/** ⑧ 倒过来漂成风筝：29.86 起，30.5 漂到 */
-const KITE1 = 30.5;
-const kiteK = (t: number) => E.io(ph(t, NIGHT_T.dusk0 + 0.02, KITE1));
-/** 铁靴的靴口：翻边上沿的中点（靴子的局部坐标，画面左边那只） */
-const RIM = toLocal(BOOT.rim, REST.ankleR, 0);
-const MOUTH: V2 = [RIM.reduce((a, p) => a + p[0], 0) / RIM.length, Math.min(...RIM.map((p) => p[1])) + 6];
+/** ⑪ 风筝：她回家写砖那几秒（⑨⑩ 在屋里，看不见）千斤一个人攥着栏杆漂起来；KITE0 起换成风筝，KITE1 漂到 */
+const KITE0 = 32.6;
+const KITE1 = 33.6;
+const kiteK = (t: number) => E.io(ph(t, KITE0, KITE1));
 
 export function makeRoof(sky: ReturnType<typeof makeSky>) {
   const T = ROOF_T;
-  const S = STAY_T;
+  const S = HUG_T;
   // ——— 沉沉 ———
   const run = (p: typeof CHEN.跑_落地, swap: boolean) => ({ ...(swap ? swapSides(p) : p), expression: "坚定", lookX: -0.7, lookY: -0.2 });
   const chenMove = live(
     [
       // 背对着千斤（朝右）在收床单：攥着床单左头往下扯
-      // 靴筒里的砖今天全送完了（⑦ 伸手进去掏是空的）
-      { t: 23.9, x: 0, items: { bricks: 0 }, p: { ...CHEN2.收床单, face: 1, ground: false, lift: -8 } },
+      // 靴筒里的砖今天全送完了（第二幕里她的靴筒一律是空的）
+      { t: 25.9, x: 0, items: { bricks: 0 }, p: { ...CHEN2.收床单, face: 1, ground: false, lift: -8 } },
       { t: T.pull, p: { ...CHEN2.收床单, face: 1, ground: false, lift: -8 } },
       // 扯下来：两只手往下一拽，回头——
       { t: T.see, ease: "out", p: { ...CHEN2.收床单, face: 1, ground: false, lift: -8, neck: 2, ...pull(), headTurn: -0.9, lookX: -0.9 } },
@@ -127,21 +132,15 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       { t: T.catch, ease: "out", p: CHEN2.抱住 },
       // 抱着她在天上飘：腿软软地垂着
       { t: T.catch + 0.35, ease: "inOut", p: CHEN2.抱着飘 },
-      // 快到楼顶：腿伸下去准备落地
-      { t: T.land - 0.05, ease: "inOut", p: CHEN2.抱着坠 },
-      { t: T.land + 0.12, ease: "out", squash: 0.06, p: CHEN2.落地 },
-      { t: T.land + 0.34, ease: "inOut", squash: 0, p: CHEN2.落地_起 },
-      // ⑦ 一只手攥着往上漂的她，弯腰掏靴筒 → 空的 → 抬头 → 把她的手按到栏杆上 → 凑过去说「等等我」→ 转身往右跑
-      { t: S.start, p: CHEN2.落地_起 },
-      { t: S.reach, ease: "out", p: CHEN2.掏靴筒 },
-      { t: S.empty + 0.04, ease: "out", p: CHEN2.空手 },
-      { t: S.look - 0.02, p: CHEN2.空手 },
-      { t: S.look + 0.08, ease: "inOut", p: CHEN2.抬头看她 },
-      { t: S.rail1, ease: "inOut", p: CHEN2.按手 },
-      { t: S.say, ease: "inOut", p: { ...CHEN2.按手, lean: 30, neck: 16 } },
-      { t: S.go - 0.02, p: { ...CHEN2.按手, lean: 30, neck: 16 } },
-      ...runRight(),
-
+      // 快到楼顶：腿往前伸成坐的样子（不伸下去够地），屁股先着地——落下来就是坐着的
+      { t: 29.3, p: CHEN2.抱着飘 },
+      { t: 29.72, ease: "inOut", p: CHEN2.抱着坐飘 },
+      { t: T.land, ease: "out", p: CHEN2.坐地抱 },
+      { t: T.land + 0.1, ease: "out", squash: 0.05, p: CHEN2.坐地抱 },
+      { t: T.land + 0.32, ease: "inOut", squash: 0, p: CHEN2.坐地抱 },
+      // ⑧「等、等、我」低头在她耳边说；之后闭着眼抱着
+      { t: S.say[2] + 0.3, ease: "inOut", p: CHEN2.坐地抱_贴脸 },
+      { t: 40, p: CHEN2.坐地抱_贴脸 },
     ] as MoveKey[],
     {
       look: CHENGTUO,
@@ -155,48 +154,50 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
         const k = kick(t, T.catch, 0.12);
         o.lean += 6 * k;
         o.neck -= 6 * k;
-        // 「等、等、我」：嘴一张一合
+        // ⑧「等、等、我」：贴着她的头轻轻说，嘴一张一合
         const say = (t0: number, a: number) => (t > t0 - 0.02 && t < t0 + 0.16 ? a * Math.sin((Math.PI * (t - t0 + 0.02)) / 0.18) : 0);
-        const m = say(28.44, 0.55) + say(28.59, 0.55) + say(28.8, 0.75);
+        const m = say(S.say[0], 0.4) + say(S.say[1], 0.4) + say(S.say[2], 0.55);
         if (m > 0) o.open = Math.max(o.open ?? 0, m);
+        // 坐下来以后抱着她轻轻地晃（哄她）
+        const rock = fade(t, T.land + 0.2, T.land + 0.6);
+        o.lean += 2.5 * rock * Math.sin((t - T.land - 0.2) * 3.4);
       },
     },
   );
-  /** ⑦ 转身往右跑：三步（跑的姿势朝右，face 1） */
-  function runRight(): MoveKey[] {
-    const R = (p: typeof CHEN.跑_落地, swap: boolean) => ({ ...(swap ? swapSides(p) : p), face: 1, expression: "坚定" as const, lookX: 0.6, lookY: -0.1 });
-    const keys: MoveKey[] = [];
-    const t0 = S.go;
-    keys.push({ t: t0 + 0.08, ease: "inOut", p: R(CHEN.跑_蹬地, false) });
-    let t = t0 + 0.08;
-    for (let k = 0; k < 4; k++) {
-      const sw = k % 2 === 1;
-      keys.push({ t: t + 0.08, ease: SMOOTH, p: R(CHEN.跑_腾空, sw) });
-      keys.push({ t: t + 0.13, ease: SMOOTH, p: R(CHEN.跑_落地, !sw) });
-      keys.push({ t: t + 0.2, ease: SMOOTH, p: R(CHEN.跑_蹬地, !sw) });
-      t += 0.2;
-    }
-    keys.push({ t: 32, p: R(CHEN.跑_蹬地, false) });
-    return keys;
-  }
   /** 扯床单那一下：手往下拽到胸口 */
   function pull() {
     return { shoulderL: 50, elbowL: 50, shoulderR: 62, elbowR: 44 };
   }
 
-  // ——— 两个人的路线：沉沉的根（两脚之间） ———
+  // ——— 两个人的路线：沉沉的根（两脚之间的地面；坐着时是屁股底下的地面） ———
   const chenChestOff = (pose: PoseIn): V2 => {
     const j = jointsOf(pose);
     return [(j.shoulderL[0] + j.shoulderR[0]) / 2, (j.shoulderL[1] + j.shoulderR[1]) / 2 + 40];
   };
-  // 抱住那一刻千斤的胸口（按第五镜她往上飘的路线算）→ 反算沉沉的根
+  // 抱住那一刻千斤的胸口（按第六镜她往上飘的路线算）→ 反算沉沉的根
   const qjCatch = sky.chestOf(sky.qjAt(T.catch));
   const hugPose = chenMove(T.catch).pose;
   const cc = chenChestOff(hugPose);
   const P_CATCH: V2 = [qjCatch[0] - HUG[0] - cc[0], qjCatch[1] - HUG[1] - cc[1]];
   const P_EDGE: V2 = [X_EDGE, TOWER_ROOF];
-  /** 落地那一刻根的高度：靴底正好踩在楼顶上 */
-  const Y_LAND = QJ_ROOF - soleOf(chenMove(T.land).pose);
+  /** 抱住那一刻、坐在楼顶上那一刻她的胸口：抱着飘的这一段按胸口走（半空里腿慢慢收成坐姿、胯的高度变了，人不跟着跳） */
+  const C_CATCH: V2 = [P_CATCH[0] + cc[0], P_CATCH[1] + cc[1]];
+  const C_LAND: V2 = (() => {
+    const o = chenChestOff(chenMove(T.land).pose);
+    return [X_LAND + o[0], QJ_ROOF + o[1]];
+  })();
+  /**
+   * 抱着飘的这一段胸口在哪：带着扑出去的惯性往左飘、越飘越慢；先被千斤往上带一点、悬着（前 30%），再慢慢落下来、越落越快，
+   * 快到楼顶收一点，坐下去时还有一点往下的速度（每秒约 350：坐下去的那一下）。悬得久一点：腿垂着时人一低，脚就先踩到楼顶上了
+   */
+  const chestPath = (t: number): V2 => {
+    const u = ph(t, T.catch, T.land);
+    const x = C_CATCH[0] + (C_LAND[0] - C_CATCH[0]) * (1 - Math.pow(1 - u, 1.7));
+    const v = Math.max(0, (u - 0.3) / 0.7);
+    const sink = 0.72 * v * v * (3 - 2 * v) + 0.28 * v * v;
+    const y = C_CATCH[1] + (C_LAND[1] - C_CATCH[1]) * sink - 46 * Math.sin(Math.PI * Math.min(1, u / 0.6)) * (1 - u);
+    return [x, y];
+  };
   const rootAt = (t: number): V2 => {
     if (t <= T.run0) return [X_C0, TOWER_ROOF];
     if (t <= T.jump) {
@@ -210,27 +211,29 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       return [P_EDGE[0] + (P_CATCH[0] - P_EDGE[0]) * u, P_EDGE[1] + (P_CATCH[1] - P_EDGE[1]) * u - 70 * Math.sin(Math.PI * u)];
     }
     if (t <= T.land) {
-      // 抱住以后：她轻、她沉，两个人差不多悬住了——带着扑出去的惯性慢慢往左飘（越来越慢），先被千斤往上带一点，再慢慢沉下去
-      const u = ph(t, T.catch, T.land);
-      const x = P_CATCH[0] + (X_LAND - P_CATCH[0]) * (1 - Math.pow(1 - u, 1.7));
-      const y = P_CATCH[1] + (Y_LAND - P_CATCH[1]) * Math.pow(u, 1.9) - 46 * Math.sin(Math.PI * Math.min(1, u / 0.6)) * (1 - u);
-      return [x, y];
+      // 抱住以后：她轻、她沉，两个人差不多悬住了——按胸口的路线慢慢往左飘、慢慢落下来
+      const p = chestPath(t);
+      const o = chenChestOff(chenMove(t).pose);
+      return [p[0] - o[0], p[1] - o[1]];
     }
-    // 落地以后：铁靴的底踩在楼顶上（按这一刻的姿势算脚多高；蹲下去时根跟着往下）；⑦ 29.02 起转身往右跑（跑的姿势按根在地面上写的）
-    const d = t - S.go;
-    if (d > 0) return [X_LAND + (d < 0.15 ? (1300 * d * d) / 0.3 : 1300 * (d - 0.075)), QJ_ROOF];
-    return [X_LAND, QJ_ROOF - soleOf(chenMove(t).pose)];
+    // 坐在楼顶上：坐姿的胯离根 45（lift −235），根就是楼顶
+    return [X_LAND, QJ_ROOF];
   };
-  /** 靴底离根多高（根在两脚之间的地面：脚抬起来时是负的） */
-  function soleOf(pose: PoseIn) {
-    const j = jointsOf(pose);
-    return Math.max(j.ankleL[1], j.ankleR[1]) + 46;
-  }
-  /** 根的速度（头发、围巾按它往反方向甩） */
+  /** 身子的速度（头发、围巾按它往反方向甩）：抱住以前按根，抱住以后按胸口（半空里收腿时根会跟着动，身子没动） */
   const velAt = (t: number): V2 => {
-    const a = rootAt(t - 0.02);
-    const c = rootAt(t + 0.02);
-    return [(c[0] - a[0]) / 0.04, (c[1] - a[1]) / 0.04];
+    const d = (f: (s: number) => V2): V2 => {
+      const a = f(t - 0.02);
+      const c = f(t + 0.02);
+      return [(c[0] - a[0]) / 0.04, (c[1] - a[1]) / 0.04];
+    };
+    const w = fade(t, T.catch, T.catch + 0.15);
+    if (w <= 0) return d(rootAt);
+    const vc = d((s) => {
+      const r = rootAt(s);
+      const o = chenChestOff(chenMove(s).pose);
+      return [r[0] + o[0], r[1] + o[1]];
+    });
+    return w >= 1 ? vc : mixP(d(rootAt), vc, w);
   };
   const chenAt = (t: number) => {
     const f = chenMove(t);
@@ -252,18 +255,16 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       { t: T.catch - 0.5, x: 0, p: QIANJIN.张手 },
       { t: T.catch, p: QIANJIN.张手 },
       { t: T.catch + 0.1, ease: "out", p: QIANJIN.被抱住 },
-      { t: T.catch + 0.45, ease: "inOut", p: QIANJIN.被抱着坠 },
-      { t: T.land + 0.05, p: QIANJIN.被抱着坠 },
-      { t: T.land + 0.3, ease: "inOut", p: QIANJIN.落地_回头 },
-      // ⑦ 一松开就往上漂，一只手被她牵着；被按到栏杆上，转过来看着她；她跑走了，扭头望着
-      { t: S.start, p: QIANJIN.落地_回头 },
-      { t: S.empty, ease: "out", p: QIANJIN.被牵着漂 },
-      { t: S.rail0, p: QIANJIN.被牵着漂 },
-      { t: S.rail1, ease: "inOut", p: QIANJIN.攥栏杆 },
-      { t: S.say, ease: "inOut", p: QIANJIN.攥栏杆_听 },
-      { t: S.go + 0.25, ease: "out", p: QIANJIN.攥栏杆_望 },
-      // ⑧ 天黑下来，被白往上拽：倒过来斜着漂起来，像一只风筝
-      { t: NIGHT_T.dusk0 + 0.02, p: QIANJIN.攥栏杆_望 },
+      // 半空里（「我」以后的底鼓）一下转过身来抱住她：不回头（头单独转 headTurn −0.3…−0.9 时短发会翻成一圈尖），也不慢慢转（脸转到正面附近短发也会翻），
+      // 转身前手脚收拢、腿垂着（前后两个样子差不多对称），在一帧里只翻朝向；接着扑进她怀里，把脸埋在她胸口，跟她一起坐着落下来；「我」哭出来
+      { t: S.turn - 0.16, ease: "inOut", p: QIANJIN.转身前 },
+      { t: S.turn - 0.01, p: QIANJIN.转身前 },
+      { t: S.turn, ease: "hold", p: { ...QIANJIN.转身前, face: 0.6 } },
+      { t: S.hug1, ease: "out", p: QIANJIN.转身抱 },
+      { t: S.lean - 0.02, p: QIANJIN.转身抱 },
+      { t: S.lean + 0.3, ease: "inOut", p: QIANJIN.转身抱_哭 },
+      // （⑨⑩ 在屋里，看不见：她回家写砖去了，千斤一个人攥着栏杆，被白往上拽成一只风筝）
+      { t: KITE0, p: QIANJIN.转身抱_哭 },
       { t: KITE1, ease: "inOut", p: QIANJIN.风筝 },
       // ⑪ 砖放进手里：低头看；一沉，坠下来，坐回楼顶抱着砖；抬头看着她哭着笑
       { t: GIVE_T.give - 0.04, p: QIANJIN.风筝 },
@@ -275,15 +276,30 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       { t: GIVE_T.smile + 0.22, ease: "inOut", p: QIANJIN.坐_哭着笑 },
       { t: 40, p: QIANJIN.坐_哭着笑 },
     ] as MoveKey[],
-    // 不随机眨眼：⑦ 她抬头看沉沉、听「等等我」那几下要睁着眼
-    { look: lookOf(QJ), base: { wind: 1.1 }, idle: false, seed: 63, springs: LIMP, follow: 0 },
+    {
+      look: lookOf(QJ),
+      base: { wind: 1.1 },
+      idle: false,
+      seed: 63,
+      springs: LIMP,
+      follow: 0,
+      add: (t, o) => {
+        // ⑧ 埋在她怀里哭：肩膀一抽一抽
+        const k = fade(t, S.hug1 - 0.1, S.hug1 + 0.2) * (1 - fade(t, KITE0 - 0.3, KITE0));
+        const h = hitch(t, 0.62, 0.1);
+        o.neck -= 4 * k * h;
+        o.lean += 3 * k * h;
+        o.shoulderL += 4 * k * h;
+        o.shoulderR += 4 * k * h;
+      },
+    },
   );
   const qjPose = (t: number): PoseIn => {
     const pose: PoseIn = { ...qjMove(t).pose };
-    // 抱着时和她一起飘：头发、衣服按两个人的速度甩；⑦ 松开以后她自己几乎不动
-    const v = velAt(Math.min(t, S.start));
+    // 抱着时和她一起飘：头发、衣服按两个人的速度甩；⑪ 她一个人攥着栏杆，几乎不动
+    const v = t < KITE0 ? velAt(t) : [0, 0];
     withDrag(pose, [v[0], Math.max(-2000, Math.min(2000, v[1]))], 0.9);
-    // ⑧ 被白往上拽：两条腿在风里一下一下地飘
+    // ⑪ 被白往上拽：两条腿在风里一下一下地飘
     const kk = kiteK(t);
     if (kk > 0) {
       const lL = pose.legL as { a: number };
@@ -297,11 +313,11 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     const j = castJoints(QJ, pose);
     return [(j.shoulderL[0] + j.shoulderR[0]) / 2, (j.shoulderL[1] + j.shoulderR[1]) / 2 + 40];
   };
-  /** 她还轻飘飘的：脚不着地（沉沉蹲下去时她不跟着往下压，鞋底离楼顶至少 24） */
-  const floating = (pose: PoseIn, x: number, y: number) => {
+  /** 她还轻飘飘的：脚不着地（沉沉蹲下去时她不跟着往下压，鞋底离楼顶至少 gap；⑧ 被搂着坐下来时脚可以挨着楼顶） */
+  const floating = (pose: PoseIn, x: number, y: number, gap = 24) => {
     const j = castJoints(QJ, pose);
     const low = Math.max(j.ankleL[1], j.ankleR[1]) + 40;
-    return { pose, x, y: Math.min(y, QJ_ROOF - 24 - low) };
+    return { pose, x, y: Math.min(y, QJ_ROOF - gap - low) };
   };
   /** 抱着时她在哪（抱住以前按第五镜的路线）：胸口贴在沉沉胸口前面 */
   const qjHugAt = (t: number) => {
@@ -315,71 +331,64 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     // 抱住那一下从她自己飘的位置贴过去（0.06 秒）
     const w = E.out(ph(t, T.catch, T.catch + 0.06));
     const own = sky.chestOf(sky.qjAt(Math.min(t, T.catch + 0.06)));
-    const at = mixP(own, [c[0] + HUG[0], c[1] + HUG[1]], w);
-    return floating(pose, at[0] - qc[0], at[1] - qc[1]);
+    let at = mixP(own, [c[0] + HUG[0], c[1] + HUG[1]], w);
+    // ⑧ 转过身来抱住她：和她贴成一个整体一起落下来（相对她胸口的位置按「坐到楼顶上那一刻」算：千斤的脚刚好在楼顶上、脸贴着她的脸），
+    // 两个人同一刻着地——千斤要是按自己的头去够，腿会比沉沉的屁股先碰到楼顶，像蹲着先落了地
+    const wc = E.io(ph(t, S.turn, S.hug1));
+    if (wc > 0) {
+      const c2 = chenChest(t);
+      const root: V2 = [c2[0] + HUG_REL()[0], c2[1] + HUG_REL()[1]];
+      at = mixP(at, [root[0] + qc[0], root[1] + qc[1]], wc);
+    }
+    return floating(pose, at[0] - qc[0], at[1] - qc[1], 24 - 30 * wc);
+  };
+  /** ⑧ 抱在一起时千斤的根在沉沉胸口的哪里：按坐到楼顶上那一刻算（她的脚离楼顶 4、头在沉沉的头左边 60） */
+  let hugRel: V2 | null = null;
+  const HUG_REL = (): V2 => {
+    if (hugRel) return hugRel;
+    const cp = chenMove(T.land).pose;
+    const cj = jointsOf(cp);
+    const co = chenChestOff(cp);
+    const qp = qjMove(T.land).pose;
+    const qj = castJoints(QJ, qp);
+    const low = Math.max(qj.ankleL[1], qj.ankleR[1]) + 40;
+    const rx = X_LAND + cj.head[0] + CRADLE_X - qj.head[0];
+    const ry = QJ_ROOF - 4 - low;
+    hugRel = [rx - (X_LAND + co[0]), ry - (QJ_ROOF + co[1])];
+    return hugRel;
   };
 
-  // ——— ⑦ 两个人的手 ———
-  /** 栏杆上两只手的地方：右边是牵着的那一对（沉沉的远手 R 握着千斤的近手 L，一起按下去），左边是沉沉的近手（L）盖着千斤的远手（R） */
+  // ——— ⑪ 千斤攥着栏杆的两只手 ———
+  /** 栏杆上两只手的地方：右边是近处那只（L），左边是远处那只（R） */
   const GL: V2 = [GRIP_X - 22, RAIL_TOP + 2];
   const GR: V2 = [GRIP_X + 24, RAIL_TOP + 2];
-  /** 她身前那只铁靴（R）的靴口（世界坐标） */
-  const mouthAt = (c: { pose: PoseIn; x: number; y: number }): V2 => {
-    const rig = rigOf(c.pose);
-    const p = bootMap(rig, "R")(MOUTH);
-    return [c.x + (rig.mir ? -p[0] : p[0]), c.y + p[1]];
-  };
-  /**
-   * 沉沉连两只手一起（IK 的目标都不看千斤这一刻在哪，千斤的手跟着她的手走）：抱住时环在她腰上；⑦ 近处那只伸进靴口掏两下 →
-   * 拿出来交给姿势（空手摊在眼前）→「等等」按到栏杆上；远处那只交给姿势（往前上方举着牵住她）→ 按到栏杆上；跑的时候松开
-   */
+  /** 沉沉连两只手一起：抱住以后两只手臂环在她腰上（⑧ 坐下来也一直抱着） */
   const chenPosed = (t: number) => {
     const c = chenAt(t);
     const hugW = fade(t, T.catch - 0.04, T.catch + 0.02);
     if (hugW <= 0) return c;
     const pose: PoseIn = { ...c.pose };
-    const q0 = qjHugAt(Math.min(t, S.start));
+    const q0 = qjHugAt(t);
     const jq = castJoints(QJ, q0.pose);
     const waist: V2 = [q0.x + jq.hip[0], q0.y + jq.hip[1] - 60];
     let tl: V2 = [waist[0] - 34, waist[1] + 4];
     let tr: V2 = [waist[0] - 6, waist[1] - 20];
-    let wl = hugW;
-    let wr = hugW;
-    if (t > S.start) {
-      const m = mouthAt(c);
-      // 手腕停在靴口上面一点：手掌和手指伸进靴口里（被重画的靴子盖住），翻两下
-      const dig: V2 = [m[0] - 4 + 5 * Math.sin(t * 70), m[1] - 22 + 7 * Math.max(0, Math.cos(t * 52))];
-      tl = mixP(tl, dig, E.io(ph(t, S.start, S.reach)));
-      wl = 1 - E.out(ph(t, S.empty - 0.02, S.empty + 0.1));
-      wr = 1 - E.io(ph(t, S.start, S.start + 0.14));
-      const k = E.io(ph(t, S.rail0, S.rail1));
-      if (k > 0) {
-        tl = [GL[0] + 4, GL[1] - 14];
-        tr = [GR[0] + 4, GR[1] - 14];
-        wl = k;
-        wr = k;
-      }
+    // ⑧ 她转过身来扑在怀里：两只手臂环到她背上（她朝右，背在左边）
+    const wc = E.io(ph(t, S.turn, S.hug1));
+    if (wc > 0) {
+      const chest: V2 = [q0.x + (jq.shoulderL[0] + jq.shoulderR[0]) / 2, q0.y + (jq.shoulderL[1] + jq.shoulderR[1]) / 2 + 40];
+      tl = mixP(tl, [chest[0] - 46, chest[1] + 20], wc);
+      tr = mixP(tr, [chest[0] - 30, chest[1] - 24], wc);
     }
-    const let_ = 1 - fade(t, S.go - 0.02, S.go + 0.1);
     const mx = (pose.face ?? -1) > 0 ? -1 : 1;
-    pose.armL = { ...(pose.armL as object), to: [(tl[0] - c.x) * mx, tl[1] - c.y], ik: wl * let_ };
-    pose.armR = { ...(pose.armR as object), to: [(tr[0] - c.x) * mx, tr[1] - c.y], ik: wr * let_ };
+    pose.armL = { ...(pose.armL as object), to: [(tl[0] - c.x) * mx, tl[1] - c.y], ik: hugW };
+    pose.armR = { ...(pose.armR as object), to: [(tr[0] - c.x) * mx, tr[1] - c.y], ik: hugW };
     return { pose, x: c.x, y: c.y };
   };
-  /** 沉沉的手心（世界坐标） */
-  const chenPalm = (t: number, side: "L" | "R"): V2 => {
-    const c = chenPosed(t);
-    const j = jointsOf(c.pose);
-    const p = side === "L" ? j.palmL : j.palmR;
-    return [c.x + p[0], c.y + p[1]];
-  };
-  /**
-   * 千斤在哪：⑦ 一松开就往上漂，近处那只手的手腕在沉沉举着的手心里（像牵着一只气球，身子慢半拍跟着那只手），
-   * 「等等」被拽下来、两只手按在栏杆上，身子浮在栏杆上面；她跑走以后被风带起来一点（⑧ 接着漂成风筝）
-   */
   /** ⑪ 坐在楼顶上：胯离楼顶约 44，就在她攥着栏杆的那个地方底下 */
   const SIT_X = GRIP_X - 34;
   let atDrop: { pose: PoseIn; x: number; y: number } | null = null;
+  /** 千斤在哪：抱住以前、⑦⑧ 被抱着（贴在沉沉身前）；⑪ 一个人攥着栏杆漂成风筝 → 砖一沉坐回楼顶 */
   const qjAt = (t: number) => {
     if (t > GIVE_T.drop) {
       // 砖一沉：从风筝的地方往下坠（越坠越快），「咚」坐到楼顶上
@@ -391,56 +400,39 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       const r = mixP([atDrop.x, atDrop.y], sit, u);
       return { pose, x: r[0], y: r[1] };
     }
-    return qjAtKite(t);
+    if (t >= KITE0) return qjAtKite(t);
+    return qjHugAt(t);
   };
+  /** ⑪ 风筝：被提起来，两肩差不多就在两只手的正上方、胳膊绷直（够得着栏杆的最高处），一下一下被往上扯 */
   const qjAtKite = (t: number) => {
-    if (t <= S.start) return qjHugAt(t);
     const pose = qjPose(t);
-    const qc = qjChestOff(pose);
-    const h = chenPalm(t - 0.05, "R");
-    const bob: V2 = [4 * Math.sin(t * 1.7), 6 * Math.sin(t * 2.1)];
-    const tether: V2 = [h[0] + TETHER[0] + bob[0], h[1] + TETHER[1] + bob[1]];
-    const hug = qjHugAt(t);
-    let at = mixP([hug.x + qc[0], hug.y + qc[1]], tether, E.io(ph(t, S.start, S.start + 0.15)));
-    const k = E.io(ph(t, S.rail0, S.rail1));
-    if (k > 0) {
-      // 肩膀在栏杆上面约 115：胳膊微微弯着往下够到栏杆；她跑走以后身子往左歪着漂起来，胳膊绷直斜着拉住栏杆
-      const lift = E.io(ph(t, S.go, S.end + 0.4));
-      at = mixP(at, [GRIP_X + 14 - 50 * lift, RAIL_TOP - 78 + bob[1] - 8 * lift], k);
-    }
-    let root: V2 = [at[0] - qc[0], at[1] - qc[1]];
-    // ⑧ 风筝：被提起来，两肩差不多就在两只手的正上方、胳膊绷直（够得着栏杆的最高处），一下一下被往上扯
-    const kk = kiteK(t);
-    if (kk > 0) {
-      const j = castJoints(QJ, pose);
-      const sm: V2 = [(j.shoulderL[0] + j.shoulderR[0]) / 2, (j.shoulderL[1] + j.shoulderR[1]) / 2];
-      const tug = 7 * Math.max(0, Math.sin(t * 5.2)) ** 3;
-      const sx = GRIP_X - 26 + 5 * Math.sin(t * 2.3);
-      const sy = RAIL_TOP - 122 + 4 * Math.sin(t * 1.9) - tug;
-      root = mixP(root, [sx - sm[0], sy - sm[1]], kk);
-    }
-    return floating(pose, root[0], root[1]);
+    const j = castJoints(QJ, pose);
+    const sm: V2 = [(j.shoulderL[0] + j.shoulderR[0]) / 2, (j.shoulderL[1] + j.shoulderR[1]) / 2];
+    const tug = 7 * Math.max(0, Math.sin(t * 5.2)) ** 3;
+    const sx = GRIP_X - 26 + 5 * Math.sin(t * 2.3);
+    const sy = RAIL_TOP - 122 + 4 * Math.sin(t * 1.9) - tug;
+    return floating(pose, sx - sm[0], sy - sm[1]);
   };
-  /** 被牵着时她的胸口在手腕的哪里（按「被牵着漂」站稳以后的姿势算：胳膊伸直，身子在手的左上方） */
-  const TETHER: V2 = (() => {
-    const p = qjPose(S.rail0);
-    const j = castJoints(QJ, p);
-    const o = qjChestOff(p);
-    return [o[0] - j.wristL[0], o[1] - j.wristL[1]];
-  })();
-  /** 千斤连两只手一起：近处那只在沉沉手心里 → 跟着她的手按到栏杆上；远处那只「等等」也按到栏杆上 */
+  /** 千斤连两只手一起：⑪ 两只手攥在栏杆上（IK） */
   const qjPosed = (t: number) => {
     const q = qjAt(t);
-    if (t <= S.start) return q;
     const pose: PoseIn = { ...q.pose };
     const k = QJ.scale;
     const mir = (pose.face ?? 0) > 0 ? -1 : 1;
     const loc = (p: V2): V2 => [((p[0] - q.x) / k) * mir, (p[1] - q.y) / k];
-    const kr = t > S.rail1 ? 1 : E.io(ph(t, S.rail0, S.rail1));
+    if (t < KITE0) {
+      // ⑧ 转过身来抱住她：两只手环到她背后（近处那只露在她身侧，远处那只藏在她身后）
+      const wk = fade(t, S.turn, S.hug1 + 0.05);
+      if (wk <= 0) return q;
+      const ch = chenChest(t);
+      pose.armL = { ...(pose.armL as object), to: loc([ch[0] + 34, ch[1] + 40]), ik: wk };
+      pose.armR = { ...(pose.armR as object), to: loc([ch[0] + 20, ch[1] - 6]), ik: wk };
+      return { ...q, pose };
+    }
     // ⑪ 砖一沉：两只手松开（交给「坠」的姿势），坐下以后两只手扶着砖的两头抱在胸前
     const free = 1 - E.io(ph(t, GIVE_T.drop, GIVE_T.drop + 0.08));
-    pose.armL = { ...(pose.armL as object), to: loc(mixP(chenPalm(t, "R"), GR, kr)), ik: E.io(ph(t, S.start, S.start + 0.12)) * free };
-    if (kr > 0) pose.armR = { ...(pose.armR as object), to: loc(GL), ik: kr * free };
+    pose.armL = { ...(pose.armL as object), to: loc(GR), ik: free };
+    pose.armR = { ...(pose.armR as object), to: loc(GL), ik: free };
     const hug = E.io(ph(t, GIVE_T.sit - 0.06, GIVE_T.sit + 0.12));
     if (hug > 0) {
       const c = hugBrick(q);
@@ -537,8 +529,8 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     g.restore();
   };
   /**
-   * 画这一场的人（世界坐标）。抱住以前：千斤照第五镜画（drawQj：铁链、锁、眼泪、脚踝上的半截红线都接着），沉沉和床单；
-   * 抱住以后：千斤画在沉沉的身子和近处那只手臂之间；⑦ 她漂开以后两个人分开画（千斤在后面，沉沉的手盖在她手上）
+   * 画这一场的人（世界坐标）。抱住以前：千斤照第六镜画（drawQj：铁链、锁、眼泪、脚踝上的半截红线都接着），沉沉和床单；
+   * 抱住以后（⑦⑧）：千斤画在沉沉的身子和近处那只手臂之间（缩在她怀里）；⑪ 千斤一个人攥着栏杆（沉沉在 lib/give.ts 画）
    */
   const drawPeople = (g: CanvasRenderingContext2D, t: number, z: number, drawQj: (g: CanvasRenderingContext2D) => void) => {
     const line = 1 / Math.sqrt(Math.max(0.3, z));
@@ -547,19 +539,12 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       drawChen(g, t, z);
       return;
     }
-    const c = chenPosed(t);
     const q = qjPosed(t);
     const qSpec = { ...QJ, hairclip: undefined };
-    drawSheet(g, t);
-    drawDust(g, t);
     const jq = castJoints(QJ, q.pose);
     // 脚踝上还拴着那半截红线
     const an: V2 = [q.x + jq.ankleL[0], q.y + jq.ankleL[1]];
-    g.save();
-    g.translate(c.x, c.y);
-    if (t > S.start + 0.12) {
-      g.save();
-      g.translate(-c.x, -c.y);
+    if (t >= KITE0) {
       drawRedEnd(g, an, t);
       // ⑪ 她手里的砖：画在身子和近处那只手臂之间
       const qb = qjBrickAt(t);
@@ -574,34 +559,57 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
             },
           }
         : {});
-      g.restore();
-      // 跑到楼边就不见了（跳到隔壁那栋楼去了：⑧ 退开时只剩千斤一个人）
-      if (!(t > S.go && c.x > QJ_HOME.x + QJ_HOME.w - 30)) drawChengtuo(g, c.pose, { line });
-    } else {
-      const worldM = g.getTransform();
-      drawChengtuo(g, c.pose, {
-        line,
-        beforeFrontArms: (cc) => {
-          cc.save();
-          cc.setTransform(worldM);
-          cc.translate(-c.x, -c.y);
-          drawRedEnd(cc, an, t);
-          drawPerson(cc, qSpec, q.pose, q.x, q.y, z);
-          cc.restore();
-        },
-      });
+      return;
     }
-    // 手伸在靴筒里：那只靴子再画一遍盖在手上（只画靴口附近）
-    if (t > S.start + 0.12 && t < S.empty + 0.14) {
-      const rig = rigOf(c.pose);
-      const m = bootMap(rig, "R")(MOUTH);
-      if (rig.mir) g.scale(-1, 1);
-      const near = new Path2D();
-      near.arc(m[0], m[1] + 40, 92, 0, Math.PI * 2);
-      g.clip(near);
-      drawBoot(g, rig, "R", { line: CHEN_COLORS.line, lw: 3 * line, shade: [rig.mir ? -4 : 4, 4] });
+    const c = chenPosed(t);
+    drawSheet(g, t);
+    drawDust(g, t);
+    g.save();
+    g.translate(c.x, c.y);
+    const worldM = g.getTransform();
+    drawChengtuo(g, c.pose, {
+      line,
+      beforeFrontArms: (cc) => {
+        cc.save();
+        cc.setTransform(worldM);
+        cc.translate(-c.x, -c.y);
+        drawRedEnd(cc, an, t);
+        drawPerson(cc, qSpec, q.pose, q.x, q.y, z);
+        drawHugTears(cc, t, q);
+        cc.restore();
+      },
+    });
+    g.restore();
+  };
+  /** ⑧ 缩在她怀里哭：眼泪从眼角冒出来往上飘（这里什么都往上飘） */
+  const drawHugTears = (g: CanvasRenderingContext2D, t: number, q: { pose: PoseIn; x: number; y: number }) => {
+    const k = fade(t, S.turn, S.hug1);
+    if (k <= 0) return;
+    const j = castJoints(QJ, q.pose);
+    const hx = q.x + j.head[0];
+    const hy = q.y + j.head[1];
+    g.save();
+    g.fillStyle = "rgba(170,214,240,0.9)";
+    for (let i = 0; i < 4; i++) {
+      const u = (t * 0.6 + i / 4) % 1;
+      g.globalAlpha = k * Math.min(1, u * 8) * (1 - u) ** 0.8;
+      const r = 5 + 2.5 * Math.min(1, u * 4);
+      g.beginPath();
+      g.ellipse(hx - 18 + (i % 2 ? 14 : -6) + 10 * Math.sin(t * 2 + i) * u, hy + 8 - u * 230, r * 0.75, r, 0, 0, Math.PI * 2);
+      g.fill();
     }
     g.restore();
+  };
+  /** ⑧ 两个人抱着坐下来以后：她们身上一团暖光（天黑下来、满城都是冷的夜色，只有她们这里是暖的） */
+  const drawHugGlow = (g: CanvasRenderingContext2D, t: number) => {
+    if (t < T.land - 0.3 || t >= KITE0) return;
+    const w = E.io(ph(t, T.land, S.say[2] + 0.4));
+    if (w <= 0.01) return;
+    const a = chenChest(t);
+    const b2 = qjChest(t);
+    const m: V2 = [(a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2];
+    drawGlow(g, m[0], m[1] - 30, 300 + 60 * w, 0.2 * w);
+    drawGlow(g, m[0], m[1] - 60, 560, 0.1 * w);
   };
 
   /** 落地：铁靴踩到楼顶上，两边扬起一小团灰 */
@@ -626,14 +634,7 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     g.restore();
   }
 
-  /** ⑦ 镜头要用的点：她身前那只靴口、她的脸和空着的手中间、两个人的脸 */
-  const bootAt = (t: number): V2 => mouthAt(chenAt(t));
-  const faceHandAt = (t: number): V2 => {
-    const c = chenAt(t);
-    const j = jointsOf(c.pose);
-    const p = chenPalm(t, "L");
-    return [(c.x + j.head[0] + p[0]) / 2, (c.y + j.head[1] + p[1]) / 2];
-  };
+  /** ⑧ 镜头要用的点：两个人的脸 */
   const facesAt = (t: number): [V2, V2] => {
     const c = chenAt(t);
     const q = qjAt(t);
@@ -652,7 +653,9 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     return [q.x + j.head[0], q.y + j.head[1]];
   };
 
-  return { chenAt, qjAt, qjPosed, qjBrickAt, qjHeadAt, brickWarm, chenChest, rootAt, drawPeople, drawChen, bootAt, faceHandAt, facesAt, qjChestOf: (t: number) => qjChest(t) };
+  /** ⑧ 抱在一起以后：夜色在她们身上蒙得浅一点（只有她们这里是暖的） */
+  const hugLight = (t: number) => (t < KITE0 ? E.io(ph(t, T.land - 0.3, T.land + 0.5)) : 0);
+  return { chenAt, qjAt, qjPosed, qjBrickAt, qjHeadAt, brickWarm, chenChest, rootAt, drawPeople, drawChen, drawHugGlow, hugLight, facesAt, qjChestOf: (t: number) => qjChest(t) };
 
   function qjChest(t: number): V2 {
     const q = qjAt(t);
@@ -663,7 +666,7 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
 
 const mixP = (a: V2, b: V2, k: number): V2 => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
 
-/** 她脚踝上拴着的那半截红线（第四镜绷断的，跟着她飘） */
+/** 她脚踝上拴着的那半截红线（第五镜绷断的，跟着她飘） */
 function drawRedEnd(g: CanvasRenderingContext2D, an: V2, t: number) {
   const sw = 10 * Math.sin(t * 2.3);
   g.save();
@@ -680,7 +683,7 @@ function drawRedEnd(g: CanvasRenderingContext2D, an: V2, t: number) {
   g.restore();
 }
 
-/** 千斤家楼顶沿着女儿墙的一圈铁栏杆（⑦ 沉沉把她的两只手按在上面） */
+/** 千斤家楼顶沿着女儿墙的一圈铁栏杆（⑪ 她一个人攥着它漂成风筝） */
 export const RAIL_TOP = QJ_ROOF - 290;
 export function drawQjRail(g: CanvasRenderingContext2D) {
   const x0 = QJ_HOME.x + 10;
@@ -715,8 +718,9 @@ export function drawQjRail(g: CanvasRenderingContext2D) {
 
 // ——————————————— 镜头 ———————————————
 /**
- * ⑥ 的镜头：接着第五镜往上退开的那个镜头（不切）。她一惊一顿；中心挪到两个人中间，按两人的距离推近（越近越近），抱住一震；
- * 抱住以后跟着两个人往左飘、慢慢退开一点（看得见下面千斤家的楼顶），落下来轻轻一沉。
+ * ⑦ 的镜头：接着第六镜往上退开的那个镜头（不切）。她一惊一顿；中心挪到两个人中间，按两人的距离推近（越近越近），抱住一震；
+ * 抱住以后跟着两个人往左飘、往下落、慢慢退开一点（看得见下面千斤家的楼顶），坐到楼顶上那一下轻轻一沉。
+ * ⑧ 坐下来抱着：柔和起步、一路减速地推近两张脸（越推越慢），「我」以后几乎不动、极慢地再凑近一点（屏住气，天黑下来）。
  */
 export function roofCam(t: number, r: ReturnType<typeof makeRoof>, sky: ReturnType<typeof makeSky>): Cam {
   const T = ROOF_T;
@@ -730,46 +734,24 @@ export function roofCam(t: number, r: ReturnType<typeof makeRoof>, sky: ReturnTy
     const z = Math.max(1, Math.min(1.6, 700 / Math.max(1, d)));
     c = camLerp(c, aim((ch[0] + q[0]) / 2, (ch[1] + q[1]) / 2, 540, 1000, z), w2);
   }
-  // 抱住以后：跟着两个人往左飘，慢慢退开（1.6 → 1.15），两个人在画面左中，下面千斤家的楼顶飘过来
+  // 抱住以后：跟着两个人往左飘、往下落，慢慢退开一点（1.6 → 1.3），下面千斤家的楼顶飘过来
   const w3 = E.io(ph(t, T.catch + 0.04, T.catch + 0.4));
   if (w3 > 0) {
     const a = r.chenChest(t);
     const b2 = r.qjChestOf(t);
-    const u = E.io(ph(t, T.catch, T.land + 0.2));
-    c = camLerp(c, aim((a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2, 540 - 100 * u, 940, 1.6 * Math.pow(1.15 / 1.6, u)), w3);
+    const u = E.io(ph(t, T.catch, T.land));
+    c = camLerp(c, aim((a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2, 540 - 80 * u, 940, 1.6 * Math.pow(1.3 / 1.6, u)), w3);
   }
-  // ⑦ 一路推近、不往回拉：跟着她弯腰、手伸进靴筒（1.5 倍，靴口在画面下方，上面是被她牵着往上漂的千斤）；空手一顿，
-  // 跟着手拿出来往上推到她的脸和手（1.75）；「你」她抬头、把千斤拽下来按到栏杆上，落到两张脸中间（1.85）；「我」推到 2.2；
-  // 她跑走了，镜头留在千斤脸上，再慢慢退开
-  const S = STAY_T;
-  if (t > S.start) {
-    const m = r.bootAt(Math.min(t, S.empty));
-    c = camLerp(c, aim(m[0] + 20, m[1], 610, 1290, 1.5), E.io(ph(t, S.start, S.reach + 0.04)));
-    const wB = E.io(ph(t, S.empty, S.look + 0.02));
-    if (wB > 0) {
-      const f = r.faceHandAt(Math.min(t, S.look));
-      c = camLerp(c, aim(f[0], f[1], 610, 1120, 1.75), wB);
-    }
-    const [f1, f2] = r.facesAt(Math.min(t, S.go));
-    const mid: V2 = [(f1[0] + f2[0]) / 2, (f1[1] + f2[1]) / 2];
-    const wC = E.io(ph(t, S.look, S.rail1 + 0.06));
-    if (wC > 0) c = camLerp(c, aim(mid[0], mid[1], 540, 900, 1.85), wC);
-    const wD = E.out(ph(t, S.rail1 + 0.06, S.say + 0.06));
-    if (wD > 0) c = camLerp(c, aim(mid[0], mid[1], 540, 880, 2.2), wD);
-    const wE = E.io(ph(t, S.go, S.go + 0.5));
-    if (wE > 0) {
-      const qf = r.facesAt(t)[1];
-      c = camLerp(c, aim(qf[0], qf[1] + 40, 480, 880, 2.2), wE);
-    }
-    // 只剩她一个人：慢慢退开，露出整个人往左歪着漂起来、攥着栏杆（⑧ 接着退）
-    const wF = E.io(ph(t, S.go + 0.3, S.end + 0.6));
-    if (wF > 0) {
-      const q = r.qjChestOf(t);
-      c = camLerp(c, aim(q[0], q[1], 640, 940, 1.8), wF);
-    }
+  // ⑧ 坐到楼顶上以后：推近两张脸（越推越慢，落点按「我」以后两张脸的位置算）
+  const S = HUG_T;
+  const w8 = E.settle(ph(t, T.land + 0.03, S.say[2] + 0.36));
+  if (w8 > 0) {
+    const [f1, f2] = r.facesAt(S.say[2] + 0.36);
+    c = camLerp(c, aim((f1[0] + f2[0]) / 2, (f1[1] + f2[1]) / 2 + 30, 540, 900, 2.45), w8);
+    c = { ...c, z: c.z * (1 + 0.025 * E.soft(ph(t, S.say[2] + 0.36, S.end))) };
   }
-  // 一惊一顿、抱住一震、落地轻轻一沉；⑦ 空手一顿
-  c = { ...c, z: c.z * (1 + 0.04 * kick(t, T.shock, 0.1) + 0.06 * kick(t, T.catch, 0.09) + 0.02 * kick(t, T.land, 0.1) + 0.03 * kick(t, STAY_T.empty, 0.1)) };
+  // 一惊一顿、抱住一震、落地轻轻一沉
+  c = { ...c, z: c.z * (1 + 0.04 * kick(t, T.shock, 0.1) + 0.06 * kick(t, T.catch, 0.09) + 0.02 * kick(t, T.land, 0.1)) };
   c = { ...c, y: c.y - (16 * kick(t, T.land, 0.12)) / c.z };
   return c;
 }

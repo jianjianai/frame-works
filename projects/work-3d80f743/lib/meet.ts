@@ -1,8 +1,8 @@
-// 五④ 尾奏第五、六小节（144.02–148.02；146.02 小节线）：把砖给她。
+// 五④ 第四声「活下去」（模块时间 144.02–150.02，作品 124.02–130.02；146.02 是「活」）：把砖给她。
 // 人链接着往上冲，穿过天上那张网，越升越慢，145.85 他停在她右下方（lib/coatoff.ts 的 giveAt）；白的边上她闭着眼、发梢一点点化成光，
-// 他举着砖绕长边翻过来（她写的「活下去」朝外）；她睁开眼看见他，146.02 两只手接过砖，捧到胸前——是她自己的字；翻过来，
-// 背面是「沉沉，明天见」（lib/dive.ts 的 brick5）。147.02 砖发出全片最强的暖光（只用画面，不加音效）：发梢化成的光停下来、熄掉，
-// 头发落下来（有了分量）；她哭着笑，抱住他。
+// 他举着砖绕长边翻过来（她写的「活下去」朝外）；她睁开眼看见他，146.02 两只手接过砖，捧到胸前——是她自己的字；「下」翻过来，
+// 背面是「沉沉，明天见」（lib/dive.ts 的 brick5），看着字忍着哭；148.02「去」砖发出全片最强的暖光（只用画面，不加音效）：
+// 发梢化成的光停下来、熄掉，头发落下来（有了分量）；她哭着笑，抱住他。五⑤ 往下落时这团光就是落回城里的一盏灯。
 // 这里画砖（五④ 起画在所有人上面，两个人的手都捏在两头后面；抱住以后夹在两个人中间，见 scenes/act7.ts）、暖光、发梢的光和镜头。
 
 import { jointsOf } from "@materials/剪纸角色/code/chengtuo";
@@ -21,7 +21,7 @@ export { GIVE_T };
 /** 砖按街上的大小画（屋里的 1/1.22），和他手里时一样 */
 const BS = 1 / 1.22;
 
-/** 砖亮起来到多亮（0–1）：147.02 起 0.35 秒亮到头，之后很慢地一明一暗 */
+/** 砖亮起来到多亮（0–1）：148.02 起 0.35 秒亮到头，之后很慢地一明一暗 */
 export const glowAt = (t: number) => (t < T.glow ? 0 : E.out(ph(t, T.glow, T.glow + 0.35)) * (0.94 + 0.06 * Math.sin((t - T.glow) * 5.2)));
 
 /** 画砖（世界坐标）：她那块，中心、转角、翻面跟着 brick5；亮起来以后砖面上叠一层暖光（字照样看得清） */
@@ -77,6 +77,12 @@ export function drawGiveGlow(g: CanvasRenderingContext2D, base: DOMMatrix, cam: 
   drawGlow(g, b.c[0], b.c[1], 60 + 20 * w, 0.7 * w);
   drawGlow(g, b.c[0], b.c[1], 170 * w, 0.24 * w);
   drawGlow(g, b.c[0], b.c[1] - 30, 420 * w, 0.07 * w);
+  // 五⑤ 镜头拉到整座城时：光团在画面上不小于一盏灯（按画面大小再叠一团，越远越明显）
+  const far = Math.min(1, Math.max(0, (1 - cam.z) / 0.75));
+  if (far > 0) {
+    drawGlow(g, b.c[0], b.c[1], 30 / cam.z, 0.55 * w * far);
+    drawGlow(g, b.c[0], b.c[1], 95 / cam.z, 0.28 * w * far);
+  }
   // 抱住以前砖面再压一层在光上（光从砖的四周漫出来，「沉沉，明天见」照样看得清）；抱住以后砖夹在两个人中间，不压
   if (t < T.hug0 + 0.1) {
     g.globalAlpha = 0.8;
@@ -140,7 +146,7 @@ export function drawHairLight5(g: CanvasRenderingContext2D, t: number) {
  */
 export function cam54(t: number): Cam {
   const [bx, by] = breath(t);
-  const zc = 1.45 * Math.exp(Math.log(2.85 / 1.45) * E.io(ph(t, 145.7, 147.9)));
+  const zc = 1.45 * Math.exp(Math.log(2.85 / 1.45) * E.io(ph(t, 145.7, 148.9)));
   // 砖亮起来她往下一沉、抱住他：镜头跟着往下落一点
   const close = aim(-2250 + bx / zc, -8990 + 70 * E.io(ph(t, T.glow, T.hug1 + 0.1)) + by / zc, 540, 960, zc);
   return camLerp(cam53(t), close, E.io(ph(t, 144.6, 146.3)));

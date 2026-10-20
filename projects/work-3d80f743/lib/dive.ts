@@ -114,7 +114,7 @@ const HER_HUG = pose(8, { face: 0.3, ground: false, rot: -10, float: 0.15, chest
   ...armL(60, 96, 0, "grip", l),
   ...armR(52, 104, 0, "grip", l),
 }));
-// ——— 五⑤ 落回街上（lib/t55.ts，故事时间）———
+// ——— 五⑤ 落回街上（lib/t55.ts）———
 /** 快落地：还抱着他，两条腿往下伸 */
 const HER_HUG_DOWN = { ...HER_HUG, rot: -4, ...legL(-4, -10, -20), ...legR(8, -14, -20) };
 /** 光着脚站在街上抱着他（两只手环在他背上，IK） */
@@ -171,21 +171,26 @@ const herMove = live(
     { t: GIVE_T.hug0 - 0.08, p: HER_GLOW },
     { t: GIVE_T.hug0 + 0.06, ease: "out", p: { ...HER_GLOW, lookX: 0.4, lookY: 0.95 } },
     { t: GIVE_T.hug1, ease: "inOut", p: HER_HUG },
-    // 五⑤ 抱着他慢慢往下落（天上）；跳过去以后快落地，两条腿往下伸，155.5 光着脚落在街上（膝盖一软）；抬起头看左边的千斤、
-    // 右边的周磊，哭着笑；往前一步（前脚抬起来往前迈，后脚钉在地上），157.4「咚」
-    { t: LAND_T.start + 1.5, p: HER_HUG },
-    { t: LAND_T.street0, p: HER_HUG_DOWN },
+    // 五⑤ 抱着他慢慢往下落（一镜到底，lib/t55.ts）；快落地时两条腿往下伸，158.02 光着脚落在街上（膝盖一软）；抬起头看左边的千斤、
+    // 右边的周磊，再低头看着怀里的他，哭着笑；低头看一眼坑里那双铁靴；抬起头看着前面，往前一步（前脚抬起来往前迈，后脚钉在地上），168.52「咚」
+    { t: LAND_T.legs0, p: HER_HUG },
+    { t: LAND_T.land - 0.3, ease: "inOut", p: HER_HUG_DOWN },
     { t: LAND_T.land, ease: "inOut", squash: 0.05, p: HER_STAND },
     { t: LAND_T.land + 0.16, ease: "out", p: HER_STAND },
     { t: LAND_T.hand1 - 0.1, p: HER_STAND },
     { t: LAND_T.hand1 + 0.14, ease: "inOut", p: { ...HER_STAND, neck: 6, lookX: -0.7, lookY: 0.1 } },
     { t: LAND_T.hand2 - 0.06, p: { ...HER_STAND, neck: 6, lookX: -0.7, lookY: 0.1 } },
     { t: LAND_T.hand2 + 0.16, ease: "inOut", p: { ...HER_STAND, neck: 6, lookX: 0.7, lookY: 0.1 } },
+    { t: LAND_T.hand2 + 0.95, p: { ...HER_STAND, neck: 6, lookX: 0.7, lookY: 0.1 } },
+    { t: LAND_T.hand2 + 1.4, ease: "inOut", p: HER_STAND },
+    { t: LAND_T.boots0, p: HER_STAND },
+    { t: LAND_T.boots0 + 0.4, ease: "inOut", p: { ...HER_STAND, neck: -20, lookX: -0.8, lookY: 0.9 } },
+    { t: LAND_T.look1, p: { ...HER_STAND, neck: -20, lookX: -0.8, lookY: 0.9 } },
     { t: LAND_T.step0, ease: "inOut", p: { ...HER_STAND, neck: -2, lookX: 0.45, lookY: 0.3 } },
     { t: LAND_T.step0 + 0.22, ease: "inOut", p: { ...HER_STEP_UP, neck: -2, lookX: 0.45, lookY: 0.3 } },
     { t: LAND_T.step, ease: "in", squash: 0.05, p: { ...HER_STEP_DOWN, neck: -2, lookX: 0.45, lookY: 0.3 } },
     { t: LAND_T.step + 0.2, ease: "out", p: { ...HER_STEP_DOWN, neck: -2, lookX: 0.45, lookY: 0.3 } },
-    { t: 160, p: { ...HER_STEP_DOWN, neck: -2, lookX: 0.45, lookY: 0.3 } },
+    { t: 175, p: { ...HER_STEP_DOWN, neck: -2, lookX: 0.45, lookY: 0.3 } },
   ] as MoveKey[],
   { look: CHENGTUO, base: { chestL: "under", chestR: "under" }, idle: true, seed: 231, springs: ARMS, follow: 0 },
 );

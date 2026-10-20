@@ -41,7 +41,8 @@ export const HOME_T = {
   lock: 21.53,
   /** 下一句「看不清灯火」 */
   end3: 21.86,
-  // ——— ④「看不清灯火」：妈妈松手进门，门「嘭」；千斤看着门；「火」灯灭；她闭上眼飘起来，哑铃被铁链拖离地面、吊在脚下，红线绷断 ———
+  // ——— ④「看不清灯火」：妈妈松手进门，门「嘭」；千斤看着门；「火」灯灭；她闭上眼飘起来，哑铃被铁链拖离地面、吊在脚下（她的浮力比最重的哑铃还大），
+  //      红线绷直，一下把她拽住 ———
   /** 妈妈松开红线和铁链，转身 */
   drop: 21.93,
   /** 门往里开（妈妈推开）、她进门 */
@@ -59,10 +60,24 @@ export const HOME_T = {
   /** 窗帘拉上（灯还亮着，看不清了） */
   cur0: 22.86,
   cur1: 23.16,
-  /** 红线绷断（最后一下底鼓） */
-  snap: b(47),
+  /** 红线绷直（最后一下底鼓）：一下被拽住，悬在半空——23.6 音乐空掉的那一拍里一直拽着 */
+  taut: b(47),
   /** 下一句「但我还想做些什么」 */
   end4: 24.0,
+  // ——— ⑤「但我还想做些什么」（2026-10-20 用户：「红绳断掉，慢慢向上飞」）：鼓整套进来，红线绷断；她吊着哑铃慢慢往上飘，
+  //      睁开眼低头望着家门，近处的手朝门伸下去，又慢慢收回来 ———
+  /** 红线绷断（鼓整套进来） */
+  snap: b(48),
+  /** 「做」睁开眼，低头望着家门 */
+  look: 24.15,
+  /** 「些」—「么」手朝门伸下去 */
+  reach0: 24.36,
+  reach1: 24.8,
+  /** 手慢慢收回来 */
+  back0: 25.4,
+  back1: 25.95,
+  /** 切到高空（下一句「其实还想要说很多」，lib/sky.ts） */
+  end5: b(52),
 };
 
 // ——— ④ 门、灯、窗帘 ———
@@ -521,9 +536,13 @@ const PULL_DROP = 285;
 /** 拽完以后红线剩多长、斜多少：她悬在妈妈右上方（脚踝够得着，身子不压在妈妈头上） */
 const LEN_END = THREAD - 3 * PULL_DROP;
 const ANG_END = 0.165;
-/** ④ 飘起来：越飘越快，RISE_T 秒升 RISE_H，之后照最后的速度一直往上（出画） */
-const RISE_T = 0.92;
-const RISE_H = 1300;
+/** ④ 飘起来：从灯灭到红线绷直越飘越快，升 RISE_H、被风往右带 DRIFT（红线斜着拉到铁桩，哑铃吊在红线右边，不和红线叠在一起） */
+const RISE_H = 394;
+const DRIFT = 150;
+/** ⑤ 红线断了以后：一下往上一窜，然后慢慢往上飘（V5 起步，越飘越快一点），被风慢慢往右带 */
+const LURCH = 70;
+const V5 = 140;
+const A5 = 60;
 
 export function makeHome() {
   const T = HOME_T;
@@ -713,10 +732,16 @@ export function makeHome() {
       { t: T.slam, p: QIANJIN.看妈妈 },
       { t: T.slam + 0.2, ease: "out", p: QIANJIN.望门 },
       { t: T.dark, p: QIANJIN.望门 },
-      // 「火」灯一灭：闭上眼，头垂下去——身子轻了，往上飘；拴着的那条腿被铁链那头的哑铃坠直
+      // 「火」灯一灭：闭上眼，头垂下去——身子轻了，往上飘；拴着的那条腿被铁链那头的哑铃坠直；红线绷直，被拽住（闭着眼）
       { t: T.dark + 0.18, ease: "inOut", p: QIANJIN.望门_闭眼 },
       { t: T.liftOff + 0.3, ease: "inOut", p: QIANJIN.吊着飘 },
-      { t: 30, p: QIANJIN.吊着飘 },
+      { t: T.snap, p: QIANJIN.吊着飘 },
+      // ⑤ 红线断了：「做」睁开眼低头望着家门，「些」—「么」近处的手朝门伸下去；够不着，手慢慢收回来
+      { t: T.look + 0.09, ease: "out", p: QIANJIN.回望 },
+      { t: T.reach1, ease: "inOut", p: QIANJIN.回望_伸手 },
+      { t: T.back0, p: QIANJIN.回望_伸手 },
+      { t: T.back1, ease: "inOut", p: QIANJIN.回望 },
+      { t: 30, p: QIANJIN.回望 },
     ],
     {
     look: lookOf(QJ),
@@ -741,6 +766,14 @@ export function makeHome() {
       const jl = kick(t, T.liftOff, 0.16);
       o.rot += 6 * jl;
       o.neck -= 8 * jl;
+      // 红线绷直：被一把拽住，身子往下一顿、头一甩；绷断：往上一窜
+      const jt = kick(t, T.taut, 0.14);
+      o.rot += 8 * jt;
+      o.neck -= 12 * jt;
+      o.lean += 6 * jt;
+      const js = kick(t, T.snap, 0.18);
+      o.rot -= 6 * js;
+      o.neck += 8 * js;
     },
   });
   /** 风把她往右推，红线绷着、慢慢晃 */
@@ -765,16 +798,23 @@ export function makeHome() {
     return [RING[0] + L * Math.sin(a), RING[1] - L * Math.cos(a)];
   };
   const A4 = ankle3(T.end3);
-  /** ④ 飘起来：越飘越快（出画以后照着最后的速度接着走）；哑铃离地那一下往下一顿；红线一断往上一窜 */
+  /**
+   * ④ 飘起来：越飘越快、被风往右带；哑铃离地那一下往下一顿；红线绷直那一下（底鼓）被拽住，往回一弹，悬在那里一下一下往上挣。
+   * ⑤ 红线一断往上一窜，然后吊着哑铃慢慢往上飘
+   */
   const ankleAt = (t: number): V2 => {
     if (t <= T.end3) return ankle3(t);
-    const u = (t - T.rise) / RISE_T;
-    const up = u <= 0 ? 0 : u <= 1 ? RISE_H * Math.pow(u, 2.5) : RISE_H * (1 + 2.5 * (u - 1));
+    const u = ph(t, T.rise, T.taut);
+    const up = RISE_H * Math.pow(u, 1.6);
     const a = t - T.liftOff;
     const jerk = a > 0 ? 22 * (1 - Math.exp(-a / 0.03)) * Math.exp(-a / 0.16) : 0;
-    const dx = -20 * Math.pow(Math.max(0, Math.min(1, u)), 1.6);
-    const free = 50 * E.out(ph(t, T.snap, T.snap + 0.2));
-    return [A4[0] + dx, A4[1] - up + jerk - free];
+    const k = t - T.taut;
+    const yank = k > 0 ? 34 * (1 - Math.exp(-k / 0.022)) * Math.exp(-k / 0.1) : 0;
+    const tug = k > 0 && t < T.snap ? 5 * Math.max(0, Math.sin((k - 0.12) * 11)) * fade(t, T.taut + 0.12, T.taut + 0.2) : 0;
+    const s = t - T.snap;
+    const free = s > 0 ? LURCH * E.out(Math.min(1, s / 0.3)) + V5 * s + 0.5 * A5 * s * s : 0;
+    const dx = DRIFT * E.io(u) + (s > 0 ? 34 * s : 0);
+    return [A4[0] + dx, A4[1] - up + jerk + yank - tug - free];
   };
   const qjAt = (t: number) => {
     const f = qjMove(t);
@@ -792,7 +832,7 @@ export function makeHome() {
   // ——— ④ 哑铃吊在铁链上：她往上飘，铁链一绷，哑铃被拖离地面、在她脚下荡着跟上去（按一个有分量的摆算，开头一次算好） ———
   const bell = (() => {
     const t0 = T.rise;
-    const t1 = T.end4 + 0.8;
+    const t1 = T.end5 + 0.2;
     const DT = 1 / 240;
     const [gx, gy] = ON_GROUND;
     // 链长：她飘到「底鼓」那一刻正好绷直（之前铁链还搭在铁饼上）
@@ -856,11 +896,11 @@ export function makeHome() {
     return [[d.x, d.y - 6], L];
   };
 
-  // ——— ④ 红线：妈妈松手以后按一根有分量的细线算（落到地上、被她带起来绷直、断开、落下来），开头一次算好 ———
+  // ——— ④⑤ 红线：妈妈松手以后按一根有分量的细线算（落到地上、被她带起来、绷直拽住她、断开、落下来），开头一次算好 ———
   const thread = (() => {
     const N = 40;
     const t0 = T.end3;
-    const t1 = T.end4 + 0.8;
+    const t1 = T.end5 + 0.2;
     const DT = 1 / 240;
     // 起点：③ 最后一帧画的样子（铁环 → 地上一堆 → 妈妈手里 → 她的脚踝）
     const G0 = gripAt(t0);
@@ -892,8 +932,8 @@ export function makeHome() {
     const qx = Float64Array.from(px);
     const qy = Float64Array.from(py);
     const iG = Math.round(((N - 1) * cum[gDense]) / total);
-    // 多长：她飘到绷断前一点点正好拉直（之前多出来的一截堆在地上）
-    const Ae = ankleAt(T.snap - 0.05);
+    // 多长：她飘到「绷直」那一下正好拉直（之前多出来的一截堆在地上）
+    const Ae = ankleAt(T.taut);
     const r = Math.max(total * 1.1, Math.hypot(Ae[0] - RING[0], Ae[1] - RING[1])) / (N - 1);
     /** 断在离脚踝三节的地方：上面一小截跟着她走，下面一长截弹回去、落下来 */
     const S = N - 4;
@@ -1169,29 +1209,6 @@ export function makeHome() {
     const th = thread(t);
     drawThreadPts(g, th.lower);
     if (th.upper) drawThreadPts(g, [q.ankle, ...th.upper.slice(0, -1).reverse()]);
-    // 绷断的那一下：断口一闪，崩出几道短线
-    if (t >= T.snap && t < T.snap + 0.12) {
-      const k = 1 - (t - T.snap) / 0.12;
-      const [bx, by] = th.at;
-      drawGlow(g, bx, by, 70 + 40 * (1 - k), 0.75 * k);
-      const burst = new Path2D();
-      for (let i = 0; i < 6; i++) {
-        const a = -Math.PI / 2 + (i - 2.5) * 0.62;
-        const r0 = 16 + 30 * (1 - k);
-        const r1 = r0 + 26 * k + 10;
-        burst.moveTo(bx + Math.cos(a) * r0, by + Math.sin(a) * r0);
-        burst.lineTo(bx + Math.cos(a) * r1, by + Math.sin(a) * r1);
-      }
-      g.save();
-      g.lineCap = "round";
-      g.strokeStyle = `rgba(58,38,41,${0.55 * k})`;
-      g.lineWidth = 7;
-      g.stroke(burst);
-      g.strokeStyle = `rgba(255,246,228,${0.95 * k})`;
-      g.lineWidth = 3.6;
-      g.stroke(burst);
-      g.restore();
-    }
     // 哑铃（地上时在妈妈小腿前面），她，铁链和锁画在她腿前面
     drawDumbbell(g, d.x, d.y, d.phi, d.rot, 1, lw);
     drawPerson(g, QJ, q.pose, q.x, q.y, z);
@@ -1199,6 +1216,29 @@ export function makeHome() {
     const Lk = lockAt(t);
     drawPadlock(g, Lk[0], Lk[1] + 8, 0, 0.05);
     drawTears(g, t);
+    // 绷断的那一下：断口一闪，崩出几道短线（画在最上面：断口就在铁链和锁旁边，画在下面会被挡住）
+    if (t >= T.snap && t < T.snap + 0.16) {
+      const k = 1 - (t - T.snap) / 0.16;
+      const [bx, by] = th.at;
+      drawGlow(g, bx, by, 90 + 70 * (1 - k), 0.95 * k);
+      const burst = new Path2D();
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + 0.3;
+        const r0 = 18 + 40 * (1 - k);
+        const r1 = r0 + 34 * k + 12;
+        burst.moveTo(bx + Math.cos(a) * r0, by + Math.sin(a) * r0);
+        burst.lineTo(bx + Math.cos(a) * r1, by + Math.sin(a) * r1);
+      }
+      g.save();
+      g.lineCap = "round";
+      g.strokeStyle = `rgba(58,38,41,${0.55 * k})`;
+      g.lineWidth = 7.5;
+      g.stroke(burst);
+      g.strokeStyle = `rgba(255,246,228,${k})`;
+      g.lineWidth = 4;
+      g.stroke(burst);
+      g.restore();
+    }
   };
   /** 镜头跟着她往下坠：追她的胸口，晚一点到（每被拽一把，镜头跟着往下一沉） */
   const chestFollow = smoothTrack(qjChest, 19.9, 23, 11);
@@ -1350,23 +1390,34 @@ export function homeCam(
 }
 
 /**
- * ④ 锁上以后：跟着走开的妈妈往左移、退开，框住门、铁桩和半空里的她（门「嘭」那一下落定）；
- * 之后几乎不动，只极慢地凑近（心酸）；她飘走时不跟，让她出画；走了以后往下一沉、往后退一点（空了）。
+ * ④ 锁上以后：跟着走开的妈妈往左移、退开，框住门、铁桩和半空里的她（门「嘭」那一下落定）；之后几乎不动，只极慢地凑近（心酸）。
+ * 哑铃离地、她往上飘：镜头跟着往上抬、往右挪一点（越来越吃力地跟），红线绷直把她拽住的那一下一起停住、一顿；
+ * 音乐空掉的那一拍屏住气不动：半空里被拽住的她、脚下吊着的哑铃、斜拉到铁桩的红线、黑了的门口。
+ * ⑤ 红线一断一惊；她吊着哑铃慢慢往上飘，镜头跟着升起来、比她慢（柔和起步、一路减速），她在画面里一点点往上走，
+ * 家门口沉到画面最下面——离家越来越远（漂着、微微转一点）。
  */
 function cam4(t: number, c0: Cam): Cam {
   const T = HOME_T;
   const F = aim(-4295, 0, 540, 1700, 1.2);
   let c = camLerp(c0, F, E.io(ph(t, T.drop - 0.03, T.slam + 0.06)));
-  const push = 1 + 0.04 * E.soft(ph(t, T.slam, T.rise + RISE_T));
-  const sink = E.out(ph(t, 23.8, T.end4 + 0.1));
-  c = { ...c, z: c.z * push * (1 - 0.04 * sink) * (1 + 0.012 * kick(t, T.slam, 0.08)), y: c.y + 50 * sink };
+  const push = 1 + 0.04 * E.soft(ph(t, T.slam, 23.8));
+  c = { ...c, z: c.z * push * (1 + 0.012 * kick(t, T.slam, 0.08)) };
+  // 拽住：她在画面右上、红线从她脚踝斜着拉到右下的铁桩，门口在左下，地面在画面最下面
+  const HOLD = aim(-4135, 0, 540, 1900, 1.1);
+  c = camLerp(c, HOLD, E.io(ph(t, T.liftOff - 0.02, T.taut + 0.03)));
+  // 屏住气：极慢地凑近一点
+  c = { ...c, z: c.z * (1 + 0.012 * E.soft(ph(t, T.taut, T.snap))) };
+  // ⑤ 慢慢升起来、一边退开：她一直在画面上半截（一点点往上走），门口越来越小，沉到画面最下面
+  const UP = aim(-4019, -1168, 540, 960, 0.92, -0.015);
+  c = camLerp(c, UP, E.settle(ph(t, T.snap + 0.04, T.end5 + 0.3)));
+  c = { ...c, z: c.z * (1 + 0.03 * kick(t, T.taut, 0.1) + 0.035 * kick(t, T.snap, 0.1)) };
   return c;
 }
 
-/** 门口这一场的抖：哑铃落地、每拽一把、锁扣上；④ 门「嘭」、哑铃被拖离地面、红线绷断 */
+/** 门口这一场的抖：哑铃落地、每拽一把、锁扣上；④ 门「嘭」、哑铃被拖离地面、红线绷直；⑤ 红线绷断 */
 export function homeShake(t: number) {
   let k = 5 * kick(t, HOME_T.set, 0.08) + 6 * kick(t, HOME_T.lock, 0.08);
   for (const P of HOME_T.pulls) k += 4 * kick(t, P + 0.02, 0.08);
-  k += 5 * kick(t, HOME_T.slam, 0.08) + 3 * kick(t, HOME_T.liftOff, 0.07) + 4 * kick(t, HOME_T.snap, 0.07);
+  k += 5 * kick(t, HOME_T.slam, 0.08) + 3 * kick(t, HOME_T.liftOff, 0.07) + 6 * kick(t, HOME_T.taut, 0.07) + 7 * kick(t, HOME_T.snap, 0.08);
   return k;
 }

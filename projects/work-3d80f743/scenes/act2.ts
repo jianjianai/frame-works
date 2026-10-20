@@ -7,15 +7,16 @@
 //   ② 17.9–19.8「把愿望敲碎成粉末」千斤家门口（lib/home.ts）：同一只哑铃溶过来；她弯腰把它放在铁桩旁边「咚」，
 //      镜头一边退开一边顺着铁桩上的红线往上抬，落在「门口仰着头的妈妈—红线—半空里抱着膝盖的女儿」一竖条上，几乎不动（窒息）。
 //   ③ 19.8–21.86「心灵也被挂上门锁」：妈妈一把一把把她拽下来（踩底鼓），把哑铃上的铁链锁到她脚踝上「咔」。
-//   ④ 21.86–24.0「看不清灯火」：妈妈松手、转身进门，门「嘭」（底鼓）；千斤一把把哑铃拽上来抱住（想留下来）；
-//      「火」门灯灭、帘子拉上；她闭上眼飘起来，哑铃被铁链拖离地面、吊在脚下，红线绷断（最后一下底鼓），音乐空掉的那一拍里出画。
-//   ⑤ 24.02–25.8「但我还想做些什么」（lib/sky.ts）：高空，她吊着哑铃悬住、睁开眼，拔下发卡开锁「咔」（底鼓），
-//      铁链连着哑铃掉下去，她张开手往上飘；镜头推到锁上一顿，再跟着她往上退开，露出头顶的白和最高那栋楼的楼顶。
-//   ⑥ 25.8–27.84「其实还想要说很多」（lib/roof.ts，和⑤是一个镜头，不切）：楼顶上收床单的沉沉看见她，一惊，冲出去在她碰到白之前
-//      从身后抱住，两个人在天上带着惯性慢慢往左飘，落在加高了的千斤家楼顶；镜头两人越近推得越近，抱住一震，跟着往左飘、退开一点。
-//   ⑦ 27.84–29.79「请你等等我」（lib/roof.ts，还是同一个镜头）：牵着往上漂的千斤，手伸进靴筒是空的；把她的手按到栏杆上说「等等我」，跑走。
-//   ⑧ 29.79–31.97「请你等等我」第二句（lib/night.ts，还是同一个镜头）：退开，天黑下来，城里的窗一组组亮；千斤被白往上拽成一只风筝；
-//      「我」沉沉家那扇窗亮了，镜头飞过去推进窗里，31.97 起只画她的屋子（lib/room.ts）。
+//   ④ 21.86–24.0「看不清灯火」：妈妈松手、转身进门，门「嘭」（底鼓）；「火」门灯灭、帘子拉上；她闭上眼飘起来，
+//      哑铃被铁链拖离地面、吊在脚下（她的浮力比最重的哑铃还大）；红线绷直（最后一下底鼓）一下把她拽住，音乐空掉的那一拍里悬在那儿。
+//   ⑤ 24.0–26.0「但我还想做些什么」（lib/home.ts）：鼓整套进来，红线绷断；她吊着哑铃慢慢往上飘，低头望着家门、手朝门伸下去又收回来；
+//      镜头跟着慢慢升起来，门口沉到画面最下面。（2026-10-20 用户重排：原来红线在④就断了，开锁在⑤）
+//   ⑥ 26.0–27.8「其实还想要说很多」（lib/sky.ts）：切到高空，她吊着哑铃悬住，拔下发卡开锁「咔」（底鼓），
+//      铁链连着哑铃掉下去，她张开手越飘越快；镜头推到锁上一顿，再跟着她往上退开，露出头顶的白和最高那栋楼的楼顶。
+//   ⑦ 27.8–29.79「请你等等我」（lib/roof.ts，和⑥是一个镜头，不切）：楼顶上收床单的沉沉看见她，一惊，冲出去在她碰到白之前
+//      从身后抱住，两个人在天上带着惯性慢慢往左飘、往下落，29.01 千斤在半空里转过身来抱住她；镜头两人越近推得越近，抱住一震，跟着飘、退开一点。
+//   ⑧ 29.79–31.97「请你等等我」第二句（lib/roof.ts 的 HUG_T，还是同一个镜头）：30.01 两个人一起坐着落到千斤家楼顶上（不站着落地），
+//      「等等我」在她耳边说；天黑下来，城里的窗一组组亮（lib/night.ts），镜头越推越慢地推近两张脸。31.97 切进她的屋子（lib/room.ts）。
 //   ⑨ 31.97–33.9「两块五的签字笔」（lib/write.ts）：在屋里推到桌上，笔杆上「2.5元」的价签；「签、字、笔」写出「活、下、去」。
 //   ⑩ 33.9–35.88「东拼西凑的词句」：贴着地上一排排写好的砖往左滑，退开；她抱着「活下去」往左冲出门，门「嘭」地关上。
 //   ⑪ 35.88–37.8「妄想用它拯救你」（lib/give.ts，切回夜里的楼顶）：她抱着砖从楼顶跳下来，把砖放进千斤攥着栏杆的那只手里；
@@ -31,7 +32,7 @@ import { HOME_T, drawHomeDusk, drawHomeLights, homeCam, homeLook, homeShake, mak
 import { SKY_T, makeSky, skyCam, skyLook, skyShake } from "../lib/sky";
 import { GIVE_T, QJ_ROOF, RAIL_TOP, ROOF_T, drawQjRail, makeRoof, roofCam, roofShake } from "../lib/roof";
 import { makeGive } from "../lib/give";
-import { NIGHT_T, duskAt, nightCam } from "../lib/night";
+import { NIGHT_T, duskAt } from "../lib/night";
 import { tenCam, twelveCam, writeCam } from "../lib/write";
 import { makeStage } from "../lib/stage";
 import { TEN_T, TWELVE_T } from "../lib/room";
@@ -56,7 +57,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const roof = makeRoof(sky);
   const give = makeGive(roof);
 
-  const { drawWorld, drawAir, windowCovers, drawInside } = makeStage(base, grain);
+  const { drawWorld, drawAir, drawInside } = makeStage(base, grain);
 
   // ——— ① 哑铃店 ———
   const drawShop = (g: CanvasRenderingContext2D, t: number) => {
@@ -97,7 +98,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     drawAir(g, cam, t, sh, homeLook(t));
   };
 
-  // ——— ⑤⑥ 高空：一个镜头（开锁 → 往上飘 → 楼顶上的沉沉扑出去抱住 → 慢慢飘到千斤家楼顶） ———
+  // ——— ⑥⑦⑧ 高空：一个镜头（开锁 → 往上飘 → 楼顶上的沉沉扑出去抱住 → 慢慢飘到千斤家楼顶 → 坐下来抱着，天黑下来） ———
   const drawHigh = (g: CanvasRenderingContext2D, t: number) => {
     const six = t >= ROOF_T.cut;
     const night = t >= NIGHT_T.start;
@@ -105,8 +106,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     // ⑧ 天黑下来：这一帧的天色（画完复原，别的镜头不受影响）
     if (night) setDusk(...duskAt(t));
     try {
-      let cam = eleven ? give.cam(t) : six ? roofCam(t, roof, sky) : skyCam(t, sky);
-      if (night && !eleven) cam = nightCam(t, cam);
+      const cam = eleven ? give.cam(t) : six ? roofCam(t, roof, sky) : skyCam(t, sky);
       const sh = shake(t, eleven ? give.shakeK(t) : six ? roofShake(t) : skyShake(t));
       // 远处满天往上飘的人：画在各自那一层的楼后面、空气前面
       const setCam = (D: number) => applyCam(g, base, cam, D, sh);
@@ -125,9 +125,10 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         }
         if (eleven) give.draw(gg, t, cam.z);
       };
-      if (night) drawTinted(g, [QJ_HOME.x - 520, RAIL_TOP - 820, QJ_HOME.x + QJ_HOME.w + 1200, QJ_ROOF + 40], people, 0.85);
+      if (night) drawTinted(g, [QJ_HOME.x - 520, RAIL_TOP - 820, QJ_HOME.x + QJ_HOME.w + 1200, QJ_ROOF + 40], people, 0.85 - (eleven ? 0 : 0.3 * roof.hugLight(t)));
       else people(g);
-      // ⑪ 砖暖起来的光（画在夜色上面）
+      // ⑧ 抱在一起的两个人身上的暖光、⑪ 砖暖起来的光（画在夜色上面）
+      if (six && !eleven) roof.drawHugGlow(g, t);
       if (eleven) give.drawGlowOver(g, t);
       drawAir(g, cam, t, sh, skyLook(t), night ? E.io(ph(cam.z, 2, 6)) : 0);
     } finally {
@@ -135,9 +136,6 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     }
   };
 
-  // ——— ⑧ 进了沉沉的屋子（⑨ 接手之前）：窗的玻璃一盖住整个画面就只画屋里（和画在窗里的一模一样），镜头接着推进窗的那个速度慢慢停下来 ———
-  /** 这一帧的镜头（⑧ 推进窗那一段起） */
-  const camAt = (t: number) => (t >= TEN_T.start ? tenCam(t) : t >= NIGHT_T.inside ? writeCam(t) : nightCam(t, roofCam(t, roof, sky)));
   return {
     canvas,
     render(t) {
@@ -151,12 +149,10 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         drawHigh(ctx, t);
         return;
       }
-      if (t >= NIGHT_T.go) {
-        const cam = camAt(t);
-        if (t >= NIGHT_T.inside || windowCovers(cam)) {
-          drawInside(ctx, t, cam);
-          return;
-        }
+      // ⑨⑩ 切进她的屋子（窗正好铺满画面的取景，只画屋里）
+      if (t >= NIGHT_T.inside) {
+        drawInside(ctx, t, t >= TEN_T.start ? tenCam(t) : writeCam(t));
+        return;
       }
       if (t >= SKY_T.cut) {
         drawHigh(ctx, t);

@@ -52,35 +52,68 @@
     },
     {
       "id": "act4",
-      "name": "主歌二 夜里",
+      "name": "主歌二 窗框、刀、系绳",
       "source": {
         "kind": "scene",
         "module": "act4",
         "engine": "canvas"
       },
-      "start": 72.019,
-      "duration": 16.001,
-      "offset": 72.019,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
-      "blend": "source-over"
+      "blend": "source-over",
+      "start": 72.019,
+      "duration": 9.581,
+      "offset": 72.019
+    },
+    {
+      "id": "act4dawn",
+      "name": "主歌二 天亮（溶）",
+      "source": {
+        "kind": "scene",
+        "module": "act4",
+        "engine": "canvas"
+      },
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over",
+      "start": 81.2,
+      "duration": 0.8204,
+      "offset": 87.2,
+      "fadeIn": 0.4
     },
     {
       "id": "act5",
-      "name": "三 明天见",
+      "name": "三 早上、穿靴、阿满",
       "source": {
         "kind": "scene",
         "module": "act5",
         "engine": "canvas"
       },
-      "start": 88.0204,
-      "duration": 17.9696,
-      "offset": 88.0204,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
-      "blend": "source-over"
+      "blend": "source-over",
+      "start": 82.0204,
+      "duration": 6.0,
+      "offset": 88.0204
+    },
+    {
+      "id": "act5lamp",
+      "name": "三 灯下：笔、明天见、塞不进",
+      "source": {
+        "kind": "scene",
+        "module": "act5",
+        "engine": "canvas"
+      },
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over",
+      "start": 88.0204,
+      "duration": 3.9696,
+      "offset": 102.0204
     },
     {
       "id": "act6",
@@ -90,13 +123,29 @@
         "module": "act6",
         "engine": "canvas"
       },
-      "start": 105.99,
-      "duration": 23.88,
-      "offset": 105.99,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
-      "blend": "source-over"
+      "blend": "source-over",
+      "start": 91.99,
+      "duration": 19.83,
+      "offset": 105.99
+    },
+    {
+      "id": "act6edge",
+      "name": "四 白的边上（静）",
+      "source": {
+        "kind": "scene",
+        "module": "act6",
+        "engine": "canvas"
+      },
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over",
+      "start": 111.82,
+      "duration": 1.48,
+      "offset": 127.82
     },
     {
       "id": "act7",
@@ -106,13 +155,13 @@
         "module": "act7",
         "engine": "canvas"
       },
-      "start": 129.87,
-      "duration": 24.13,
-      "offset": 129.87,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
-      "blend": "source-over"
+      "blend": "source-over",
+      "start": 113.3,
+      "duration": 38.7,
+      "offset": 133.3
     }
   ]
 }

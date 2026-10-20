@@ -125,8 +125,8 @@ export function drawDoors(g: CanvasRenderingContext2D, t: number) {
 /** 街上的人（站在街面上，一起蒙一次早上的色）；不在画面里不画。onlyStays：五③跑去抓人的那几个由 lib/link.ts 画，这里只画还站着看的 */
 export function drawCrowd(g: CanvasRenderingContext2D, t: number, cam: Cam, onlyStays = false) {
   const v = viewOf(cam, 1);
-  // 五⑤ 跳过去以后（落回街上）哑铃店里的人回去了，只剩她救过的人
-  if (t >= LAND_T.street0 - 1) return;
+  // 五⑤ 哑铃店里的人回店里去了（镜头还在白的边上、街上不在画面里的时候），落回街上的只有她救过的人
+  if (t >= LAND_T.start + 1) return;
   const items = CROWD.filter((w) => !onlyStays || w.stays)
     .map((w) => ({ w, a: walkerAt(w, t) }))
     .filter((it) => it.a && it.a.root[0] > v.x0 - 300 && it.a.root[0] < v.x1 + 300) as { w: Walker; a: { root: V2; pose: PoseIn } }[];
