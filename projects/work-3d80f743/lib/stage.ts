@@ -75,9 +75,27 @@ export function makeStage(base: DOMMatrix, grain: HTMLCanvasElement, extra: Bloc
   /** 她家那扇窗的玻璃是不是已经盖住了整个画面（盖住了就只画屋里） */
   const windowCovers = (cam: Cam) => {
     const w = homeWindow();
-    const [x0, y0] = toScreen(cam, w.x, w.y);
-    const [x1, y1] = toScreen(cam, w.x + w.w, w.y + w.h);
-    return x0 <= -2 && y0 <= -2 && x1 >= W + 2 && y1 >= H + 2;
+    if (!cam.r) {
+      const [x0, y0] = toScreen(cam, w.x, w.y);
+      const [x1, y1] = toScreen(cam, w.x + w.w, w.y + w.h);
+      return x0 <= -2 && y0 <= -2 && x1 >= W + 2 && y1 >= H + 2;
+    }
+    // 画面转着：画面四个角（倒着转回世界里）都落在窗里才算盖住
+    const c = Math.cos(-cam.r);
+    const sn = Math.sin(-cam.r);
+    for (const [sx, sy] of [
+      [-2, -2],
+      [W + 2, -2],
+      [-2, H + 2],
+      [W + 2, H + 2],
+    ]) {
+      const dx = sx - W / 2;
+      const dy = sy - H / 2;
+      const x = cam.x + (dx * c - dy * sn) / cam.z;
+      const y = cam.y + (dx * sn + dy * c) / cam.z;
+      if (x < w.x || x > w.x + w.w || y < w.y || y > w.y + w.h) return false;
+    }
+    return true;
   };
   /** 只画她的屋子（窗盖住整个画面以后），镜头还是世界里的镜头 */
   const drawInside = (g: CanvasRenderingContext2D, t: number, cam: Cam) => {

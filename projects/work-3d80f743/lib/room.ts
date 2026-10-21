@@ -85,7 +85,13 @@ export const TWELVE_T = {
   end: 39.39,
 };
 /** 躺在床里时胯在哪（背贴着床垫，头枕在枕头上，脚伸到被子外面） */
-const BED_HIP: V2 = [990, 400];
+/**
+ * 天花板上那张床整体往左挪多少：床尾板的右沿和椅面的右沿对齐，床在桌子和椅子正上方，脚那头在椅子上面
+ * （用户 2026-10-21：「把床向左移动，刚好和椅子对齐」→「床的右边和椅子对齐」；椅面 x 556–742，床尾板右沿原来在 1382）。
+ * 床、被子、躺在床里的位置都按它挪，lib/morning.ts 也用它
+ */
+export const BED_DX = ROOM.chair.x + 102 - 1382;
+const BED_HIP: V2 = [990 + BED_DX, 400];
 
 /** 门：左边墙上（门外是黑着的楼梯间，通到楼顶） */
 export const DOOR = { x0: -440, x1: -180, top: 840 };
@@ -464,12 +470,12 @@ function wallShelf(g: CanvasRenderingContext2D) {
  */
 function bedBack(g: CanvasRenderingContext2D) {
   const c = ROOM.ceil;
-  for (const x of [660, 1300]) part(g, rectPath(x, c - 4, 22, 56), WOOD, WOOD_D, L(4), [4, 3]);
-  part(g, rectPath(636, c + 50, 740, 26), WOOD, WOOD_D, L(4), [5, 4]);
+  for (const x of [660 + BED_DX, 1300 + BED_DX]) part(g, rectPath(x, c - 4, 22, 56), WOOD, WOOD_D, L(4), [4, 3]);
+  part(g, rectPath(636 + BED_DX, c + 50, 740, 26), WOOD, WOOD_D, L(4), [5, 4]);
   // 床头板、床尾板（倒过来朝下；床尾板矮一点）
   for (const [x0, x1, h] of [
-    [612, 646, 214],
-    [1352, 1382, 150],
+    [612 + BED_DX, 646 + BED_DX, 214],
+    [1352 + BED_DX, 1382 + BED_DX, 150],
   ]) {
     const board = new Path2D();
     board.moveTo(x0, c + 40);
@@ -480,39 +486,39 @@ function bedBack(g: CanvasRenderingContext2D) {
     part(g, board, WOOD, WOOD_D, L(4), [4, 3]);
   }
   const mat = new Path2D();
-  mat.roundRect(646, c + 76, 706, 52, 14);
+  mat.roundRect(646 + BED_DX, c + 76, 706, 52, 14);
   part(g, mat, "#efe6d8", "#ddd2c2", L(4), [6, 5]);
   const pillow = new Path2D();
-  pillow.roundRect(660, c + 126, 128, 36, 16);
+  pillow.roundRect(660 + BED_DX, c + 126, 128, 36, 16);
   part(g, pillow, "#f7f0e4", "#e6ddcf", L(3.5), [4, 4]);
 }
 
 /** 被子下沿（从左到右）：没人时平平地捆在床垫下面；⑫ 她钻进来以后鼓起来盖住她（左头挨着枕头，右头在脚踝前面，光脚露在外面） */
 const QUILT_EMPTY: V2[] = [
-  [796, 340],
-  [798, 362],
-  [812, 378],
-  [880, 380],
-  [940, 381],
-  [1000, 380],
-  [1070, 381],
-  [1140, 380],
-  [1200, 380],
-  [1238, 374],
-  [1250, 352],
+  [796 + BED_DX, 340],
+  [798 + BED_DX, 362],
+  [812 + BED_DX, 378],
+  [880 + BED_DX, 380],
+  [940 + BED_DX, 381],
+  [1000 + BED_DX, 380],
+  [1070 + BED_DX, 381],
+  [1140 + BED_DX, 380],
+  [1200 + BED_DX, 380],
+  [1238 + BED_DX, 374],
+  [1250 + BED_DX, 352],
 ];
 const QUILT_FULL: V2[] = [
-  [790, 344],
-  [786, 414],
-  [818, 478],
-  [880, 498],
-  [940, 491],
-  [1000, 487],
-  [1070, 499],
-  [1130, 496],
-  [1170, 490],
-  [1190, 474],
-  [1200, 420],
+  [790 + BED_DX, 344],
+  [786 + BED_DX, 414],
+  [818 + BED_DX, 478],
+  [880 + BED_DX, 498],
+  [940 + BED_DX, 491],
+  [1000 + BED_DX, 487],
+  [1070 + BED_DX, 499],
+  [1130 + BED_DX, 496],
+  [1170 + BED_DX, 490],
+  [1190 + BED_DX, 474],
+  [1200 + BED_DX, 420],
 ];
 /** ⑫ 她躺进床里了多少（被子跟着鼓起来） */
 function bedK(t: number) {

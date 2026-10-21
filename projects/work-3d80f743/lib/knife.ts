@@ -3,11 +3,12 @@
 // 三个人连在一根红绳上，还在往上飘，连沉沉的铁靴也离了地。镜头推到妈妈的手上：她哭着笑，「小刀」从口袋里拿出一把小折刀，
 // 「带」割断缠在自己手腕上的红绳；镜头顺着掉下去的红绳甩下来，沉沉抱着小石头掉回街上，51.33 铁靴「咚」；刀掉在他们脚边。
 // 妈妈一个人往上飘走（下一镜）。
+// 2026-10-21 重做：镜头都在 lib/streetcam.ts（②–⑥ 一个镜头），这里只管人和东西。
 
 import { CAST, type CastSpec, castJoints } from "@materials/剪纸角色/code/cast";
 import { type MoveKey, type PoseIn, drawChengtuo, jointsOf } from "@materials/剪纸角色/code/chengtuo";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, aim, camLerp, kick, ph } from "./cam";
+import { E, ph } from "./cam";
 import { INK } from "./world";
 import { live } from "./motion";
 import { armL, armR, legL, legR } from "./poses";
@@ -26,7 +27,7 @@ export const KNIFE_T = {
   pull: 50.12,
   slip: 50.32,
   /** 沉沉的铁靴离了地 */
-  boots: 50.5,
+  boots: 50.4,
   /** 镜头推到妈妈的手上 */
   push0: 50.5,
   push1: 50.82,
@@ -163,13 +164,21 @@ function soleOf(p: PoseIn) {
   const j = jointsOf(p);
   return Math.max(j.ankleL[1], j.ankleR[1]) + 46;
 }
-/** 妈妈的根：被拽住一下往下一顿，三个人一起被她带着往上（割断以前升约 330）；割断以后越飘越快 */
+/** ⑤「歌」她仰起脸迎着光，从这一刻起越飘越快、飞出画面（碰到白在画面外，54.018） */
+export const MOM_AWAY = 53.5;
+/**
+ * 妈妈的根：被拽住一下往下一顿，三个人一起被她带着往上（割断以前升约 330）；割断以后一下松开往上一窜，之后舍不得走、
+ * 慢慢往上飘（一直低头看着他们，⑤ 镜头在地上看她，她要一直在画面里）；「歌」起越飘越快
+ */
 export function momRoot4(t: number): V2 {
   const base = momRoot(t);
   const dip = 34 * E.out(ph(t, T.grab, T.grab + 0.12)) * (1 - ph(t, T.grab + 0.12, T.slip + 0.1));
-  const up = 330 * E.io(ph(t, T.slip, T.cut));
+  // 三个人一起被她带上去：先一下窜上去（沉沉的铁靴离了地），越往上越慢
+  const up = 330 * E.out(ph(t, T.slip, T.cut));
   const tau = Math.max(0, t - T.cut);
-  return [base[0], base[1] + dip - up - (320 * tau + 760 * tau * tau)];
+  const rel = 120 * E.out(Math.min(1, tau / 0.35)) + 60 * tau;
+  const away = t > MOM_AWAY ? 2800 * Math.pow(t - MOM_AWAY, 1.8) : 0;
+  return [base[0], base[1] + dip - up - rel - away];
 }
 
 /** 妈妈这一刻：远处那只手攥着红绳那头（被拽到腰前），近处那只手掏刀、伸到手腕上割；割断以后两只手张开、往上飘走 */
@@ -360,29 +369,3 @@ export function drawKnife4(g: CanvasRenderingContext2D, t: number, z: number, wi
     }
   }
 }
-
-// ——— 镜头 ———
-/**
- * ④的镜头（以③的镜头为底）：先跟着三个人（被她带着往上）；「小刀」推到她的手上（刀、缠在手腕上的红绳，她的脸在上面）；
- * 割断以后停一拍，顺着掉下去的红绳往下甩到街上（0.23 秒，竖着拖影），「在」铁靴落地一震；之后跟着他们仰头，镜头往上抬一点
- */
-export function knifeCam(t: number, base: (t: number) => Cam): Cam {
-  if (t <= T.start) return base(t);
-  let c = base(t);
-  const k = knifeAt(Math.min(t, T.cut));
-  // 三个人：她的头到沉沉的脚
-  const top = k.mom.root[1] - 600;
-  c = camLerp(c, aim(-2390, (top + 0) / 2, 540, 960, 0.86), E.io(ph(t, T.start, T.slip)));
-  // 推到她的手上（刀、手腕上的红绳）
-  const hand = k.mom.ropeHand;
-  c = camLerp(c, aim(hand[0] + 10, hand[1] - 40, 540, 880, 1.5), E.io(ph(t, T.push0, T.push1)));
-  // 甩下来：落在街上抱着他的沉沉
-  if (t > T.whip0) {
-    const kk = knifeAt(T.land + 0.2);
-    c = camLerp(c, aim(kk.chen.root[0] + 70, -380, 540, 1140, 1.5), E.io(ph(t, T.whip0, T.land)));
-  }
-  // 落地一震；之后跟着他们仰头往上抬一点
-  const up = E.io(ph(t, T.land + 0.12, T.end + 0.5));
-  return { ...c, y: c.y - 220 * up, z: c.z * (1 + 0.035 * kick(t, T.land, 0.1)) };
-}
-export const knifeShake = (t: number) => 12 * kick(t, KNIFE_T.land, 0.07) + 4 * kick(t, KNIFE_T.cut, 0.05);

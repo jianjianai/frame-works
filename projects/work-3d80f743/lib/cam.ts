@@ -37,8 +37,11 @@ export function applyCam(ctx: CanvasRenderingContext2D, base: DOMMatrix, c: Cam,
 
 /** 这一层在画面里看得见的世界范围（留一点边，歪着、抖着的时候也够） */
 export function viewOf(c: Cam, D = 1, margin = 1.2) {
-  const hw = ((W / 2) * D * margin) / c.z;
-  const hh = ((H / 2) * D * margin) / c.z;
+  // 画面转着的时候（⑫ 跟着她转 180°），转过去的画面要的世界范围更大
+  const cr = Math.abs(Math.cos(c.r || 0));
+  const sr = Math.abs(Math.sin(c.r || 0));
+  const hw = (((W / 2) * cr + (H / 2) * sr) * D * margin) / c.z;
+  const hh = (((H / 2) * cr + (W / 2) * sr) * D * margin) / c.z;
   return { x0: c.x - hw, x1: c.x + hw, y0: c.y - hh, y1: c.y + hh };
 }
 
@@ -62,3 +65,25 @@ export function shake(t: number, k: number): [number, number] {
 
 /** 一惊：从 t0 起按 decay 秒衰减 */
 export const kick = (t: number, t0: number, decay = 0.1) => (t < t0 ? 0 : Math.exp(-(t - t0) / decay));
+
+/**
+ * 转着甩的拖影（⑫ → 副歌一的转场）：把这一帧绕画面中间转着叠几层（ang：快门时间里画面转过的角度，弧度）。
+ * buf / bctx：和画布一样大的暂存画布
+ */
+export function spinBlur(ctx: CanvasRenderingContext2D, buf: HTMLCanvasElement, bctx: CanvasRenderingContext2D, ang: number) {
+  if (Math.abs(ang) < 0.006) return;
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  bctx.setTransform(1, 0, 0, 1, 0, 0);
+  bctx.clearRect(0, 0, w, h);
+  bctx.drawImage(ctx.canvas, 0, 0);
+  ctx.save();
+  const n = 9;
+  for (let i = 1; i < n; i++) {
+    ctx.globalAlpha = 1 / (i + 1);
+    ctx.setTransform(1, 0, 0, 1, w / 2, h / 2);
+    ctx.rotate((i / (n - 1) - 0.5) * Math.min(0.5, ang));
+    ctx.drawImage(buf, -w / 2, -h / 2);
+  }
+  ctx.restore();
+}

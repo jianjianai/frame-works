@@ -71,22 +71,62 @@ export function tenCam(t: number): Cam {
   return { ...c, z: c.z * (1 + k) };
 }
 
-/**
- * ⑫ 的镜头（37.79 起，切过来）：中景，椅子上的她和脚边的地（靴子掉在这里），脱靴子时慢慢凑近一点，两只靴子落地各一震；
- * 她飘起来，镜头跟上去（中心挪到她身上，一边往后退）；躺进床里、脚绳绷直那一下一顿，最后落在整间屋子上：
- * 天花板上床里睡着的她、一根绷直的脚绳斜着拉到椅子后腿、地上两只空铁靴
- */
-export function twelveCam(t: number): Cam {
-  const W = TWELVE_T;
-  let c = aimRoom([560, 1440], 540, 1180, 1.5 * (1 + 0.04 * E.io(ph(t, W.start, W.rise0 + 0.1))));
+/** ⑫ 她身子的中间（胯和两肩中间的中点，屋子坐标）：转成横着时也在身子正中 */
+function torsoAt(t: number): V2 {
   const ch = roomChen(t);
   const j = jointsOf(ch.pose);
-  const hip: V2 = [ch.root[0] + j.hip[0] * ROOM.s, ch.root[1] + j.hip[1] * ROOM.s];
-  const zf = 1.56 * Math.pow(1.12 / 1.56, E.io(ph(t, W.rise0, W.bed)));
-  c = camLerp(c, aimRoom([hip[0] - 30, hip[1] + 60], 540, 960, zf), E.io(ph(t, W.rise0 + 0.04, W.rise0 + 0.34)));
-  c = camLerp(c, aimRoom([800, 960], 540, 960, 1), E.settle(ph(t, W.bed - 0.26, W.end)));
-  const k = 0.022 * kick(t, W.boot1, 0.1) + 0.016 * kick(t, W.boot2, 0.1) + 0.012 * kick(t, W.bed, 0.12);
-  return { ...c, z: c.z * (1 + k) };
+  const x = (j.hip[0] + (j.shoulderL[0] + j.shoulderR[0]) / 2) / 2;
+  const y = (j.hip[1] + (j.shoulderL[1] + j.shoulderR[1]) / 2) / 2;
+  return [ch.root[0] + x * ROOM.s, ch.root[1] + y * ROOM.s];
+}
+/**
+ * ⑫ 的镜头（37.79 起，切过来）。情绪（情绪运镜）：卸下 → 失重 → 被拉住。
+ * 「顺便拯」卸下：贴近她和那双铁靴（2 倍），像压着分量一样线性地慢慢凑近；两只靴子落地，镜头各往下一沉。
+ * 「救我」失重：她飘起来时镜头先屏住一下，再跟上她（对准她身子的中间、放在画面正中，晚 0.05 秒），一路跟到床上；
+ * 画面跟着她转 180°（用户 2026-10-21：「改成跟随主角旋转一下」→「是180度旋转，跟随主角到床上」）：整间屋子绕着她顺时针转半圈，
+ * 她在画面里只顺着转 90° 躺下——天花板转到了脚下，倒钉的床成了一张正着的床，她睡在里面；桌子、椅子、铁靴倒挂在上面。
+ * 「自己」被拉住：39.016 脚绳一绷，镜头一顿；之后越来越慢地往后让开，露出整条线：床里的她、往上拉到倒挂着的椅子的脚绳、铁靴。
+ * 转场（2026-10-21 用户：「这里出去后直接切换场景用一个过度即可，到新的场景保持镜头的旋转趋势直到回正」）：最后 0.17 秒又顺时针转起来、
+ * 越转越快，一甩切到副歌一，那边接着同一个方向转、越转越慢，副歌鼓进来时转正。
+ */
+export const TWELVE_TURN = Math.PI;
+/** 转场切到副歌一时画面还倒着多少（⑫ 转过了 180° 又往前转了一截，副歌一接着转完剩下的；负的 = 还差多少转正） */
+export const NET_SPIN0 = -0.78 * Math.PI;
+/** 转场前又转起来的那一段多长 */
+const TWELVE_SPIN_T = 0.17;
+/** ⑫ 她自己转成横着转了多少（0 竖着 → 1 躺平；按 rot 自己的单位归一） */
+let rotBed = 0;
+function turnAt(t: number) {
+  rotBed ||= (roomChen(TWELVE_T.bed + 0.05).pose.rot as number | undefined) ?? 1;
+  const r = (roomChen(t).pose.rot as number | undefined) ?? 0;
+  return Math.max(0, Math.min(1, r / rotBed));
+}
+export function twelveCam(t: number): Cam {
+  const W = TWELVE_T;
+  // 卸下：她和靴子，线性慢推 6%
+  const heavy = ph(t, W.start, W.rise0 + 0.1);
+  let c = aimRoom([560, 1420], 540, 1060, 2.0 * (1 + 0.06 * heavy));
+  // 失重：屏住一下以后跟上她（她在画面正中，画面绕着她转），一路跟到床上，转 180°
+  if (t > W.rise0) {
+    const p = torsoAt(t - 0.05);
+    const zf = 2.06 * Math.pow(1.6 / 2.06, E.out(ph(t, W.rise0 + 0.08, W.bed)));
+    // 画面转多少 = 她在画面里该转的（平平地从竖着转到躺下，0 → 90°）+ 她自己在屋里转的（逆时针 0 → 90°）：
+    // 这样她在画面里一路顺着转、不会转过头；最后一共转 180°
+    const seen = (TWELVE_TURN / 2) * E.io(ph(t, W.rise0 + 0.06, W.bed + 0.06));
+    const follow = { ...aimRoom(p, 540, 960, zf), r: seen + (TWELVE_TURN / 2) * turnAt(t) };
+    c = camLerp(c, follow, E.io(ph(t, W.rise0 + 0.06, W.rise0 + 0.26)));
+  }
+  // 被拉住以后：越来越慢地往后让开，露出整条线（画面倒着：床在下面，椅子、铁靴倒挂在上面）
+  const all = aimRoom([360, 860], 540, 960, 1.18);
+  c = camLerp(c, { ...all, r: c.r }, E.settle(ph(t, W.bed + 0.08, W.end + 0.1)));
+  // 转场：最后 0.17 秒又顺时针转起来、越转越快（转过 180° 再往前 0.22π），副歌一接着这股转劲转完剩下的（lib/net.ts 的 NET_SPIN0）
+  const spin = ph(t, W.end - TWELVE_SPIN_T, W.end);
+  c = { ...c, r: c.r + (TWELVE_TURN + NET_SPIN0) * spin * spin };
+  // 两只靴子落地一沉；脚绳一绷一顿
+  const kb1 = kick(t, W.boot1, 0.1);
+  const kb2 = kick(t, W.boot2, 0.1);
+  const kb = kick(t, W.bed, 0.14);
+  return { ...c, z: c.z * (1 + 0.02 * kb1 + 0.016 * kb2 + 0.02 * kb), y: c.y - (18 * (kb1 + kb2) + 26 * kb) / c.z };
 }
 
 export type { V2 };

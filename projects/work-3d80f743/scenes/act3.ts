@@ -1,16 +1,18 @@
 // 副歌一（39.39 起）。一个镜头一个镜头做，用户确认一个再做下一个。图层 offset = start：模块里的时间就是作品的绝对时间。
-//   ① 39.39–43.92「只因为 / 你那渴望自由的心脏 / 困在一张没空隙的网」（lib/net.ts）：从她的屋子退出窗外；窗外的巷子里一个人往上飘、
-//      扑向头顶的白，「困」拴在他脚踝上的红绳一下绷直，把他拽住；镜头一路退到整座城：天上到处是被红绳拴住的人，缠成一张盖住整座城的网。
-//   ② 43.92–47.92「我们的周围并非没光亮 / 只是太耀眼将我们灼伤」（lib/dawn.ts，还是同一个镜头）：天亮起来，窗一组组灭，天上的人被
-//      一个个收回窗里；「只是」镜头扎到街上：小石头飘了起来，妈妈攥着拴在他脚踝上的红绳往下拽，「灼」她的脚跟也离了地。
-//   ③ 47.92–49.98「在这个世界难免会迷茫」（lib/coat.ts，还是同一个镜头）：妈妈两把把自己拽到儿子跟前，脱下外套（下摆缝着铅）裹在他身上，
-//      他一沉，「茫」抱住妈妈的脚踝；沉沉从最高那栋楼那边冲过来。
-//   ④ 49.98–51.93「但别再把小刀带在身上」（lib/knife.ts，还是同一个镜头）：沉沉抓住小石头的脚踝往下拽，三个人连在一根红绳上还在往上飘，
-//      沉沉的铁靴也离了地；镜头推到妈妈手上，「小刀」她割断手腕上的红绳；镜头甩到街上，沉沉抱着小石头落地「咚」。
-//   ⑤ 51.93–53.94「至少我还在为你而歌唱」（lib/sing.ts，还是同一个镜头）：镜头顺着视线往上甩、追上往上飘的妈妈，她张着手低头看着儿子
-//      哭着笑，越飘越快；「歌唱」她仰起脸迎着白，镜头追不上了往后退，她一个人往白的边上冲去。
-//   ⑥ 53.94–55.98「在黑暗漫长的反乌托邦」（lib/ash.ts，还是同一个镜头）：54.018 她碰到白，散成淡彩的光点，彩色的光炸开、画面一亮；
-//      光点变成灰像雪一样往城里落，镜头顺着灰慢慢往下，落到街上：沉沉紧紧抱着小石头。
+//   ① 39.39–43.92「只因为 / 你那渴望自由的心脏 / 困在一张没空隙的网」（lib/net.ts，2026-10-21 重做）：⑫ 转着甩切过来，接着转、鼓进来时转正；
+//      最高那栋楼右边一个人张着手笑着往上飞、越飞越快，「困」拴在他脚踝上的红绳一下绷直，把他拽住；没被拴住的人从他身边冲进白里散成灰；
+//      镜头一下往后撤到整座城：天上到处是被红绳拴住的人，交错成一张网，网上面的人一拍一个、两个、三个冲进白里化成灰。
+//   ②–⑥ 2026-10-21 重做，一个镜头（lib/streetcam.ts）：
+//   ② 43.92–47.92「我们的周围并非没光亮 / 只是太耀眼将我们灼伤」（lib/dawn.ts）：直接切到天亮的街上：小石头离了地往上飘，妈妈攥着拴在他脚踝上的
+//      红绳往下拽，拽不住，被拖得踮起脚，「灼」她的脚也离了地。
+//   ③ 47.92–49.98「在这个世界难免会迷茫」（lib/coat.ts）：妈妈两把把自己拽到儿子跟前，脱下外套（下摆缝着铅）裹在他身上，他一沉，「茫」抱住
+//      妈妈的脚踝；沉沉从左边跑进来。
+//   ④ 49.98–51.93「但别再把小刀带在身上」（lib/knife.ts）：沉沉抓住小石头的脚踝，三个人连在一根红绳上还在往上飘，沉沉的铁靴也离了地；
+//      妈妈哭着笑，「小刀」割断手腕上的红绳；沉沉抱着小石头落地「咚」。
+//   ⑤ 51.93–53.94「至少我还在为你而歌唱」（lib/sing.ts）：死亡不追拍——镜头在地上：天上的妈妈伸下手、低头看着儿子含泪笑，慢慢往上飘；
+//      「歌」她仰起脸迎着光，飞出画面。
+//   ⑥ 53.94–55.98「在黑暗漫长的反乌托邦」（lib/ash.ts）：54.018 天上炸开彩色的光，压下来照在地上两个人脸上；小石头埋进沉沉怀里哭，
+//      沉沉紧紧抱住他；灰像雪一样落下来。
 //   ⑦ 55.98–60.02「即便我们都在这黑暗漫长的反乌托邦」（lib/memory.ts）：推近沉沉闭着眼的脸，「在这」溶成同一位置、同样大小的小时候的脸——
 //      十二年前同一条街，七岁的她穿着妈妈的大铁靴仰着头，光着脚的妈妈往天上飘；镜头从她脸上拉开。
 //   ⑧ 60.02–64.02「邦」拖着的 4 秒（lib/sign.ts，还在十二年前，同一个镜头）：推到天上的妈妈手里，她掏出一块小木牌竖着写下「活下去」，
@@ -21,18 +23,19 @@
 // 第二幕的城、她那扇窗、她的屋子都从 lib/stage.ts 画（和第二幕同一套），接过去的那一帧一样。
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
-import { type Cam, E, applyCam, ph, shake, viewOf } from "../lib/cam";
-import { drawBurst, drawStreet, drawTinted, makeGrain, prepareCity, setDusk } from "../lib/world";
+import { type Cam, E, applyCam, ph, shake, spinBlur, viewOf } from "../lib/cam";
+import { drawBurst, drawRays, drawStreet, drawTinted, makeGrain, prepareCity, setDusk } from "../lib/world";
 import { loadHandFont } from "../lib/note";
 import { skyLook } from "../lib/sky";
 import { makeStage } from "../lib/stage";
-import { drawMan, drawNetLayer, manRopeSeg, netCam, netShake, netWide } from "../lib/net";
-import { DAWN_T, ZHONG_HOUSE, ZHONG_NEIGHBORS, dawnCam, dawnShake, dawnSky, drawDazzle, drawStreet2 } from "../lib/dawn";
+import { NET_T, drawFree, drawFreeBursts, drawMan, drawNetLayer, manRopeSeg, netFlash, netWide } from "../lib/net";
+import { DAWN_T, ZHONG_HOUSE, ZHONG_NEIGHBORS, dawnSky, drawDazzle, drawStreet2 } from "../lib/dawn";
 import { drawHouse, drawHouseWindowFront } from "../lib/props";
-import { COAT_T, coatCam, drawChen3, drawCoat3 } from "../lib/coat";
-import { KNIFE_T, drawKnife4, knifeCam, knifeShake } from "../lib/knife";
-import { SING_T, drawSing5, singAt, singCam } from "../lib/sing";
-import { ASH_T, ashCam, ashFlash, ashShake, burnLine, burnedOut, burstAt, drawBits, drawSnow } from "../lib/ash";
+import { COAT_T, drawChen3, drawCoat3 } from "../lib/coat";
+import { KNIFE_T, drawKnife4 } from "../lib/knife";
+import { SING_T, drawSing5, singAt } from "../lib/sing";
+import { ASH_T, ashFlash, ashRays, burstAt, drawSkyBloom, drawSnow } from "../lib/ash";
+import { streetCam, streetLook, streetShake } from "../lib/streetcam";
 import { MEM_T, drawThen, memoryGrade, nowCam, thenCam } from "../lib/memory";
 import { SIGN_T, drawDust, drawFallingBoard, drawMemAsh, drawMemFlash, drawSign8, signCam, signShake } from "../lib/sign";
 import { GROW_T, backCam, drawGrow, growCam, memoryAmount } from "../lib/grow";
@@ -54,7 +57,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const { drawWorld, drawAir, windowCovers, drawInside } = makeStage(base, grain, ZHONG_NEIGHBORS);
   /** 这一幕的镜头：①接②（同一个镜头） */
   /** 现在这条线的镜头（⑦ 推近沉沉的脸为止） */
-  const nowAt = (t: number) => nowCam(t, (tn) => ashCam(tn, (t0) => singCam(t0, (t1) => knifeCam(t1, (t2) => coatCam(t2, (t3) => dawnCam(t3, netCam))))));
+  const nowAt = (t: number) => nowCam(t, streetCam);
   /** 间奏最后接回现在（和十九岁跪下来的她对齐） */
   const camAt = (t: number): Cam => backCam(t, nowAt, thenCamAt);
   /** ⑦⑧、间奏 十二年前的镜头 */
@@ -109,9 +112,9 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   };
 
   /** 夜里（天亮）的城和网、街上（她那扇窗、窗里的屋子由 stage 画） */
-  const drawNight = (g: CanvasRenderingContext2D, t: number) => {
+  const drawNight = (g: CanvasRenderingContext2D, t: number, beforeMan?: () => void) => {
     const cam = camAt(t);
-    const sh = shake(t, netShake(t) + dawnShake(t) + knifeShake(t) + ashShake(t));
+    const sh = shake(t, streetShake(t));
     setDusk(...dawnSky(t));
     try {
       drawWorld(g, cam, t, sh, (D) => {
@@ -129,9 +132,15 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       if (v.y1 > -400) drawStreet(g, cam);
       applyCam(g, base, cam, 1, sh);
       drawNetLayer(g, t, 1, cam.z, manRopeSeg(t));
+      // ① 他往上飞得很快：楼、窗、网按快门竖着拖影，他自己清楚（拖完再画他）
+      if (beforeMan) {
+        beforeMan();
+        applyCam(g, base, cam, 1, sh);
+      }
       drawMan(g, t, cam.z);
-      // ② 街上的小石头和妈妈
-      if (t > DAWN_T.dive0 - 0.2) {
+      drawFree(g, t, cam.z);
+      // ②–⑥ 街上：小石头和妈妈、沉沉（夜里、清晨的那层色）；⑤ 往上飘走的妈妈（单独蒙色：她已经飘出街上那一块了）；⑥ 落下来的灰
+      if (t >= DAWN_T.start) {
         drawTinted(g, [-3400, -2800, -1500, 80], (gg) => {
           if (t <= COAT_T.start) drawStreet2(gg, t, cam.z);
           else if (t <= KNIFE_T.start) {
@@ -139,29 +148,27 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
             drawChen3(gg, t, cam.z);
           } else drawKnife4(gg, t, cam.z, t <= SING_T.start);
         }, 0.85);
-        // ⑤ 往白里飘的妈妈（单独蒙色：她已经飘出街上那一块了）；⑥ 碰到白以后从头顶往下一截截散成光点
-        if (t > SING_T.start && !burnedOut(t)) {
+        if (t > SING_T.start && t < ASH_T.touch) {
           const r = singAt(t).root;
-          const line = burnLine(t);
-          g.save();
-          if (line !== null) {
-            g.beginPath();
-            g.rect(r[0] - 3000, line, 6000, 9000);
-            g.clip();
-          }
           drawTinted(g, [r[0] - 600, r[1] - 1000, r[0] + 600, r[1] + 200], (gg) => drawSing5(gg, t, cam.z), 0.85);
-          g.restore();
         }
-        drawBits(g, t, cam.z);
         drawSnow(g, t, cam.z);
         drawDazzle(g, t);
       }
       // 退出窗时外面的空气（浮尘、白）跟着倍数淡进来（和⑧推进窗反过来）
-      drawAir(g, cam, t, sh, skyLook(t), E.io(ph(cam.z, 2, 6)), ashFlash(t));
+      drawAir(g, cam, t, sh, t >= DAWN_T.start ? streetLook(t, skyLook(t)) : skyLook(t), E.io(ph(cam.z, 2, 6)), ashFlash(t) + netFlash(t));
+      // ① 退到整座城上：白往下打几道宽宽的斜光（和序章全城那个画面一样），天亮以后淡掉
+      if (t < DAWN_T.start) drawRays(g, base, cam, t, netWide(cam));
+      // ⑥ 天上炸开彩色的光：白往下打几道光（照在地上仰着头的两个人身上）
+      else if (t > ASH_T.touch) drawRays(g, base, cam, t, 0.95 * ashRays(t));
+      // ① 没被拴住的人碰到白：彩色光环、灰（画在最上面）
+      drawFreeBursts(g, base, cam, t);
       // ⑥ 碰到白：一圈像肥皂泡边一样的彩色光炸开（画在最上面）
+      drawSkyBloom(g, base, t);
       if (t > ASH_T.touch - 0.02 && t < ASH_T.touch + 2) {
         const b = burstAt();
-        drawBurst(g, base, cam, b[0], b[1], t - ASH_T.touch, 1.4);
+        drawBurst(g, base, cam, b[0], b[1], t - ASH_T.touch, 2.1);
+        drawBurst(g, base, cam, b[0] - 260, b[1] + 200, t - ASH_T.touch - 0.12, 1.2);
       }
     } finally {
       setDusk(0);
@@ -206,9 +213,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         drawInside(ctx, t, cam);
         return;
       }
-      drawNight(ctx, t);
+      // ① 转场切过来还在转：转着拖影；转正以后他往上飞得很快：背景竖着拖影（他自己不拖）
+      const flying = t >= NET_T.upright - 0.05 && t < NET_T.yank + 0.02;
+      drawNight(ctx, t, flying ? () => smear(cam.z, camAt(t - 1 / 120), camAt(t + 1 / 120)) : undefined);
+      if (t < NET_T.upright) spinBlur(ctx, buf, bctx, ((camAt(t + 0.004).r - camAt(t - 0.004).r) / 0.008) / 48);
       // ④顺着掉下去的红绳甩到街上、⑤顺着视线往上甩：镜头竖着甩得很快，按 1/48 秒快门竖着拖一下
-      const whip = (t > KNIFE_T.whip0 - 0.03 && t < KNIFE_T.land + 0.03) || (t > SING_T.start && t < SING_T.catch + 0.05);
+      const whip = t > KNIFE_T.whip0 - 0.03 && t < KNIFE_T.land + 0.03;
       if (whip) smear(cam.z, camAt(t - 1 / 120), camAt(t + 1 / 120));
     },
     dispose() {

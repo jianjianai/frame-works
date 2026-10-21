@@ -2,15 +2,16 @@
 // 「茫」拖到 49.9；小节线 48.02、50.02）。接着②（同一个镜头）：母子俩一起被带着往上飘。妈妈顺着红绳两把把自己拽到儿子跟前，
 // 脱下自己的橘色外套（下摆缝了一圈铅）裹在他身上——他一下有了分量，往下一沉，「茫」抱住了妈妈的脚踝，把她往下坠了一下；
 // 妈妈低头看着他，哭着笑。沉沉从最高那栋楼那边冲过来（下一镜抓住小石头的脚踝）。
+// 2026-10-21 重做：镜头都在 lib/streetcam.ts（②–⑥ 一个镜头），这里只管人和东西。
 
 import { CAST, type CastSpec, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, swapSides } from "@materials/剪纸角色/code/chengtuo";
-import { type Cam, E, aim, camLerp, ph } from "./cam";
+import { E, ph } from "./cam";
 import { INK, part } from "./world";
 import { ARMS, LIMP, SMOOTH, live } from "./motion";
 import { CHEN, armL, armR, legL, legR } from "./poses";
 import { drawPerson } from "./people";
-import { DAWN_T, MOM, MOM_POSES, MOM_X, STONE, STONE_POSES, momLift, pose, streetAt } from "./dawn";
+import { DAWN_MOM_KEYS, DAWN_STONE_KEYS, DAWN_T, MOM, MOM_POSES, MOM_X, STONE, STONE_POSES, momLift, momSkid, pose, streetAt } from "./dawn";
 
 type V2 = [number, number];
 const mix = (a: V2, b: V2, k: number): V2 => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
@@ -72,11 +73,7 @@ export const STONE3 = {
 };
 /** ③她的关键帧（④接着往后加） */
 export const MOM3_KEYS: MoveKey[] = [
-    { t: 45.5, x: 0, p: MOM_POSES.拽绳 },
-    { t: DAWN_T.land + 0.1, p: MOM_POSES.拽绳 },
-    { t: 47.0, ease: "inOut", p: MOM_POSES.踮脚 },
-    { t: DAWN_T.lift - 0.04, p: MOM_POSES.踮脚 },
-    { t: DAWN_T.lift + 0.2, ease: "out", p: MOM_POSES.离地 },
+    ...DAWN_MOM_KEYS,
     { t: 48.32, p: MOM_POSES.离地 },
     { t: COAT_T.off - 0.02, ease: "inOut", p: MOM3.脱外套 },
     { t: COAT_T.off + 0.16, ease: "inOut", p: MOM3.裹 },
@@ -87,9 +84,7 @@ export const MOM3_OPTS = { look: lookOf(MOM), base: { wind: 0.6 }, idle: true, s
 const momMove3 = live([...MOM3_KEYS, { t: 52, p: MOM3.低头看他 }], MOM3_OPTS);
 /** ③他的关键帧（④接着往后加） */
 export const STONE3_KEYS: MoveKey[] = [
-    { t: 45.5, x: 0, p: STONE_POSES.飘 },
-    { t: 46.7, p: STONE_POSES.飘 },
-    { t: 47.3, ease: "inOut", p: STONE_POSES.够 },
+    ...DAWN_STONE_KEYS,
     { t: 48.0, p: STONE_POSES.够 },
     { t: COAT_T.pull2, ease: "inOut", p: STONE3.被拉下来 },
     { t: COAT_T.meet + 0.06, ease: "inOut", p: STONE3.被抱着 },
@@ -104,7 +99,7 @@ export function momRoot(t: number): V2 {
   const climb = 210 * E.out(ph(t, COAT_T.pull1, COAT_T.pull1 + 0.14)) + 200 * E.out(ph(t, COAT_T.pull2, COAT_T.pull2 + 0.14));
   const dip = 80 * E.out(ph(t, COAT_T.grab, COAT_T.grab + 0.09)) * (1 - 0.7 * E.io(ph(t, COAT_T.grab + 0.09, COAT_T.grab + 0.6)));
   const rise = 60 * E.io(ph(t, 49.3, 50.4));
-  return [MOM_X + 6 * Math.sin(t * 1.2), -momLift(t) - climb + dip - rise];
+  return [MOM_X + momSkid(t) + 6 * Math.sin(t * 1.2) * ph(t, COAT_T.start, COAT_T.start + 0.4), -momLift(t) - climb + dip - rise];
 }
 
 /** 这一刻的两个人：姿势、根、手里攥的地方（IK）、外套在哪 */
@@ -130,7 +125,9 @@ export function coatAt(t: number) {
   const meet: V2 = [chest[0] + 34, chest[1] + 150];
   const hang: V2 = [ankleM[0] + 6 + 10 * Math.sin(t * 2.2), ankleM[1] + 182];
   const u = 0.5 * E.out(ph(t, T.pull1, T.pull1 + 0.14)) + 0.5 * E.out(ph(t, T.pull2, T.pull2 + 0.14));
+  // 拽过来的路上往右绕一点（不从她脸前面过）
   let hip = mix(hip2, meet, u);
+  hip = [hip[0] + 90 * Math.sin(Math.PI * u), hip[1]];
   hip = mix(hip, hang, E.in2(ph(t, T.wrap, T.grab)));
   const sRoot: V2 = [hip[0] - sj.hip[0], hip[1] - sj.hip[1]];
   const sk = STONE.scale;
@@ -234,14 +231,14 @@ export function drawCoat3(g: CanvasRenderingContext2D, t: number, z: number) {
   g.lineWidth = 3.6;
   g.stroke(path);
   g.restore();
-  drawPerson(g, c.stone.spec, c.stone.pose, c.stone.root[0], c.stone.root[1], z);
-  // 脱下来、裹过去的外套：领子在她两只手里（刚脱下来时在她肩上）
+  // 脱下来、裹过去的外套：领子在她两只手里（刚脱下来时在她肩上）；画在他后面——绕到他背后裹上去，他的脸一直看得见
   if (t >= T.off && t < T.wrap) {
     const k = E.io(ph(t, T.off, T.off + 0.12));
     const a = mix([c.mom.shR[0] - 10, c.mom.shR[1] - 6], c.mom.palmR, k);
     const b = mix([c.mom.shL[0] + 10, c.mom.shL[1] - 6], c.mom.palmL, k);
     drawCoat(g, a, b, t);
   }
+  drawPerson(g, c.stone.spec, c.stone.pose, c.stone.root[0], c.stone.root[1], z);
 }
 
 // ——— 沉沉：从最高那栋楼那边冲过来（朝右跑，铁靴一步一「咚」），慢下来停在他们左下 ———
@@ -275,22 +272,4 @@ export function drawChen3(g: CanvasRenderingContext2D, t: number, z: number) {
   g.translate(r[0], r[1]);
   drawChengtuo(g, pose, { line: 1 / Math.sqrt(Math.max(0.3, z)) });
   g.restore();
-}
-
-// ——— 镜头 ———
-/**
- * ③的镜头（以②的镜头为底）：跟着两个人（她的头到他的脚中间那一点），先往下（她把他拽下来），他一沉再跟着往下一点；
- * 沉沉冲进来时往左挪、往后退一点，把街面和冲过来的她框进来
- */
-export function coatCam(t: number, base: (t: number) => Cam): Cam {
-  const T = COAT_T;
-  if (t <= T.start) return base(t);
-  const c0 = base(t);
-  const c = coatAt(t);
-  const top = c.mom.root[1] - 600;
-  const bottom = c.stone.root[1];
-  const center: V2 = [(c.mom.root[0] + c.stone.root[0]) / 2, (top + bottom) / 2];
-  let cam = camLerp(c0, aim(center[0] - 30, center[1], 540, 900, 0.95), E.io(ph(t, T.start, T.meet + 0.1)));
-  cam = camLerp(cam, aim(-2470, -660, 540, 980, 0.86), E.io(ph(t, T.chen0, T.end + 0.2)));
-  return cam;
 }

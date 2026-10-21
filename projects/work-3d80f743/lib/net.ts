@@ -1,9 +1,13 @@
 // 副歌一①「只因为 / 你那渴望自由的心脏 / 困在一张没空隙的网」（39.39–43.92）。字（酷狗逐字）：只 39.39 因 39.72 为 39.84（拖到 40.7），
 // 40.016 副歌鼓进来；你 40.74 那 40.80 渴 40.86 望 40.92 自 40.98 由 41.04 的 41.10 心 41.37 脏 41.70；困 41.94 在 42.09 一 42.15 张 42.21
 // 没 42.27 空 42.33 隙 42.39 的 42.45 网 42.51（拖到 43.9）。
-// 一个镜头：从她的屋子退出窗外（⑧推进窗反过来）：夜里最高那栋楼的顶层，她那扇亮着的窗。副歌一进来，窗外的巷子里一个人往上飘——
-// 张着手、闭着眼笑，越飘越快，从她窗外升过去，扑向头顶的白；「困」拴在他脚踝上的红绳一下绷直，把他拽住（另一头拴在他家的窗上，
-// 就在她家楼下几层）。镜头往后一路退到整座城：天上到处是这样被拴住的人，一根根红绳从城里的窗、楼顶拉上来，缠成一张盖住整座城的网。
+// 2026-10-21 用户重做（「之前做的不太行，这次换个地图的地方」）：
+// 一个镜头：⑫ 最后画面倒着、还在顺时针转——转场一甩切过来，接着同一个方向转、越转越慢，副歌鼓进来（40.016）时正好转正。
+// 最高那栋楼右边（楼面一排排窗在画面左边往下刷过去，下面是老钟家左边那栋五层楼），一个人张着手、仰着脸笑着往上飞，越飞越快——
+// 渴望自由；「心」「脏」胸口那团光跳两下；快到白的时候，「困」拴在他脚踝上的红绳一下绷直，把他拽住（另一头拴在他家的窗上）。
+// 他刚被拽住，一个没被拴住的人从他身边冲上去，「网」碰到白，散成光点和灰——他抬头看着。
+// 镜头一下往后撤，越撤越慢，落在整座城上：天上到处是和他一样被红绳拴住的人，一根根红绳从城里的窗、楼顶拉上来，交错成一张盖住整座城的网；
+// 网上面没被拴住的人一拍一个（三拍里 1、2、3 个）冲进白里，炸开彩色的光环、化成灰落下来（和序章一样）。
 // 她拴着自己（脚绳是她自己拴在椅子上的），他们是被家里人拴住的。
 
 import { type CastSpec, castJoints, lookOf, passerby } from "@materials/剪纸角色/code/cast";
@@ -11,33 +15,31 @@ import { type Angles, type MoveKey, type PoseIn, figurePose } from "@materials/�
 import { seeded } from "@frame/engine/math";
 import { beatAt } from "@frame/engine/tempo";
 import { type Cam, E, H, W, aim, camLerp, kick, ph } from "./cam";
-import { type Block, INK, LAYERS, QJ_HOME, STREET, TOWER, drawGlow, drawSilhouette, drawTinted } from "./world";
+import { type Block, INK, LAYERS, QJ_HOME, STREET, TOWER, Y_WHITE, drawAshFall, drawBurst, drawGlow, drawSilhouette, drawTinted, whiteEdge } from "./world";
 import { LIMP, live } from "./motion";
 import { armL, armR, legL, legR } from "./poses";
 import { drawPerson } from "./people";
-import { twelveCam } from "./write";
-import { homeWindow } from "./night";
 import { DAWN_T, nightGlow } from "./dawn";
+import { NET_SPIN0 } from "./write";
 
 type V2 = [number, number];
 
 export const NET_T = {
   start: 39.39,
-  /** 退出窗外，停在「她亮着的窗 + 楼顶 + 头顶的白」上 */
-  out: 40.1,
-  /** 他升到画面中间以后镜头跟上去、往上抬 */
-  follow0: 41.3,
-  follow1: 41.72,
+  /** 转场接过来还在转，越转越慢，副歌鼓进来时转正 */
+  upright: 39.99,
   /** 「心」「脏」：他胸口那团光跳一下 */
   heart: 41.37,
   heart2: 41.7,
   /** 「困」：红绳绷直（小节线） */
   yank: beatAt(84),
-  /** 往后退开，落在整座城上 */
-  pull0: 42.06,
-  wide: 43.7,
+  /** 往后撤，落在整座城上 */
+  pull0: 42.1,
+  wide: 43.62,
   end: 43.92,
 };
+/** 没被拴住、冲进白里化成灰的人碰到白的那几拍：「网」一个，之后一拍两个、一拍三个 */
+export const ASH_BEATS = [beatAt(85), beatAt(86), beatAt(87)];
 
 function pose(lean: number, rest: Omit<Angles, "lean">, arms: (lean: number) => Angles): Angles {
   return { lean, ...rest, ...arms(lean) };
@@ -46,6 +48,11 @@ function pose(lean: number, rest: Omit<Angles, "lean">, arms: (lean: number) => 
 // ——— 往上飘的那个人（路人，短发：失重只给一点，|face| 别停在 0.2–0.45，头发会画成尖） ———
 const MAN: CastSpec = passerby(5);
 const MAN_POSES = {
+  /** 往上飞：两只手张开、胸口挺着，仰着脸闭着眼笑，腿拖在后面（风从头顶往下吹） */
+  飞: pose(-10, { face: -0.85, ground: false, float: 0.12, rot: -2, ...legL(-10, -40, -50), ...legR(14, -30, -46), neck: 26, expression: "释然", blink: 1, smile: 0.6 }, (l) => ({
+    ...armL(-62, 18, -10, "open", l),
+    ...armR(120, 16, 8, "open", l),
+  })),
   /** 往上飘：远处的手伸向白、近处的手往后，腿拖在后面，仰着头、闭着眼笑（松了一口气） */
   升: pose(-6, { face: -0.85, ground: false, float: 0.12, rot: -4, ...legL(-8, -44, -50), ...legR(12, -24, -46), neck: 22, expression: "释然", blink: 1, smile: 0.45 }, (l) => ({
     ...armL(-30, 24, -10, "open", l),
@@ -56,6 +63,11 @@ const MAN_POSES = {
     ...armL(150, 30, 0, "open", l),
     ...armR(172, 20, 0, "open", l),
   })),
+  /** 抬头看：旁边那个人冲进白里散成灰，他仰着脸看着，嘴微张 */
+  抬头看: pose(0, { face: -0.85, ground: false, float: 0, rot: 2, ...legL(0, -4, -44), ...legR(20, -40, -36), neck: 24, expression: "难过", sad: 0.9, lookX: 0.3, lookY: -0.7 }, (l) => ({
+    ...armL(24, 30, 0, "relax", l),
+    ...armR(120, 40, 0, "open", l),
+  })),
   /** 悬着：远处的手还举着，近处的手垂下来，低头看着拴住他的那根绳子 */
   悬着: pose(0, { face: -0.85, ground: false, float: 0, rot: 2, ...legL(0, -4, -44), ...legR(20, -40, -36), neck: -18, expression: "难过", sad: 0.85, lookX: 0.1, lookY: 0.8 }, (l) => ({
     ...armL(20, 30, 0, "relax", l),
@@ -64,33 +76,43 @@ const MAN_POSES = {
 };
 const manMove = live(
   [
-    { t: 39.3, x: 0, p: MAN_POSES.升 },
+    // 张开手往上飞；「自由」两只手往白伸过去；「困」被拽住；旁边那个人散成灰时抬头看；之后低头看着拴住他的绳子
+    { t: 39.3, x: 0, p: MAN_POSES.飞 },
+    { t: 40.9, p: MAN_POSES.飞 },
+    { t: 41.3, ease: "inOut", p: MAN_POSES.升 },
     { t: NET_T.yank - 0.01, p: MAN_POSES.升 },
     { t: NET_T.yank + 0.07, ease: "out", p: MAN_POSES.拽住 },
-    { t: NET_T.yank + 0.42, ease: "inOut", p: MAN_POSES.悬着 },
+    { t: ASH_BEATS[0] - 0.12, ease: "inOut", p: MAN_POSES.抬头看 },
+    { t: ASH_BEATS[0] + 0.5, p: MAN_POSES.抬头看 },
+    { t: ASH_BEATS[0] + 0.95, ease: "inOut", p: MAN_POSES.悬着 },
     { t: 44.5, p: MAN_POSES.悬着 },
   ] as MoveKey[],
   { look: lookOf(MAN), base: { wind: 0.5 }, idle: true, seed: 31, springs: LIMP, follow: 0 },
 );
-/** 他在最高那栋楼左边的巷子里往上飘（她那扇窗在巷子右边的墙上） */
-const MAN_X = -3880;
-/** 「困」那一刻他的胯在哪、往上飘得多快（越靠近白越快：每秒 650 → 1010） */
+/** 他在最高那栋楼右边往上飞（楼面在他左边；下面是老钟家左边那栋五层楼和②的那条街） */
+const MAN_X = -2440;
+/** 「困」那一刻他的胯在哪；转场切过来时在哪（五层楼楼顶上面、最高那栋楼半腰）；越飞越快 */
 const Y_TOP = -8760;
-const V_YANK = 1010;
-const ACC = 180;
+const Y_START = -3150;
+/** 匀加速：39.39 每秒 V0，「困」那一刻的速度由距离算出来 */
+const V0 = 1250;
+const FLY = NET_T.yank - NET_T.start;
+const ACC = (2 * (Y_START - Y_TOP - V0 * FLY)) / (FLY * FLY);
 /** 他的胯（世界坐标）：「困」之前一路往上；那一下停住、被拽得往下一沉再弹两下 */
 /** ② 天亮时他也被收回家里的窗（比别人早一点） */
 const MAN_REEL = DAWN_T.reel0 + 0.25;
 function manHip(t: number): V2 {
-  const x = MAN_X + 18 * Math.sin(t * 1.3);
-  const tau = NET_T.yank - t;
-  if (tau > 0) return [x, Y_TOP + V_YANK * tau - 0.5 * ACC * tau * tau];
-  const d = -tau;
-  const y = Y_TOP + 115 * Math.exp(-d / 0.16) * Math.sin(d * 17) + 24 * (1 - Math.exp(-d / 0.3));
+  const x = MAN_X + 14 * Math.sin(t * 1.3);
+  const d0 = Math.max(0, t - NET_T.start);
+  if (t < NET_T.yank) return [x, Y_START - V0 * d0 - 0.5 * ACC * d0 * d0];
+  const d = t - NET_T.yank;
+  const y = Y_TOP + 150 * Math.exp(-d / 0.16) * Math.sin(d * 17) + 30 * (1 - Math.exp(-d / 0.3));
   const u = E.io(ph(t, MAN_REEL, MAN_REEL + 0.7));
   const back: V2 = [MAN_ANCHOR[0], MAN_ANCHOR[1] - 330];
   return [x + (back[0] - x) * u, y + (back[1] - y) * u];
 }
+/** 他往上飞的速度（每秒，世界坐标）：镜头竖着拖影按它算 */
+export const manSpeed = (t: number) => (t < NET_T.start || t >= NET_T.yank ? 0 : V0 + ACC * (t - NET_T.start));
 /** 他还看得见多少（收进窗里以后淡掉） */
 const manA = (t: number) => 1 - ph(E.io(ph(t, MAN_REEL, MAN_REEL + 0.7)), 0.75, 1);
 /** 他这一刻：姿势、根、胯、近处那只脚踝（红绳拴在这里） */
@@ -119,8 +141,8 @@ const colsOf = (b: Block) => Math.max(2, Math.round(b.w / (b.fh / 128) / 150));
 /** 楼顶的女儿墙上（拴不到窗的矮楼） */
 const roofOf = (b: Block, k: number): V2 => [b.x + b.w * k, -b.floors * b.fh - 40];
 
-/** 他家的窗：最高那栋楼最左边那一列，她家往下第六层 */
-const MAN_ANCHOR = sillOf(TOWER, 6, 0);
+/** 他家的窗：最高那栋楼最右边那一列，往下第二十二层（离街面七层） */
+const MAN_ANCHOR = sillOf(TOWER, 21, colsOf(TOWER) - 1);
 /** 红绳多长：「困」那一刻正好绷直 */
 let manRopeLen = 0;
 const manRope = () => (manRopeLen ||= Math.hypot(manAt(NET_T.yank).ankle[0] - MAN_ANCHOR[0], manAt(NET_T.yank).ankle[1] - MAN_ANCHOR[1]));
@@ -161,11 +183,18 @@ function buildNet(): Hanger[] {
   const near: [number, number, Block, number, number, Angles, number][] = [
     // 胯 x、胯 y、拴在哪栋楼、第几层、第几扇、姿势、第几个路人
     [-4560, -8640, QJ_HOME, 13, 0, HANG_B, 12],
-    [-2480, -8840, TOWER, 9, 2, HANG_A, 22],
+    [-1960, -8860, TOWER, 9, 2, HANG_A, 22],
     [-5380, -8930, STREET[5], 1, 1, HANG_A, 3],
-    [-1660, -8580, TOWER, 16, 2, HANG_B, 17],
+    [-1420, -8600, TOWER, 16, 2, HANG_B, 17],
     [-6150, -8760, STREET[6], 0, 0, HANG_B, 27],
-    [-2680, -9010, TOWER, 4, 2, HANG_A, 8],
+    [-2950, -9010, TOWER, 4, 2, HANG_A, 8],
+    // 2026-10-21 加：他被拽住以后镜头往后撤，先看见身边一圈和他一样被拴着的人
+    [-3420, -8700, QJ_HOME, 6, 1, HANG_B, 31],
+    [-1000, -8930, STREET[0], 2, 0, HANG_A, 35],
+    [-3950, -8980, TOWER, 14, 0, HANG_A, 14],
+    [-700, -8560, STREET[0], 4, 1, HANG_B, 19],
+    [-5000, -8820, QJ_HOME, 20, 0, HANG_A, 25],
+    [-3260, -8760, TOWER, 24, 1, HANG_B, 6],
   ];
   near.forEach(([x, y, b, f, i, p, n], k) => {
     const spec = passerby(n);
@@ -377,7 +406,7 @@ function manRopePts(t: number, ankle: V2): V2[] {
   const slack = t > NET_T.yank ? 0 : Math.max(0, manRope() - d);
   const n: V2 = [-(B[1] - ankle[1]) / d, (B[0] - ankle[0]) / d];
   const dy = t - NET_T.yank;
-  const amp = 0.55 * Math.sqrt(slack * 60) + (dy > 0 ? 40 * Math.exp(-dy / 0.12) * Math.sin(dy * 2 * Math.PI * 7) : 0);
+  const amp = Math.min(140, 0.55 * Math.sqrt(slack * 60)) + (dy > 0 ? 40 * Math.exp(-dy / 0.12) * Math.sin(dy * 2 * Math.PI * 7) : 0);
   const pts: V2[] = [];
   for (let i = 0; i <= 16; i++) {
     const u = i / 16;
@@ -407,39 +436,138 @@ export function drawMan(g: CanvasRenderingContext2D, t: number, z: number) {
   g.globalAlpha = ga;
 }
 
-// ——— 镜头 ———
-/** 退出窗外以后：她那扇窗在画面右下（640, 1100），左边是他飘上来的巷子，上面是楼顶和白 */
-const OUT = (() => {
-  const w = homeWindow();
-  return aim(w.x + w.w / 2, w.y + w.h / 2, 640, 1100, 0.85);
+// ——— 没被拴住的人：从城里冲上来、碰到白散成灰（一拍一下，和序章一样） ———
+interface Free {
+  /** 胯 x、碰到白那一刻、往上冲多快（每秒）、碰到白以前多久出现、多大、彩色光环多大 */
+  x: number;
+  tb: number;
+  speed: number;
+  span: number;
+  k: number;
+  burst: number;
+  spec: CastSpec;
+  pose: PoseIn;
+}
+/** 冲向白：两只手举过头顶、仰着脸闭着眼笑 */
+const FREE_POSE: Angles = pose(-6, { face: 0.85, ground: false, float: 0.15, rot: 3, ...legL(-8, -40, -50), ...legR(10, -26, -46), neck: 24, expression: "释然", blink: 1, smile: 0.5 }, (l) => ({
+  ...armL(160, 14, 0, "open", l),
+  ...armR(172, 10, 0, "open", l),
+}));
+const FREE: Free[] = (() => {
+  const list: [number, number, number, number, number, number, number][] = [
+    // 胯 x、第几拍、每秒冲多快、提前多久出现、大小、光环、第几个路人
+    // 「网」：他刚被拽住，一个人从他身后下面冲上来、从他右边擦过去，就在他眼前散掉（镜头刚开始往后撤）
+    [MAN_X + 330, 0, 3800, 0.75, 1, 0.85, 33],
+    // 之后一拍两个、一拍三个，在网上面那一片天里（落在整座城的取景里）
+    [-4700, 1, 2300, 1.3, 0.95, 0.42, 9],
+    [-1500, 1, 2300, 1.3, 0.95, 0.42, 21],
+    [-5800, 2, 2400, 1.5, 1, 0.5, 4],
+    [-3300, 2, 2400, 1.5, 1, 0.62, 15],
+    [-800, 2, 2400, 1.5, 1, 0.5, 28],
+  ];
+  return list.map(([x, b, speed, span, k, burst, n]) => {
+    const spec = passerby(n);
+    return { x, tb: ASH_BEATS[b], speed, span, k, burst, spec, pose: figurePose({ ...FREE_POSE, face: n % 2 ? 0.85 : -0.85 }, 50 + n, lookOf(spec)) };
+  });
 })();
-
+/** 一个没被拴住的人的胯（碰到白以前）：从下面冲上来、越冲越快（之前不画：在画面外的城里） */
+function freeHip(p: Free, t: number): V2 | null {
+  const d = p.tb - t;
+  if (t >= p.tb + 0.28 || d > p.span) return null;
+  const top = whiteEdge(p.x, p.tb) + 330 * p.k;
+  const dd = Math.max(0, d);
+  return [p.x + 10 * Math.sin(t * 1.7 + p.x), top + p.speed * dd * (1 + 0.35 * dd)];
+}
 /**
- * 这一镜的镜头：从她的屋子（⑫最后一帧）退出窗外（E.io，0.7 秒退 13 倍，副歌鼓进来时停稳）；停着几乎不动，他从画面下面升上来、
- * 从她窗外过去；他升到画面中间以后镜头跟着他往上抬（往左挪一点，他在画面 400、1000）；「困」他一下停住，镜头冲过去一点再一顿；
- * 然后柔和起步、一路减速地往后退到整座城（E.settle，1.6 秒），最后极慢地漂一点
+ * 画没被拴住的人（人这一层，世界坐标）：身上一团暖光，越靠近白越亮；碰到白以后 0.28 秒里从头顶往下一截截没了
+ * （光环、灰在 drawFreeBursts 里，画在最上面）
+ */
+export function drawFree(g: CanvasRenderingContext2D, t: number, z: number) {
+  for (const p of FREE) {
+    const h = freeHip(p, t);
+    if (!h) continue;
+    const j = castJoints(p.spec, p.pose);
+    const near = Math.min(1, Math.max(0, 1 - (h[1] - Y_WHITE) / 1400));
+    drawGlow(g, h[0], h[1] - 200 * p.k, 300 * p.k * (1 + 0.5 * near) + 24 / z, (0.45 + 0.5 * near) * nightGlow(t));
+    g.save();
+    if (t > p.tb) {
+      // 从头顶往下一截截散掉
+      const top = h[1] - 520 * p.k + 760 * p.k * E.in2(ph(t, p.tb, p.tb + 0.28));
+      g.beginPath();
+      g.rect(h[0] - 800, top, 1600, 2000);
+      g.clip();
+    }
+    const hpx = 590 * p.k * z;
+    if (hpx < 70) drawSilhouette(g, h[0], h[1], 590 * p.k * p.spec.scale, t, p.x, 0.9, "92,62,86");
+    else
+      drawTinted(g, [h[0] - 420 * p.k, h[1] - 640 * p.k, h[0] + 420 * p.k, h[1] + 420 * p.k], (gg) => {
+        gg.translate(h[0], h[1]);
+        gg.scale(p.k, p.k);
+        drawPerson(gg, p.spec, p.pose, -j.hip[0], -j.hip[1], z * p.k);
+      }, 0.8);
+    g.restore();
+  }
+}
+/** 碰到白的那一下：彩色光环、散开的灰（画在最上面，画面坐标） */
+export function drawFreeBursts(g: CanvasRenderingContext2D, base: DOMMatrix, cam: Cam, t: number) {
+  for (const p of FREE) {
+    if (t < p.tb) continue;
+    const y = whiteEdge(p.x, p.tb);
+    drawBurst(g, base, cam, p.x, y, t - p.tb, p.burst);
+    drawAshFall(g, base, cam, p.x, y + 180 * p.k, t - p.tb, 0.95 * p.burst);
+    drawAshFall(g, base, cam, p.x + 40, y + 420 * p.k, t - p.tb - 0.08, 0.8 * p.burst);
+  }
+}
+/** 碰到白时画面一亮（第三拍最亮） */
+export const netFlash = (t: number) => 0.14 * kick(t, ASH_BEATS[0], 0.13) + 0.1 * kick(t, ASH_BEATS[1], 0.13) + 0.3 * kick(t, ASH_BEATS[2], 0.15);
+
+// ——— 镜头 ———
+/** 他身子的中间（画面绕着这一点转） */
+function manMid(t: number): V2 {
+  const m = manAt(t);
+  return [m.hip[0], m.hip[1] - 120];
+}
+/**
+ * 这一镜的镜头（情绪：渴望自由 → 被拽住 → 震撼）：
+ * 转场切过来时画面还倒着、在顺时针转：接着同一个方向转、越转越慢（(1 − u)²，开头的角速度和⑫ 最后一样），40.0 副歌鼓进来时转正；
+ * 转的时候他在画面正中（画面绕着他转），一直跟着他往上飞（楼面上一排排窗往下刷）。转正以后他慢慢升到画面中间偏上，
+ * 镜头追着他、比他慢一点（他在往外冲，头顶的白越来越近）；「心」「脏」各往里一顶。
+ * 「困」：他一下停住，镜头冲过去一点再回来、往里一顿、一震；之后一下往后撤、越撤越慢（E.out），落在整座城上（WIDE），
+ * 撤的路上身边一圈和他一样被拴着的人、一根根交错的红绳一层层露出来；网上面的人一拍一个冲进白里化成灰，每一下镜头一惊；最后极慢地漂。
  */
 export function netCam(t: number): Cam {
   const T = NET_T;
-  let c = camLerp(twelveCam(T.start), OUT, E.io(ph(t, T.start, T.out)));
-  // 停着时也极慢地往上漂一点（不死）
-  c = { ...c, y: c.y - 40 * E.io(ph(t, T.out, T.follow1)) };
-  // 跟着他往上：他在画面 (400, 1000)
-  const w = E.io(ph(t, T.follow0, T.follow1));
-  if (w > 0) {
-    const h = manHip(Math.min(t, T.yank));
-    c = camLerp(c, aim(h[0], h[1] - 60, 400, 1000, 0.85), w);
-  }
+  const p = manMid(Math.min(t, T.yank));
+  // 他在画面上的位置：转的时候正中（540, 960）→ 转正以后在 (590, 1060) → 越来越快时升到 (590, 860)（镜头追不上他）
+  const settle = E.io(ph(t, T.upright - 0.1, T.upright + 0.4));
+  const ahead = E.io(ph(t, 40.6, T.yank));
+  const sx = 540 + 50 * settle;
+  const sy = 960 + 100 * settle - 200 * ahead;
+  const z = 1.35 * Math.pow(1.18 / 1.35, E.io(ph(t, T.upright, T.yank)));
+  const u = ph(t, T.start, T.upright);
+  let c = aim(p[0], p[1], sx, sy, z, NET_SPIN0 * (1 - u) * (1 - u));
+  // 「心」「脏」：往里一顶
+  c = { ...c, z: c.z * (1 + 0.025 * kick(t, T.heart, 0.12) + 0.025 * kick(t, T.heart2, 0.12)) };
   // 「困」：他一下停住，镜头冲过去一点再回来，往里一顿
   const dy = t - T.yank;
-  if (dy > 0) c = { ...c, y: c.y - 70 * Math.exp(-dy / 0.1) * Math.sin(Math.min(Math.PI, dy * 22)), z: c.z * (1 + 0.05 * kick(t, T.yank, 0.1)) };
-  // 退到整座城上，再极慢地漂
-  const back = E.settle(ph(t, T.pull0, T.wide));
-  if (back > 0) c = camLerp(c, WIDE, back);
+  if (dy > 0) c = { ...c, y: c.y - 90 * Math.exp(-dy / 0.1) * Math.sin(Math.min(Math.PI, dy * 22)), z: c.z * (1 + 0.05 * kick(t, T.yank, 0.1)) };
+  // 一下往后撤、越撤越慢（E.out），一路以他为中心（他一直在画面里、越来越小，身边一圈圈被拴着的人露出来），
+  // 后半段才慢慢挪到整座城的取景上（他落在 WIDE 里他自己的位置）
+  if (t > T.pull0) {
+    const back = E.out(ph(t, T.pull0, T.wide));
+    const zb = c.z * Math.pow(WIDE.z / c.z, back);
+    const [wx, wy] = [W / 2 + (p[0] - WIDE.x) * WIDE.z, H / 2 + (p[1] - WIDE.y) * WIDE.z];
+    const m = E.io(ph(t, T.pull0 + 0.35, T.wide));
+    const sx0 = W / 2 + (p[0] - c.x) * c.z;
+    const sy0 = H / 2 + (p[1] - c.y) * c.z;
+    c = aim(p[0], p[1], sx0 + (wx - sx0) * m, sy0 + (wy - sy0) * m, zb);
+  }
+  // 碰到白：镜头一惊
+  c = { ...c, z: c.z * (1 + 0.012 * kick(t, ASH_BEATS[0], 0.1) + 0.012 * kick(t, ASH_BEATS[1], 0.1) + 0.022 * kick(t, ASH_BEATS[2], 0.12)) };
   const drift = ph(t, T.wide, T.end + 0.5);
   return drift > 0 ? { ...c, z: c.z * (1 - 0.02 * E.io(drift)) } : c;
 }
-/** 「困」那一下画面一震 */
-export const netShake = (t: number) => 22 * kick(t, NET_T.yank, 0.08);
+/** 「困」那一下画面一震；碰到白各一震 */
+export const netShake = (t: number) => 22 * kick(t, NET_T.yank, 0.08) + 5 * kick(t, ASH_BEATS[0], 0.08) + 4 * kick(t, ASH_BEATS[1], 0.08) + 9 * kick(t, ASH_BEATS[2], 0.1);
 /** 退到整座城上时，远处那几栋高楼从雾里浮出来（和第一幕全城那个镜头一样） */
 export const netWide = (c: Cam) => Math.min(1, Math.max(0, (0.62 - c.z) / 0.3));

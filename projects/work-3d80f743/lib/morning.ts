@@ -21,7 +21,7 @@ import { legL, legR } from "./poses";
 import { CHEN2 } from "./poses2";
 import { pose } from "./dawn";
 import { drawPerson } from "./people";
-import { KNOT, ROOM, type RoomAway, bootLow, looseBoot, strokeRope } from "./room";
+import { BED_DX, KNOT, ROOM, type RoomAway, bootLow, looseBoot, strokeRope } from "./room";
 import { aimRoom } from "./write";
 import { DOWN_PX, downPx } from "./bed";
 
@@ -133,7 +133,7 @@ function drawBoots(g: CanvasRenderingContext2D, t: number) {
 
 // ——— 她：被拉着脚绳从床里滑出来，从横着转成竖着，睡着 ———
 /** 躺在床里时胯在哪（和 room.ts 一样）、最后飘在铁靴上面时胯在哪 */
-const BED_HIP: V2 = [990, 400];
+const BED_HIP: V2 = [990 + BED_DX, 400];
 const END_HIP: V2 = [652, 1138];
 /** 她最后在多远（和铁靴同一个远近，画大一点） */
 const HER_END_S = depthK(BOOT_Y);
@@ -269,7 +269,7 @@ function herAt(t: number) {
   const p: PoseIn = { ...herPose(t).pose };
   const k = pulled(t);
   // 先往下、再往左（贴着床边滑出来，再被拉到他跟前）；② 睡着时飘歪了一点（往右）
-  const c: V2 = [1010, 940];
+  const c: V2 = [1010 + BED_DX, 940];
   const drift = E.io(ph(t, HM.wake0 - 0.05, HM.doubt0 + 0.1));
   const end: V2 = [END_HIP[0] + 42 * drift, END_HIP[1] - 12 * drift];
   const hip: V2 = [(1 - k) ** 2 * BED_HIP[0] + 2 * (1 - k) * k * c[0] + k * k * end[0], (1 - k) ** 2 * BED_HIP[1] + 2 * (1 - k) * k * c[1] + k * k * end[1]];

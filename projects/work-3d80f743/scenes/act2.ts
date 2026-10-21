@@ -24,7 +24,7 @@
 //   ⑫ 37.79–39.39「顺便拯救我自己」（lib/room.ts 的 TWELVE_T，切回她的屋子）：脱掉铁靴「咚、咚」，飘起来躺进天花板上的床里，脚绳拉直。
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
-import { E, H, W, applyCam, ph, shake, toScreen, viewOf } from "../lib/cam";
+import { E, H, W, applyCam, ph, shake, spinBlur, toScreen, viewOf } from "../lib/cam";
 import { QJ_HOME, drawStreet, drawTinted, makeGrain, prepareCity, setDusk } from "../lib/world";
 import { loadHandFont } from "../lib/note";
 import { drawShopShade, drawShopSpill, makeShop, shopCam, shopLook, shopShake } from "../lib/shop";
@@ -142,6 +142,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       // ⑫ 切回她的屋子
       if (t >= TWELVE_T.start) {
         drawInside(ctx, t, twelveCam(t));
+        // 转场：最后又转起来、越转越快，按 1/48 秒快门转着拖一下
+        if (t > TWELVE_T.end - 0.2) spinBlur(ctx, buf, bctx, ((twelveCam(t + 0.004).r - twelveCam(t - 0.004).r) / 0.008) / 48);
         return;
       }
       // ⑪ 切回夜里的楼顶

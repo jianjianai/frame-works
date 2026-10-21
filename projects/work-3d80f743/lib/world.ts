@@ -233,10 +233,12 @@ export const skyAt = (y: number) => `rgb(${skyRGB(y).join(",")})`;
 /** 天色（按人这一层的高度换算到画面上）；alpha < 1 时当作空气蒙在远处的楼上 */
 export function drawSky(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, alpha = 1) {
   g.setTransform(base);
-  const yTop = c.y - H / 2 / c.z;
-  const yBot = c.y + H / 2 / c.z;
-  const gr = g.createLinearGradient(0, 0, 0, H);
-  for (let i = 0; i <= 6; i++) gr.addColorStop(i / 6, skyAt(yTop + ((yBot - yTop) * i) / 6));
+  // 画面转着时（副歌一转场），天的渐变跟着转：沿着世界里「往下」在画面上的方向
+  const dx = -Math.sin(c.r || 0);
+  const dy = Math.cos(c.r || 0);
+  const L = (W / 2) * Math.abs(dx) + (H / 2) * Math.abs(dy);
+  const gr = g.createLinearGradient(W / 2 - dx * L, H / 2 - dy * L, W / 2 + dx * L, H / 2 + dy * L);
+  for (let i = 0; i <= 6; i++) gr.addColorStop(i / 6, skyAt(c.y + (-L + (2 * L * i) / 6) / c.z));
   g.globalAlpha = alpha;
   g.fillStyle = gr;
   g.fillRect(-40, -40, W + 80, H + 80);
