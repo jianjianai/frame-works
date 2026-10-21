@@ -74,20 +74,29 @@ export const HUG_T = {
 
 /**
  * ⑪「妄想用它拯救你」（35.88–37.8：妄 35.91 想 36.12 用 36.42 它 36.63 拯 36.81 救 37.17 你 37.26；底鼓 36.016、37.016）：
- * 夜里的楼顶，千斤还像风筝一样攥着栏杆漂着。沉沉抱着砖从最高那栋楼的楼顶跳下来（镜头切过来时她在半空），落在千斤家楼顶，
- * 跑两步到她跟前，把「活下去」放进她攥着栏杆的那只手里——砖一沉，千斤松开栏杆坠下来，「咚」地坐回楼顶，不再往上飘；
- * 抱着砖抬头看着蹲在旁边的她，哭着笑了，砖暖暖地亮起来。（沉沉这一镜在 lib/give.ts）
+ * 2026-10-20 用户改：「两块五的签字笔：主角写砖头 / 东拼西凑的词句：展示写好的各种砖头 / 妄想用它拯救你：回到之前救下另外一个人的场景，把砖递给她」。
+ * 切回楼顶上两个人抱着坐着的那一刻（和⑧最后同一个样子、同一个取景）：沉沉松开一点，千斤从她胸口抬起头、两只手放下来；
+ * 沉沉近处那只手伸进外套兜里，掏出一块写着「活下去」的砖，放进千斤垂在身前的两只手里（千斤不伸手去接：是她放进去的）；
+ * 砖一沉，千斤的手往下一坠、人往下一沉，愣愣地低头看；37.016 砖暖起来、亮起来，千斤抬起头哭着笑了，沉沉歪过头靠着她笑。
+ * （原来是千斤一个人攥着栏杆漂成风筝、沉沉抱着刚写好的砖从最高那栋楼跳过来递给她，⑩ 里她抱着砖冲出门；2026-10-20 换掉）
  */
 export const GIVE_T = {
   start: 35.88,
-  leap: 35.62,
-  land: b(72),
-  run0: 36.1,
-  stop: 36.38,
-  give: 36.63,
+  /** 沉沉松开一点、往后靠；千斤抬起头，两只手从她背上放下来 */
+  loosen0: 35.92,
+  loosen1: 36.3,
+  /** 近处那只手伸进外套兜里、掏出砖 */
+  pocket0: 36.08,
+  pocket1: 36.34,
+  /** 放进千斤手里（「它」） */
+  show: 36.47, give: 36.68,
+  /** 砖一沉（「拯」） */
   drop: 36.81,
-  sit: b(74),
+  /** 砖暖起来（底鼓） */
+  warm: b(74),
+  /** 千斤抬起头哭着笑（「救」）、沉沉歪过头靠着她（「你」） */
   smile: 37.17,
+  pat: 37.26,
   end: 37.8,
 };
 
@@ -109,8 +118,8 @@ const X_LAND = -4330;
 /** ⑪ 千斤两只手攥在栏杆上的地方（两只手中间） */
 const GRIP_X = X_LAND - 214;
 /** ⑪ 风筝：她回家写砖那几秒（⑨⑩ 在屋里，看不见）千斤一个人攥着栏杆漂起来；KITE0 起换成风筝，KITE1 漂到 */
-const KITE0 = 32.6;
-const KITE1 = 33.6;
+const KITE0 = 99;
+const KITE1 = 100;
 const kiteK = (t: number) => E.io(ph(t, KITE0, KITE1));
 
 export function makeRoof(sky: ReturnType<typeof makeSky>) {
@@ -147,7 +156,16 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       { t: SIT1 + 0.3, ease: "inOut", squash: 0, p: CHEN2.坐地抱 },
       // ⑧「等、等、我」低头在她耳边说；之后闭着眼抱着
       { t: S.say[2] + 0.3, ease: "inOut", p: CHEN2.坐地抱_贴脸 },
-      { t: 40, p: CHEN2.坐地抱_贴脸 },
+      // ⑪ 回到这一刻：松开一点、往后靠，睁开眼看着她；掏出砖放进她手里；砖暖起来，含着泪笑
+      { t: GIVE_T.loosen0, p: CHEN2.坐地抱_贴脸 },
+      { t: GIVE_T.loosen1, ease: "inOut", p: CHEN2.坐地_看她 },
+      // 递：身子往她那边倾过去，看着她的脸，嘴角带着笑；放进她手里以后靠回来一点
+      { t: GIVE_T.pocket1, p: CHEN2.坐地_看她 },
+      { t: GIVE_T.give, ease: "inOut", p: { ...CHEN2.坐地_看她, lean: 18, neck: -14, smile: 0.4 } },
+      { t: GIVE_T.drop + 0.12, p: { ...CHEN2.坐地_看她, lean: 18, neck: -14, smile: 0.4 } },
+      { t: GIVE_T.warm, ease: "inOut", p: { ...CHEN2.坐地_看她, lean: 8, smile: 0.3 } },
+      { t: GIVE_T.smile, ease: "inOut", p: CHEN2.坐地_笑 },
+      { t: 40, p: CHEN2.坐地_笑 },
     ] as MoveKey[],
     {
       look: CHENGTUO,
@@ -274,18 +292,16 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       { t: SIT0 + 0.2, ease: "inOut", p: QIANJIN.转身抱 },
       { t: S.lean - 0.02, p: QIANJIN.转身抱 },
       { t: S.lean + 0.3, ease: "inOut", p: QIANJIN.转身抱_哭 },
-      // （⑨⑩ 在屋里，看不见：她回家写砖去了，千斤一个人攥着栏杆，被白往上拽成一只风筝）
-      { t: KITE0, p: QIANJIN.转身抱_哭 },
-      { t: KITE1, ease: "inOut", p: QIANJIN.风筝 },
-      // ⑪ 砖放进手里：低头看；一沉，坠下来，坐回楼顶抱着砖；抬头看着她哭着笑
-      { t: GIVE_T.give - 0.04, p: QIANJIN.风筝 },
-      { t: GIVE_T.give + 0.1, ease: "out", p: QIANJIN.风筝_看砖 },
-      { t: GIVE_T.drop, p: QIANJIN.风筝_看砖 },
-      { t: GIVE_T.drop + 0.1, ease: (x: number) => x * x, p: QIANJIN.坠 },
-      { t: GIVE_T.sit, ease: "out", p: QIANJIN.坐_抱砖 },
-      { t: GIVE_T.smile, p: QIANJIN.坐_抱砖 },
-      { t: GIVE_T.smile + 0.22, ease: "inOut", p: QIANJIN.坐_哭着笑 },
-      { t: 40, p: QIANJIN.坐_哭着笑 },
+      // ⑪ 回到这一刻：抬起头看着她，两只手放下来；砖放进手里，低头看，一愣；砖暖起来，抬头哭着笑
+      { t: GIVE_T.loosen0, p: QIANJIN.转身抱_哭 },
+      { t: GIVE_T.loosen1, ease: "inOut", p: QIANJIN.抬头看她 },
+      { t: GIVE_T.show - 0.14, p: QIANJIN.抬头看她 },
+      { t: GIVE_T.show + 0.1, ease: "inOut", p: { ...QIANJIN.抬头看她, neck: -6, expression: "惊", lookX: 0.4, lookY: 0.5 } },
+      { t: GIVE_T.give, p: { ...QIANJIN.抬头看她, neck: -6, expression: "惊", lookX: 0.4, lookY: 0.5 } },
+      { t: GIVE_T.drop + 0.08, ease: "out", p: QIANJIN.捧砖_看 },
+      { t: GIVE_T.smile - 0.04, p: QIANJIN.捧砖_看 },
+      { t: GIVE_T.smile + 0.4, ease: "inOut", p: QIANJIN.捧砖_哭着笑 },
+      { t: 40, p: QIANJIN.捧砖_哭着笑 },
     ] as MoveKey[],
     {
       look: lookOf(QJ),
@@ -303,7 +319,7 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
           if (typeof o.wind === "number") o.wind = -o.wind;
         }
         // ⑧ 埋在她怀里哭：肩膀一抽一抽
-        const k = fade(t, S.hug1 - 0.1, S.hug1 + 0.2) * (1 - fade(t, KITE0 - 0.3, KITE0));
+        const k = fade(t, S.hug1 - 0.1, S.hug1 + 0.2) * (1 - fade(t, GIVE_T.loosen0, GIVE_T.loosen1));
         const h = hitch(t, 0.62, 0.1);
         o.neck -= 4 * k * h;
         o.lean += 3 * k * h;
@@ -403,38 +419,33 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       tl = mixP(tl, [chest[0] - 46, chest[1] + 20], wc);
       tr = mixP(tr, [chest[0] - 30, chest[1] - 24], wc);
     }
+    // ⑪ 近处那只手：从她背上松开 → 伸进外套兜里 → 掏出砖、托着送到她身前、放进她手里 → 手一直在砖底下护着（擦眼泪、摸头都试过：胳膊会横过自己或她的脸）
+    if (t > GIVE_T.loosen0) {
+      const G = GIVE_T;
+      const pk = pocketAt(t);
+      tl = mixP(tl, [pk[0] + 6, pk[1] - 10], E.io(ph(t, G.pocket0, G.pocket1 - 0.04)));
+      const b = brick11(t);
+      if (b) tl = mixP(tl, [b[0] + WORD_BRICK.w / 2 - 4, b[1] - 8], E.io(ph(t, G.pocket1 - 0.06, G.pocket1 + 0.04)));
+      if (t > G.give) {
+        // 她把砖抱进怀里：这只手跟上去，托在她捧着砖的手下面（砖右头底下，不挡字），胳膊弯着
+        const bb = brick11(t);
+        if (bb) tl = mixP(tl, [bb[0] + WORD_BRICK.w / 2 + 8, bb[1] + 26], E.io(ph(t, G.warm + 0.05, G.warm + 0.5)));
+
+      }
+    }
     const mx = (pose.face ?? -1) > 0 ? -1 : 1;
     pose.armL = { ...(pose.armL as object), to: [(tl[0] - c.x) * mx, tl[1] - c.y], ik: hugW };
     pose.armR = { ...(pose.armR as object), to: [(tr[0] - c.x) * mx, tr[1] - c.y], ik: hugW };
     return { pose, x: c.x, y: c.y };
   };
-  /** ⑪ 坐在楼顶上：胯离楼顶约 44，就在她攥着栏杆的那个地方底下 */
-  const SIT_X = GRIP_X - 34;
-  let atDrop: { pose: PoseIn; x: number; y: number } | null = null;
-  /** 千斤在哪：抱住以前、⑦⑧ 被抱着（贴在沉沉身前）；⑪ 一个人攥着栏杆漂成风筝 → 砖一沉坐回楼顶 */
+  /** 千斤在哪：抱住以前、⑦⑧⑪ 被抱着（贴在沉沉身前）；⑪ 砖放进手里那一下往下一沉 */
   const qjAt = (t: number) => {
-    if (t > GIVE_T.drop) {
-      // 砖一沉：从风筝的地方往下坠（越坠越快），「咚」坐到楼顶上
-      atDrop ??= qjAtKite(GIVE_T.drop);
-      const pose = qjPose(t);
-      const j = castJoints(QJ, pose);
-      const sit: V2 = [SIT_X - j.hip[0], QJ_ROOF - 44 - j.hip[1]];
-      const u = Math.pow(ph(t, GIVE_T.drop, GIVE_T.sit), 1.7);
-      const r = mixP([atDrop.x, atDrop.y], sit, u);
-      return { pose, x: r[0], y: r[1] };
-    }
-    if (t >= KITE0) return qjAtKite(t);
-    return qjHugAt(t);
-  };
-  /** ⑪ 风筝：被提起来，两肩差不多就在两只手的正上方、胳膊绷直（够得着栏杆的最高处），一下一下被往上扯 */
-  const qjAtKite = (t: number) => {
-    const pose = qjPose(t);
-    const j = castJoints(QJ, pose);
-    const sm: V2 = [(j.shoulderL[0] + j.shoulderR[0]) / 2, (j.shoulderL[1] + j.shoulderR[1]) / 2];
-    const tug = 7 * Math.max(0, Math.sin(t * 5.2)) ** 3;
-    const sx = GRIP_X - 26 + 5 * Math.sin(t * 2.3);
-    const sy = RAIL_TOP - 122 + 4 * Math.sin(t * 1.9) - tug;
-    return floating(pose, sx - sm[0], sy - sm[1]);
+    const q = qjHugAt(t);
+    const d = t - GIVE_T.drop;
+    if (d <= 0) return q;
+    // 砖一沉：整个人往下一坠，再回来一点（有了分量）
+    const sink = 26 * (1 - Math.exp(-d / 0.05)) - 12 * (1 - Math.exp(-d / 0.3));
+    return { ...q, y: q.y + sink };
   };
   /** 千斤连两只手一起：⑪ 两只手攥在栏杆上（IK） */
   const qjPosed = (t: number) => {
@@ -443,43 +454,63 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     const k = QJ.scale;
     const mir = (pose.face ?? 0) > 0 ? -1 : 1;
     const loc = (p: V2): V2 => [((p[0] - q.x) / k) * mir, (p[1] - q.y) / k];
-    if (t < KITE0) {
-      // ⑧ 转过身来抱住她：两只手环到她背后（近处那只露在她身侧，远处那只藏在她身后）
-      const wk = fade(t, S.turn, S.hug1 + 0.05);
-      if (wk <= 0) return q;
-      const ch = chenChest(t);
-      pose.armL = { ...(pose.armL as object), to: loc([ch[0] + 34, ch[1] + 40]), ik: wk };
-      pose.armR = { ...(pose.armR as object), to: loc([ch[0] + 20, ch[1] - 6]), ik: wk };
-      return { ...q, pose };
-    }
-    // ⑪ 砖一沉：两只手松开（交给「坠」的姿势），坐下以后两只手扶着砖的两头抱在胸前
-    const free = 1 - E.io(ph(t, GIVE_T.drop, GIVE_T.drop + 0.08));
-    pose.armL = { ...(pose.armL as object), to: loc(GR), ik: free };
-    pose.armR = { ...(pose.armR as object), to: loc(GL), ik: free };
-    const hug = E.io(ph(t, GIVE_T.sit - 0.06, GIVE_T.sit + 0.12));
-    if (hug > 0) {
-      const c = hugBrick(q);
-      const hw = WORD_BRICK.w / 2 - 6;
-      pose.armL = { ...(pose.armL as object), to: loc([c[0] + hw, c[1] + 4]), ik: hug };
-      pose.armR = { ...(pose.armR as object), to: loc([c[0] - hw, c[1] + 4]), ik: hug };
+    {
+      // ⑧ 转过身来抱住她：两只手环到她背后（近处那只露在她身侧，远处那只藏在她身后）；⑪ 她松开时两只手放下来
+      const wk = fade(t, S.turn, S.hug1 + 0.05) * (1 - E.io(ph(t, GIVE_T.loosen0, GIVE_T.loosen0 + 0.3)));
+      if (wk > 0) {
+        const ch = chenChest(t);
+        pose.armL = { ...(pose.armL as object), to: loc([ch[0] + 34, ch[1] + 40]), ik: wk };
+        pose.armR = { ...(pose.armR as object), to: loc([ch[0] + 20, ch[1] - 6]), ik: wk };
+      }
+      // ⑪ 她不伸手：松开以后两只手软软地放在腿上（就是砖要落下来的地方），沉沉把砖放进来，手才托住它（读成沉沉主动给，不是她讨要）
+      const wb = E.io(ph(t, GIVE_T.loosen0 + 0.15, GIVE_T.loosen1 + 0.1));
+      const b = wb > 0 ? (t < GIVE_T.give ? lapAt(t) : brick11(t)) : null;
+      if (b) {
+        const hw = WORD_BRICK.w / 2 - 6;
+        const hk = hugBrickK(t);
+        // 抱进怀里：近处那只手（画在砖前面）挪到离自己近的左头底下托着，远处那只（在身子后面）去右头——
+        // 近处那只手还去右头的话，胳膊斜着横过砖上的字（用户：「砖被挡住了」）
+        const nearX = b[0] + hw - (2 * hw - 6) * hk;
+        pose.armL = { ...(pose.armL as object), to: loc([nearX, b[1] + 8 + 20 * hk]), ik: wb };
+        pose.armR = { ...(pose.armR as object), to: loc([b[0] - hw + (2 * hw - 10) * hk, b[1] + 8 - 4 * hk]), ik: wb };
+      }
     }
     return { ...q, pose };
   };
-  /** ⑪ 坐下以后抱在胸前的砖的中心（按她这一刻的身子算：胸口前面、偏下） */
-  const hugBrick = (q: { pose: PoseIn; x: number; y: number }): V2 => {
-    const j = castJoints(QJ, q.pose);
-    return [q.x + (j.shoulderL[0] + j.shoulderR[0]) / 2 - 24, q.y + (j.shoulderL[1] + j.shoulderR[1]) / 2 + 74];
+  /** ⑪ 沉沉外套兜在哪（她胸口右下、外套下摆那个兜） */
+  const pocketAt = (t: number): V2 => {
+    const c = chenAt(t);
+    const j = jointsOf(c.pose);
+    return [c.x + (j.shoulderL[0] + j.shoulderR[0]) / 2 + 44, c.y + (j.shoulderL[1] + j.shoulderR[1]) / 2 + 190];
   };
-  /** ⑪ 那块砖在千斤手里时的中心（世界坐标）：放进她攥着栏杆的那只手里 → 跟着那只手坠下来 → 抱在胸前；交出来以前返回 null */
-  const qjBrickAt = (t: number): V2 | null => {
-    if (t < GIVE_T.give) return null;
-    const q = qjPosed(t);
+  /** ⑪ 放进她手里的地方：她身前、两个人中间、肚子那么高（跟着她的身子） */
+  const lapAt = (t: number): V2 => {
+    const q = qjHugAt(t);
     const j = castJoints(QJ, q.pose);
-    const palm: V2 = [q.x + j.palmL[0], q.y + j.palmL[1] + WORD_BRICK.h / 2 - 4];
-    return mixP(palm, hugBrick(q), E.io(ph(t, GIVE_T.sit - 0.06, GIVE_T.sit + 0.12)));
+    const d = t - GIVE_T.drop;
+    const sink = d > 0 ? 26 * (1 - Math.exp(-d / 0.05)) - 12 * (1 - Math.exp(-d / 0.3)) : 0;
+    return [q.x + (j.shoulderL[0] + j.shoulderR[0]) / 2 + 58, q.y + (j.shoulderL[1] + j.shoulderR[1]) / 2 + 112 + sink];
   };
-  /** ⑪ 砖暖起来多少（坐下那一下起） */
-  const brickWarm = (t: number) => E.io(ph(t, GIVE_T.sit - 0.04, GIVE_T.sit + 0.4));
+  /** ⑪ 那块「活下去」的中心（世界坐标）：从兜里掏出来 → 送到她身前 → 放进她手里（砖一沉跟着往下）；掏出来以前 null */
+  const brick11 = (t: number): V2 | null => {
+    if (t < GIVE_T.pocket1 - 0.06) return null;
+    const p = pocketAt(Math.min(t, GIVE_T.pocket1));
+    const up: V2 = [p[0] - 10, p[1] - 70];
+    const out = mixP(p, up, E.out(ph(t, GIVE_T.pocket1 - 0.06, GIVE_T.pocket1 + 0.1)));
+    // 举到她眼前给她看（在她胸前、两个人中间停一下），再慢慢放进她腿上的手里
+    const show: V2 = [lapAt(t)[0] + 6, lapAt(t)[1] - 82];
+    const held = mixP(out, show, E.io(ph(t, GIVE_T.pocket1 + 0.02, GIVE_T.show)));
+    const lap = mixP(held, lapAt(t), E.io(ph(t, GIVE_T.show + 0.06, GIVE_T.give)));
+    return mixP(lap, hugBrickAt(t), hugBrickK(t));
+  };
+  /** ⑪ 砖暖起来：千斤把它从腿上捧起来、抱进怀里（贴在胸口；和⑩ 沉沉在屋里抱着它是同一个样子） */
+  const hugBrickK = (t: number) => E.io(ph(t, GIVE_T.warm - 0.02, GIVE_T.warm + 0.42));
+  const hugBrickAt = (t: number): V2 => {
+    const l = lapAt(t);
+    return [l[0] - 6, l[1] - 62];
+  };
+  const qjBrickAt = (t: number): V2 | null => brick11(t);
+  const brickWarm = (t: number) => E.io(ph(t, GIVE_T.warm - 0.04, GIVE_T.warm + 0.4));
 
   // ——— 白床单：在绳子上 → 左半边被她扯下来、右头还挂在绳子上 → 一惊脱手，被风卷着往右上飞走、翻着，融进白里 ———
   const LINE_Y = TOWER_ROOF - 284;
@@ -597,7 +628,19 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
         cc.setTransform(worldM);
         cc.translate(-c.x, -c.y);
         drawRedEnd(cc, an, t);
-        drawPerson(cc, qSpec, q.pose, q.x, q.y, z);
+        // ⑪ 那块砖：画在千斤的身子和她近处那只手臂之间（她托着的手压在砖上；沉沉近处那只手在最外面）
+        const qb = brick11(t);
+        const qm = cc.getTransform();
+        drawPerson(cc, qSpec, q.pose, q.x, q.y, z, qb
+          ? {
+              beforeFrontArms: (c3) => {
+                c3.save();
+                c3.setTransform(qm);
+                drawWordBrick(c3, qb[0], qb[1], "活下去", -0.03, brickWarm(t), 3 * line);
+                c3.restore();
+              },
+            }
+          : {});
         drawHugTears(cc, t, q);
         cc.restore();
       },
@@ -678,7 +721,7 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
 
   /** ⑧ 抱在一起以后：夜色在她们身上蒙得浅一点（只有她们这里是暖的） */
   const hugLight = (t: number) => (t < KITE0 ? E.io(ph(t, T.land - 0.3, T.land + 0.5)) : 0);
-  return { chenAt, qjAt, qjPosed, qjBrickAt, qjHeadAt, brickWarm, chenChest, rootAt, drawPeople, drawChen, drawHugGlow, hugLight, facesAt, qjChestOf: (t: number) => qjChest(t) };
+  return { chenAt, qjAt, qjPosed, qjBrickAt, qjHeadAt, lapAt, brickWarm, chenChest, rootAt, drawPeople, drawChen, drawHugGlow, hugLight, facesAt, qjChestOf: (t: number) => qjChest(t) };
 
   function qjChest(t: number): V2 {
     const q = qjAt(t);

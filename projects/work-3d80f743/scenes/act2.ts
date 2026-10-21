@@ -18,9 +18,9 @@
 //   ⑧ 29.79–31.97「请你等等我」第二句（lib/roof.ts 的 HUG_T，还是同一个镜头）：30.01 两个人一起坐着落到千斤家楼顶上（不站着落地），
 //      「等等我」在她耳边说；天黑下来，城里的窗一组组亮（lib/night.ts），镜头越推越慢地推近两张脸。31.97 切进她的屋子（lib/room.ts）。
 //   ⑨ 31.97–33.9「两块五的签字笔」（lib/write.ts）：在屋里推到桌上，笔杆上「2.5元」的价签；「签、字、笔」写出「活、下、去」。
-//   ⑩ 33.9–35.88「东拼西凑的词句」：贴着地上一排排写好的砖往左滑，退开；她抱着「活下去」往左冲出门，门「嘭」地关上。
-//   ⑪ 35.88–37.8「妄想用它拯救你」（lib/give.ts，切回夜里的楼顶）：她抱着砖从楼顶跳下来，把砖放进千斤攥着栏杆的那只手里；
-//      砖一沉，千斤坐回楼顶，抱着砖哭着笑，砖暖暖地亮起来。
+//   ⑩ 33.9–35.88「东拼西凑的词句」：贴着地上一排排写好的砖往左滑，退开：搁板上、地上码满了砖，台灯下坐着看「活下去」的她。
+//   ⑪ 35.88–37.8「妄想用它拯救你」（lib/give.ts，切回夜里的楼顶，⑧ 那两个抱着坐着的人）：千斤抬起头，沉沉从外套兜里掏出「活下去」
+//      放进她手里；砖一沉，暖暖地亮起来，千斤哭着笑了。（2026-10-20 用户改；原来她冲出门、跳过来把砖放进漂成风筝的千斤手里）
 //   ⑫ 37.79–39.39「顺便拯救我自己」（lib/room.ts 的 TWELVE_T，切回她的屋子）：脱掉铁靴「咚、咚」，飘起来躺进天花板上的床里，脚绳拉直。
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
@@ -125,10 +125,10 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         }
         if (eleven) give.draw(gg, t, cam.z);
       };
-      if (night) drawTinted(g, [QJ_HOME.x - 520, RAIL_TOP - 820, QJ_HOME.x + QJ_HOME.w + 1200, QJ_ROOF + 40], people, 0.85 - (eleven ? 0 : 0.3 * roof.hugLight(t)));
+      if (night) drawTinted(g, [QJ_HOME.x - 520, RAIL_TOP - 820, QJ_HOME.x + QJ_HOME.w + 1200, QJ_ROOF + 40], people, 0.85 - 0.3 * roof.hugLight(t));
       else people(g);
       // ⑧ 抱在一起的两个人身上的暖光、⑪ 砖暖起来的光（画在夜色上面）
-      if (six && !eleven) roof.drawHugGlow(g, t);
+      if (six) roof.drawHugGlow(g, t);
       if (eleven) give.drawGlowOver(g, t);
       drawAir(g, cam, t, sh, skyLook(t), night ? E.io(ph(cam.z, 2, 6)) : 0);
     } finally {

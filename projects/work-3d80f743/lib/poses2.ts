@@ -251,6 +251,22 @@ export const QIANJIN = {
     ...armL(70, 60, 0, "grip", l),
     ...armR(80, 50, 0, "grip", l),
   })),
+  // ——— ⑪「妄想用它拯救你」（2026-10-20 改：回到楼顶上两个人抱着坐着的那一刻，沉沉从外套兜里掏出「活下去」放进她手里）———
+  /** 她松开一点：千斤从她胸口抬起头看着她，两只手从她背上放下来、垂在身前（还跪坐在她腿上） */
+  抬头看她: pose(10, { face: 0.6, float: 0, ground: false, rot: 0, wind: 0.2, ...legL(84, -166, -166), ...legR(90, -166, -164), neck: 4, expression: "含泪", tears: 1, lookX: 0.5, lookY: -0.3 }, (l) => ({
+    ...armL(16, 46, 0, "relax", l),
+    ...armR(10, 52, 0, "relax", l),
+  })),
+  /** 砖放进手里：低头看着，一愣（两只手由 IK 托着砖的两头） */
+  捧砖_看: pose(10, { face: 0.6, float: 0, ground: false, rot: 0, wind: 0.2, ...legL(84, -166, -166), ...legR(90, -166, -164), neck: -12, expression: "惊", tears: 1, lookX: 0.2, lookY: 0.9 }, (l) => ({
+    ...armL(30, 90, 0, "grip", l),
+    ...armR(24, 96, 0, "grip", l),
+  })),
+  /** 砖暖起来：抬起头看着她，哭着笑 */
+  捧砖_哭着笑: pose(8, { face: 0.6, float: 0, ground: false, rot: 0, wind: 0.2, ...legL(84, -166, -166), ...legR(90, -166, -164), neck: 6, expression: "哭着笑", tears: 1, lookX: 0.5, lookY: -0.3 }, (l) => ({
+    ...armL(30, 90, 0, "grip", l),
+    ...armR(24, 96, 0, "grip", l),
+  })),
   // ——— （2026-10-20 前的）⑦「请你等等我」：落地以后还往上漂，被沉沉攥着手腕；被按到栏杆上，转过来看着她（现在没用） ———
   /** 往上漂、近处那只手被她牵着（像牵着一只气球，胳膊往右下方伸直，手由 IK 放进她手里；两条腿往左前方漂着，脚不垂到她跟前），另一只手飘起来，低头看着她 */
   被牵着漂: pose(-4, { face: -0.6, float: 0, ground: false, rot: 8, ...legL(40, -24, -30), ...legR(54, -34, -24), neck: -26, expression: "难过", sad: 0.6, lookX: 0.5, lookY: 1 }, (l) => ({
@@ -364,6 +380,16 @@ export const CHEN2 = {
   坐地抱: pose(12, { face: -1, ground: false, lift: -235, chestL: "over", ...legR(124, -80, 44), ...legL(102, -36, 66), neck: -26, expression: "心疼", tears: 0.5, lookX: -0.4, lookY: 1 }, (l) => ({
     ...armL(60, 100, 0, "grip", l),
     ...armR(72, 94, 0, "grip", l),
+  })),
+  /** ⑪ 松开一点、往后靠一点，睁开眼看着她（心疼） */
+  坐地_看她: pose(4, { face: -1, ground: false, lift: -235, chestL: "over", ...legR(124, -80, 44), ...legL(102, -36, 66), neck: -10, expression: "心疼", tears: 0.5, lookX: -0.5, lookY: 0.3 }, (l) => ({
+    ...armL(40, 100, 0, "grip", l),
+    ...armR(70, 96, 0, "grip", l),
+  })),
+  /** ⑪ 砖暖起来：看着她，含着泪笑 */
+  坐地_笑: pose(12, { face: -1, ground: false, lift: -235, chestL: "over", ...legR(124, -80, 44), ...legL(102, -36, 66), neck: -22, expression: "哭着笑", tears: 0.6, lookX: -0.5, lookY: 0.35 }, (l) => ({
+    ...armL(40, 100, 0, "grip", l),
+    ...armR(70, 96, 0, "grip", l),
   })),
   /** 下巴凑到她头上，闭上眼（「等等我」说完了），含着泪 */
   坐地抱_贴脸: pose(16, { face: -1, ground: false, lift: -235, chestL: "over", ...legR(124, -80, 44), ...legL(102, -36, 66), neck: -24, expression: "闭眼", smile: 0.3, tears: 0.6 }, (l) => ({

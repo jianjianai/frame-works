@@ -42,25 +42,26 @@ export const ROOM = {
 };
 
 /**
- * ⑩「东拼西凑的词句」（33.96–35.85：东 33.96 拼 34.14 西 34.38 凑 34.62 的 34.83 词 34.95 句 35.25）：镜头顺着桌子往下，
- * 贴着地上靠墙码着的一排排写好的砖往左滑（别怕 34.14、会好的 34.55、有我在 34.95 正好滑到画面中间）；她在画外放下笔、
- * 站起来、捧起刚写好的「活下去」抱在胸前；镜头往后一退：屋子左边的门开着，「句」她抱着砖往左冲出门，门「嘭」地关上。
- * 门在左边：她家这扇窗在最高那栋楼的最左边、正对着千斤家，出门往左跑，下一镜在楼顶上还是从右往左跑向千斤。
+ * ⑩「东拼西凑的词句」（33.9–35.88）：放下笔，坐在桌前看着刚写好的那块砖，「词」捧起来、「句」举到胸前看着它笑；
+ * 镜头贴着地上码成墙的砖从暗处往右滑到她脚边，再升上去落在台灯底下的她身上（见 lib/write.ts 的 tenCam、tenNight）。2026-10-20 用户改成「展示写好的各种砖头」：原来她站起来、抱着砖冲出门
+ * （⑪ 抱着砖跳到千斤家楼顶），现在⑪ 回到楼顶上两个人抱着的那一刻、砖从外套兜里掏出来，她不出门。站起来、跑、关门的时刻放到片子外面不用。
  */
 export const TEN_T = {
   start: 33.9,
   /** 把笔放到桌上 */
   penDown: 34.05,
-  /** 站起来 */
-  stand0: 34.08,
-  stand1: 34.42,
-  /** 两只手捧住砖、抱到胸前 */
-  grab: 34.6,
-  lift: 34.85,
-  /** 冲出门（「句」前一点起跑）、到门口、门关上 */
-  run: 35.2,
-  slam0: 35.7,
-  slam1: 35.8,
+  /** 看着写好的那块砖 */
+  look: 34.4,
+  /** 「词」两只手捧起「活下去」，「句」举到眼前看着（坐着，不站起来） */
+  grab: 34.86,
+  lift: 35.3,
+  /** （不用了：站起来、冲出门） */
+  stand0: 99,
+  stand1: 99.1,
+  run: 99.4,
+  /** 门一直关着 */
+  slam0: 0,
+  slam1: 0.01,
   end: 35.88,
 };
 /**
@@ -102,6 +103,14 @@ const ROW: [number, number, string][] = [
   [266, 1, "天会亮的"],
   [138, 1, "再撑一下"],
   [10, 1, "慢慢来"],
+  // 再往上码两层（⑩ 一路滑过去越码越高，到她脚边最高）
+  [330, 2, "会过去的"],
+  [202, 2, "你值得"],
+  [74, 2, "晚安"],
+  [266, 3, "多喝水"],
+  [138, 3, "早点睡"],
+  [458, 1, "不怪你"],
+  [394, 2, "我在呢"],
 ];
 
 /** 她写字时坐着：胯在椅面上一点 */
@@ -118,13 +127,14 @@ const chenMove = live(
     { t: 33.66, p: CHEN2.写字 },
     // 写完：嘴角动了一下
     { t: 33.86, ease: "out", p: { ...CHEN2.写字, neck: -24, smile: 0.35, lookY: 0.8 } },
-    // ⑩ 放下笔、站起来、捧起砖抱在胸前，转头望着门；「句」冲出门
+    // ⑩ 放下笔，坐直一点，看着写好的那块砖（嘴角带一点笑）
     { t: 34.05, p: { ...CHEN2.写字, neck: -24, smile: 0.35, lookY: 0.8 } },
-    { t: 34.42, ease: "inOut", p: CHEN2.捧砖 },
-    { t: 34.6, p: CHEN2.捧砖 },
-    { t: 34.85, ease: "inOut", p: CHEN2.抱砖 },
-    { t: 35.12, p: CHEN2.抱砖 },
-    ...runLeft(),
+    { t: TEN_T.look, ease: "inOut", p: { ...CHEN2.写字, lean: 18, neck: -22, smile: 0.5, lookX: -0.3, lookY: 0.75 } },
+    { t: TEN_T.grab - 0.12, p: { ...CHEN2.写字, lean: 20, neck: -22, smile: 0.5, lookX: -0.3, lookY: 0.8 } },
+    // 捧起来抱进怀里、坐直，闭上眼笑（像许了个愿：「妄想用它拯救你」）
+    { t: TEN_T.lift - 0.1, ease: "inOut", p: { ...CHEN2.写字, lean: 6, neck: -10, smile: 0.7, lookX: -0.4, lookY: 0.6 } },
+    { t: TEN_T.lift + 0.12, ease: "out", p: { ...CHEN2.写字, lean: 4, neck: -14, expression: "闭眼", smile: 0.85 } },
+    { t: 36, p: { ...CHEN2.写字, lean: 3, neck: -15, expression: "闭眼", smile: 0.9 } },
     // ⑫ 回来了：坐在椅子上拔靴子 → 脚一抽（靴子掉下去）→ 收腿、一脚踢掉另一只 → 松一口气，飘起来 → 转成横着躺进床里
     { t: TWELVE_T.start, p: CHEN2.脱靴 },
     { t: TWELVE_T.off1 - 0.03, ease: "inOut", p: { ...CHEN2.脱靴, lean: 57 } },
@@ -353,7 +363,13 @@ export function roomChen(t: number) {
     pose.armR = { ...(pose.armR as object), to: loc([B.x + B.w / 2 + 26, B.y - B.h - 22]), ik: 1 };
     return { pose, root, brick: [B.x, B.y - 8] as V2 };
   }
-  // 放下笔以后：捧砖（两只手伸到砖的两头）→ 抱到胸前，一直扶着
+  // ⑩ 放下笔以后：坐着，近处那只手搁在桌上砖的旁边，远处那只还扶着砖
+  if (t < T.grab) {
+    pose.armL = { ...(pose.armL as object), to: loc([B.x + B.w / 2 + 70, B.y - 18]), ik: 1, bend: 1 };
+    pose.armR = { ...(pose.armR as object), to: loc([B.x + B.w / 2 + 26, B.y - B.h - 22]), ik: 1 };
+    return { pose, root, brick: [B.x, B.y - 8] as V2 };
+  }
+  // （不用了）捧砖（两只手伸到砖的两头）→ 抱到胸前，一直扶着
   const bp = brickPos(t, pose, root);
   const w = E.io(ph(t, T.grab - 0.16, T.grab));
   pose.armL = { ...(pose.armL as object), to: loc([bp[0] + 50, bp[1] - 24]), ik: w };
@@ -368,8 +384,12 @@ function brickPos(t: number, pose: PoseIn, root: V2): V2 {
   if (t <= T.grab) return desk;
   const j = jointsOf(pose);
   const S = ROOM.s;
+  // 抱进怀里：贴在胸口（她朝左，前面是 −x）；捧起来先抬一点再收进怀里，抱住那一下往怀里紧一紧
   const chest: V2 = [root[0] + ((j.shoulderL[0] + j.shoulderR[0]) / 2 - 30) * S, root[1] + ((j.shoulderL[1] + j.shoulderR[1]) / 2 + 92) * S];
-  return mixV(desk, chest, E.io(ph(t, T.grab, T.lift)));
+  const u = E.io(ph(t, T.grab, T.lift));
+  const p = mixV(desk, chest, u);
+  const squeeze = 6 * Math.sin(Math.PI * ph(t, T.lift - 0.05, T.lift + 0.25));
+  return [p[0] + squeeze, p[1] - 30 * Math.sin(Math.PI * u)];
 }
 
 // ——— 画 ———
@@ -873,6 +893,61 @@ function light(g: CanvasRenderingContext2D, on: number) {
   drawGlow(g, lx, ly + 10, 150, 0.85 * on);
 }
 
+/**
+ * ⑩ 暖：屋角只轻轻压一点（柔和扁平风，暗角 ≤ 0.25），灯下一大团暖光，她把砖抱进怀里时暖光涌上来；灯光里慢慢浮着的灰尘。
+ * （第一版压成深紫的夜、只剩一圈灯光，用户：「感觉有点压抑」）
+ * k：浓淡（⑩ 开头 0.4 秒里起来，只有 ⑩ 用）
+ */
+function tenNight(g: CanvasRenderingContext2D, t: number, k: number) {
+  if (k <= 0.01) return;
+  const [lx, ly] = ROOM.bulb;
+  const R = ROOM;
+  g.save();
+  g.globalCompositeOperation = "multiply";
+  const cx = lx + 160;
+  const cy = ly + 240;
+  const gr = g.createRadialGradient(cx, cy, 200, cx, cy, 1300);
+  const m = (a: number[]) => a.map((v) => Math.round(255 + (v - 255) * k)).join(",");
+  gr.addColorStop(0, `rgb(${m([255, 255, 255])})`);
+  gr.addColorStop(0.6, `rgb(${m([246, 236, 236])})`);
+  gr.addColorStop(1, `rgb(${m([214, 196, 214])})`);
+  g.fillStyle = gr;
+  g.fillRect(R.x0, -600, R.x1 - R.x0, 3200);
+  g.restore();
+  // 暖：灯下一大团暖光（soft-light），她把砖抱进怀里时涌上来
+  const hug = E.io(ph(t, TEN_T.lift - 0.2, TEN_T.end));
+  g.save();
+  g.globalCompositeOperation = "soft-light";
+  const wx = lx + 260 * hug;
+  const wy = ly + 140;
+  const warm = g.createRadialGradient(wx, wy, 0, wx, wy, 900);
+  warm.addColorStop(0, `rgba(255,196,120,${k * (0.45 + 0.35 * hug)})`);
+  warm.addColorStop(1, "rgba(255,196,120,0)");
+  g.fillStyle = warm;
+  g.fillRect(R.x0, -600, R.x1 - R.x0, 3200);
+  g.restore();
+  // 灰尘：灯光里慢慢往上浮、左右飘，离灯越近越亮
+  g.save();
+  g.globalCompositeOperation = "screen";
+  for (let i = 0; i < 46; i++) {
+    const h1 = Math.sin(i * 12.9898) * 43758.5453;
+    const h2 = Math.sin(i * 78.233) * 12543.137;
+    const r1 = h1 - Math.floor(h1);
+    const r2 = h2 - Math.floor(h2);
+    const x = lx - 260 + r1 * 820 + 22 * Math.sin(t * 0.9 + i);
+    const span = 760;
+    const y = ly - 200 + ((((r2 * span - t * (14 + 10 * r1)) % span) + span) % span);
+    const d = Math.hypot(x - (lx + 80), y - (ly + 200)) / 520;
+    const a = k * 0.55 * Math.max(0, 1 - d) * (0.6 + 0.4 * Math.sin(t * 2.3 + i * 1.7));
+    if (a <= 0.01) continue;
+    g.fillStyle = `rgba(255,226,170,${a})`;
+    g.beginPath();
+    g.arc(x, y, 2.2 + 2.6 * r2, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+}
+
 /** 铁靴在靴子自己的坐标里（脚踝在原点，画面左边那只的线稿） */
 const LOOSE = {
   body: toLocal(BOOT.body, REST.ankleR, 0),
@@ -1143,5 +1218,6 @@ export function drawRoom(g: CanvasRenderingContext2D, t: number, on: number, lw 
     drawPen(g, palm, penTip(t));
   }
   light(g, on);
+  if (!AWAY && t >= TEN_T.start && t < TWELVE_T.start) tenNight(g, t, E.io(ph(t, TEN_T.start, TEN_T.start + 0.4)));
   AWAY?.after?.(g);
 }
