@@ -33,9 +33,9 @@ export const NET_T = {
   heart2: 41.7,
   /** 「困」：红绳绷直（小节线） */
   yank: beatAt(84),
-  /** 往后撤，落在整座城上 */
-  pull0: 42.1,
-  wide: 43.62,
+  /** 往后暴退拉远（只下移到半空楼腰，不到地面） */
+  pull0: 42.08,
+  wide: 43.35,
   end: 43.92,
 };
 /** 没被拴住、冲进白里化成灰的人碰到白的那几拍：「网」一个，之后一拍两个、一拍三个 */
@@ -147,9 +147,9 @@ const MAN_ANCHOR = sillOf(TOWER, 27, colsOf(TOWER) - 1);
 let manRopeLen = 0;
 const manRope = () => (manRopeLen ||= Math.hypot(manAt(NET_T.yank).ankle[0] - MAN_ANCHOR[0], manAt(NET_T.yank).ankle[1] - MAN_ANCHOR[1]));
 
-// ——— 网：天上被拴住的人（按镜头落在整座城上那一刻的取景排，远的层被透视压向画面中间，按画面位置排才铺得满） ———
-/** 最后落在整座城上的取景：白在画面上面约 1/6，最高那栋楼在中间，城在下面 */
-export const WIDE = aim(-3210, 0, 540, 1955, 0.185);
+// ——— 网：天上被拴住的人（按镜头拉开后的半空取景排，远的层被透视压向画面中间，按画面位置排才铺得满） ———
+/** 拉远后的半空大远景：只下移到塔楼半腰（画面底边在 y ≈ -2685，不到地面 y = 0），漫天红绳巨网与白光铺满画面 */
+export const WIDE = aim(-3080, -7150, 540, 960, 0.215);
 const atWide = (sx: number, sy: number, D: number): V2 => [WIDE.x + ((sx - W / 2) * D) / WIDE.z, WIDE.y + ((sy - H / 2) * D) / WIDE.z];
 
 interface Hanger {
@@ -188,32 +188,37 @@ function buildNet(): Hanger[] {
     [-1420, -8600, TOWER, 16, 2, HANG_B, 17],
     [-6150, -8760, STREET[6], 0, 0, HANG_B, 27],
     [-2950, -9010, TOWER, 4, 2, HANG_A, 8],
-    // 2026-10-21 加：他被拽住以后镜头往后撤，先看见身边一圈和他一样被拴着的人
+    // 2026-10-21 加：他被拽住以后镜头往后撤，先看见身边一圈和他一样被拴着的人，往下到半空也铺满
     [-3420, -8700, QJ_HOME, 6, 1, HANG_B, 31],
     [-1000, -8930, STREET[0], 2, 0, HANG_A, 35],
     [-3950, -8980, TOWER, 14, 0, HANG_A, 14],
     [-700, -8560, STREET[0], 4, 1, HANG_B, 19],
     [-5000, -8820, QJ_HOME, 20, 0, HANG_A, 25],
     [-3260, -8760, TOWER, 24, 1, HANG_B, 6],
+    [-2120, -7650, TOWER, 19, 2, HANG_B, 11],
+    [-4280, -7420, QJ_HOME, 18, 1, HANG_A, 16],
+    [-1560, -7180, STREET[0], 3, 0, HANG_A, 23],
+    [-2860, -6850, TOWER, 22, 1, HANG_B, 29],
+    [-4880, -6920, QJ_HOME, 22, 0, HANG_B, 34],
   ];
   near.forEach(([x, y, b, f, i, p, n], k) => {
     const spec = passerby(n);
     out.push({ D: 1, x, y, h: 590 * spec.scale, anchor: f < 0 ? roofOf(b, 0.5) : sillOf(b, f, i), ph: k * 1.7, reel: 0, spec, pose: figurePose({ ...p }, 40 + k * 0.37, lookOf(spec)) });
   });
-  // 远处三层：在最后那个取景里铺满白下面那一片天，越靠近白越密；红绳拴到那一层的楼上（往左或往右斜，彼此交叉成网）
+  // 远处三层：在半空大远景里铺满白下面整片天，越靠近白越密；红绳拴到那一层的楼上（往左或往右斜，彼此交叉成网）
   const r = seeded(84);
   const layers: [number, number, number][] = [
     // D、人数、身高（相对）
-    [4, 52, 0.95],
-    [2.2, 36, 0.95],
-    [1.5, 18, 0.95],
+    [4, 58, 0.95],
+    [2.2, 42, 0.95],
+    [1.5, 22, 0.95],
   ];
   for (const [D, n, hk] of layers) {
     const L = LAYERS.find((l) => l.D === D)!;
     for (let k = 0; k < n; k++) {
-      const sx = -70 + ((k + 0.15 + 0.7 * r()) / n) * 1220;
-      // 越靠近白越密，往下也有（绳子长短不一），网才铺得满整片天
-      const sy = 270 + 700 * Math.pow(r(), 1.25);
+      const sx = -120 + ((k + 0.15 + 0.7 * r()) / n) * 1320;
+      // 越靠近白越密，往下铺到半空（绳子长短不一），网才铺得满整片天
+      const sy = 520 + 960 * Math.pow(r(), 1.2);
       const [x, y] = atWide(sx, sy, D);
       // 红绳往哪边斜：在画面上左右各偏 120–380，拴在那里的楼上，比人至少低 220（画面上）
       const tx = sx + (r() < 0.5 ? -1 : 1) * (180 + 380 * r());
@@ -490,13 +495,13 @@ const FREE: Free[] = (() => {
   const list: [number, number, number, number, number, number, number][] = [
     // 胯 x、第几拍、每秒冲多快、提前多久出现、大小、光环、第几个路人
     // 「网」：他刚被拽住，一个人从他身后下面冲上来、从他右边擦过去，就在他眼前散掉（镜头刚开始往后撤）
-    [MAN_X + 330, 0, 3800, 0.75, 1, 0.85, 33],
-    // 之后一拍两个、一拍三个，在网上面那一片天里（落在整座城的取景里）
-    [-4700, 1, 2300, 1.3, 0.95, 0.42, 9],
-    [-1500, 1, 2300, 1.3, 0.95, 0.42, 21],
-    [-5800, 2, 2400, 1.5, 1, 0.5, 4],
-    [-3300, 2, 2400, 1.5, 1, 0.62, 15],
-    [-800, 2, 2400, 1.5, 1, 0.5, 28],
+    [MAN_X + 330, 0, 3800, 0.75, 1, 1.05, 33],
+    // 之后一拍两个、一拍三个，在网上面那一片天里（半空大远景里）
+    [-4600, 1, 2500, 1.3, 0.95, 0.58, 9],
+    [-1500, 1, 2500, 1.3, 0.95, 0.58, 21],
+    [-5500, 2, 2600, 1.5, 1, 0.68, 4],
+    [-3200, 2, 2600, 1.5, 1, 0.88, 15],
+    [-950, 2, 2600, 1.5, 1, 0.68, 28],
   ];
   return list.map(([x, b, speed, span, k, burst, n]) => {
     const spec = passerby(n);
@@ -552,7 +557,7 @@ export function drawFreeBursts(g: CanvasRenderingContext2D, base: DOMMatrix, cam
   }
 }
 /** 碰到白时画面一亮（第三拍最亮） */
-export const netFlash = (t: number) => 0.14 * kick(t, ASH_BEATS[0], 0.13) + 0.1 * kick(t, ASH_BEATS[1], 0.13) + 0.3 * kick(t, ASH_BEATS[2], 0.15);
+export const netFlash = (t: number) => 0.18 * kick(t, ASH_BEATS[0], 0.14) + 0.16 * kick(t, ASH_BEATS[1], 0.14) + 0.38 * kick(t, ASH_BEATS[2], 0.16);
 
 // ——— 镜头 ———
 /** 他身子的中间（画面绕着这一点转） */
@@ -561,15 +566,16 @@ function manMid(t: number): V2 {
   return [m.hip[0], m.hip[1] - 120];
 }
 /**
- * 这一镜的镜头（情绪运镜：破空起飞 → 渴望自由越推越急 → 被拽住猛停 → 暴退拉出全城大网震撼）：
+ * 这一镜的镜头（情绪运镜：破空起飞 → 渴望自由越推越急 → 被拽住猛停 → 暴退半空大网 + 倾斜震撼）：
  * 1. 转场落定（39.39–39.99「只因为」）：接着上一镜顺时针旋转，(1 − u)² 越转越慢，40.016 副歌鼓进来时转正并带一下鼓点落定冲击（+3.5%）；
  *    落定在低处中景（1.08 倍），他在画面偏下（555, 1090），身后五层楼、树冠与高塔同框，看清从低处起飞。
  * 2. 破空疾冲 + 渴望自由（40.00–42.017「你那渴望自由的心脏」）：他猛烈加速往上飙，镜头追赶不及，他在画面上从下半截（1090）一路往上冲到
  *    上半截（760，单调向上不回落）；同时按「期待/渴望」情绪曲线（pow 2.15）越推越快逼近他仰望白光的脸和伸出的手（1.08 → 1.54 倍），
  *    画面随冲势带一点仰望倾斜（-0.035）；「心」「脏」两拍随胸口光芒连续递进急顶（+4%、+6%）。
  * 3. 「困」（42.017）：红绳瞬间绷直，他急停下坠，镜头因惯性往上猛冲过头 115px 再拽回、画面回正、猛震一顿（+6.5%）。
- * 4. 震撼（42.08–43.62「在一张没空隙的网」）：从 1.54 倍近景一口气暴退到 0.185 倍全城大远景（E.out 先快后慢），身边一圈圈被拴住的人和
- *    交错的红绳网铺满全城；网上面的人一拍一个冲进白里化成灰，每一下镜头一惊；最后极慢地漂。
+ * 4. 震撼（42.08–43.92「在一张没空隙的网」）：从 1.54 倍近景一口气暴退拉远到 0.215 倍半空大远景（E.out 先快后慢），只往下移到塔楼半腰
+ *    （c.y = -7150，不到地面），漫天被拴住的人和交错的红绳巨网铺满视野；拉开后画面顺势倾斜（荷兰角推到 -0.145 弧度 ≈ -8.3°），配合三拍
+ *    冲进白光化灰的连续爆闪、光环与震动，营造强烈的压迫与震撼。
  */
 export function netCam(t: number): Cam {
   const T = NET_T;
@@ -594,30 +600,35 @@ export function netCam(t: number): Cam {
   // 「困」：他一下停住，镜头惯性往上猛冲过头再拽回，往里一顿
   const dy = t - T.yank;
   if (dy > 0) c = { ...c, y: c.y - 115 * Math.exp(-dy / 0.1) * Math.sin(Math.min(Math.PI, dy * 22)), z: c.z * (1 + 0.065 * kick(t, T.yank, 0.1)) };
-  // 一下往后暴退、越撤越慢（E.out），一路以他为中心（他一直在画面里、越来越小，身边一圈圈被拴着的人露出来），
-  // 后半段才慢慢挪到整座城的取景上（他落在 WIDE 里他自己的位置）
+  // 一下往后暴退拉远（E.out），只往下移到半空楼腰（WIDE，不到地面），之后压出强烈的震撼倾斜角
   if (t > T.pull0) {
     const back = E.out(ph(t, T.pull0, T.wide));
     const zb = c.z * Math.pow(WIDE.z / c.z, back);
     const [wx, wy] = [W / 2 + (p[0] - WIDE.x) * WIDE.z, H / 2 + (p[1] - WIDE.y) * WIDE.z];
-    const m = E.io(ph(t, T.pull0 + 0.35, T.wide));
+    const m = E.out(ph(t, T.pull0 + 0.04, T.wide));
     const sx0 = W / 2 + (p[0] - c.x) * c.z;
     const sy0 = H / 2 + (p[1] - c.y) * c.z;
-    c = aim(p[0], p[1], sx0 + (wx - sx0) * m, sy0 + (wy - sy0) * m, zb);
+    // 拉开后顺势倾斜（42.42 起压入荷兰角，三拍化灰每一拍再往斜里一震）
+    const shockTilt =
+      -0.145 * E.io(ph(t, 42.42, 43.55)) -
+      0.012 * kick(t, ASH_BEATS[0], 0.14) -
+      0.015 * kick(t, ASH_BEATS[1], 0.14) -
+      0.024 * kick(t, ASH_BEATS[2], 0.18);
+    c = aim(p[0], p[1], sx0 + (wx - sx0) * m, sy0 + (wy - sy0) * m, zb, shockTilt);
   }
-  // 碰到白：镜头一惊
-  c = { ...c, z: c.z * (1 + 0.012 * kick(t, ASH_BEATS[0], 0.1) + 0.012 * kick(t, ASH_BEATS[1], 0.1) + 0.022 * kick(t, ASH_BEATS[2], 0.12)) };
+  // 碰到白：三拍连续冲击，镜头一惊（第三拍最重）
+  c = { ...c, z: c.z * (1 + 0.024 * kick(t, ASH_BEATS[0], 0.11) + 0.028 * kick(t, ASH_BEATS[1], 0.11) + 0.045 * kick(t, ASH_BEATS[2], 0.14)) };
   const drift = ph(t, T.wide, T.end + 0.5);
-  return drift > 0 ? { ...c, z: c.z * (1 - 0.02 * E.io(drift)) } : c;
+  return drift > 0 ? { ...c, z: c.z * (1 - 0.03 * E.out(drift)) } : c;
 }
-/** 鼓进落定、「心」「脏」跳动、「困」猛拽、碰到白各一震 */
+/** 鼓进落定、「心」「脏」跳动、「困」猛拽、碰到白三拍震撼各一震 */
 export const netShake = (t: number) =>
   6 * kick(t, 40.016, 0.08) +
   5 * kick(t, NET_T.heart, 0.08) +
   7 * kick(t, NET_T.heart2, 0.08) +
   24 * kick(t, NET_T.yank, 0.08) +
-  5 * kick(t, ASH_BEATS[0], 0.08) +
-  4 * kick(t, ASH_BEATS[1], 0.08) +
-  9 * kick(t, ASH_BEATS[2], 0.1);
+  9 * kick(t, ASH_BEATS[0], 0.09) +
+  11 * kick(t, ASH_BEATS[1], 0.09) +
+  16 * kick(t, ASH_BEATS[2], 0.12);
 /** 退到整座城上时，远处那几栋高楼从雾里浮出来（和第一幕全城那个镜头一样） */
 export const netWide = (c: Cam) => Math.min(1, Math.max(0, (0.62 - c.z) / 0.3));

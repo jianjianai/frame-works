@@ -22,8 +22,15 @@ export function camLerp(a: Cam, b: Cam, e: number): Cam {
   return { x: a.x + (b.x - a.x) * w, y: a.y + (b.y - a.y) * w, z, r: a.r + (b.r - a.r) * e };
 }
 
-/** 世界里的点在画面上的位置（D 是那一层的远近） */
-export const toScreen = (c: Cam, x: number, y: number, D = 1): [number, number] => [W / 2 + ((x - c.x) * c.z) / D, H / 2 + ((y - c.y) * c.z) / D];
+/** 世界里的点在画面上的位置（D 是那一层的远近；含镜头旋转） */
+export const toScreen = (c: Cam, x: number, y: number, D = 1): [number, number] => {
+  const dx = ((x - c.x) * c.z) / D;
+  const dy = ((y - c.y) * c.z) / D;
+  if (!c.r) return [W / 2 + dx, H / 2 + dy];
+  const cr = Math.cos(c.r);
+  const sr = Math.sin(c.r);
+  return [W / 2 + dx * cr - dy * sr, H / 2 + dx * sr + dy * cr];
+};
 
 /** 画这一层之前：设好变换（base 是设计坐标到画布像素的缩放） */
 export function applyCam(ctx: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, D = 1, sh: [number, number] = [0, 0]) {
