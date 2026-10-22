@@ -17,5 +17,6 @@ const project: AnimationProject = {
   credits: [],
   load: () => import("./scene"),
   loadVisual: () => import("./visual.json"),
+  experiences: ["AI生视频现实题材温情短片"],
 };
 export default project;
