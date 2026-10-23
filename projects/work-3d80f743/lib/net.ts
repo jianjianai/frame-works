@@ -48,13 +48,13 @@ function pose(lean: number, rest: Omit<Angles, "lean">, arms: (lean: number) => 
 // ——— 往上飘的那个人（路人，短发：失重只给一点，|face| 别停在 0.2–0.45，头发会画成尖） ———
 const MAN: CastSpec = passerby(5);
 const MAN_POSES = {
-  /** 往上飞：两只手张开、胸口挺着，仰着脸闭着眼笑，腿拖在后面（风从头顶往下吹） */
-  飞: pose(-10, { face: -0.85, ground: false, float: 0.12, rot: -2, ...legL(-10, -40, -50), ...legR(14, -30, -46), neck: 26, expression: "释然", blink: 1, smile: 0.6 }, (l) => ({
+  /** 往上飞：两只手张开、胸口挺着，腿拖在后面（风从头顶往下吹）。人一绝望才会飘起来：仰着脸、眼睛半睁着望向白、含着泪，嘴角一点苦笑（终于能逃开了的解脱） */
+  飞: pose(-10, { face: -0.85, ground: false, float: 0.12, rot: -2, ...legL(-10, -40, -50), ...legR(14, -30, -46), neck: 26, expression: "含泪", sad: 0.75, blink: 0.45, smile: 0.25, open: 0.08, tears: 0.85, blush: 0.4, lookX: -0.2, lookY: -1 }, (l) => ({
     ...armL(-62, 18, -10, "open", l),
     ...armR(120, 16, 8, "open", l),
   })),
-  /** 往上飘：远处的手伸向白、近处的手往后，腿拖在后面，仰着头、闭着眼笑（松了一口气） */
-  升: pose(-6, { face: -0.85, ground: false, float: 0.12, rot: -4, ...legL(-8, -44, -50), ...legR(12, -24, -46), neck: 22, expression: "释然", blink: 1, smile: 0.45 }, (l) => ({
+  /** 往上飘：远处的手伸向白、近处的手往后，腿拖在后面，仰着头、泪流着盯着白、嘴微微张开（伸手去够那道光：想挣脱一切的渴望，也是绝望） */
+  升: pose(-6, { face: -0.85, ground: false, float: 0.12, rot: -4, ...legL(-8, -44, -50), ...legR(12, -24, -46), neck: 22, expression: "含泪", sad: 0.9, wide: 0.2, blink: 0.15, smile: 0.1, open: 0.18, tears: 1, blush: 0.45, lookX: -0.2, lookY: -1 }, (l) => ({
     ...armL(-30, 24, -10, "open", l),
     ...armR(165, 12, 8, "open", l),
   })),
@@ -574,7 +574,7 @@ function manMid(t: number): V2 {
  *    画面随冲势带一点仰望倾斜（-0.035）；「心」「脏」两拍随胸口光芒连续递进急顶（+4%、+6%）。
  * 3. 「困」（42.017）：红绳瞬间绷直，他急停下坠，镜头因惯性往上猛冲过头 115px 再拽回、画面回正、猛震一顿（+6.5%）。
  * 4. 震撼（42.08–43.92「在一张没空隙的网」）：从 1.54 倍近景一口气暴退拉远到 0.215 倍半空大远景（E.out 先快后慢），只往下移到塔楼半腰
- *    （c.y = -7150，不到地面），漫天被拴住的人和交错的红绳巨网铺满视野；拉开后画面顺势倾斜（荷兰角推到 -0.145 弧度 ≈ -8.3°），配合三拍
+ *    （c.y = -7150，不到地面），漫天被拴住的人和交错的红绳巨网铺满视野；拉开时镜头逆时针旋转（和暴退一起甩起来，到切走一共约 13.7°），转着拉开有广角的张力，配合三拍
  *    冲进白光化灰的连续爆闪、光环与震动，营造强烈的压迫与震撼。
  */
 export function netCam(t: number): Cam {
@@ -608,18 +608,20 @@ export function netCam(t: number): Cam {
     const m = E.out(ph(t, T.pull0 + 0.04, T.wide));
     const sx0 = W / 2 + (p[0] - c.x) * c.z;
     const sy0 = H / 2 + (p[1] - c.y) * c.z;
-    // 拉开后顺势倾斜（42.42 起压入荷兰角，三拍化灰每一拍再往斜里一震）
+    // 镜头逆时针旋转（画面里的城顺时针转开）：和暴退一起甩起来（E.out），到 WIDE 以后不停、继续慢慢转到切走，
+    // 转着拉开像广角把整座城卷进画面；三拍化灰每一拍再往同一方向一震
     const shockTilt =
-      -0.145 * E.io(ph(t, 42.42, 43.55)) -
-      0.012 * kick(t, ASH_BEATS[0], 0.14) -
-      0.015 * kick(t, ASH_BEATS[1], 0.14) -
+      0.17 * E.out(ph(t, T.pull0 + 0.06, T.wide)) +
+      0.07 * ph(t, T.wide, T.end) +
+      0.012 * kick(t, ASH_BEATS[0], 0.14) +
+      0.015 * kick(t, ASH_BEATS[1], 0.14) +
       0.024 * kick(t, ASH_BEATS[2], 0.18);
     c = aim(p[0], p[1], sx0 + (wx - sx0) * m, sy0 + (wy - sy0) * m, zb, shockTilt);
   }
   // 碰到白：三拍连续冲击，镜头一惊（第三拍最重）
   c = { ...c, z: c.z * (1 + 0.024 * kick(t, ASH_BEATS[0], 0.11) + 0.028 * kick(t, ASH_BEATS[1], 0.11) + 0.045 * kick(t, ASH_BEATS[2], 0.14)) };
   const drift = ph(t, T.wide, T.end + 0.5);
-  return drift > 0 ? { ...c, z: c.z * (1 - 0.03 * E.out(drift)) } : c;
+  return drift > 0 ? { ...c, z: c.z * (1 - 0.07 * E.out(drift)) } : c;
 }
 /** 鼓进落定、「心」「脏」跳动、「困」猛拽、碰到白三拍震撼各一震 */
 export const netShake = (t: number) =>

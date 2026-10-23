@@ -1,30 +1,23 @@
-// 副歌一⑥「在黑暗漫长的反乌托邦」（53.94–55.98；在 53.94 黑 54.18 暗 54.39 漫 54.45 长 54.66 的 54.84 反 55.14 乌 55.38 托 55.44 邦 55.68；
-// 小节线 54.018、56.019）。2026-10-21 重做（死亡不追拍，拍地上的人）：妈妈飞出画面以后，54.018 天上炸开彩色的光——
-// 一圈圈像肥皂泡边一样的彩色光环从画面上方压下来，白往下打几道光，整个画面一亮，照在地上仰着头的两个人脸上，镜头被光推开一点；
-// 小石头一缩，埋进沉沉怀里哭，沉沉紧紧抱住他、低头贴着他的头闭上眼；灰像雪一样从天上一层层落下来，落在他们身上。
-// 镜头在 lib/streetcam.ts。
+// 副歌一⑥⑦ 妈妈碰到白（画面外）以后：天上炸开彩色的光，灰像雪一样落下来（2026-10-22 用户重做：「主角和孩子拥抱，镜头不动，
+// 上方发出彩色的光，小刀从天上掉下来」）。52.517（「至少我还在为你而歌唱」的「还」，拍）一圈圈像肥皂泡边一样的彩色光环从画面上方压下来，
+// 白往下打几道光，整个画面一亮，照在地上仰着头的两个人脸上；镜头不动。人和小刀在 lib/mother.ts，镜头在 lib/streetcam.ts。
 
 import { seeded } from "@frame/engine/math";
-import { beatAt } from "@frame/engine/tempo";
-import { kick } from "./cam";
 import { moteSprite } from "./world";
 import { MOM_X } from "./dawn";
-import { SING_T } from "./sing";
+import { MT } from "./mother";
 
 type V2 = [number, number];
 
 export const ASH_T = {
-  start: SING_T.end,
-  /** 她碰到白（小节线，画面外）：天上炸开彩色的光 */
-  touch: beatAt(108),
-  /** 小石头埋进沉沉怀里，沉沉紧紧抱住他 */
-  hug0: 54.25,
-  hug1: 54.85,
-  end: 55.98,
+  start: 53.94,
+  /** 她碰到白（拍，画面外）：天上炸开彩色的光 */
+  touch: MT.touch,
+  end: MT.end,
 };
 
-/** 彩色的光从哪里炸开：两个人头顶的天上（⑤最后那个取景的上边外面，光环往下压进画面） */
-export const burstAt = (): V2 => [MOM_X + 30, -2080];
+/** 彩色的光从哪里炸开：两个人头顶的天上（⑥不动的那个取景的上边外面一点，光环往下压进画面） */
+export const burstAt = (): V2 => [MOM_X + 40, -1500];
 
 /** 像雪一样往下落的灰：在他们头顶那一片天上，从上往下一层层显出来（灰落下来的样子），慢慢飘落；街上那一块多一些（镜头最后落在这里） */
 const FLAKES = (() => {
@@ -93,4 +86,4 @@ export function drawSkyBloom(g: CanvasRenderingContext2D, base: DOMMatrix, t: nu
 export const ashFlash = (t: number) => (t < ASH_T.touch ? 0 : 0.6 * Math.exp(-(t - ASH_T.touch) / 0.2));
 /** 白往下打的光：炸开以后亮起来，慢慢淡掉 */
 export const ashRays = (t: number) => (t < ASH_T.touch ? 0 : Math.min(1, (t - ASH_T.touch) / 0.12) * Math.exp(-Math.max(0, t - ASH_T.touch - 0.3) / 0.9));
-export const ashShake = (t: number) => 9 * kick(t, ASH_T.touch, 0.09);
+

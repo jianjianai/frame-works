@@ -1246,11 +1246,18 @@ export const whiteEdge = (x: number, t: number) => Y_WHITE + 34 * Math.sin(x / 5
  * flash 是有人被吸进去时整个画面亮一下。
  */
 export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, t: number, flash = 0) {
-  const [, yEdge] = toScreen(c, 0, Y_WHITE);
+  // 白的下沿在没转的画面上的高度；画面转着时眩光和光柱跟着转（pad：转开后露出来的角）
+  const yEdge = H / 2 + (Y_WHITE - c.y) * c.z;
+  const pad = c.r ? Math.abs(Math.sin(c.r)) * H + 40 : 0;
   g.setTransform(base);
   const glare = 1500 * c.z;
-  if (yEdge + glare > 0) {
+  if (yEdge + glare > -pad) {
     g.save();
+    if (c.r) {
+      g.translate(W / 2, H / 2);
+      g.rotate(c.r);
+      g.translate(-W / 2, -H / 2);
+    }
     g.globalCompositeOperation = "screen";
     const gr = g.createLinearGradient(0, yEdge, 0, yEdge + glare);
     gr.addColorStop(0, "rgba(255,252,246,0.75)");
@@ -1258,7 +1265,7 @@ export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, 
     gr.addColorStop(0.45, "rgba(255,240,226,0.08)");
     gr.addColorStop(1, "rgba(255,240,226,0)");
     g.fillStyle = gr;
-    g.fillRect(0, Math.max(-10, yEdge - 200), W, glare + 220);
+    g.fillRect(-pad, Math.max(-10 - pad, yEdge - 200), W + 2 * pad, glare + 220);
     // 白往下打的光柱（一根根很淡的斜光，慢慢地挪）
     const k = clamp01(1 - (yEdge - 0) / (H * 1.6)) * clamp01((yEdge + glare) / 600);
     if (k > 0.01) {
@@ -1281,7 +1288,7 @@ export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, 
     }
     g.restore();
   }
-  if (yEdge > -400) {
+  if (yEdge > -400 - pad) {
     applyCam(g, base, c, 1);
     const v = viewOf(c, 1);
     const path = new Path2D();

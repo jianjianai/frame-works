@@ -17,7 +17,7 @@ import { brickHold } from "./props";
 import { pose } from "./dawn";
 import { KID, KID_X } from "./memory";
 import { BOARD, KID8_KEYS, SIGN_T, drawBoard, kidAt8 } from "./sign";
-import { knifeAt } from "./knife";
+import { knifeAt } from "./mother";
 import { STUDENT, UNCLE } from "./saved";
 
 type V2 = [number, number];

@@ -15,7 +15,7 @@ import { armL, armR, legL, legR } from "./poses";
 import { drawPerson } from "./people";
 import { pose } from "./dawn";
 import { ASH_T } from "./ash";
-import { knifeAt } from "./knife";
+import { knifeAt } from "./mother";
 
 type V2 = [number, number];
 
