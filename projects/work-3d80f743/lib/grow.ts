@@ -38,7 +38,7 @@ export const GROW_T = {
   jump2: beatAt(131),
   land2: beatAt(132),
   give2: beatAt(133),
-  /** 十七岁一边走一边拽下刚飘起来的女学生 */
+  /** 十七岁一边走一边拽下刚飘起来的女学生（她在前方，不应跑到主角身后） */
   pull1: beatAt(138),
   /** 十九岁：跪下去张开手（小节线），溶回现在 */
   kneel: beatAt(140),
