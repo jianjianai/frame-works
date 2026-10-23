@@ -38,7 +38,7 @@ export const GROW_T = {
   jump2: beatAt(131),
   land2: beatAt(132),
   give2: beatAt(133),
-  /** 十七岁一边走一边拽下刚飘起来的女学生（她在前方，不应跑到主角身后） */
+  /** 十七岁一边走一边拽下刚飘起来的女学生 */
   pull1: beatAt(138),
   /** 十九岁：跪下去张开手（小节线），溶回现在 */
   kneel: beatAt(140),
@@ -158,16 +158,8 @@ const KEYS: MoveKey[] = [
   { t: G.give2 + 0.1, ease: "out", plant: "R", p: { ...R(CHEN.跪_看他), expression: "微笑", lookX: 0.4, lookY: 0.5 } },
   { t: G.give2 + 0.24, ease: "inOut", plant: "R", p: { ...R(CHEN.起身), ...faceOf(12) } },
   { t: G.give2 + 0.38, ease: "inOut", plant: "R", p: { ...R(CHEN.起身_直), ...faceOf(12) } },
-  // 十三到十六岁先按原节奏走到救人前；十七岁看到已经飘到网上的女学生，停步蓄力。
-  ...walkKeys(134, 137, "L"),
-  { t: G.pull1 - 0.18, ease: "inOut", plant: "R", squash: 0.08, items: teenItems(17), p: { ...R(CHEN.蹲), ...faceOf(17) } },
-  // 跳起来抓住脚踝，把人拽回地面；落地后保持蹲姿，片段在这里结束，不再接着走。
-  { t: G.pull1 - 0.04, ease: "in", squash: -0.08, items: teenItems(17), p: { ...R(CHEN.起跳), lift: 120, ...faceOf(17) } },
-  { t: G.pull1 + 0.08, ease: "out", squash: -0.02, items: teenItems(17), p: { ...R(CHEN.抓住), lift: 260, ...faceOf(17) } },
-  { t: G.pull1 + 0.2, ease: "in", squash: -0.02, items: teenItems(17), p: { ...R(CHEN.拽着坠), lift: 90, ...faceOf(17) } },
-  { t: G.pull1 + 0.34, ease: "out", squash: 0.12, plant: "L", items: teenItems(17), p: { ...R(CHEN.跪_缓冲), lift: 0, handR: "open", ...faceOf(17) } },
-  { t: G.pull1 + 0.5, ease: "inOut", squash: 0.12, plant: "L", items: teenItems(17), p: { ...R(CHEN.跪_缓冲), lift: 0, handR: "open", ...faceOf(17) } },
-  { t: G.kneel - 0.02, ease: "inOut", squash: 0.12, plant: "L", items: teenItems(17), p: { ...R(CHEN.跪_缓冲), lift: 0, handR: "open", ...faceOf(17) } },
+  // 十三到十八岁一路走（69.02 一边走一边伸手拽下女学生，见 girlAt 的 IK），最后一步 R 落地
+  ...walkKeys(134, 139, "L"),
   // 十九岁：跪下去张开手（前脚 R 钉住）
   { t: G.kneel, ease: "out", squash: 0.08, plant: "R", items: teenItems(19), p: G8.接 },
   { t: G.kneel + 0.2, ease: "out", squash: 0, plant: "R", p: G8.接 },
@@ -229,9 +221,9 @@ const S1 = {
 };
 const studentMove = live(
   [
-    // 她登场时就已经飘在半空，救援不是把刚站起来的人拽下去。
-    { t: 64, x: 0, p: { ...S1.飘, ground: false } },
-    { t: G.pull1 - 1.2, p: S1.飘 },
+    { t: 64, x: 0, p: S1.站 },
+    { t: G.pull1 - 0.85, p: S1.站 },
+    { t: G.pull1 - 0.4, ease: "inOut", p: { ...S1.飘, ground: false } },
     { t: G.pull1 - 0.04, p: S1.飘 },
     { t: G.pull1 + 0.08, ease: "out", p: S1.惊 },
     { t: G.pull1 + 0.22, ease: "inOut", p: { ...S1.惊, ground: true, lift: 0 } },
@@ -290,8 +282,8 @@ export function girlAt(t: number) {
     pose.armL = { ...(pose.armL as object), to: loc(eL), ik: wb } as PoseIn["armL"];
     pose.armR = { ...(pose.armR as object), to: loc(eR), ik: wb } as PoseIn["armR"];
   }
-  // 看到已经飘到网上的女学生后，她跳起来才伸手抓脚踝；抓住后把人拽下来。
-  const w1 = E.io(ph(t, G.pull1 - 0.04, G.pull1 + 0.08)) * (1 - E.io(ph(t, G.pull1 + 0.16, G.pull1 + 0.3)));
+  // 66.024 远处那只手往前伸，攥住女学生的脚踝往下、往后一拽
+  const w1 = E.io(ph(t, G.pull1 - 0.2, G.pull1 - 0.06)) * (1 - E.io(ph(t, G.pull1 + 0.2, G.pull1 + 0.36)));
   let grip1: V2 | null = null;
   if (w1 > 0.001) {
     grip1 = pull1Grip(t);
@@ -307,9 +299,7 @@ export function girlAt(t: number) {
 // 女学生：飘在她前面一点、脚刚离地；被攥住脚踝以后脚踝跟着她的手往下、往后，落地站住
 const STUDENT_X = () => rootAt(G.pull1) + 150;
 function studentLift(t: number) {
-  // 女学生从镜头一开始就在高处网上飘；被抓住后才快速落到地面。
-  const u = E.in2(ph(t, G.pull1 + 0.08, G.pull1 + 0.34));
-  return 330 * (1 - u) + 10 * Math.sin(t * 2.3) * ph(t, G.pull1 - 1.2, G.pull1 + 0.08);
+  return 300 * E.in2(ph(t, G.pull1 - 0.8, G.pull1)) + 10 * Math.sin(t * 2.3) * ph(t, G.pull1 - 0.8, G.pull1 - 0.4);
 }
 /** 她攥住的地方（女学生近处那只脚踝）：攥住以前在女学生身上，攥住以后往下、往后拽到她胯边 */
 function pull1Grip(t: number): V2 {
