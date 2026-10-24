@@ -988,7 +988,7 @@ function drawArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: 
   unshadeShoulder(ctx, rig, side, upper, base);
   rig.look.onUpperArm?.(ctx, rig, side, upper, ink);
   rig.look.onForearm?.(ctx, rig, side, ink);
-  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), rig.look.hands?.(rig) ?? null);
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), rig.look.hands?.(rig) ?? null, lower);
 }
 
 /** 压在身子上的手臂合并描边（两倍宽的边再盖上填色），但肩膀那一圈里压在身子上的边不描：身子（连外套）外面一遍、肩膀圈外面一遍 */
@@ -1066,13 +1066,15 @@ function drawForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", i
       ctx.restore();
     }
   rig.look.onForearm?.(ctx, rig, side, ink);
-  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), rig.look.hands?.(rig) ?? null);
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), rig.look.hands?.(rig) ?? null, lower);
 }
 
 /**
  * 手：手指在手掌后面，拿着的东西画在手掌和大拇指之间。握拳时收起手指，指一下时只留一根。
  * 手掌和手指、大拇指接的地方不描线（同一块手套，和刘海一个道理），手指之间的线留着。
  * glove：手套的颜色和阴影；null 是光着手，同样的手形画成皮肤色（和脸一样细线、手指不加阴影）。
+ * arm：前臂的轮廓。光着手时手掌、大拇指压在前臂上的那段不描线——手和前臂是同一块皮肤，描出来就是手腕上一道接缝
+ *（《引力》2026-10-24 用户：「这里手有接缝，很奇怪」）；戴手套时那条线是手套口，照常描。
  */
 function drawGlove(
   ctx: CanvasRenderingContext2D,
@@ -1082,6 +1084,7 @@ function drawGlove(
   ink: Ink,
   hold: (ctx: CanvasRenderingContext2D, layer: HoldInfo["layer"]) => void,
   glove: [string, string] | null = null,
+  arm: Path2D | null = null,
 ) {
   const bare = !glove;
   const on = ([x, y]: V2) => f.p(x * sx, y);
@@ -1102,6 +1105,7 @@ function drawGlove(
     out.addPath(p);
     ctx.clip(out, "evenodd");
   }
+  if (bare && arm) ctx.clip(outside(arm), "evenodd");
   ctx.strokeStyle = K.line;
   ctx.lineWidth = lw;
   ctx.lineJoin = "round";
@@ -1117,6 +1121,7 @@ function drawGlove(
   out.rect(-1e4, -1e4, 2e4, 2e4);
   out.addPath(palm);
   ctx.clip(out, "evenodd");
+  if (bare && arm) ctx.clip(outside(arm), "evenodd");
   // 重新设一遍描边：拿着的东西（砖顶的白色亮边）会改掉画笔，不设的话大拇指描成一圈浅色
   ctx.strokeStyle = K.line;
   ctx.lineWidth = lw;
