@@ -182,24 +182,24 @@ function buildNet(): Hanger[] {
   // 人这一层：几个离他近的（镜头往后退时一个个出现），拴在千斤家那栋楼、最高那栋楼、左边矮楼的窗上
   const near: [number, number, Block, number, number, Angles, number][] = [
     // 胯 x、胯 y、拴在哪栋楼、第几层、第几扇、姿势、第几个路人
-    [-4560, -8640, QJ_HOME, 13, 0, HANG_B, 12],
+    [-5160, -8640, QJ_HOME, 13, 0, HANG_B, 12],
     [-1960, -8860, TOWER, 9, 2, HANG_A, 22],
-    [-5380, -8930, STREET[5], 1, 1, HANG_A, 3],
+    [-5980, -8930, STREET[5], 1, 1, HANG_A, 3],
     [-1420, -8600, TOWER, 16, 2, HANG_B, 17],
-    [-6150, -8760, STREET[6], 0, 0, HANG_B, 27],
+    [-6750, -8760, STREET[6], 0, 0, HANG_B, 27],
     [-2950, -9010, TOWER, 4, 2, HANG_A, 8],
     // 2026-10-21 加：他被拽住以后镜头往后撤，先看见身边一圈和他一样被拴着的人，往下到半空也铺满
     [-3420, -8700, QJ_HOME, 6, 1, HANG_B, 31],
     [-1000, -8930, STREET[0], 2, 0, HANG_A, 35],
     [-3950, -8980, TOWER, 14, 0, HANG_A, 14],
     [-700, -8560, STREET[0], 4, 1, HANG_B, 19],
-    [-5000, -8820, QJ_HOME, 20, 0, HANG_A, 25],
+    [-5600, -8820, QJ_HOME, 20, 0, HANG_A, 25],
     [-3260, -8760, TOWER, 24, 1, HANG_B, 6],
     [-2120, -7650, TOWER, 19, 2, HANG_B, 11],
-    [-4280, -7420, QJ_HOME, 18, 1, HANG_A, 16],
+    [-4880, -7420, QJ_HOME, 18, 1, HANG_A, 16],
     [-1560, -7180, STREET[0], 3, 0, HANG_A, 23],
     [-2860, -6850, TOWER, 22, 1, HANG_B, 29],
-    [-4880, -6920, QJ_HOME, 22, 0, HANG_B, 34],
+    [-5480, -6920, QJ_HOME, 22, 0, HANG_B, 34],
   ];
   near.forEach(([x, y, b, f, i, p, n], k) => {
     const spec = passerby(n);

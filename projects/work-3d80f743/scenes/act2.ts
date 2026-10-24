@@ -32,7 +32,7 @@ import { HOME_T, drawHomeDusk, drawHomeLights, homeCam, homeLook, homeShake, mak
 import { SKY_T, makeSky, skyCam, skyLook, skyShake } from "../lib/sky";
 import { GIVE_T, QJ_ROOF, RAIL_TOP, ROOF_T, drawQjRail, makeRoof, roofCam, roofShake } from "../lib/roof";
 import { makeGive } from "../lib/give";
-import { NIGHT_T, duskAt } from "../lib/night";
+import { DUSK_PRE, NIGHT_T, duskAt } from "../lib/night";
 import { tenCam, twelveCam, writeCam } from "../lib/write";
 import { makeStage } from "../lib/stage";
 import { TEN_T, TWELVE_T } from "../lib/room";
@@ -102,9 +102,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const drawHigh = (g: CanvasRenderingContext2D, t: number) => {
     const six = t >= ROOF_T.cut;
     const night = t >= NIGHT_T.start;
+    // ⑥⑦ 起就是傍晚（天、楼按 duskAt 暗下来）；人身上的那层色等落到楼顶前后（29.6–30.1）再慢慢蒙上
+    const dusk = t >= DUSK_PRE.t0;
+    const tintK = E.io(ph(t, 29.6, 30.1));
     const eleven = t >= GIVE_T.start;
     // ⑧ 天黑下来：这一帧的天色（画完复原，别的镜头不受影响）
-    if (night) setDusk(...duskAt(t));
+    if (dusk) setDusk(...duskAt(t));
     try {
       const cam = eleven ? give.cam(t) : six ? roofCam(t, roof, sky) : skyCam(t, sky);
       const sh = shake(t, eleven ? give.shakeK(t) : six ? roofShake(t) : skyShake(t));
@@ -125,14 +128,14 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         }
         if (eleven) give.draw(gg, t, cam.z);
       };
-      if (night) drawTinted(g, [QJ_HOME.x - 520, RAIL_TOP - 820, QJ_HOME.x + QJ_HOME.w + 1200, QJ_ROOF + 40], people, 0.85 - 0.3 * roof.hugLight(t));
+      if (tintK > 0) drawTinted(g, [QJ_HOME.x - 520, RAIL_TOP - 820, QJ_HOME.x + QJ_HOME.w + 1200, QJ_ROOF + 40], people, (0.85 - 0.3 * roof.hugLight(t)) * tintK);
       else people(g);
       // ⑧ 抱在一起的两个人身上的暖光、⑪ 砖暖起来的光（画在夜色上面）
       if (six) roof.drawHugGlow(g, t);
       if (eleven) give.drawGlowOver(g, t);
       drawAir(g, cam, t, sh, skyLook(t), night ? E.io(ph(cam.z, 2, 6)) : 0);
     } finally {
-      if (night) setDusk(0);
+      if (dusk) setDusk(0);
     }
   };
 

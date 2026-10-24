@@ -35,9 +35,9 @@ export const ROOF_T = {
   shock: b(56),
   /** 床单脱手、冲 */
   letgo: 28.07,
-  run0: 28.08,
-  /** 蹬着楼边扑出去 */
-  jump: 28.28,
+  run0: 28.06,
+  /** 蹬着楼边跳出去（她在巷子正中间，离楼边约 460：一步冲到楼边就跳，跳起来划一道弧、在往下落的那段抱住她） */
+  jump: 28.17,
   /** 「等」半空里从身后抱住她 */
   catch: 28.46,
   /** 坐着落在千斤家那栋楼的楼顶（第二句「请你等等我」刚开头、鼓停的那一下） */
@@ -60,10 +60,10 @@ const SIT0 = b(60) + 0.11;
 const SIT1 = b(60) + 0.44;
 export const HUG_T = {
   start: 29.79,
-  /** 「我」以后的底鼓：还在半空里，千斤一下转过身来（只翻朝向），抱住她 */
-  turn: b(58),
-  /** 转过来贴进她怀里、腿蜷起来 */
-  hug1: 29.4,
+  /** 抱住那一下她就扑进沉沉怀里（照草稿：一抱住就搂住、把脸埋进去，不先张着手愣着）：2026-10-24 从 29.01 挪到抱住后 0.12 */
+  turn: 28.58,
+  /** 两只手环到她背上、脸埋在她胸口 */
+  hug1: 28.86,
   /** 「等、等、我」在她耳边说 */
   say: [30.42, 30.6, 30.78],
   /** 「我」千斤抬起头，靠在她身上 */
@@ -114,13 +114,16 @@ const CRADLE_X = -54;
 /** ⑧ 半空里抱着时千斤身子直着，比坐好的位置再往沉沉那边贴多少 */
 const AIR_DX = 72;
 /** 落在千斤家楼顶的地方（沉沉的根） */
-const X_LAND = -4330;
+const X_LAND = QJ_HOME.x + 540;
 /** ⑪ 千斤两只手攥在栏杆上的地方（两只手中间） */
 const GRIP_X = X_LAND - 214;
 /** ⑪ 风筝：她回家写砖那几秒（⑨⑩ 在屋里，看不见）千斤一个人攥着栏杆漂起来；KITE0 起换成风筝，KITE1 漂到 */
 const KITE0 = 99;
 const KITE1 = 100;
 const kiteK = (t: number) => E.io(ph(t, KITE0, KITE1));
+
+/** 抱着飘：抱住了，松一口气，闭着眼、嘴角带一点笑，脸贴在她头边（2026-10-24 用户：「被抱住到飘到对面是一种很温暖的感觉」） */
+const FLOAT_SOFT = { ...CHEN2.抱着飘, expression: "闭眼", teeth: 0, smile: 0.4, neck: -18 } as PoseIn;
 
 export function makeRoof(sky: ReturnType<typeof makeSky>) {
   const T = ROOF_T;
@@ -137,18 +140,18 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       { t: T.see, ease: "out", p: { ...CHEN2.收床单, face: 1, ground: false, lift: -8, neck: 2, ...pull(), headTurn: -0.9, lookX: -0.9 } },
       // ——一下转过身来，一惊
       { t: T.shock, ease: "out", p: { ...CHEN2.一惊, ground: false, lift: -8, headTurn: 0 } },
-      // 冲：一步半（铁靴，一步 0.2 秒）
+      // 冲：一大步冲到楼边（铁靴），另一只脚踩上楼边蹬出去
       { t: T.run0, ease: "inOut", p: run(CHEN.跑_蹬地, false) },
-      { t: T.run0 + 0.08, ease: "out", p: run(CHEN.跑_腾空, false) },
-      { t: T.run0 + 0.13, ease: "inOut", p: run(CHEN.跑_落地, true) },
-      { t: T.jump - 0.03, ease: "inOut", p: run(CHEN.跑_蹬地, true) },
+      { t: T.run0 + 0.05, ease: "out", p: run(CHEN.跑_腾空, false) },
+      { t: T.jump - 0.03, ease: "inOut", p: run(CHEN.跑_落地, true) },
+      { t: T.jump - 0.01, ease: "inOut", p: run(CHEN.跑_蹬地, true) },
       { t: T.jump + 0.08, ease: "out", p: CHEN2.扑 },
       { t: T.catch, ease: "out", p: CHEN2.抱住 },
-      // 抱着她在天上飘：腿软软地垂着
-      { t: T.catch + 0.35, ease: "inOut", p: CHEN2.抱着飘 },
-      // 快到楼顶：腿伸下去，铁靴先踩到楼顶上（膝盖一弯吃住分量），再抱着她坐下去（用户 2026-10-20：「主角应该脚先触地之后再坐下」）
-      { t: 29.3, p: CHEN2.抱着飘 },
-      { t: T.land - 0.3, ease: "inOut", p: CHEN2.抱着坠 },
+      // 抱着她在天上飘：抱住了——松一口气，慢慢闭上眼、嘴角松开，脸贴在她头边（腿软软地垂着）
+      { t: T.catch + 0.45, ease: "inOut", p: FLOAT_SOFT },
+      // 快到楼顶：睁开眼低头看楼顶，腿伸下去，铁靴先踩到楼顶上（膝盖一弯吃住分量），再抱着她坐下去（用户 2026-10-20：「主角应该脚先触地之后再坐下」）
+      { t: T.land - 0.55, p: FLOAT_SOFT },
+      { t: T.land - 0.25, ease: "inOut", p: { ...CHEN2.抱着坠, expression: "心疼", teeth: 0 } },
       { t: T.land, ease: "out", squash: 0.05, p: CHEN2.落地 },
       { t: SIT0, p: CHEN2.落地 },
       { t: SIT1, ease: "inOut", p: CHEN2.坐地抱 },
@@ -212,15 +215,23 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     return [X_LAND + o[0], QJ_ROOF + o[1]];
   })();
   /**
-   * 抱着飘的这一段胸口在哪：带着扑出去的惯性往左飘、越飘越慢；先被千斤往上带一点、悬着（前 30%），再慢慢落下来、越落越快，
-   * 快到楼顶收一点，坐下去时还有一点往下的速度（每秒约 350：坐下去的那一下）。悬得久一点：腿垂着时人一低，脚就先踩到楼顶上了
+   * 抱着飘的这一段胸口在哪（2026-10-24 照草稿重做；用户：「你看看草稿为什么可以给人这种感觉，这里却没有」）：
+   * 最沉的人抱住了最轻的人——扑下来的那一沉（DIP_K 的落差）0.18 秒就被她的「轻」托住，之后两个人几乎悬着、很慢很慢地往下飘；
+   * 往左：扑过来的冲劲很快散掉（XM_K 的距离），剩下的柔和起步、柔和停住地飘过巷子，30.01 刚好落在千斤家楼顶。
+   * 不要先被往上带、悬着再落，不要在楼顶上空竖着掉，不要靠降低楼顶做速度感。
    */
+  const DIP_K = 0.6;
+  const XM_K = 0.12;
   const chestPath = (t: number): V2 => {
+    const s = Math.max(0, t - T.catch);
+    const S0 = T.land - T.catch;
     const u = ph(t, T.catch, T.land);
-    const x = C_CATCH[0] + (C_LAND[0] - C_CATCH[0]) * (1 - Math.pow(1 - u, 1.7));
-    const v = Math.max(0, (u - 0.3) / 0.7);
-    const sink = 0.72 * v * v * (3 - 2 * v) + 0.28 * v * v;
-    const y = C_CATCH[1] + (C_LAND[1] - C_CATCH[1]) * sink - 46 * Math.sin(Math.PI * Math.min(1, u / 0.6)) * (1 - u);
+    const m = (1 - Math.exp(-u / 0.08)) / (1 - Math.exp(-1 / 0.08));
+    // 退远的那一段（29.0–29.65）她们还悬在巷子中间，29.55 前后才飘过千斤家楼顶的边
+    const v = ph(u, 0.15, 1);
+    const x = C_CATCH[0] + (C_LAND[0] - C_CATCH[0]) * (XM_K * m + (1 - XM_K) * v * v * (3 - 2 * v));
+    const dip = (1 - Math.exp(-s / 0.18)) / (1 - Math.exp(-S0 / 0.18));
+    const y = C_CATCH[1] + (C_LAND[1] - C_CATCH[1]) * (DIP_K * dip + (1 - DIP_K) * (s / S0));
     return [x, y];
   };
   const rootAt = (t: number): V2 => {
@@ -231,9 +242,9 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
       return [X_C0 + (X_EDGE - X_C0) * (0.55 * u + 0.45 * u * u), TOWER_ROOF];
     }
     if (t <= T.catch) {
-      // 扑出去：横着飞、略往上拱一点
+      // 扑下去：蹬出去先略往上拱一点，接着越落越快，往左下扑到她身上（抱住那一下带着往下的速度）
       const u = ph(t, T.jump, T.catch);
-      return [P_EDGE[0] + (P_CATCH[0] - P_EDGE[0]) * u, P_EDGE[1] + (P_CATCH[1] - P_EDGE[1]) * u - 70 * Math.sin(Math.PI * u)];
+      return [P_EDGE[0] + (P_CATCH[0] - P_EDGE[0]) * u, P_EDGE[1] + (P_CATCH[1] - P_EDGE[1]) * u * u - 60 * Math.sin(Math.PI * u)];
     }
     if (t <= T.land) {
       // 抱住以后：她轻、她沉，两个人差不多悬住了——按胸口的路线慢慢往左飘、慢慢落下来
@@ -279,12 +290,11 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     [
       { t: T.catch - 0.5, x: 0, p: QIANJIN.张手 },
       { t: T.catch, p: QIANJIN.张手 },
-      { t: T.catch + 0.1, ease: "out", p: QIANJIN.被抱住 },
-      // 半空里（「我」以后的底鼓）一下转过身来抱住她：不回头（头单独转 headTurn −0.3…−0.9 时短发会翻成一圈尖），也不慢慢转（脸转到正面附近短发也会翻），
-      // 转身前手脚收拢、腿垂着（前后两个样子差不多对称），在一帧里只翻朝向；接着扑进她怀里，把脸埋在她胸口，跟她一起坐着落下来；「我」哭出来
-      { t: S.turn - 0.16, ease: "inOut", p: QIANJIN.转身前 },
-      { t: S.turn - 0.01, p: QIANJIN.转身前 },
-      { t: S.turn, ease: "hold", p: { ...QIANJIN.转身前, face: 0.6 } },
+      // 被接住：一惊（0.06 秒），接着就扑进她怀里——两只手环到她背上、脸埋在她胸口哭（她本来就朝右、对着沉沉，不用转身；
+      // S.turn 那一帧只是把朝左写的姿势换成朝右写的，朝向不变）
+      { t: T.catch + 0.06, ease: "out", p: QIANJIN.被抱住 },
+      { t: S.turn - 0.01, p: QIANJIN.被抱住 },
+      { t: S.turn, ease: "hold", p: { ...QIANJIN.被抱住, face: 0.6 } },
       // 腿在半空里软软地垂着，落到楼顶以后才折到身子底下跪坐在她腿上（不提前收）
       { t: S.hug1, ease: "out", p: QIANJIN.转身抱_垂腿 },
       // 两个人一起坐下来：沉沉往下坐的同时千斤把腿折到身子底下，同一刻坐稳（用户 2026-10-20：「他们两个人要一起坐下来」）
@@ -333,8 +343,10 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     // 抱着时和她一起飘：头发、衣服按两个人的速度甩；⑪ 她一个人攥着栏杆，几乎不动
     const v = t < KITE0 ? velAt(t) : [0, 0];
     // 踩到楼顶以后抱着坐下去那一下胸口往下走得快：千斤的齐肩短发按这个速度会往上甩成一圈尖，只给一点
-    const vmax = t > T.land - 0.05 && t < KITE0 ? 300 : 2000;
-    withDrag(pose, [v[0], Math.max(-vmax, Math.min(vmax, v[1]))], 0.9);
+    // 抱住以后带着往下的惯性一路往下沉（每秒一千多）：齐肩短发同样会往上甩成尖，也只给一点
+    const vmax = t > T.catch - 0.05 && t < KITE0 ? 300 : 2000;
+    const hmax = t > T.catch - 0.05 && t < KITE0 ? 700 : 4000;
+    withDrag(pose, [Math.max(-hmax, Math.min(hmax, v[0])), Math.max(-vmax, Math.min(vmax, v[1]))], 0.9);
     // ⑪ 被白往上拽：两条腿在风里一下一下地飘
     const kk = kiteK(t);
     if (kk > 0) {
@@ -668,14 +680,17 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
   };
   /** ⑧ 两个人抱着坐下来以后：她们身上一团暖光（天黑下来、满城都是冷的夜色，只有她们这里是暖的） */
   const drawHugGlow = (g: CanvasRenderingContext2D, t: number) => {
-    if (t < T.land - 0.3 || t >= KITE0) return;
-    const w = E.io(ph(t, T.land, S.say[2] + 0.4));
+    if (t < T.catch || t >= KITE0) return;
+    // 抱住那一下就暖起来（照草稿：抱住一闪，飘着的时候一直是一团暖光裹着两个人），坐到楼顶上天黑下来也一直暖着
+    const w = Math.max(E.io(ph(t, T.catch, T.catch + 0.5)), E.io(ph(t, T.land, S.say[2] + 0.4)));
     if (w <= 0.01) return;
     const a = chenChest(t);
     const b2 = qjChest(t);
     const m: V2 = [(a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2];
     drawGlow(g, m[0], m[1] - 30, 300 + 60 * w, 0.2 * w);
     drawGlow(g, m[0], m[1] - 60, 560, 0.1 * w);
+    const fl = kick(t, T.catch, 0.12);
+    if (fl > 0.01) drawGlow(g, m[0], m[1] - 30, 700, 0.35 * fl);
   };
 
   /** 落地：铁靴踩到楼顶上，两边扬起一小团灰 */
@@ -791,22 +806,27 @@ export function drawQjRail(g: CanvasRenderingContext2D) {
 export function roofCam(t: number, r: ReturnType<typeof makeRoof>, sky: ReturnType<typeof makeSky>): Cam {
   const T = ROOF_T;
   let c = skyCam(t, sky);
-  // 两个人越近推得越近
+  // 2026-10-24 用户：「抱住之前不要放大镜头，抱住之后暖光+放大，之后缓慢缩小，落地之后放大」
+  // 抱住以前：倍数不变（接⑥ 退开的 0.78），只跟着两个人平移，把冲过来、扑出去的沉沉和千斤一起框住
+  const z0 = c.z;
   const w2 = E.io(ph(t, T.cut + 0.05, T.jump));
   if (w2 > 0) {
     const ch = r.chenChest(Math.min(t, T.catch));
     const q = r.qjChestOf(Math.min(t, T.catch));
-    const d = Math.hypot(ch[0] - q[0], ch[1] - q[1]);
-    const z = Math.max(1, Math.min(1.6, 700 / Math.max(1, d)));
-    c = camLerp(c, aim((ch[0] + q[0]) / 2, (ch[1] + q[1]) / 2, 540, 1000, z), w2);
+    c = camLerp(c, aim((ch[0] + q[0]) / 2, (ch[1] + q[1]) / 2, 540, 1060, z0), w2);
   }
-  // 抱住以后：跟着两个人往左飘、往下落，慢慢退开一点（1.6 → 1.3），下面千斤家的楼顶飘过来
-  const w3 = E.io(ph(t, T.catch + 0.04, T.catch + 0.4));
+  // 抱住：暖光一闪，镜头推近抱在一起的两个人（0.78 → 1.2，E.out，0.5 秒越推越慢）；
+  // 之后缓慢地退开（→ 0.95，E.io 到落地），两个人飘过巷子、千斤家楼顶从左下上来；落地以后再推近（下面的 w8）
+  const w3 = E.io(ph(t, T.catch - 0.02, T.catch + 0.2));
   if (w3 > 0) {
     const a = r.chenChest(t);
     const b2 = r.qjChestOf(t);
-    const u = E.io(ph(t, T.catch, T.land));
-    c = camLerp(c, aim((a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2, 540 - 80 * u, 940, 1.6 * Math.pow(1.3 / 1.6, u)), w3);
+    const mid: V2 = [(a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2];
+    const zin = z0 * Math.pow(1.2 / z0, E.out(ph(t, T.catch, T.catch + 0.5)));
+    // 2026-10-24 用户：「这里的镜头缩小去掉看看」——推近以后不再缓慢退开（原来 1.2 → 0.95），一直 1.2 跟着到落地
+    const z = zin;
+    const sy = 980 + 60 * E.io(ph(t, T.catch + 0.5, T.land));
+    c = camLerp(c, aim(mid[0], mid[1], 540, sy, z), w3);
   }
   // ⑧ 坐到楼顶上以后：推近两张脸（越推越慢，落点按「我」以后两张脸的位置算）
   const S = HUG_T;
@@ -817,11 +837,12 @@ export function roofCam(t: number, r: ReturnType<typeof makeRoof>, sky: ReturnTy
     c = { ...c, z: c.z * (1 + 0.025 * E.soft(ph(t, S.say[2] + 0.36, S.end))) };
   }
   // 一惊一顿、抱住一震、落地轻轻一沉
-  c = { ...c, z: c.z * (1 + 0.04 * kick(t, T.shock, 0.1) + 0.06 * kick(t, T.catch, 0.09) + 0.02 * kick(t, T.land, 0.1)) };
+  // 抱住那一下不砸：轻轻一凑（被软软地接住）
+  c = { ...c, z: c.z * (1 + 0.04 * kick(t, T.shock, 0.1) + 0.03 * kick(t, T.catch, 0.16) + 0.02 * kick(t, T.land, 0.1)) };
   c = { ...c, y: c.y - (16 * kick(t, T.land, 0.12)) / c.z };
   return c;
 }
 
 export function roofShake(t: number) {
-  return 6 * kick(t, ROOF_T.shock, 0.07) + 10 * kick(t, ROOF_T.catch, 0.08) + 5 * kick(t, ROOF_T.land, 0.08);
+  return 6 * kick(t, ROOF_T.shock, 0.07) + 3 * kick(t, ROOF_T.catch, 0.08) + 5 * kick(t, ROOF_T.land, 0.08);
 }

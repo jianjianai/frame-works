@@ -912,17 +912,20 @@ export const STREET: Block[] = [
   { x: 2090, w: 660, floors: 8, wall: "#e2d3b0", wallShade: "#d3c29c", seed: 402, fh: 215 },
   { x: 2810, w: 520, floors: 5, wall: "#e6b39d", wallShade: "#d69f88", seed: 403, fh: 240, shop: "#6f8f86" },
   { x: 3390, w: 700, floors: 7, wall: "#ecd5a6", wallShade: "#dcc290", seed: 404, fh: 220, shop: "#d9a441" },
-  { x: -5540, w: 680, floors: 6, wall: "#ecd5a6", wallShade: "#dcc290", seed: 313, fh: 220, shop: "#d9a441" },
-  { x: -6140, w: 540, floors: 4, wall: "#dcc5b6", wallShade: "#cdb3a3", seed: 314, fh: 240 },
+  { x: -6140, w: 680, floors: 6, wall: "#ecd5a6", wallShade: "#dcc290", seed: 313, fh: 220, shop: "#d9a441" },
+  { x: -6740, w: 540, floors: 4, wall: "#dcc5b6", wallShade: "#cdb3a3", seed: 314, fh: 240 },
 ];
 
 /**
- * 千斤家那栋楼：最高那栋楼左边，隔一条巷子（−4060…−3700）的一栋三十层老楼（楼顶 −7922，比最高那栋楼矮 620）。一楼是她家（门口一根拴人的铁桩），
+ * 千斤家那栋楼：最高那栋楼左边，隔一条宽巷子（−4660…−3700）的一栋三十层老楼（楼顶 −7922，比最高那栋楼矮 620）。一楼是她家（门口一根拴人的铁桩），
  * 她从门口飘起来、顺着巷子飘到最高那栋楼旁边的高空；沉沉从楼顶扑出去抱住她，两个人在天上慢慢往左飘，落在这栋楼的楼顶上。
  * 原来二十层，用户 2026-10-19 要「左边房子加高一点」：上面加盖十层（topFloors），下面二十层一样不变。
+ * 巷子原来 360 宽，2026-10-24 用户要「两栋楼的间隙改得远一点，让他们在空中慢慢下落飘得远一点」：这栋楼和左边两栋一起往左挪 600。
+ * （2026-10-24 试过降三层让⑦ 抱着往下沉得多一点，用户：「左边的房子太矮了，应该是抱住之后在中间慢慢飘过去，把房子变矮速度感就提升了，这样不行」——
+ * 楼顶就在这个高度，⑦ 抱住以后在巷子中间几乎平着慢慢飘过去，快到楼顶才斜着滑下来。）
  * 楼顶不放天线（plainRoof）：⑦ 两个人就站在楼顶上，天线正好立在沉沉身后，细线像一个准星。
  */
-export const QJ_HOME: Block = { x: -4800, w: 740, floors: 30, topFloors: 10, wall: "#e6cbb0", wallShade: "#d7b99b", seed: 406, fh: 260, plainRoof: true };
+export const QJ_HOME: Block = { x: -5400, w: 740, floors: 30, topFloors: 10, wall: "#e6cbb0", wallShade: "#d7b99b", seed: 406, fh: 260, plainRoof: true };
 
 // ——— 斜照的光：楼缝里漏下来的阳光，在楼面和地上落成一道道斜的影子（影子偏紫的暖灰，用 multiply，不发黑） ———
 const BAND_SLOPE = 0.62;

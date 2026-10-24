@@ -26,10 +26,22 @@ export const NIGHT_T = {
 };
 
 /** [天黑了多少, 城里的窗亮了多少] */
+/**
+ * ⑥⑦ 已经是傍晚（2026-10-24 用户：「这里应该是快到晚上了，让天暗下来」）：切到高空（26.0）时天已经偏橙红、暗了一层（PRE0），
+ * 一路慢慢再暗（到 30.0 是 PRE1），城里零星亮起几扇窗；鼓一停（30.0）起接着落到天黑透。
+ */
+export const DUSK_PRE = { t0: 26.0, PRE0: 0.46, PRE1: 0.6, lights: 0.18 };
 export function duskAt(t: number): [number, number] {
   const T = NIGHT_T;
+  const P = DUSK_PRE;
+  if (t < T.dusk0) {
+    if (t < P.t0) return [0, 0];
+    const v = ph(t, P.t0, T.dusk0);
+    return [P.PRE0 + (P.PRE1 - P.PRE0) * v, P.lights * v];
+  }
   const u = ph(t, T.dusk0, T.dusk1);
-  return [1 - Math.pow(1 - u, 1.6), Math.pow(ph(t, T.lights0, T.lights1), 1.3)];
+  const lights = P.lights + (1 - P.lights) * Math.pow(ph(t, T.lights0, T.lights1), 1.3);
+  return [P.PRE1 + (1 - P.PRE1) * (1 - Math.pow(1 - u, 1.6)), lights];
 }
 /** 沉沉家的台灯：啪地亮起来，闪一下 */
 export function lampAt(t: number) {

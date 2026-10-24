@@ -1406,12 +1406,12 @@ export function homeCam(
  */
 function cam4pre(t: number, c0: Cam): Cam {
   const T = HOME_T;
-  const F = aim(-4295, 0, 540, 1700, 1.2);
+  const F = aim(HX + 505, 0, 540, 1700, 1.2);
   let c = camLerp(c0, F, E.io(ph(t, T.drop - 0.03, T.slam + 0.06)));
   const push = 1 + 0.04 * E.soft(ph(t, T.slam, 23.8));
   c = { ...c, z: c.z * push * (1 + 0.012 * kick(t, T.slam, 0.08)) };
   // 拽住：她在画面右上、红线从她脚踝斜着拉到右下的铁桩，门口在左下，地面在画面最下面
-  const HOLD = aim(-4135, 0, 540, 1900, 1.1);
+  const HOLD = aim(HX + 665, 0, 540, 1900, 1.1);
   c = camLerp(c, HOLD, E.io(ph(t, T.liftOff - 0.02, T.taut + 0.03)));
   // 屏住气：极慢地凑近一点
   c = { ...c, z: c.z * (1 + 0.012 * E.soft(ph(t, T.taut, T.snap))) };
