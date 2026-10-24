@@ -8,7 +8,8 @@
 //   ④ 绷直以后远景屏住一下；沉沉跑进来，镜头落到街上跟着她跑（晚 0.06 秒，吊着的两个人在画面上边）；蹲下凑近 4%；起跳跟着往上（只平移），
 //      「茫」抓住一冲一震，坠下去一沉；49.62 起让开到三个人和铁靴的远景，僵持着线性慢推。
 //   ⑤「但」铁靴离了地一惊；「把小刀」推到妈妈的脸和手上，「带」割断一顿；她往上飞走（不追），镜头顺着掉下去的两个人往下甩，「身」落地一震。
-//   ⑥ 用户：「主角和孩子拥抱，镜头不动，上方发出彩色的光，小刀从天上掉下来」——落地以后往后让开一点，把头顶的天让出来，之后一动不动。
+//   ⑥ 用户：「主角和孩子拥抱，镜头不动，上方发出彩色的光，小刀从天上掉下来」；2026-10-24「运镜和情绪还有动作需要优化」：不震、不追拍，但跟着人和东西走——
+//      落地让开以后顺着他伸向天上的手慢慢抬头往上看（屏着气）；「还」彩光炸开，镜头被光推开一点；之后跟着落下来的灰落回两个人身上，越推越慢地凑近两张脸。
 //   ⑦ 小刀扎在街上以后，柔和起步、一路减速地凑近她和那把刀；之后 lib/memory.ts 推近她仰着的脸。
 
 import { type Cam, E, aim, camLerp, kick, ph } from "./cam";
@@ -89,7 +90,19 @@ function chenChest(t: number): V2 {
   const j = jointsOf(s.chen.pose);
   return [s.chen.root[0] + (j.shoulderL[0] + j.shoulderR[0]) / 2, s.chen.root[1] + (j.shoulderL[1] + j.shoulderR[1]) / 2 + 60];
 }
-/** ⑥ 不动的那个取景：跪着抱在一起的两个人在画面下面，头顶留一大片天（光和小刀从上面来） */
+/** ⑥ 彩光以后跟着灰落回两个人身上：从这一刻起 */
+const HUG_T0 = 53.0;
+/** 落回去推近的取景：两张脸中间偏下（脚下的铁靴和小刀落的地方也在画面里） */
+let HUG: Cam | null = null;
+function hugFrame(): Cam {
+  if (HUG) return HUG;
+  const s = sceneAt(53.7);
+  const j = jointsOf(s.chen!.pose);
+  const head: V2 = [s.chen!.root[0] + j.head[0], s.chen!.root[1] + j.head[1]];
+  HUG = aim(head[0] + 30, head[1] + 130, 540, 1000, 1.95);
+  return HUG;
+}
+/** ⑥ 落地以后让开的那个取景：跪着抱在一起的两个人在画面下面，头顶留一大片天（光和小刀从上面来） */
 let STILL: Cam | null = null;
 function still(): Cam {
   if (STILL) return STILL;
@@ -132,7 +145,7 @@ export function streetCam(t: number): Cam {
     const fx = 0.6 * cc[0] + 0.4 * sc.stone.ankle[0];
     const zf = W0.z * 1.6 * (1 + 0.04 * E.io(ph(t, MT.crouch, MT.jump)));
     let f = aim(fx, cc[1], 540, 1230, zf);
-    f = { ...f, z: f.z * (1 + 0.05 * kick(t, MT.grab, 0.1)), y: f.y + (40 * kick(t, MT.ground, 0.12)) / f.z };
+    f = { ...f, z: f.z * (1 + 0.05 * kick(t, MT.grab, 0.1)), y: f.y + (28 * kick(t, MT.ground, 0.12)) / f.z };
     c = camLerp(c, f, E.io(ph(t, MT.taut + 0.1, 48.45)));
     // 僵持：三个人和街上的铁靴，线性慢推
     const hold = { ...W0, y: W0.y + 60 / W0.z, z: W0.z * 1.08 * (1 + 0.06 * ph(t, 49.7, MT.lift + 0.3)) };
@@ -151,8 +164,15 @@ export function streetCam(t: number): Cam {
   }
   c = { ...c, z: c.z * (1 + 0.04 * kick(t, MT.land, 0.1)) };
   if (t <= MT.land + 0.06) return c;
-  // ⑥ 往后让开一点，把头顶的天让出来，之后一动不动
+  // ⑥ 往后让开一点，把头顶的天让出来
   c = camLerp(c, still(), E.settle(ph(t, MT.land + 0.06, 51.92)));
+  // 「至少我」：顺着他伸向天上的手，屏着气线性地慢慢抬头往上看（人沉到画面下面，头顶的天越来越大，等着）
+  c = { ...c, y: c.y - (150 * ph(t, 51.8, MT.touch)) / c.z, z: c.z * (1 - 0.03 * ph(t, 51.8, MT.touch)) };
+  // 「还」彩光炸开：镜头被光推开、再往上让一点（不震）——光照在两张仰着的脸上
+  const pushed = E.out(ph(t, MT.touch, MT.touch + 0.45));
+  c = { ...c, y: c.y - (50 * pushed) / c.z, z: c.z * (1 - 0.05 * pushed) };
+  // 「在为你而歌唱」：跟着落下来的灰慢慢落回两个人身上，越推越慢地凑近两张脸（心碎）；脚下留着铁靴跟前那块地（小刀会掉在那里）
+  if (t > HUG_T0) c = camLerp(c, hugFrame(), E.settle(ph(t, HUG_T0, ASH_T.start + 0.3)));
   if (t <= MT.knifeLand + 0.1) return c;
   // ⑦ 小刀扎在街上以后：柔和起步、一路减速地凑近她和那把刀
   const s0 = sceneAt(55.2);
@@ -170,7 +190,7 @@ export function streetShake(t: number) {
     10 * kick(t, MT.push, 0.07) +
     12 * kick(t, MT.taut, 0.08) +
     8 * kick(t, MT.grab, 0.08) +
-    7 * kick(t, MT.ground, 0.07) +
+    3 * kick(t, MT.ground, 0.07) +
     4 * kick(t, MT.lift, 0.07) +
     4 * kick(t, MT.cut, 0.05) +
     12 * kick(t, MT.land, 0.07)
@@ -180,9 +200,11 @@ export function streetShake(t: number) {
 /** 这一段的光：越拽越紧暗角收一点；抱在一起、裹上外套暖光涌上来、暗角松开；推开收紧；掏刀时收紧 */
 export function streetLook(t: number, base: { vig: number; warm: number }) {
   const bump = (a: number, b: number, c: number, d: number) => E.io(ph(t, a, b)) * (1 - E.io(ph(t, c, d)));
+  // ⑥ 彩光照下来：暖光涌一下、暗角松开，之后慢慢收回来（她不在了）
+  const lit = bump(MT.touch, MT.touch + 0.15, MT.touch + 0.6, MT.touch + 1.8);
   const vig =
-    base.vig + 0.05 * bump(44.3, 45.45, 45.7, 46.2) - 0.06 * bump(45.9, 46.4, MT.push - 0.1, MT.push + 0.1) + 0.07 * bump(MT.push, MT.push + 0.1, 48.2, 48.9) + 0.08 * bump(50.3, 50.78, 51.1, 51.6);
-  const warm = base.warm + 0.16 * bump(45.9, 46.4, MT.push - 0.05, MT.push + 0.3);
+    base.vig + 0.05 * bump(44.3, 45.45, 45.7, 46.2) - 0.06 * bump(45.9, 46.4, MT.push - 0.1, MT.push + 0.1) + 0.07 * bump(MT.push, MT.push + 0.1, 48.2, 48.9) + 0.08 * bump(50.3, 50.78, 51.1, 51.6) - 0.06 * lit + 0.04 * bump(53.2, 53.9, 55.5, 56);
+  const warm = base.warm + 0.16 * bump(45.9, 46.4, MT.push - 0.05, MT.push + 0.3) + 0.14 * lit;
   return { vig, warm };
 }
 export { ASH_T };

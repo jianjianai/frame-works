@@ -61,13 +61,12 @@ import {
   drawForegroundItem,
   drawHouse,
   drawHouseWindowFront,
-  drawPapers,
   drawRoof,
   groundShadow,
-  makePapers,
 } from "../lib/props";
 import { type Note, drawNote, loadHandFont } from "../lib/note";
-import { SHOP_SPAN, SHOP_T, drawShopShade, drawShopSpill, makeShop, shopCam, shopLook } from "../lib/shop";
+import { BIG_R, SHOP_SPAN, SHOP_T, drawDumbbell, drawShopShade, drawShopSpill, makeShop, shopCam, shopLook } from "../lib/shop";
+import { drawDent } from "../lib/dent";
 import { type Walker, drawPerson, walkerAt } from "../lib/people";
 import { type Num, ARMS, LIMP, SMOOTH, fade, hitch, live, ring, smoothTrack, withDrag } from "../lib/motion";
 import { CHEN, KID, WAVE_R, ZHONG, ZHOU as ZP, armL, armR, legL, legR } from "../lib/poses";
@@ -76,11 +75,21 @@ import { WOMAN_LOOK, WOMAN_SCALE } from "../lib/woman";
 const ZHOU = CAST.周磊;
 const STONE = CAST.小石头;
 const OLD = CAST.老钟;
-/** 公文包往下掉的加速度（世界单位 / 秒²；人 590 高 ≈ 1.7 米）。比真实重力大一倍：掉得快、砸得狠 */
+/**
+ * 2026-10-24 用户：「让打工人左手拿公文包，右手拿杠铃，让杠铃掉下来，这样才显得惊险。掉下来是地面被砸裂，屏幕剧烈放大」：
+ * 他近处的手（L，画面左边）拎着一只大铁哑铃，远处的手（R）拎着公文包（2026-10-24 用户：「拿公文包的手和拿杠铃的手要互换一下」）（哑铃店里那只的画法，缩小，两头厚铁饼）——买来压住自己的；
+ * 掉下来、砸裂街面的是哑铃。公文包一直拎着，被她拽回地面那一下才脱手掉在身边。
+ */
+const BELL_S = 0.6;
+/** 哑铃最大那片铁饼的半径：落地时中心离地面这么高 */
+const BELL_R = BIG_R * BELL_S;
+/** 哑铃的轴转多少（0 横着看侧面，越大铁饼越朝镜头） */
+const BELL_PHI = 0.32;
+/** 哑铃往下掉的加速度（世界单位 / 秒²；人 590 高 ≈ 1.7 米）。比真实重力大一倍：掉得快、砸得狠 */
 const G = 6800;
-/** 她跑过来刹住、停稳的位置（根）；公文包落在她靴尖前面 */
+/** 她跑过来刹住、停稳的位置（根）；哑铃落在她靴尖前面 */
 const X_STOP = 330;
-/** 公文包的右边擦着她伸出去的手和靴尖落下（靴尖在根前面约 185） */
+/** 哑铃落在她靴尖前面一点（靴尖在根前面约 185） */
 const X_LAND = X_STOP - 185 - CASE.w / 2;
 /** 她越过公文包跃起、落地，一共往左挪多少 */
 const LEAP = 600;
@@ -105,28 +114,34 @@ function timeline() {
     cut: b(3),
     /** 切到她：跟着她跑 */
     her: b(5),
-    /** 公文包砸地 */
-    slam: b(8),
+    /** 「赶不赶得上」（2026-10-24，情绪：险）：她边跑边抬头，镜头顺着她的视线摇到半空的他（slip0 起摇），停在他手上，提手一点点从指尖滑下去 →
+     *  手一松，镜头跟着公文包往下坠、越落越快越近 → 砸地（slam，拍上）一声重响、猛停、震 → 她正好冲到公文包旁边刹住 → 镜头自然转到她身上。
+     *  交叉剪辑被否（「画面切换太快了」「采用一个运镜的方式，不是切」）；摇回她身上也被否（「改成不切到主角，改成镜头跟着公文包下落」） */
+    slip0: b(6.2),
+    /** 公文包砸地。2026-10-24 砖亮起来挪到第 5 小节（8.013）：她跑过来的距离拉长、多跑 1 秒（用户：「应该改她跑过来的镜头，把距离拉长让她多跑一会」），
+     *  砸地、起跳、抓住、落地、掏砖都整体晚 1 秒，动作之间的节奏和原来一样（中间加停顿看着像犹豫） */
+    slam: b(9),
     /** 他松手（按重力反推，下面算） */
     drop: 3.4,
     /** 蹬地（脚离开地面） */
-    launch: b(9) + 0.08,
+    launch: b(11) + 0.08,
     /** 空中攥住他的脚踝（跳到最高） */
-    grab: b(10),
+    grab: b(12),
     /** 两个人一起落地 */
-    land: b(11),
-    /** 砖从靴筒里抽出来、递到他手边、落进他手里（亮起来） */
-    pull: b(12.5) + 0.05,
-    give: b(13.5) - 0.05,
-    take: b(14),
-    /** 鼓进来（第 5 小节）：他抬头哭着笑，她站起来 */
+    land: b(13),
+    /** 跪着喘口气、心疼地看他 → 一口气掏砖、递过去，前奏第二段（第 5 小节，整套鼓进来）落进他手里亮起来 */
+    pull: b(14.5) + 0.05,
+    take: b(16),
+    /** 鼓进来（第 5 小节）= 砖亮起来 */
     drum: b(16),
+    /** 他抬头冲她哭着笑，她也笑了、站起来 */
+    smile: b(18),
     /** 往前走：第一步落地，一步一拍 */
-    walk0: b(17),
+    walk0: b(19),
     /** 老钟举杯、她挥手 */
-    zhong: b(20),
-    kidStop: b(23),
-    pat: b(23) + 0.3,
+    zhong: b(21),
+    kidStop: b(24),
+    pat: b(24) + 0.3,
     /** 镜头升起来 */
     r0: b(25),
     /** 停在整座城上 */
@@ -181,7 +196,8 @@ const FLOAT_POSE: Angles = {
 /** 近景（离镜头比人更近的一层，D = 0.62）：镜头一动它们划得比人快。矮的只在画面底边露一截，高的路灯杆只在跟着跑时一闪而过 */
 const FG_D = 0.62;
 const FOREGROUND: { x: number; kind: FgKind }[] = [
-  { x: 880, kind: "lamp" },
+  // 2026-10-24 她多跑了 1 秒、3.1 起镜头往上摇：路灯杆挪到她 2.75 秒左右（还在平着跟跑时）经过的地方，原来 880 正好落在往上摇的那段，一根清楚的光杆竖在画面正中
+  { x: 2550, kind: "lamp" },
   { x: 1500, kind: "bollard" },
   { x: -1520, kind: "planter" },
   { x: -1950, kind: "bike" },
@@ -229,14 +245,16 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   // 跑的根按 dx 匀速走（有腾空）；姿势表里站着那只脚的位置是按这个速度反算的，脚不滑
   const RUN_STEP = 0.26;
   const RUN_V = 1200;
-  const T_BRAKE = T.slam - 0.4;
+  // 哑铃先砸地，她紧跟着冲到它旁边刹住
+  const T_BRAKE = T.slam + 0.12;
   const RUN: [number, Angles, number][] = [
     [0, CHEN.跑_落地, 0.03],
     [0.19, CHEN.跑_踩实, 0.05],
     [0.38, CHEN.跑_蹬地, 0],
     [0.68, CHEN.跑_腾空, -0.02],
   ];
-  const RUN_K0 = 5;
+  // 画外的脚步从第一幕切到他之前就有（先听见再看见）
+  const RUN_K0 = 1;
   const RUN_K1 = 15;
   const runKeys: MoveKey[] = [];
   for (let k = RUN_K0; k <= RUN_K1; k++) {
@@ -245,7 +263,9 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       if (k === RUN_K1 && at > 0) break;
       const t = T_BRAKE - (RUN_K1 - k - at) * RUN_STEP;
       const last = runKeys[runKeys.length - 1];
-      runKeys.push({ t, ease: SMOOTH, squash, dx: last ? -RUN_V * (t - last.t) : undefined, p: foot === "L" ? p : swapSides(p) });
+      // 边跑边抬头盯着前上方的他（镜头顺着这道视线摇上去）
+      const up = t >= T.slip0 - 0.15 ? { neck: ((p.neck as number) ?? 0) + 16, lookY: -0.9 } : {};
+      runKeys.push({ t, ease: SMOOTH, squash, dx: last ? -RUN_V * (t - last.t) : undefined, p: { ...(foot === "L" ? p : swapSides(p)), ...up } });
     }
   }
   const SKID = 0.2;
@@ -287,14 +307,11 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   }
   const chenKeys: MoveKey[] = [
     ...runKeys,
-    // 刹住：前脚 R 扎在地上往前滑，手被甩在身前，抬头盯着掉下来的公文包（看见了才刹）。
+    // 哑铃刚砸进前面的街面：她冲到它旁边，前脚 R 扎在地上往前滑着刹住，手被甩在身前，低头看一眼砸裂的地。
     // 跑的姿势不自动着地（ground: false）：刹住起换回自动着地，不然后面的姿势全都悬在地面上
-    { t: T_BRAKE + SKID, ease: "out", squash: 0.08, dx: (-RUN_V * SKID) / 3, p: { ...CHEN.刹, ground: true, lift: 0 } },
-    // 公文包擦着手掉下来：一惊，上身往后一仰、手猛地缩到胸前；砸在靴尖跟前：闭眼一缩
-    { t: T.slam - 0.07, ease: "out", squash: 0.02, p: CHEN.刹_缩 },
-    { t: T.slam + 0.07, ease: "out", squash: 0.06, p: CHEN.缩_闭眼 },
+    { t: T_BRAKE + SKID, ease: "out", squash: 0.08, dx: (-RUN_V * SKID) / 3, p: { ...CHEN.刹, ground: true, lift: 0, neck: -12, expression: "吓一跳", lookX: -0.3, lookY: 0.8 } },
     // 抬头盯住头顶的他（下定决心）→ 蹲下攒劲（拉满的弓）→ 蹬地弹出去，越过公文包斜着跃起来，最高处攥住他的脚踝 → 一口气带着他落下来
-    { t: T.slam + 0.24, ease: "out", plant: "R", squash: 0, p: CHEN.仰头 },
+    { t: T_BRAKE + SKID + 0.28, ease: "out", plant: "R", squash: 0, p: CHEN.仰头 },
     { t: T.launch - 0.06, ease: "inOut", plant: "R", squash: 0.1, p: CHEN.蹲 },
     { t: T.launch + 0.06, ease: "in", squash: -0.1, dx: -90, p: CHEN.起跳 },
     { t: T.grab, ease: "out", squash: -0.02, dx: -LEAP * 0.36, p: CHEN.抓住 },
@@ -315,9 +332,9 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     { t: T.take + 0.6, ease: "inOut", plant: "R", p: CHEN.跪_看他 },
     // 鼓进来、他抬头冲她哭着笑：她也笑了，边笑边站起来，直接迈出第一步（后脚 L）。起身 → 快站直 → 后脚往前收 → 第一步落地，
     // 一段 0.1–0.18 秒（原来起身和迈步的姿势之间只隔 0.04 秒，一下子从弯着腰跳到站直，用户：「这里跳帧了」）
-    { t: T.drum + 0.02, ease: "out", plant: "R", p: { ...CHEN.跪_看他, expression: "微笑", lookX: -0.4, lookY: 0.4, neck: -2 } },
-    { t: T.drum + 0.2, ease: "inOut", plant: "R", p: CHEN.起身 },
-    { t: T.drum + 0.31, ease: "inOut", plant: "R", p: CHEN.起身_直 },
+    { t: T.smile + 0.02, ease: "out", plant: "R", p: { ...CHEN.跪_看他, expression: "微笑", lookX: -0.4, lookY: 0.4, neck: -2 } },
+    { t: T.smile + 0.2, ease: "inOut", plant: "R", p: CHEN.起身 },
+    { t: T.smile + 0.31, ease: "inOut", plant: "R", p: CHEN.起身_直 },
     { t: T.walk0 - 0.1, ease: "inOut", plant: "R", p: { ...swapSides(CHEN.走_经过), expression: "微笑", neck: 2, lookX: -0.5, lookY: 0 } },
     ...walkKeys,
   ];
@@ -370,19 +387,23 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   // 被抓住脚踝一惊 → 被一口气拽下来、屁股砸在地上 → 缩着低头哭，手软软地搭在膝盖上（不伸、不接）→ 她把砖放进他手里 →
   // 砖很沉，手一下坠下去，他一惊、睁眼看手里 → 两只手捧着低头哭 →
   // 鼓进来那一拍抬起头冲她哭着笑 → 她走了，把砖抱在怀里
+  // 两只手都拎着东西：近处 L 拎哑铃，远处 R 拎公文包（手臂被坠得笔直）
+  const TWO = (lean: number) => ({ ...armL(4, 4, -4, "grip", lean), ...armR(8, 6, -4, "grip", lean) });
   const zKeys = (drop: number): MoveKey[] => [
-    { t: 0, p: ZP.拎着飘 },
-    { t: T.cut + 0.4, p: { ...ZP.拎着飘, neck: -34 } },
-    { t: T.her - 0.6, ease: "inOut", p: { ...ZP.拎着飘, neck: -32, expression: "忍着哭" } },
-    // 切走之前：闭上眼，攥着提手的手指松开（公文包滑到指尖上悬着）；切到她以后在画外松手
-    { t: T.her - 0.12, ease: "inOut", p: { ...ZP.拎着飘, neck: -28, expression: "闭眼", sad: 0.9, handL: "relax" } },
-    { t: drop - 0.05, ease: "inOut", p: { ...ZP.松手, handL: "relax" } },
-    { t: drop + 0.2, ease: "out", p: ZP.松手 },
-    { t: drop + 1.2, ease: "inOut", p: ZP.飘 },
-    { t: T.grab - 0.15, p: ZP.飘 },
-    { t: T.grab + 0.12, ease: "out", p: ZP.一惊 },
-    { t: T.grab + 0.34, ease: "inOut", p: ZP.被拽 },
-    { t: T.land - 0.15, ease: "inOut", p: ZP.被拽 },
+    { t: 0, p: { ...ZP.拎着飘, ...TWO(10) } },
+    { t: T.cut + 0.4, p: { ...ZP.拎着飘, ...TWO(10), neck: -34 } },
+    { t: T.her - 0.6, ease: "inOut", p: { ...ZP.拎着飘, ...TWO(10), neck: -32, expression: "忍着哭" } },
+    { t: T.her - 0.12, ease: "inOut", p: { ...ZP.拎着飘, ...TWO(10), neck: -28, expression: "闭眼", sad: 0.9 } },
+    // 镜头停在他手上：闭着眼，头越垂越低，拎哑铃的手指一根根松开
+    { t: drop - 0.12, ease: "inOut", p: { ...ZP.拎着飘, ...TWO(10), neck: -38, expression: "闭眼", sad: 1, tears: 0.6, handL: "relax" } },
+    { t: drop - 0.05, ease: "inOut", p: { ...ZP.松手, ...armR(8, 6, -4, "grip", 10) } },
+    { t: drop + 0.2, ease: "out", p: { ...ZP.松手, ...armR(8, 6, -4, "grip", 10) } },
+    // 没了哑铃的分量，往上飘：近处的手软软浮起来，远处的手还拎着公文包
+    { t: drop + 1.2, ease: "inOut", p: { ...ZP.飘, ...armR(26, 24, 0, "grip", -4) } },
+    { t: T.grab - 0.15, p: { ...ZP.飘, ...armR(26, 24, 0, "grip", -4) } },
+    { t: T.grab + 0.12, ease: "out", p: { ...ZP.一惊, ...armR(40, 30, 0, "grip", 4) } },
+    { t: T.grab + 0.34, ease: "inOut", p: { ...ZP.被拽, ...armR(70, 30, 0, "grip", -6) } },
+    { t: T.land - 0.15, ease: "inOut", p: { ...ZP.被拽, ...armR(70, 30, 0, "grip", -6) } },
     { t: T.land + 0.03, ease: "in", squash: 0.08, p: ZP.坐下 },
     { t: T.land + 0.5, ease: "out", squash: 0, p: ZP.瘫坐 },
     // 手一直搭在膝盖上不动；砖落到手上那一刻手指才张开托住（手不往上迎）
@@ -394,9 +415,9 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     { t: T.take + 0.26, ease: "inOut", squash: 0, p: { ...ZP.坐_托稳, ...armL(35, 63, 0, "flat", 2) } },
     { t: T.take + 0.42, ease: "inOut", p: { ...ZP.坐_托稳, ...armL(35, 57, 0, "flat", 2) } },
     { t: T.take + 0.6, ease: "inOut", p: ZP.坐_托稳 },
-    { t: T.take + 0.85, ease: "inOut", p: ZP.坐_捧着哭 },
-    { t: T.drum - 0.12, ease: "inOut", p: { ...ZP.坐_捧着哭, neck: -16 } },
-    { t: T.drum + 0.14, ease: "out", p: ZP.坐_哭着笑 },
+    { t: T.take + 0.72, ease: "inOut", p: ZP.坐_捧着哭 },
+    { t: T.smile - 0.12, ease: "inOut", p: { ...ZP.坐_捧着哭, neck: -16 } },
+    { t: T.smile + 0.14, ease: "out", p: ZP.坐_哭着笑 },
     { t: T.walk0 + 0.9, ease: "inOut", p: { ...ZP.坐_哭着笑, neck: 20, lookY: -0.6 } },
     { t: T.walk0 + 1.8, ease: "inOut", p: ZP.坐_抱砖 },
   ];
@@ -426,7 +447,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     o.shoulderR += 14 * ring(t, T.grab + 0.08, 0.5, 0.3);
     // 坐在地上哭：肩膀一抽一抽
     // （看见她递过来的砖就停下来）
-    const sob = fade(t, T.land + 0.4, T.land + 0.7) * (1 - fade(t, T.take - 0.35, T.take - 0.1)) + fade(t, T.take + 0.7, T.take + 0.9) * (1 - fade(t, T.drum - 0.1, T.drum + 0.1)) * 1.2;
+    const sob = fade(t, T.land + 0.4, T.land + 0.7) * (1 - fade(t, T.take - 0.35, T.take - 0.1)) + fade(t, T.take + 0.7, T.take + 0.9) * (1 - fade(t, T.smile - 0.1, T.smile + 0.1)) * 1.2;
     if (sob > 0) {
       const h = sob * hitch(t, 0.6);
       o.lean += 2.5 * h;
@@ -519,12 +540,14 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   });
   const zRootAt = (t: number, drop = T.drop) => (settled && drop === T.drop ? zMemo(t) : zRootRaw(t, drop));
 
-  // ——— 公文包：近处的手拎着提手 → 手指一松，从手里滑下去（按重力反推松手的时刻，落地正好砸在她靴尖前面那一拍）———
-  const caseSlip = (t: number) => 16 * E.io(ph(t, T.her - 0.75, T.her - 0.3));
+  // ——— 哑铃：近处的手拎着 → 镜头停在他手上时手指一根根松开、往下滑两下、越歪越厉害 → 手一松掉下去（按重力反推松手的时刻，落地正好砸在拍上）———
+  const slipStep = (t: number) => 0.45 * E.out(ph(t, T.slip0 + 0.52, T.slip0 + 0.59)) + 0.55 * E.out(ph(t, T.slip0 + 0.7, T.slip0 + 0.77));
+  const caseSlip = (t: number) => 22 * slipStep(t);
+  const caseTilt = (t: number) => 0.2 * slipStep(t);
   const heldCase = (t: number, drop = T.drop): V2 => {
     const r = zRootAt(t, drop);
     const p = zPalms(r.pose);
-    return [r.x + p.L[0], r.y + p.L[1] + CASE.h / 2 + 24 + caseSlip(t)];
+    return [r.x + p.L[0], r.y + p.L[1] + 8 + caseSlip(t)];
   };
   let drop = T.drop;
   let v0: V2 = [0, 0];
@@ -536,7 +559,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const hands0 = heldCase(drop, drop);
     if (k > 0.05) DRIFT += (X_LAND - hands0[0]) / k;
     const p0 = heldCase(drop, drop);
-    const h = -CASE.h / 2 - p0[1];
+    const h = -BELL_R - p0[1];
     tf = Math.sqrt((2 * h) / G);
     drop = T.slam - tf;
     v0 = [(X_LAND - p0[0]) / tf, 0];
@@ -552,25 +575,40 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   }
   settled = true;
   const P0 = heldCase(drop);
-  const caseSway = (t: number) => 0.1 * Math.sin(t * 1.6) + 0.05 * Math.sin(t * 2.7 + 1);
-  const caseAt = (t: number): { x: number; y: number; r: number; open: number } => {
+  const caseSway = (t: number) => 0.06 * Math.sin(t * 1.6) + 0.03 * Math.sin(t * 2.7 + 1);
+  /** 哑铃这一刻（中心、歪多少）：拎着 → 直直往下掉、越掉越快 → 砸进街面（不弹，太沉了），陷下去一点、晃一下停住 */
+  const caseAt = (t: number): { x: number; y: number; r: number } => {
     if (t < T.drop) {
       const p = heldCase(t);
-      return { x: p[0], y: p[1], r: caseSway(t), open: 0 };
+      return { x: p[0], y: p[1], r: caseSway(t) + caseTilt(t) };
     }
     if (t < T.slam) {
-      // 从手里滑下去：直直地往下掉，提手那头先脱手、往前歪一下，落地时放平
       const s = t - T.drop;
       const u = s / tf;
-      return { x: P0[0] + v0[0] * s, y: P0[1] + 0.5 * G * s * s, r: caseSway(T.drop) * (1 - u) + 0.22 * Math.sin(Math.PI * u), open: 0 };
+      return { x: P0[0] + v0[0] * s, y: P0[1] + 0.5 * G * s * s, r: (caseSway(T.drop) + caseTilt(T.drop)) * (1 - u) + 0.12 * Math.sin(Math.PI * u) };
     }
-    // 砸地：弹一下、往前滑一点；锁扣弹开、盖子掀起来又落回一半
     const a = t - T.slam;
-    const hop = a < 0.22 ? 30 * Math.sin((Math.PI * a) / 0.22) : 0;
-    const open = a < 0.04 ? 0 : 0.5 * E.out(ph(a, 0.04, 0.16)) - 0.18 * E.io(ph(a, 0.16, 0.5));
-    return { x: X_LAND - 10 * E.out(Math.min(1, a / 0.3)), y: -CASE.h / 2 - hop, r: a < 0.22 ? -0.08 * Math.sin((Math.PI * a) / 0.22) : 0, open };
+    return { x: X_LAND, y: -BELL_R + 10 * E.out(Math.min(1, a / 0.06)), r: a < 0.4 ? 0.06 * Math.exp(-a / 0.1) * Math.sin(a * 40) : 0 };
   };
-  const papers = makePapers(seeded(23));
+  const drawBell = (cc: CanvasRenderingContext2D, b: { x: number; y: number; r: number }, z: number) => drawDumbbell(cc, b.x, b.y, BELL_PHI, b.r, BELL_S, 3 / Math.sqrt(Math.max(0.5, z)));
+
+  // ——— 公文包：远处的手一直拎着；被她拽回地面那一下手一张，从手里掉下去，落在他身边躺平 ———
+  const CASE_REL = T.land + 0.02;
+  const caseHeld = (t: number): V2 => {
+    const r = zRootAt(t);
+    const p = zPalms(r.pose);
+    return [r.x + p.R[0], r.y + p.R[1] + CASE.h / 2 + 24];
+  };
+  let CASE_FROM: V2 | null = null;
+  const briefAt = (t: number): { x: number; y: number; r: number } => {
+    if (t < CASE_REL) return { x: caseHeld(t)[0], y: caseHeld(t)[1], r: 0.05 * Math.sin(t * 1.4) };
+    CASE_FROM ??= caseHeld(CASE_REL);
+    const s = t - CASE_REL;
+    const ground = -CASE.h / 2 + 6;
+    const y = Math.min(ground, CASE_FROM[1] + 0.5 * G * s * s);
+    const landed = y >= ground;
+    return { x: CASE_FROM[0] + 60 * Math.min(s, 0.3), y, r: landed ? 0.04 : -0.3 * Math.min(1, s / 0.2) };
+  };
 
   // ——————————— 小石头：从左边跑过来（一步 0.25 秒，最后一步 R 落地停在她跟前），仰头冲她笑，被摸头，转过来挥手送她 ———————————
   const KID_STEP = 0.25;
@@ -776,22 +814,55 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const bob = 6 * Math.cos(((t - T_BRAKE) / RUN_STEP) * 2 * Math.PI) * (1 - E.out(ph(t, T_BRAKE, T_BRAKE + 0.3)));
     return { ...k, y: k.y + bob / k.z };
   };
-  // ④ 险：跟着她跑完、刹住，砸地前 0.3 秒镜头接过去盯住公文包：它在画面上半截、镜头远一点（1.4 倍），跟着它往下坠、越落越近
-  //    （倍数按 u² 推到 2.6），砸在靴尖跟前那一下镜头跟着猛地停住，往前顶、震
-  const CASE_Z = 2.6;
-  const CASE_AT: V2 = [470, 1250];
-  const caseCam = aim(X_LAND, -CASE.h / 2, CASE_AT[0], CASE_AT[1], CASE_Z);
-  const CASE_CUT = T.slam - 0.3;
-  const caseFall = (t: number): Cam => {
-    const u = ph(t, CASE_CUT, T.slam);
-    return aim(X_LAND, Math.min(caseAt(t).y, -CASE.h / 2), CASE_AT[0], CASE_AT[1] - 720 * (1 - u), 1.4 * Math.pow(CASE_Z / 1.4, u * u));
+  // ③½ 2026-10-24 用户：「这里改成镜头拉远，把主角和打工人都放在屏幕里，之后杠铃砸地的时候镜头猛的放大到杠铃，之后快速缩小并对准主角」：
+  //   她边跑边抬头时（slip0 起 0.5 秒）镜头往后拉远，把跑过来的她和头顶拎着哑铃的他（连哑铃）一起框进来，之后跟着两个人（平滑跟，她跑得快）；
+  //   哑铃掉下来就在这个远景里掉；砸地那一下 0.08 秒猛放大到哑铃上（2.6 倍）、重震，停一下，再 0.36 秒快速缩小、对准她
+  const SLIP_UP = 0.5;
+  // 只框两个人（他的头到她的脚、她到他），边留得窄：两个人越近，镜头跟着越推越近（用户 2026-10-24：「随着两人距离缩短，镜头也跟着放大」）
+  const twoBox = (t: number): [number, number, number] => {
+    const c = chenAt(t);
+    const cj = jointsOf(c.pose);
+    const r = zRootAt(t);
+    const zj = castJoints(ZHOU, r.pose);
+    const xs = [c.x - 130, c.x + 130, r.x - 150, r.x + 150];
+    const ys = [c.y + cj.head[1] - 90, c.y + Math.max(cj.ankleL[1], cj.ankleR[1]) + 70, r.y + zj.head[1] - 100, r.y + Math.max(zj.ankleL[1], zj.ankleR[1]) + 40];
+    const x0 = Math.min(...xs);
+    const x1 = Math.max(...xs);
+    const y0 = Math.min(...ys);
+    const y1 = Math.max(...ys);
+    const z = Math.max(0.55, Math.min(2.0, Math.min((W * 0.9) / (x1 - x0), (H * 0.86) / (y1 - y0))));
+    // 竖着有富余时把脚下放到画面底边附近（1740），不空出一大块地；他的头不出画
+    return [(x0 + x1) / 2, Math.min(y1 - 780 / z, y0 + 860 / z), z];
   };
-  const punch = (t: number) => (t < T.slam ? 1 : 1 + 0.16 * (1 - Math.exp(-(t - T.slam) / 0.05)) * Math.exp(-(t - T.slam) / 0.18));
-  const caseHold = (t: number): Cam => ({ ...caseCam, z: caseCam.z * punch(t) });
-  // ⑤ 砸完停一下，镜头一口气退到她身上（0.28 秒）：她抬头盯住他、蹲下攒劲，镜头停住、跟着她往里凑一点；
+  // 横着直接对准两个人的中间（按两个人的根算，不抖；平滑跟会落后她一大截——她每秒跑 1200——人就偏到画面一边）；
+  // 竖着和倍数只轻轻平滑一下（跑步时头脚一颠一颠）
+  const twoYZ = smoothTrack((t) => [twoBox(t)[1], Math.log(twoBox(t)[2])], T.slip0 - 0.1, T.slam + 0.1, 20);
+  const twoCam = (t: number): Cam => {
+    const [y, lz] = twoYZ(t);
+    return { x: twoBox(t)[0], y, z: Math.exp(lz), r: 0 };
+  };
+  const CASE_Z = 2.6;
+  const CASE_AT: V2 = [520, 1150];
+  const caseCam = aim(X_LAND, -BELL_R, CASE_AT[0], CASE_AT[1], CASE_Z);
+  /** 4.30 起镜头以哑铃为中心，跟着它往下掉、一路放大，落地正好推到 2.6 倍（用户：「这里镜头就应该开始把杠铃作为中心，放大并跟随杠铃」；
+   *  之前是快落地前 0.15 秒才推，再之前是砸地以后 0.08 秒猛推——「放大太快了」） */
+  const ZOOM0 = T.slam - 0.21;
+  let BELL0: { z: number; s: V2 } | null = null;
+  const bellCam = (t: number): Cam => {
+    if (!BELL0) {
+      const c0 = twoCam(ZOOM0);
+      const p0 = caseAt(ZOOM0);
+      BELL0 = { z: c0.z, s: toScreen(c0, p0.x, p0.y) };
+    }
+    const e = E.io(ph(t, ZOOM0, T.slam));
+    const p = caseAt(Math.min(t, T.slam));
+    return aim(p.x, Math.min(p.y, -BELL_R), BELL0.s[0] + (CASE_AT[0] - BELL0.s[0]) * e, BELL0.s[1] + (CASE_AT[1] - BELL0.s[1]) * e, Math.exp(Math.log(BELL0.z) + (Math.log(CASE_Z) - Math.log(BELL0.z)) * e));
+  };
+  // ⑤ 砸完停一下，快速缩小、对准她：她抬头盯住他、蹲下攒劲，镜头停住、跟着她往里凑一点；
   //    蹬地那一下跟着她往上冲、往后退，把头顶的他框进来（她留在画面里）
-  const BACK0 = T.slam + 0.12;
-  const BACK1 = BACK0 + 0.26;
+  // 砸地以后只停一下（0.06 秒，重震），马上快速缩小、对准她：4.67 她冲进来刹住时已经在画面里（用户：「这里应该已经缩小了，把主角显示进去」）
+  const BACK0 = T.slam + 0.06;
+  const BACK1 = BACK0 + 0.42;
   const UP_GO = T.launch - 0.03;
   const herHold = (() => {
     const c = chenAt(T.launch - 0.05);
@@ -842,7 +913,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const e = E.out(ph(t, PUSH_GO, PUSH_IN));
     const creep = 1 + CREEP * E.soft(ph(t, T.land + 0.2, PUSH_GO));
     const zc = Z_LAND * creep;
-    const z = zc * Math.pow(Z_PUSH / (Z_LAND * (1 + CREEP)), e) * (1 + 0.025 * E.soft(ph(t, PUSH_IN, T.drum)));
+    const z = zc * Math.pow(Z_PUSH / (Z_LAND * (1 + CREEP)), e) * (1 + 0.025 * E.soft(ph(t, PUSH_IN, T.smile)));
     return aim(BRICK_AT[0], BRICK_AT[1], BRICK_S[0], BRICK_S[1] + 150 * (1 - e), z);
   };
   // 两个人落定时在画面上的位置：正好是往砖推的镜头起步时的取景（往下拽的一路慢慢挪过去，落定不用再找位置）
@@ -853,7 +924,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     return aim(m[0], m[1], 540 + (LAND_S[0] - 540) * k, 960 + (LAND_S[1] - 960) * k, ACTION_Z);
   };
   // ⑦ 鼓进来：镜头一顶；她站起来往前走：镜头退开到 1.35、移到她前面（她走的方向留空），之后只跟着她走，她在画面右边 1/3
-  const herWalkX = smoothTrack((t) => [chenAt(t).x, 0], T.drum, T.r0 + 0.5, 14);
+  const herWalkX = smoothTrack((t) => [chenAt(t).x, 0], T.smile, T.r0 + 0.5, 14);
   const walkCam = (t: number): Cam => aim(herWalkX(t)[0], -10, 780, 1460, 1.35);
   // ⑧ 和老钟打招呼：镜头挤到她和窗里的老钟中间，两个人越走越近、镜头跟着越推越近（倍数按两人的距离算）
   const zhongX = HOUSE.win.x - 20;
@@ -897,7 +968,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const lin = (x: number) => x;
   const groundChain = chain([
     [T.land + 0.25, brickCam, lin],
-    [T.drum + 0.08, brickCam, lin],
+    [T.smile + 0.08, brickCam, lin],
     // 站起来：退开、移到她前面（0.55 秒）
     [T.walk0 + 0.15, walkCam, E.io],
     [T.zhong - 0.5, walkCam, lin],
@@ -916,7 +987,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const A: V2 = [chenAt(T.r0).x - 60, -300];
     return { startCam, A, s0: toScreen(startCam, A[0], A[1]) };
   })();
-  const DRUM_KICK = (t: number) => (t < T.drum ? 1 : 1 + 0.045 * Math.exp(-(t - T.drum) / 0.22) * (1 - Math.exp(-(t - T.drum) / 0.04)));
+  // 他抬头冲她哭着笑：镜头一顶（鼓进来那一下就是砖亮起来、推上去）
+  const DRUM_KICK = (t: number) => (t < T.smile ? 1 : 1 + 0.045 * Math.exp(-(t - T.smile) / 0.22) * (1 - Math.exp(-(t - T.smile) / 0.04)));
   const DIVE_OVER = 0.036;
   const diveE = (t: number) => {
     if (t <= SHOP_T.land) return Math.pow(ph(t, T.end, SHOP_T.land), 2.2);
@@ -926,11 +998,16 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const camBase = (t: number): Cam => {
     if (t < T.cut) return camS1(t);
     if (t < T.her) return arriveCam(t);
-    if (t < CASE_CUT) return herCam(t);
+    // 拉远，把她和他（连哑铃）一起框进来；哑铃就在这个远景里掉下来
+    if (t < ZOOM0) {
+      const w = E.io(ph(t, T.slip0, T.slip0 + SLIP_UP));
+      return w <= 0 ? herCam(t) : camLerp(herCam(t), twoCam(t), w);
+    }
+    // 4.30 起以哑铃为中心、跟着它往下掉、一路放大；砸地重震；停一下，再快速缩小、对准她
+    if (t < T.slam) return bellCam(t);
+    if (t < BACK0) return caseCam;
+    if (t < BACK1) return camLerp(caseCam, herHoldAt(t), E.out(ph(t, BACK0, BACK1)));
     // 远景和跟跑镜头差不多大，硬切像跳了一帧：0.12 秒接过去
-    if (t < T.slam) return camLerp(herCam(t), caseFall(t), E.io(ph(t, CASE_CUT, CASE_CUT + 0.12)));
-    if (t < BACK0) return caseHold(t);
-    if (t < BACK1) return camLerp(caseHold(t), herHoldAt(t), E.out(ph(t, BACK0, BACK1)));
     if (t < UP_GO) return herHoldAt(t);
     if (t < T.launch + 0.26) return camLerp(herHoldAt(UP_GO), actionCam(t), E.soft(ph(t, UP_GO, T.launch + 0.26)));
     if (t < T.land + 0.25) return camLerp(actionCam(t), brickCam(t), E.io(ph(t, T.land + 0.1, T.land + 0.25)));
@@ -1016,11 +1093,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     if (t < T.her || t >= T.slam) return [0, 0];
     const a = camAt(t);
     const b = t - 1 / 30 < T.her ? camAt(t + 1 / 30) : camAt(t - 1 / 30);
-    const k = (a.z * 30) / 48;
+    // 摇上去看他那一段拖影减半（摇得快，全拖的话糊成一片）
+    const k = ((a.z * 30) / 48) * (t > T.slip0 && t < T.slip0 + SLIP_UP ? 0.5 : 1);
     return [(a.x - b.x) * k, (a.y - b.y) * k];
   };
   const shakeAt = (t: number): [number, number] => {
-    let k = 9 * kick(t, T.burn, 0.12) + 20 * kick(t, T.slam, 0.1) + 8 * kick(t, T.grab, 0.1) + 22 * kick(t, T.land, 0.1) + 6 * kick(t, T.drum, 0.12);
+    let k = 9 * kick(t, T.burn, 0.12) + 42 * kick(t, T.slam, 0.14) + 8 * kick(t, T.grab, 0.1) + 22 * kick(t, T.land, 0.1) + 6 * kick(t, T.drum, 0.12);
     for (const bt of BURN_BEATS) k += (bt === 31 ? 11 : 4) * kick(t, T.beat(bt), 0.1);
     return shake(t, k);
   };
@@ -1090,7 +1168,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     // 暗角：他飘着（紧张）、险的时候收一点；砖亮起来时松开；全城敞开
     let vig = 0.12;
     vig += 0.1 * fade(t, T.cut, T.cut + 0.3) * (1 - fade(t, T.her - 0.05, T.her + 0.05));
-    vig += 0.08 * fade(t, CASE_CUT, T.slam) * (1 - fade(t, T.slam + 0.2, T.slam + 0.6));
+    vig += 0.08 * fade(t, T.drop, T.slam) * (1 - fade(t, T.slam + 0.2, T.slam + 0.6));
     vig += 0.12 * fade(t, T.land + 0.3, T.pull) * (1 - fade(t, T.take, T.take + 0.5));
     vig -= 0.1 * fade(t, T.r0, T.wide);
     if (t < T.cut) vig = 0.04;
@@ -1254,7 +1332,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       const sit = t >= T.land;
       groundShadow(g, sit ? zr.x + 80 : zr.x + (zj.ankleL[0] + zj.ankleR[0]) / 2 + 16, sit ? 175 : 115 / (1 + zh / 260), sit ? 0.3 : 0.3 / (1 + zh / 200), sit ? 6 + ZY_SIT : 6);
       if (t >= T.drop) {
-        const bh = Math.max(0, -(bc.y + CASE.h / 2));
+        const bh = Math.max(0, -(bc.y + BELL_R));
         const near = Math.max(0, 1 - bh / 900);
         groundShadow(g, bc.x + 10, 70 + 40 * near, t < T.slam ? 0.38 * near * near : 0.3);
       }
@@ -1271,11 +1349,19 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     // 砖落进手里亮起来
     const warm = () => E.out(ph(t, T.take - 0.02, T.take + 0.45));
     const worldM = g.getTransform();
+    const bf = briefAt(t);
     const caseHoldFn: HoldFn = (cc, _hand, _mir, info) => {
       if (info.layer !== "back") return;
       cc.save();
       cc.setTransform(worldM);
-      drawBriefcase(cc, bc.x, bc.y, bc.r, bc.open);
+      drawBriefcase(cc, bf.x, bf.y, bf.r, 0);
+      cc.restore();
+    };
+    const bellHoldFn: HoldFn = (cc, _hand, _mir, info) => {
+      if (info.layer !== "back") return;
+      cc.save();
+      cc.setTransform(worldM);
+      drawBell(cc, bc, cam.z);
       cc.restore();
     };
     const late: (() => void)[] = [];
@@ -1290,7 +1376,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const drawHim = () => {
       if (t < T.cut - 0.1) return;
       if (zr.x < view.x0 - 500 || zr.x > view.x1 + 500) return;
-      drawPerson(g, ZHOU, zr.pose, zr.x, zr.y, zl(), t >= T.take ? { hold: { L: brickHold(warm, brickPos, late) } } : t < T.drop ? { hold: { L: caseHoldFn } } : {});
+      drawPerson(g, ZHOU, zr.pose, zr.x, zr.y, zl(), t >= T.take ? { hold: { L: brickHold(warm, brickPos, late) } } : { hold: { L: t < T.drop ? bellHoldFn : undefined, R: t < CASE_REL ? caseHoldFn : undefined } });
     };
     if (t >= T.drop) {
       // 掉得越快、身后拖的几道速度线越长
@@ -1303,8 +1389,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
           g.lineCap = "round";
           g.lineWidth = 4;
           g.beginPath();
-          for (const dx of [-CASE.w * 0.32, 0, CASE.w * 0.32]) {
-            const top = bc.y - CASE.h / 2 - 18;
+          for (const dx of [-BELL_R * 0.8, 0, BELL_R * 0.8]) {
+            const top = bc.y - BELL_R - 18;
             g.moveTo(bc.x + dx, top);
             g.lineTo(bc.x + dx, top - len * (dx === 0 ? 1 : 0.7));
           }
@@ -1312,9 +1398,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
           g.restore();
         }
       }
-      if (t >= T.slam) drawBriefcase(g, bc.x, bc.y, bc.r, bc.open);
-      drawPapers(g, papers, X_LAND - CASE.w * 0.2, t - T.slam - 0.06);
+      // 砸裂的街面（坑和裂缝）在哑铃底下
+      drawDent(g, X_LAND, T.slam, t, cam.z);
+      if (t >= T.slam) drawBell(g, bc, cam.z);
     }
+    // 公文包被拽回地面那一下脱手，掉在他身边躺着
+    if (t >= CASE_REL) drawBriefcase(g, bf.x, bf.y, bf.r, 0);
     // 落地以后他坐在她前面（靠镜头一点）：先画她，再画他；她往前走时从他身后经过。托着的砖等两个人都画完再画
     if (t >= T.land) {
       drawHer();
@@ -1324,7 +1413,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       drawHer();
     }
     for (const f of late) f();
-    if (t >= T.drop && t < T.slam) drawBriefcase(g, bc.x, bc.y, bc.r, bc.open);
+    if (t >= T.drop && t < T.slam) drawBell(g, bc, cam.z);
     // 小石头
     if (t > kid0 - 0.2) {
       const k = kidAt(t);

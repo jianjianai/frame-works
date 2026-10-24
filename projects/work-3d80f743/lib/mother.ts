@@ -5,7 +5,7 @@
 //   ③ 只是太耀眼将我们灼伤（45.93–47.94）：抱在一起，她把缝着铅的外套脱下来裹在他身上；「灼」把他推开——
 //      推出去的那一下两个人往两边分开：他有了外套的分量往下掉，她没了外套更轻、往上飘；48.02 红绳绷直，一顿。
 //   ④ 在这个世界难免会迷茫（47.94–49.95）：沉沉从左边跑过来，「会」起跳，「茫」在最高点抓住他的脚踝——她的分量把一串人往下一坠，
-//      铁靴落回街面、往后坐着拽；拽不住。
+//      惯性往下坠一点（铁靴不着地），拽不住，三个人接着往上飘。
 //   ⑤ 但别再把小刀带在身上（49.95–51.93）：「但」50.017 铁靴离了地，三个人一起往上飘；妈妈低头看见铁靴离了地，哭着笑，掏出小刀，
 //      「带」割断拴在自己手腕上的红绳——她一下往上飞走（越飞越快），两个人掉回街上（「身」落地）。
 //   ⑥ 至少我还在为你而歌唱（51.93–53.94）：沉沉抱着他跪在街上，镜头不动；52.517 天上炸开彩色的光（她碰到了白，在画面外）。
@@ -57,8 +57,8 @@ export const MT = {
   crouch: 48.56,
   jump: 48.75,
   grab: 49.11,
-  /** 她的分量把一串人坠下去，铁靴落回街面 */
-  ground: 49.53,
+  /** 她的分量把一串人往下坠，惯性坠到最低（铁靴还没着地），然后接着往上飘 */
+  ground: 49.6,
   /** ⑤「但」小节线：铁靴离了地 */
   lift: beatAt(100),
   /** 妈妈低头看见铁靴离了地 */
@@ -205,6 +205,21 @@ export const STONE_P = {
     ...armL(40, 70, 0, "relax", l),
     ...armR(165, 14, 0, "open", l),
   })),
+  /** 落地以后：挺起身子、手伸得更高，张着嘴喊她 */
+  伸手喊: pose(-10, { ...SF, float: 0, rot: 0, ...legL(56, -76, -20), ...legR(66, -86, -20), neck: 40, expression: "吓一跳", sad: 1, tears: 1, open: 0.75, lookX: -0.2, lookY: -1 }, (l) => ({
+    ...armL(40, 70, 0, "relax", l),
+    ...armR(175, 6, 0, "open", l),
+  })),
+  /** 彩光照下来：愣住，嘴合上一半，手还举着 */
+  伸手愣: pose(-8, { ...SF, float: 0, rot: 0, ...legL(58, -78, -20), ...legR(68, -88, -20), neck: 38, expression: "含泪", sad: 1, tears: 1, open: 0.25, lookX: -0.2, lookY: -1 }, (l) => ({
+    ...armL(40, 70, 0, "relax", l),
+    ...armR(168, 12, 0, "open", l),
+  })),
+  /** 明白了：手慢慢落下来，手指收拢，头还仰着 */
+  手落: pose(0, { ...SF, float: 0, rot: 0, ...legL(62, -82, -20), ...legR(72, -90, -20), neck: 22, expression: "忍着哭", tears: 1, lookX: -0.2, lookY: -0.6 }, (l) => ({
+    ...armL(50, 80, 0, "relax", l),
+    ...armR(95, 60, 0, "relax", l),
+  })),
   /** 埋进沉沉怀里哭：两只手攥着她，头低下去，闭着眼 */
   埋头: pose(14, { ...SF, float: 0, rot: 0, ...legL(64, -84, -20), ...legR(74, -92, -20), neck: -22, expression: "忍着哭", blink: 1, lookY: 0.6 }, (l) => ({
     ...armL(70, 110, 0, "grip", l),
@@ -228,10 +243,10 @@ export const CHEN_P = {
     ...armL(170, 10, 0, "grip", l),
     ...armR(175, 8, 0, "grip", l),
   })),
-  /** 铁靴落回街面：往后坐着拽，两腿蹬开 */
-  拽: pose(-16, { ...CF, ...legR(34, -14, 0), ...legL(-26, -34, 0), neck: 16, expression: "使劲", teeth: 0.8, lookX: -0.3, lookY: -0.8 }, (l) => ({
-    ...armL(150, 14, 0, "grip", l),
-    ...armR(156, 10, 0, "grip", l),
+  /** 坠到最低：惯性把两条腿甩向前，铁靴悬在街面上，咬着牙攥紧 */
+  悬: pose(-6, { ...CF, ...legR(30, -34, -20), ...legL(10, -30, -30), neck: 20, expression: "使劲", teeth: 0.8, lookX: -0.3, lookY: -0.9 }, (l) => ({
+    ...armL(160, 12, 0, "grip", l),
+    ...armR(165, 9, 0, "grip", l),
   })),
   /** 铁靴离了地：两条腿悬着，一惊，低头看自己的脚 */
   离地: pose(-4, { ...CF, ...legR(16, -30, -30), ...legL(-8, -40, -40), neck: -12, expression: "吓一跳", lookX: -0.2, lookY: 0.7 }, (l) => ({
@@ -323,8 +338,12 @@ const stoneMove = live(
     { t: T.knife1 - 0.05, ease: "out", p: STONE_P.喊 },
     { t: T.cut + 0.05, p: STONE_P.喊 },
     { t: T.land, ease: "out", p: STONE_P.伸手 },
-    { t: 52.75, p: STONE_P.伸手 },
-    { t: 53.2, ease: "inOut", p: STONE_P.埋头 },
+    { t: T.land + 0.3, ease: "out", p: STONE_P.伸手喊 },
+    { t: T.touch - 0.04, p: STONE_P.伸手喊 },
+    { t: T.touch + 0.14, ease: "out", p: STONE_P.伸手愣 },
+    { t: 52.85, p: STONE_P.伸手愣 },
+    { t: 53.15, ease: "inOut", p: STONE_P.手落 },
+    { t: 53.45, ease: "inOut", p: STONE_P.埋头 },
     { t: T.knifeLand + 0.04, p: STONE_P.埋头 },
     { t: T.knifeLand + 0.3, ease: "inOut", p: STONE_P.看刀 },
     { t: 55.2, p: STONE_P.看刀 },
@@ -350,10 +369,8 @@ const chenMove = live(
     { t: T.jump, p: CHEN_P.蹲 },
     { t: T.jump + 0.1, ease: "out", squash: 0, p: CHEN_P.起跳 },
     { t: T.grab - 0.04, ease: "inOut", p: CHEN_P.抓 },
-    { t: T.ground - 0.04, p: CHEN_P.抓 },
-    { t: T.ground + 0.1, ease: "out", squash: 0.08, p: CHEN_P.拽 },
-    { t: T.ground + 0.24, ease: "out", squash: 0, p: CHEN_P.拽 },
-    { t: T.lift - 0.02, p: CHEN_P.拽 },
+    { t: T.ground, ease: "out", p: CHEN_P.悬 },
+    { t: T.lift - 0.02, p: CHEN_P.悬 },
     { t: T.lift + 0.16, ease: "out", p: CHEN_P.离地 },
     { t: T.knife0 + 0.1, p: CHEN_P.离地 },
     { t: T.knife0 + 0.35, ease: "inOut", p: CHEN_P.看她 },
@@ -362,8 +379,8 @@ const chenMove = live(
     { t: T.land + 0.22, ease: "out", squash: 0, p: CHEN_P.接住 },
     { t: T.touch - 0.1, p: CHEN_P.接住 },
     { t: T.touch + 0.2, ease: "out", p: CHEN_P.望光 },
-    { t: 53.25, p: CHEN_P.望光 },
-    { t: 53.75, ease: "inOut", p: CHEN_P.抱紧 },
+    { t: 53.2, p: CHEN_P.望光 },
+    { t: 53.65, ease: "inOut", p: CHEN_P.抱紧 },
     { t: T.knifeLand + 0.03, p: CHEN_P.抱紧 },
     { t: T.knifeLand + 0.2, ease: "out", p: CHEN_P.看刀 },
     { t: 54.85, p: CHEN_P.看刀 },
@@ -468,12 +485,17 @@ function reachOf(p: PoseIn) {
 /** 一串人一起被往下坠、往上带了多少（加在妈妈和小石头的根上，正 = 往下） */
 function chainY(t: number) {
   const I = init();
-  const dip = I.dip * E.in2(ph(t, T.grab, T.ground));
-  const tau = Math.max(0, t - T.lift);
+  // 抓住那一下惯性往下坠：开头最快、越坠越慢（匀减速），坠到最低速度正好为 0
+  const dip = (I.dip - CLEAR) * (1 - (1 - ph(t, T.grab, T.ground)) ** 2);
+  const tau = Math.max(0, t - T.ground);
   return dip - 0.5 * RISE_A * tau * tau;
 }
-/** 「但」以后三个人一起往上飘的加速度：割断时铁靴离地 160 */
-const RISE_A = (2 * 160) / ((51.06 - 50.017) * (51.06 - 50.017));
+/** 坠到最低时铁靴离街面多高：不着地 */
+const CLEAR = 120;
+/** 坠到最低以后三个人接着往上加速：割断时铁靴离地 250（比最低处高 130） */
+const RISE_A = (2 * (250 - CLEAR)) / ((51.06 - 49.6) * (51.06 - 49.6));
+/** 割断那一刻三个人往上的速度 */
+const V_CUT = RISE_A * (51.06 - 49.6);
 
 function init() {
   if (INIT) return INIT;
@@ -484,13 +506,13 @@ function init() {
   const crouchRoot = -soleOf(pc);
   const pg = chenMove(T.grab).pose;
   const grabRoot = ankleGrab[1] + reachOf(pg);
-  // 落回街面那一刻：铁靴底正好踩在街面上
+  // 坠到最低那一刻：铁靴底正好踩在街面上（chainY 里再减掉 CLEAR，不着地）
   const pd = chenMove(T.ground).pose;
   const ankleG = stoneHang(T.ground, 0).ankle;
   const dip = -soleOf(pd) - (ankleG[1] + reachOf(pd));
   INIT = { crouchRoot, grabRoot, dip, g: 0, aMom: 0, xJump };
   // 割断：往下掉的加速度按「身」落地反算；妈妈往上飞的加速度按 52.517 碰到白反算（头顶到 −8700）
-  const vCut = RISE_A * (T.cut - T.lift);
+  const vCut = V_CUT;
   const cRoot = chenAt(T.cut - 1e-4).root[1];
   const pl = chenMove(T.land).pose;
   const drop = -soleOf(pl) - cRoot;
@@ -509,7 +531,7 @@ export function momRoot(t: number): V2 {
   if (t < T.cut) return [MOM_X + sway, momYPush(t) + (t > T.grab ? chainY(t) : 0)];
   const I = init();
   const y0 = momYPush(T.cut) + chainY(T.cut);
-  const v = RISE_A * (T.cut - T.lift) + V_REL;
+  const v = V_CUT + V_REL;
   const tau = t - T.cut;
   return [MOM_X + sway - 30 * tau, y0 - v * tau - 0.5 * I.aMom * tau * tau];
 }
@@ -604,7 +626,7 @@ function chenAt(t: number): { pose: PoseIn; root: V2 } {
   } else {
     // 割断：从割断那一刻的地方一起掉下来，「身」铁靴落回街面
     const c0 = chenAt(T.cut - 1e-4).root;
-    const v = RISE_A * (T.cut - T.lift);
+    const v = V_CUT;
     const tau = Math.min(t, T.land) - T.cut;
     const y = c0[1] - v * tau + 0.5 * I.g * tau * tau;
     root = [c0[0], t < T.land ? y : -soleOf(cp)];
