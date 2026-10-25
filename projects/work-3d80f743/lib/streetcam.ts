@@ -1,5 +1,6 @@
 // 副歌一②–⑥（43.92–55.98）的镜头：一个镜头（人和东西在 lib/mother.ts）。2026-10-22 用户重做：「注意按照情绪运镜，物理，和动作」。
-// 43.92 从①整座城的夜里直接切过来（①的镜头在 lib/net.ts），之后不切。
+// 43.92 从①整座城的夜里切过来（①的镜头在 lib/net.ts），之后不切。2026-10-25 用户「这里转场直接硬切太硬了」：
+//   ①最后 0.3 秒越转越快、往上冲进白，白压满画面；②从一片白里退出来，接着同一个方向转、越转越慢回正（`XFER`，白在 act3 render 里画）。
 //   ② 挣扎：先把街面、半空里的她和更高处的他一起框进来（看得出离地多高）；她每拽一把，镜头跟着两个人挤近一截——按两个人的上下间距自动取景，
 //      用弹簧跟（晚一点到、带着惯性），每一把一顿；越拽越近，「亮」拽进怀里时已经是两个人的近景。
 //   ③ 交出外套：柔和起步、一路减速地推到外套交过去的地方；「我们」屏着气很慢地凑近；「灼」推开——镜头被推得一震，
@@ -111,8 +112,21 @@ function still(): Cam {
   return STILL;
 }
 
+/** 43.92 的转场：w0–cut ①越转越快、往上冲进白；cut–w1 ②接着同一个方向转、越转越慢回正（两边切点上角速度一样，约每秒 0.8 弧度）；
+ *  白：①最后 white0–cut 涨满，②cut–white1 退掉 */
+export const XFER = { w0: 43.62, cut: MT.start, w1: 44.42, spin0: 0.12, spin1: 0.2, white0: 43.66, white1: 44.2 };
+/** 转场的白有多满（0–1） */
+export const xferWhite = (t: number) =>
+  t < XFER.cut ? Math.pow(ph(t, XFER.white0, XFER.cut), 1.6) : 1 - E.out(ph(t, XFER.cut, XFER.white1));
+
 export function streetCam(t: number): Cam {
-  if (t < MT.start) return netCam(t);
+  if (t < MT.start) {
+    const c = netCam(t);
+    if (t <= XFER.w0) return c;
+    // 往白里冲：越转越快、往上抬、往里凑
+    const s = ph(t, XFER.w0, XFER.cut) ** 2;
+    return { ...c, r: c.r + XFER.spin0 * s, y: c.y - (420 * s) / c.z, z: c.z * (1 + 0.14 * s) };
+  }
   // ② 自动取景、弹簧跟；每拽一把一顿
   let c = camA(Math.min(t, MT.hug + 0.4));
   // 切过来先贴在她的脸和攥着红绳的手上（歪着、喘不过气），0.7 秒里先快后慢地往后撤、回正——露出她自己也悬在半空、离地好几层楼（惊）
@@ -123,6 +137,8 @@ export function streetCam(t: number): Cam {
     const head: V2 = [s0.mom.root[0] + j0.head[0], s0.mom.root[1] + j0.head[1]];
     c = camLerp(c, { ...aim(head[0] + 30, head[1] - 40, 540, 860, 2.1), r: -0.045 }, open);
   }
+  // 从白里退出来：接着①的方向转，越转越慢回正
+  if (t < XFER.w1) c = { ...c, r: c.r - XFER.spin1 * (1 - ph(t, XFER.cut, XFER.w1)) ** 2 };
   const pullKick = MT.pull.reduce((a, p) => a + kick(t, p[1], 0.1), 0);
   c = { ...c, z: c.z * (1 + 0.022 * pullKick) };
   if (t <= MT.hug - 0.1) return c;

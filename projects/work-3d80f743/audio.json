@@ -7425,6 +7425,25 @@
       "fadeOut": 0.55,
       "fadeOffset": 0,
       "automation": []
+    },
+    {
+      "id": "c2_xfer",
+      "track": "fx_action",
+      "source": "sx_whoosh",
+      "start": 43.6,
+      "duration": 0.75,
+      "offset": 0,
+      "phase": 0,
+      "rate": 0.8,
+      "pitch": 0,
+      "preservePitch": false,
+      "gain": 0.2,
+      "pan": 0,
+      "muted": false,
+      "fadeIn": 0.2,
+      "fadeOut": 0.3,
+      "fadeOffset": 0,
+      "automation": []
     }
   ],
   "buses": [],

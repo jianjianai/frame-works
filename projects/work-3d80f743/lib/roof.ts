@@ -803,6 +803,8 @@ export function drawQjRail(g: CanvasRenderingContext2D) {
  * 抱住以后跟着两个人往左飘、往下落、慢慢退开一点（看得见下面千斤家的楼顶），坐到楼顶上那一下轻轻一沉。
  * ⑧ 坐下来抱着：柔和起步、一路减速地推近两张脸（越推越慢），「我」以后几乎不动、极慢地再凑近一点（屏住气，天黑下来）。
  */
+const HUG_ZOOM = 1.5;
+
 export function roofCam(t: number, r: ReturnType<typeof makeRoof>, sky: ReturnType<typeof makeSky>): Cam {
   const T = ROOF_T;
   let c = skyCam(t, sky);
@@ -815,15 +817,15 @@ export function roofCam(t: number, r: ReturnType<typeof makeRoof>, sky: ReturnTy
     const q = r.qjChestOf(Math.min(t, T.catch));
     c = camLerp(c, aim((ch[0] + q[0]) / 2, (ch[1] + q[1]) / 2, 540, 1060, z0), w2);
   }
-  // 抱住：暖光一闪，镜头推近抱在一起的两个人（0.78 → 1.2，E.out，0.5 秒越推越慢）；
+  // 抱住：暖光一闪，镜头推近抱在一起的两个人（0.78 → 1.5，E.settle 1.4 秒：柔和起步、越推越慢；2026-10-25 用户「抱住时拉近一点」，原来 1.2；又「拉得太快了」，原来 E.out 0.5 秒）；
   // 之后缓慢地退开（→ 0.95，E.io 到落地），两个人飘过巷子、千斤家楼顶从左下上来；落地以后再推近（下面的 w8）
-  const w3 = E.io(ph(t, T.catch - 0.02, T.catch + 0.2));
+  const w3 = E.io(ph(t, T.catch - 0.02, T.catch + 0.4));
   if (w3 > 0) {
     const a = r.chenChest(t);
     const b2 = r.qjChestOf(t);
     const mid: V2 = [(a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2];
-    const zin = z0 * Math.pow(1.2 / z0, E.out(ph(t, T.catch, T.catch + 0.5)));
-    // 2026-10-24 用户：「这里的镜头缩小去掉看看」——推近以后不再缓慢退开（原来 1.2 → 0.95），一直 1.2 跟着到落地
+    const zin = z0 * Math.pow(HUG_ZOOM / z0, E.settle(ph(t, T.catch, T.catch + 1.4)));
+    // 2026-10-24 用户：「这里的镜头缩小去掉看看」——推近以后不再缓慢退开（原来 1.2 → 0.95），一直 HUG_ZOOM 跟着到落地
     const z = zin;
     const sy = 980 + 60 * E.io(ph(t, T.catch + 0.5, T.land));
     c = camLerp(c, aim(mid[0], mid[1], 540, sy, z), w3);

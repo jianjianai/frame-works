@@ -29,7 +29,7 @@ import { DAWN_T, ZHONG_HOUSE, ZHONG_NEIGHBORS, dawnSky } from "../lib/dawn";
 import { drawHouse, drawHouseWindowFront } from "../lib/props";
 import { MT, drawDazzle, drawMothers } from "../lib/mother";
 import { ASH_T, ashFlash, ashRays, burstAt, drawSkyBloom, drawSnow } from "../lib/ash";
-import { streetCam, streetLook, streetShake } from "../lib/streetcam";
+import { XFER, streetCam, streetLook, streetShake, xferWhite } from "../lib/streetcam";
 import { MEM_T, drawThen, memoryGrade, nowCam, thenCam } from "../lib/memory";
 import { SIGN_T, drawDust, drawFallingBoard, drawMemAsh, drawMemFlash, drawSign8, signCam, signShake } from "../lib/sign";
 import { GROW_T, backCam, drawGrow, growCam, memoryAmount } from "../lib/grow";
@@ -203,7 +203,20 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       // ① 转场切过来还在转：转着拖影；转正以后他往上飞得很快：背景竖着拖影（他自己不拖）
       const flying = t >= NET_T.upright - 0.05 && t < NET_T.yank + 0.02;
       drawNight(ctx, t, flying ? () => smear(cam.z, camAt(t - 1 / 120), camAt(t + 1 / 120)) : undefined);
-      if (t < NET_T.upright) spinBlur(ctx, buf, bctx, ((camAt(t + 0.004).r - camAt(t - 0.004).r) / 0.008) / 48);
+      if (t < NET_T.upright || (t > XFER.w0 && t < XFER.w1)) spinBlur(ctx, buf, bctx, ((camAt(t + 0.004).r - camAt(t - 0.004).r) / 0.008) / 48);
+      // ①→② 转场：白压满画面，再从白里退出来（天亮）
+      const wk = xferWhite(t);
+      if (wk > 0.001) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        const wg = ctx.createLinearGradient(0, 0, 0, height);
+        wg.addColorStop(0, "#fffdf6");
+        wg.addColorStop(1, "#fff1dc");
+        ctx.globalAlpha = wk;
+        ctx.fillStyle = wg;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+      }
       // ⑤ 割断以后顺着掉下去的两个人甩到街上：镜头竖着甩得很快，按 1/48 秒快门竖着拖一下
       const whip = t > MT.cut + 0.08 && t < MT.land + 0.03;
       if (whip) smear(cam.z, camAt(t - 1 / 120), camAt(t + 1 / 120));
