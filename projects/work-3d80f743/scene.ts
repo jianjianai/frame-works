@@ -10,6 +10,7 @@ export function createScene(options: SceneOptions) {
     act4: () => import("./scenes/act4"),
     act5: () => import("./scenes/act5"),
     act6: () => import("./scenes/act6"),
-    act7: () => import("./scenes/act7"),
+    act8: () => import("./scenes/act8"),
+    act9: () => import("./scenes/act9"),
   });
 }

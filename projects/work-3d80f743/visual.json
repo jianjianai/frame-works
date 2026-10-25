@@ -58,13 +58,13 @@
         "module": "act4",
         "engine": "canvas"
       },
+      "start": 72.019,
+      "duration": 9.581,
+      "offset": 72.019,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
-      "blend": "source-over",
-      "start": 72.019,
-      "duration": 9.581,
-      "offset": 72.019
+      "blend": "source-over"
     },
     {
       "id": "act4dawn",
@@ -74,13 +74,13 @@
         "module": "act4",
         "engine": "canvas"
       },
+      "start": 81.2,
+      "duration": 0.8204,
+      "offset": 87.2,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
       "blend": "source-over",
-      "start": 81.2,
-      "duration": 0.8204,
-      "offset": 87.2,
       "fadeIn": 0.4
     },
     {
@@ -91,13 +91,13 @@
         "module": "act5",
         "engine": "canvas"
       },
+      "start": 82.0204,
+      "duration": 6,
+      "offset": 88.0204,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
-      "blend": "source-over",
-      "start": 82.0204,
-      "duration": 6.0,
-      "offset": 88.0204
+      "blend": "source-over"
     },
     {
       "id": "act5lamp",
@@ -107,61 +107,61 @@
         "module": "act5",
         "engine": "canvas"
       },
+      "start": 88.0204,
+      "duration": 3.9696,
+      "offset": 102.0204,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
-      "blend": "source-over",
-      "start": 88.0204,
-      "duration": 3.9696,
-      "offset": 102.0204
+      "blend": "source-over"
     },
     {
       "id": "act6",
-      "name": "四 赤脚",
+      "name": "四 告别、脱外套（到「就请你」）",
       "source": {
         "kind": "scene",
         "module": "act6",
         "engine": "canvas"
       },
-      "phase": 0,
-      "rate": 1,
-      "fit": "contain",
-      "blend": "source-over",
       "start": 91.99,
-      "duration": 19.83,
-      "offset": 105.99
-    },
-    {
-      "id": "act6edge",
-      "name": "四 白的边上（静）",
-      "source": {
-        "kind": "scene",
-        "module": "act6",
-        "engine": "canvas"
-      },
+      "duration": 3.531,
+      "offset": 105.99,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
-      "blend": "source-over",
-      "start": 111.82,
-      "duration": 1.48,
-      "offset": 127.82
+      "blend": "source-over"
     },
     {
-      "id": "act7",
-      "name": "五 引力",
+      "id": "act8",
+      "name": "副歌二 + 静：扑下去、铁靴给他、赤脚升天、白的边上",
       "source": {
         "kind": "scene",
-        "module": "act7",
+        "module": "act8",
         "engine": "canvas"
       },
+      "start": 95.521,
+      "duration": 18.359,
+      "offset": 95.521,
       "phase": 0,
       "rate": 1,
       "fit": "contain",
-      "blend": "source-over",
-      "start": 113.3,
-      "duration": 38.7,
-      "offset": 133.3
+      "blend": "source-over"
+    },
+    {
+      "id": "act9",
+      "name": "活下去 + 尾奏：跺地、人链、抓住她、落回街上、背面的字",
+      "source": {
+        "kind": "scene",
+        "module": "act9",
+        "engine": "canvas"
+      },
+      "start": 113.88,
+      "duration": 38.12,
+      "offset": 113.88,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     }
   ]
 }

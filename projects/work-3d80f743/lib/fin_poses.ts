@@ -64,14 +64,14 @@ export const HER = {
     ...armR(18, 20, 0, "open", l),
   })),
   /** 往上升：身子往后仰一点（头朝上、光脚朝着下面的他），两只手往下张着，一直低头看着他 */
-  升: pose(-6, { face: 1, ground: false, rot: 12, float: 0.55, ...legL(-10, -24, -44), ...legR(8, -38, -44), neck: -24, expression: "微笑", smile: 0.5, tears: 1, lookX: 0.15, lookY: 1 }, (l) => ({
-    ...armL(36, 10, 0, "open", l),
-    ...armR(24, 24, 0, "open", l),
+  升: pose(-6, { face: 1, ground: false, rot: 12, float: 0.55, ...legL(-10, -24, -44), ...legR(8, -38, -44), neck: -24, expression: "微笑", smile: 0.5, tears: 1, lookX: -0.1, lookY: 1 }, (l) => ({
+    ...armL(-20, 16, 0, "open", l),
+    ...armR(30, 22, 0, "open", l),
   })),
   /** 在网里低头冲他笑了一下（头发漾着） */
-  笑: pose(-4, { face: 1, ground: false, rot: 8, float: 0.6, ...legL(-10, -24, -44), ...legR(8, -38, -44), neck: -30, expression: "微笑", smile: 0.85, tears: 1, lookX: 0.1, lookY: 1 }, (l) => ({
-    ...armL(60, 14, 0, "open", l),
-    ...armR(44, 26, 0, "open", l),
+  笑: pose(-4, { face: 1, ground: false, rot: 8, float: 0.6, ...legL(-10, -24, -44), ...legR(8, -38, -44), neck: -34, expression: "微笑", smile: 0.85, tears: 1, lookX: -0.2, lookY: 1 }, (l) => ({
+    ...armL(-28, 20, 0, "open", l),
+    ...armR(36, 24, 0, "open", l),
   })),
   /** 仰起脸朝着白，两只手举起来（释然） */
   仰: pose(-4, { face: 1, ground: false, rot: 12, float: 0.6, ...legL(-8, -20, -40), ...legR(10, -34, -40), neck: 24, expression: "释然", smile: 0.6, tears: 1, lookX: 0, lookY: -1 }, (l) => ({
