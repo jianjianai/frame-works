@@ -21,6 +21,5 @@ const project: AnimationProject = {
   loadAudio: () => import("./audio"),
   experiences: ["情绪运镜","剧情音乐短片"],
   tempo: {"bpm":119.99,"firstBeat":0.013,"beatsPerBar":4},
-  publishedAt: "2026-10-16T12:02:19.944Z",
 };
 export default project;
