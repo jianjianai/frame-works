@@ -6,7 +6,8 @@
 // 侧面看两张床只能头对头，他的胳膊太短，隔着两个床头够不着她的手——所以这里是仰头看：两张床并排钉在头顶，中间一道缝。
 // 主歌二⑧「请你等等我」第二句（85.8–88.02；请 85.8 你 86.25 等 86.43 等 86.61 我 86.79；85.76–86.5 很静，86.5 起越来越满，88.02 下一段）：
 // 还是这个镜头，一夜过去：冷光一道道慢慢移走、越来越淡；天亮了，屋里亮起来，晨光从脚那头一道道往上爬，87.85 爬到两张脸上
-// （窗那边的他先照到）。两个人在睡梦里动了一下，手一直牵着；晨光照到他脸上，88.02 他睁开眼（下一段「三 明天见」：他先醒）。
+// （窗那边的他先照到）。两个人在睡梦里动了一下，手一直牵着；88.02 她先睁开眼，看着还睡着的他（下一段「三 明天见」：她先起来，
+// 2026-10-25 改：原来是他先醒、把她从床上拉下来，和主歌二③夜里他把她拽下来重复了）。
 // 镜头很慢地往后退、转一点点。
 // 仰头看的画面另起一套坐标（「天花板坐标」）：画面里朝上是床头（屋子里的左边），朝右是窗那边（离镜头近的那边，小床在她的床和窗之间），
 // 大小和屋子坐标一样（屋子坐标 x = 天花板坐标 y + 1020）。
@@ -52,7 +53,7 @@ export const DAWN_T = {
   /** 天亮：屋里亮起来，晨光从脚那头一道道往上爬，爬到两张脸上 */
   dawn0: 86.85,
   dawn1: 87.85,
-  /** 晨光照到他脸上，睁开眼（下一段第一拍） */
+  /** 晨光照到脸上，她先睁开眼（下一段第一拍） */
   wake: 87.94,
   end: beatAt(176),
 };
@@ -150,20 +151,22 @@ const herMove = live(
     // ⑧ 睡梦里往他那边又转了一点
     { t: 86.36, p: HER.睡 },
     { t: 86.62, ease: "inOut", p: { ...HER.睡, headTurn: 0.5, smile: 0.55 } },
-    { t: 90, p: { ...HER.睡, headTurn: 0.5, smile: 0.55 } },
+    // 晨光照到脸上，她先睁开眼，看着还睡着的他
+    { t: D.wake - 0.02, p: { ...HER.睡, headTurn: 0.5, smile: 0.55 } },
+    { t: D.wake, p: { ...HER.睡, headTurn: 0.5, expression: "平常", blink: 0.6, smile: 0.2, lookX: 0.9, lookY: 0.1 } },
+    { t: D.end, ease: "out", p: { ...HER.睡, headTurn: 0.5, expression: "平常", blink: 0.15, smile: 0.2, lookX: 0.9, lookY: 0.1 } },
+    { t: 90, p: { ...HER.睡, headTurn: 0.5, expression: "平常", blink: 0.15, smile: 0.2, lookX: 0.9, lookY: 0.1 } },
   ] as MoveKey[],
   { look: CHENGTUO, base: { wind: 0 }, idle: true, seed: 91, springs: ARMS, follow: 0 },
 );
 const himMove = live(
   [
     { t: 83.8, x: 0, p: HIM.睡 },
-    // ⑧ 睡梦里笑了一下；晨光照到脸上，睁开眼（先半睁，再睁开，往上看）
+    // ⑧ 睡梦里笑了一下；天亮了还睡着（她先醒）
     { t: 86.7, p: HIM.睡 },
     { t: 86.95, ease: "inOut", p: { ...HIM.睡, smile: 0.7 } },
-    { t: D.wake - 0.02, p: { ...HIM.睡, smile: 0.4 } },
-    { t: D.wake, p: { ...HIM.睡, expression: "平常", blink: 0.6, smile: 0.15, lookX: -0.2, lookY: -0.3 } },
-    { t: D.end, ease: "out", p: { ...HIM.睡, expression: "平常", blink: 0.22, smile: 0.15, lookX: -0.5, lookY: -0.1 } },
-    { t: 90, p: { ...HIM.睡, expression: "平常", blink: 0.22, smile: 0.15, lookX: -0.5, lookY: -0.1 } },
+    { t: 87.6, ease: "inOut", p: { ...HIM.睡, smile: 0.5 } },
+    { t: 90, p: { ...HIM.睡, smile: 0.5 } },
   ] as MoveKey[],
   { look: lookOf(STONE_BED), base: { wind: 0 }, idle: true, seed: 93, springs: ARMS, follow: 0 },
 );
@@ -581,6 +584,8 @@ export interface CeilingCast {
   lightT: number;
   untie?: number;
   hisQuiltTop?: number;
+  /** 他已经走了（1:35.5 天快亮她醒来）：他那张小床空着，被子掀到床尾，不画他（him 只用来定红绳垂下来的地方） */
+  empty?: boolean;
 }
 export function drawCeiling(g: CanvasRenderingContext2D, base: DOMMatrix, t: number, cam: Cam, cast?: CeilingCast) {
   g.setTransform(base);
@@ -607,18 +612,23 @@ export function drawCeiling(g: CanvasRenderingContext2D, base: DOMMatrix, t: num
   g.scale(HER_S, HER_S);
   drawChengtuo(g, her.pose, { line: LW, beforeFrontArms: underArms(() => quilt(g, HER_BED.x0 + 8, HER_BED.x1 - 8, -230, 196, ["#7f93a8", "#6d8196"], "grid", [-160, 10], t)) });
   g.restore();
-  g.save();
-  g.translate(him.root[0], him.root[1]);
-  g.scale(HER_S, HER_S);
-  drawPerson(g, STONE_BED, him.pose, 0, 0, 1 / (LW * LW), { beforeFrontArms: underArms(() => quilt(g, HIS_BED.x0 + 8, HIS_BED.x1 - 8, cast?.hisQuiltTop ?? -250, 4, ["#d8b056", "#c49c48"], "check", [-170, -60], t + 0.7)) });
-  g.restore();
+  if (cast?.empty) {
+    // 空着的小床：被子掀开、堆在床尾，枕头上还压着一个浅浅的坑
+    quilt(g, HIS_BED.x0 + 8, HIS_BED.x1 - 8, 2, 120, ["#d8b056", "#c49c48"], "check", [60], t + 0.7);
+  } else {
+    g.save();
+    g.translate(him.root[0], him.root[1]);
+    g.scale(HER_S, HER_S);
+    drawPerson(g, STONE_BED, him.pose, 0, 0, 1 / (LW * LW), { beforeFrontArms: underArms(() => quilt(g, HIS_BED.x0 + 8, HIS_BED.x1 - 8, cast?.hisQuiltTop ?? -250, 4, ["#d8b056", "#c49c48"], "check", [-170, -60], t + 0.7)) });
+    g.restore();
+  }
   bedEnds(g, HER_BED);
   bedEnds(g, HIS_BED);
   // 脚踝上拴着的绳子（她：近处那只脚，靠他那边；他：靠她那边那只）
   const untie = cast?.untie ?? 0;
   ropes(g, her.ankleL, him.ankleR, untie);
   ankleLoop(g, her.ankleL, 4, "#a08a6e");
-  if (untie < 0.08) ankleLoop(g, him.ankleR, 3, "#d8352b");
+  if (untie < 0.08 && !cast?.empty) ankleLoop(g, him.ankleR, 3, "#d8352b");
   lightSwitch(g, t);
   light(g, cast?.lightT ?? t);
 }

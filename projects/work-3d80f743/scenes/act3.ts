@@ -32,7 +32,8 @@ import { ASH_T, ashFlash, ashRays, burstAt, drawSkyBloom, drawSnow } from "../li
 import { XFER, streetCam, streetLook, streetShake, xferWhite } from "../lib/streetcam";
 import { MEM_T, drawThen, memoryGrade, nowCam, thenCam } from "../lib/memory";
 import { SIGN_T, drawDust, drawFallingBoard, drawMemAsh, drawMemFlash, drawSign8, signCam, signShake } from "../lib/sign";
-import { GROW_T, backCam, drawGrow, growCam, memoryAmount } from "../lib/grow";
+import { GROW_T, type Layer, backCam, drawGrowFront, drawGrowGlow, drawSaved, frontSeg, growCam, growDissolve, growDusk, growLook, growShake, landX, memoryAmount, segAt } from "../lib/grow";
+import { drawBusStop, drawSchool } from "../lib/years";
 
 export async function createScene({ width, height }: SceneOptions): Promise<Scene> {
   await loadHandFont();
@@ -58,8 +59,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const thenCamAt = (t: number): Cam => growCam(t, (t2) => signCam(t2, (tt) => thenCam(tt, camAt)));
 
   /** ⑦⑧ 十二年前：同一条街，白天，颜色淡一些、旧一些；穿着妈妈铁靴的她、往天上飘的妈妈（掉在半空的木牌、灰、调色在 drawPastTop） */
-  const drawPast = (g: CanvasRenderingContext2D, t: number) => {
+  const drawPast = (g: CanvasRenderingContext2D, t: number, layer?: Layer) => {
     const cam = thenCamAt(t);
+    if (t >= GROW_T.start) {
+      drawYears(g, t, cam, layer);
+      return;
+    }
     const sh = shake(t, signShake(t));
     drawWorld(g, cam, t, sh, undefined, 0);
     applyCam(g, base, cam, 1, sh);
@@ -72,20 +77,74 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     if (v.y1 > -400) drawStreet(g, cam);
     applyCam(g, base, cam, 1, sh);
     if (t < SIGN_T.start) drawThen(g, t, cam.z);
-    else if (t < GROW_T.start) {
+    else {
       drawSign8(g, t, cam.z);
       drawDust(g, t);
-    } else drawGrow(g, t, cam.z);
+    }
     drawAir(g, cam, t, sh, skyLook(t), 0, 0);
   };
+  /**
+   * 间奏（lib/grow.ts、lib/years.ts）：她走两步，第二步落脚前后 0.4 秒叠化成下一个地方，她一直在画面正中。
+   * 一层画面（layer：哪个地方、几岁的她；不给就按这一刻）：先画那个地方（里面带着还飘着的人），再画她，再画坐在她前面的人，
+   * 最后砖的光、空气和调色
+   */
+  const drawYears = (g: CanvasRenderingContext2D, t: number, cam: Cam, layer?: Layer) => {
+    const sh = shake(t, growShake(t));
+    const late: (() => void)[] = [];
+    const seg = layer?.seg ?? segAt(t);
+    if (seg === 0) {
+      drawWorld(g, cam, t, sh, undefined, 0);
+      applyCam(g, base, cam, 1, sh);
+      const v = viewOf(cam, 1);
+      const H_ = ZHONG_HOUSE;
+      if (H_.x0 < v.x1 + 200 && H_.x1 > v.x0 - 200 && v.y1 > H_.top - 300) {
+        drawHouse(g, H_, t);
+        drawHouseWindowFront(g, H_);
+      }
+      if (v.y1 > -400) drawStreet(g, cam);
+    } else {
+      const people = () => {
+        applyCam(g, base, cam, 1, sh);
+        drawSaved(g, t, cam.z, seg, false, late);
+      };
+      if (seg === 1) drawBusStop(g, base, cam, t, sh, landX(1), people);
+      else {
+        setDusk(0.5, 0.5);
+        try {
+          drawSchool(g, base, cam, t, sh, landX(2), people);
+        } finally {
+          setDusk(0);
+        }
+      }
+      for (const f of late.splice(0)) f();
+    }
+    applyCam(g, base, cam, 1, sh);
+    drawGrowFront(g, t, cam.z, late, layer?.age);
+    // 摔下来以后坐在她前面的人（她走开时从他身后经过）
+    const fs = frontSeg(t, seg);
+    if (fs) {
+      applyCam(g, base, cam, 1, sh);
+      drawSaved(g, t, cam.z, fs, true, late);
+    }
+    for (const f of late.splice(0)) f();
+    drawGrowGlow(g, t, width / 1080, seg);
+    const dk = growDusk(seg);
+    setDusk(dk, dk);
+    try {
+      drawAir(g, cam, t, sh, growLook(t), 0, 0);
+    } finally {
+      setDusk(0);
+    }
+  };
   /** 拖影上面的：掉在半空的木牌（保持清楚）、灰、天上那一亮，最后整幅蒙回忆的颜色 */
-  const drawPastTop = (g: CanvasRenderingContext2D, t: number) => {
+  const drawPastTop = (g: CanvasRenderingContext2D, t: number, layer?: Layer) => {
     const cam = thenCamAt(t);
+    const seg = layer?.seg ?? segAt(t);
     applyCam(g, base, cam, 1, shake(t, signShake(t)));
     drawFallingBoard(g, t, cam.z);
-    drawMemAsh(g, t, cam.z);
+    if (t < GROW_T.start || seg === 0) drawMemAsh(g, t, cam.z);
     drawMemFlash(g, base, t);
-    memoryGrade(g, base, t < GROW_T.start ? 1 : memoryAmount(t));
+    memoryGrade(g, base, t < GROW_T.start ? 1 : memoryAmount(seg));
   };
   /** 镜头竖着甩得很快时按 1/48 秒快门竖着拖一下（a、b 是前后 1/120 秒的镜头） */
   const smear = (z: number, a: { y: number }, b: { y: number }) => {
@@ -165,7 +224,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   return {
     canvas,
     render(t) {
-      // 间奏最后溶回现在：先画现在，再把回忆那一帧叠在上面越来越淡
+      // 间奏最后溶回现在：先画现在，再把回忆那一帧叠在上面越来越淡（两边的她同一个姿势、同一个地方、一样大，只有四周和怀里的人在换）
       if (t >= GROW_T.kneel) {
         drawNight(ctx, t);
         if (t < GROW_T.dis1) {
@@ -177,6 +236,20 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
           ctx.drawImage(buf, 0, 0);
           ctx.restore();
         }
+        return;
+      }
+      // 间奏换地方：前一个地方先画，后一个地方叠上去
+      const dz = t >= GROW_T.start ? growDissolve(t) : null;
+      if (dz) {
+        drawPast(ctx, t, dz.from);
+        drawPastTop(ctx, t, dz.from);
+        drawPast(bctx, t, dz.to);
+        drawPastTop(bctx, t, dz.to);
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = dz.w;
+        ctx.drawImage(buf, 0, 0);
+        ctx.restore();
         return;
       }
       // ⑦ 溶进十二年前：先画回忆，再把现在那一帧叠在上面越来越淡

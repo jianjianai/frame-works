@@ -1,10 +1,8 @@
 // 三「明天见」（88.02 起，故事「早上，沉沉家」……）。一个镜头一个镜头做，用户确认一个再做下一个。图层 offset = start：模块里的时间就是作品的绝对时间。
-//   ① 88.02–89.91「发着光的半平米」（lib/morning.ts）：镜头从主歌二⑧仰头看的天花板往下摇回侧面的屋子，摇的时候溶过去（时间往后跳一点）：
-//      早上，他已经起来了，穿着外套站在桌前的地上，一把一把把还睡着的她从天花板的床上拉下来；地上一小块太阳照亮的光里，立着她的两只铁靴。
-//   ② 89.91–92.02「胡乱哼唱的旋律」（lib/morning.ts 的 HUM_T，同一个镜头）：她醒了，他把铁靴推到她脚底下、仰头朝她伸手；她犹豫着看一眼窗外，
-//      回过头拉住他的手踩进铁靴，91.02「咚」落回地上。镜头慢慢凑近两张脸。
-//   ③ 92.02–93.9「但是还想拯救你」（lib/street3.ts）：小节线上切到白天的街上：阿满飘了起来，她跳起来攥住他的脚踝，自己也被带离了地；
-//      小石头跑过来从后面抱住她的腿，两个人一起把阿满拽回街面。镜头跟着往上带，再猛地沉回街面。
+//   ① 88.02–89.79（作品 82.02–83.79「其实还想要说很多」；lib/morning.ts，2026-10-25 换）：镜头从主歌二⑧仰头看的天花板往下摇回侧面的屋子，
+//      摇的时候溶过去：她已经穿好铁靴，拧开门；他披上外套从上面掉下来，落在她身边，两个人一起往门口走。
+//   ③ 89.79–94.02（作品 83.79–88.02，两句「请你等等我」；lib/street3.ts，2026-10-25 提前、重做）：切到白天的街上：阿满飘了起来，她跳起来攥住他的脚踝，
+//      一起往下一坠、差一点落地，又被带着往上升；第二句小石头跑过来从后面抱住她的腿，三个人一起落回街面，她把阿满拽下来坐在街上。
 //   ④ 93.9–95.55「同时拯救我自己」（lib/street4.ts，不切）：镜头往后退、往上升，退到整座城：路口周磊拽下一个飘起来的年轻人、给他砖；
 //      街的最西头千斤在家门口把砖递给窗口飘出来的老太太。一条街上两处暖光，头顶是白。
 //   ⑤ 95.55–97.98「就请你 / 放心大胆更妄为肆意」（lib/street3.ts 的 WALK_T，镜头 lib/street4.ts 的 walkCam）：镜头从整座城一下扎回她们身上，
@@ -63,7 +61,9 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
           const k = t >= LESSON_T.mix0 ? lessonMix(t) : 0;
           if (k < 1) {
             // ③–⑥ 白天的街上（和第一幕同一套城和楼）：她出门了，她家的灯灭着、铁栅栏门关着；退到整座城时远处那几栋高楼淡进来（和第一幕一样）
-            const cam = t >= WALK_T.dive ? walkCam(t) : t >= SPREAD_T.start ? spreadCam(t) : pullCam(t);
+            // ④ 已剪掉：③一直到切走（PULL_T.cut）都是 pullCam
+            const spread = t >= SPREAD_T.start && t > PULL_T.cut;
+            const cam = t >= WALK_T.dive ? walkCam(t) : spread ? spreadCam(t) : pullCam(t);
             setDusk(0);
             setHomeLamp(0);
             setCage(1);
@@ -71,7 +71,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
             applyCam(ctx, base, cam, 1);
             drawStreet(ctx, cam);
             drawPull3(ctx, t, cam.z);
-            if (t >= SPREAD_T.start) drawSpread(ctx, t, cam.z, viewOf(cam, 1));
+            if (spread) drawSpread(ctx, t, cam.z, viewOf(cam, 1));
             drawAir(ctx, cam, t, [0, 0], skyLook(t), 0, 0);
           }
           if (k > 0) {

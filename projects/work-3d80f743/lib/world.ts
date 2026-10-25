@@ -981,7 +981,13 @@ export const TREES = [-2900, -1500, 380, 1700, 3100];
 const POLES = [-420, 1250, -2300, 3000, -4200];
 const ST_D = 1.25;
 
-function planeTree(g: CanvasRenderingContext2D, x: number, t: number, lw: number, seed: number, px = 1) {
+/** 梧桐的季节：夏天绿叶（街上原来的样子）、秋天黄叶（间奏的公交站）、冬天光秃秃的只剩枝杈（间奏的学校门口） */
+export type TreeLook = "green" | "autumn" | "bare";
+const CANOPY: Record<"green" | "autumn", { base: string; mid: string; lit: string; dapple: string }> = {
+  green: { base: "#6f8c4d", mid: "#86a35a", lit: "rgba(214,222,128,0.75)", dapple: "rgba(70,96,52,0.35)" },
+  autumn: { base: "#c98a34", mid: "#dfa748", lit: "rgba(255,226,142,0.8)", dapple: "rgba(150,88,38,0.32)" },
+};
+export function planeTree(g: CanvasRenderingContext2D, x: number, t: number, lw: number, seed: number, px = 1, look: TreeLook = "green") {
   const s = 1.4;
   // 画面上很小的时候不画树皮的斑、叶子的碎影
   const fine = px > 0.45;
@@ -1041,30 +1047,35 @@ function planeTree(g: CanvasRenderingContext2D, x: number, t: number, lw: number
     canopy.closePath();
     lights.push([cx, cy, R]);
   }
+  if (look === "bare") {
+    bareCrown(g, x, s, lw, seed, t);
+    return;
+  }
+  const pal = CANOPY[look];
   g.strokeStyle = INK;
   g.lineWidth = lw * 2;
   g.lineJoin = "round";
   g.stroke(canopy);
-  g.fillStyle = "#6f8c4d";
+  g.fillStyle = pal.base;
   g.fill(canopy);
   g.save();
   g.clip(canopy);
   // 中间调
-  g.fillStyle = "#86a35a";
+  g.fillStyle = pal.mid;
   for (const [cx, cy, R] of lights) {
     g.beginPath();
     g.ellipse(cx - R * 0.18, cy - R * 0.16, R * 0.78, R * 0.62, 0, 0, Math.PI * 2);
     g.fill();
   }
   // 被太阳照亮的那一侧
-  g.fillStyle = "rgba(214,222,128,0.75)";
+  g.fillStyle = pal.lit;
   for (const [cx, cy, R] of lights) {
     g.beginPath();
     g.ellipse(cx - R * 0.42, cy - R * 0.4, R * 0.42, R * 0.3, -0.4, 0, Math.PI * 2);
     g.fill();
   }
   // 叶子的小碎影
-  g.fillStyle = "rgba(70,96,52,0.35)";
+  g.fillStyle = pal.dapple;
   if (fine) for (const [cx, cy, R] of lights) {
     for (let k = 0; k < 4; k++) {
       const a = k * 1.7 + cx * 0.01;
@@ -1076,7 +1087,49 @@ function planeTree(g: CanvasRenderingContext2D, x: number, t: number, lw: number
   g.restore();
 }
 
-function drawStreetLife(g: CanvasRenderingContext2D, c: Cam, t: number) {
+/** 冬天的梧桐：树干分出来的两根大杈接着往上分枝（三层，一层比一层细），枝梢在风里轻轻晃 */
+function bareCrown(g: CanvasRenderingContext2D, x: number, s: number, lw: number, seed: number, t: number) {
+  const r = seeded(seed + 101);
+  const segs: [number, number, number, number, number][] = [];
+  const grow = (x0: number, y0: number, ang: number, len: number, w: number, depth: number) => {
+    const sway = depth >= 2 ? 0.03 * Math.sin(t * 0.9 + x0 * 0.01 + depth) : 0;
+    const a = ang + sway;
+    const x1 = x0 + Math.sin(a) * len;
+    const y1 = y0 - Math.cos(a) * len;
+    segs.push([x0, y0, x1, y1, w]);
+    if (depth >= 3) return;
+    const n = depth === 0 ? 3 : 2;
+    for (let i = 0; i < n; i++) {
+      const spread = (i - (n - 1) / 2) * (0.5 + r() * 0.25) + (r() - 0.5) * 0.2;
+      grow(x1, y1, a + spread, len * (0.62 + r() * 0.16), w * 0.62, depth + 1);
+    }
+  };
+  // 树干分出来的两根大杈（和夏天的树干同一个形状）的顶端
+  grow(x - 45 * s, -435 * s, -0.42, 150 * s, 13 * s, 0);
+  grow(x + 50 * s, -446 * s, 0.38, 160 * s, 13 * s, 0);
+  grow(x + 2 * s, -336 * s, 0.05, 210 * s, 12 * s, 1);
+  g.save();
+  g.lineCap = "round";
+  g.strokeStyle = INK;
+  for (const [x0, y0, x1, y1, w] of segs) {
+    g.lineWidth = w + lw * 1.4;
+    g.beginPath();
+    g.moveTo(x0, y0);
+    g.lineTo(x1, y1);
+    g.stroke();
+  }
+  g.strokeStyle = "#b29c84";
+  for (const [x0, y0, x1, y1, w] of segs) {
+    g.lineWidth = w;
+    g.beginPath();
+    g.moveTo(x0, y0);
+    g.lineTo(x1, y1);
+    g.stroke();
+  }
+  g.restore();
+}
+
+function drawStreetLife(g: CanvasRenderingContext2D, c: Cam, t: number, trees: TreeLook | "none" = "green") {
   const v = viewOf(c, ST_D);
   const lw = 3.2;
   const poles = [...POLES].sort((a, b) => a - b);
@@ -1120,7 +1173,7 @@ function drawStreetLife(g: CanvasRenderingContext2D, c: Cam, t: number) {
     part(g, rectPath(x + 38, -1160, 22, 30), "#e8e2d8", null, lw * 0.7);
   }
   TREES.forEach((x, i) => {
-    if (x > v.x0 - 500 && x < v.x1 + 500) planeTree(g, x, t, lw, i * 17 + 3, c.z / ST_D);
+    if (trees !== "none" && x > v.x0 - 500 && x < v.x1 + 500) planeTree(g, x, t, lw, i * 17 + 3, c.z / ST_D, trees);
   });
 }
 
@@ -1149,7 +1202,7 @@ export function drawCity(
   t: number,
   between?: (D: number) => void,
   sh: [number, number] = [0, 0],
-  o: { light?: number; haze?: number; wide?: number } = {},
+  o: { light?: number; haze?: number; wide?: number; trees?: TreeLook | "none" } = {},
 ) {
   const light = o.light ?? 1;
   const extra = o.haze ?? 0;
@@ -1199,7 +1252,7 @@ export function drawCity(
     road.rect(v.x0, 0, v.x1 - v.x0, 8000);
     if (light > 0) drawLightBands(g, c, ST_D, road, light * 0.8);
   }
-  drawStreetLife(g, c, t);
+  drawStreetLife(g, c, t, o.trees);
   between?.(ST_D);
   if (extra > 0) drawSky(g, base, c, extra * 0.7);
 }

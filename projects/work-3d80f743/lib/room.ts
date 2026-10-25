@@ -622,6 +622,8 @@ export interface RoomAway {
   after?: (g: CanvasRenderingContext2D) => void;
   /** 桌上那支放下的笔画不画（三⑦ 笔在两个人手里，场景自己画）；不写是画 */
   pen?: boolean;
+  /** 门扇前面、灯光之前（三 早上：站在门口的她、跑过来的他） */
+  front?: (g: CanvasRenderingContext2D) => void;
 }
 export function setRoomAway(a: RoomAway | null) {
   AWAY = a;
@@ -745,7 +747,7 @@ function ropeLoop(g: CanvasRenderingContext2D, t: number) {
 }
 
 /** 一块砖（底边中点 x、y），正面写着字 */
-function brickAt(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, word: string, rot = 0) {
+export function brickAt(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, word: string, rot = 0) {
   g.save();
   g.translate(x, y);
   g.rotate(rot);
@@ -1217,6 +1219,7 @@ export function drawRoom(g: CanvasRenderingContext2D, t: number, on: number, lw 
   }
   quilt(g, t);
   doorFront(g, t);
+  AWAY?.front?.(g);
   if (t < TEN_T.penDown) {
     // 两块五的签字笔：笔尖在砖上，笔杆压在手心里
     const j = jointsOf(c.pose);
