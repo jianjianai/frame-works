@@ -1,15 +1,18 @@
 {
   "work": "d1187f37",
   "title": "unhappy - s0rrow",
+  "types": [
+    "音乐短剧"
+  ],
   "posts": [
     {
       "id": "p1",
       "platform": "抖音",
       "title": "他发了一大段，她只回了一个“嗯”… #双向暗恋 #unhappy #s0rrow",
+      "pinnedComment": "中英全文歌词 +「回看第 1 秒，“对方正在输入”闪了几次？」",
       "postedAt": "2026-10-07T15:00:00.000Z",
       "duration": 57,
       "version": "d11eebe4b057e25a2ac27174183fbd520edbe820",
-      "pinnedComment": "中英全文歌词 +「回看第 1 秒，“对方正在输入”闪了几次？」",
       "goals": {
         "views": 1000000
       }
