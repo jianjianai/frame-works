@@ -22,6 +22,5 @@ const project: AnimationProject = {
   materials: ["s0rrow"],
   loadAudioDocument: () => import("./audio.json"),
   tempo: {"bpm":124.59,"firstBeat":0.009,"beatsPerBar":4},
-  publishedAt: "2026-10-18T00:56:57.230Z",
 };
 export default project;
