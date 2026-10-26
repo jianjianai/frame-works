@@ -108,11 +108,6 @@ export const HER = {
     ...armL(-30, 40, 0, "open", 4),
     ...armR(50, 40, 0, "open", 4),
   })),
-  /** 认出来了：他底下一整串人，全是她拽下来过的人，都仰着头看着她——近处那只手捂住嘴，忍着哭，眼泪涌上来 */
-  认出: pose(6, { face: 0.5, ground: false, rot: 6, float: 0.7, ...legL(-8, -20, -40), ...legR(10, -34, -40), neck: -28, expression: "忍着哭", tears: 1, sad: 1, open: 0.12, lookX: 0.35, lookY: 1 }, () => ({
-    ...armL(26, 138, 8, "relax", 6),
-    ...armR(46, 44, 0, "open", 6),
-  })),
   /** 翻身扑向栏杆：头朝下，两只手往下够 */
   翻: pose(30, { face: 0.6, ground: false, rot: 120, float: 0.7, ...legL(-30, -50, -30), ...legR(10, -70, -30), neck: 20, expression: "使劲", teeth: 0.6, tears: 1, lookX: 0, lookY: -0.6 }, (l) => ({
     ...armL(170, 10, 0, "open", l),

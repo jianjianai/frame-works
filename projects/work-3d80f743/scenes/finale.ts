@@ -2,15 +2,13 @@
 // 图层 offset = start：模块里的时间就是作品时间。按镜头分段画：
 //   街（94.02）→ 天花板她醒来（95.40）→ 一镜到底（96.02：他冲上去、她扑下来、抱住、下坠、停住、交靴、松手、他落地）→
 //   （他落地以后天上掉下来一块砖，104.52 砸在靴尖前面）→ 第一视角（104.8：捡起来、看）→ 她越升越快冲他笑（106.02）→ 跺地（108.02）→ 慢放：白的边上（109.89）→
-//   静：老钟的特写（112.02，屋里墙上的钟跳两下）→ 窗外：他从靴子里出来往上飘、老钟攥住他、被拽出窗（113.88–117.0）→
-//   大家来了（镜头退到街上钉住：她救过的人一个接一个跑来、跳起来攥住，五层楼关上的窗一扇扇推开，120.02 最后一个人站住）→
-//   一路往上（120.02 从最后那个人攥着的手顺着人链往上爬，路人快、认得出的人慢，122.5 爬到他）→ 顺着他的视线摇到白的边上的她：
-//   睁开眼、看见他们、认出来捂住嘴、翻身攥住栏杆倒挂（123.36–125.42）→ 第四声（126.02）从她的脸往后拉开到整条人链，人链先往右、再往左荡 →
-//   在这反乌托邦里（129.35 起推）推到他，跟着他往左荡过去，句子唱完把砖递到她手里（131.96）、鼓回来那一下一接过来就亮（132.01）、
-//   她立即松开栏杆抱住他、转正（132.58）→ 推到她脸上：睁开眼看砖，一滴眼泪往下掉在「活」字上（133.02）→
-//   拉远、整个画面暗下去（133.3）→ 尾奏：光直接炸开、铺满整个画面（134.02），白里留着两个人的影子 →
-//   光退下去，退到和第四声同一个机位的整幅：人链连上了她 → 从上往下一个个松手飘下来、推向两个人 →
-//   落地、给他穿外套 → 光脚跺一下（148.53）。
+//   静：老钟的特写（112.02，屋里墙上的钟跳两下）→ 窗外：他从靴子里出来往上飘、老钟攥住他、被拽出窗（113.88）→
+//   人链（118.02 街上一个抓住一个，退到 119.45 改成跟着他往上）→ 第三声（121.75）从他往下一张脸一张脸看到街上最后那个人 →
+//   第四声（126.01）从街上往后拉开到整条人链，人链先往右、再往左荡 → 在这反乌托邦里（129.55 起推）推到他，跟着他往左荡过去，
+//   句子唱完把砖递到她手里（131.96）、鼓回来那一下一接过来就亮（132.01）、她立即松开栏杆抱住他、转正（132.58）→
+//   推到她脸上：睁开眼看砖，一滴眼泪往下掉在「活」字上（133.02）→
+//   拉远、整个画面暗下去（133.3）→ 尾奏：光直接炸开、铺满整个画面（134.02），白里留着两个人的影子 → 散开、落下来、推向两个人 →
+//   落地、给他穿外套 → 光脚跺一下（134.03）。
 //   （用户 2026-10-25 第二次改 112.02 以后：下面的人是在救他；人链钉在地上的那一点不动，随风摆；砖不翻面；她给他穿外套，光着脚跺出一个坑）
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
@@ -21,7 +19,7 @@ import { drawCeiling } from "../lib/bed";
 import { TE, type V2 } from "../lib/end_t";
 import { drawWatchers, makeEndStage } from "../lib/end_map";
 import { wakeCast } from "../lib/end_ceil";
-import { ceilCam, chainCam, climbing, endCam, handCam, oneTakeCam, slowCam, smileCam, stompCam, streetCam, zhongCam, zhongCloseCam } from "../lib/end_cam";
+import { ceilCam, chainCam, endCam, handCam, oneTakeCam, slowCam, smileCam, stompCam, streetCam, zhongCam, zhongCloseCam } from "../lib/end_cam";
 import { HB_REST, drawCoat, drawCoatInHands, drawGroundBrick, drawHer, drawKid, drawKidBoots, drawLooseGift, herAt, herBrickAt, holding, kidAt, warmAt } from "../lib/end_pair";
 import { drawZhongHouse } from "../lib/end_zhong";
 import { drawChain } from "../lib/end_chain";
@@ -211,14 +209,14 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const renderZhongClose = (t: number) => worldShot(zhongCloseCam(t), t, { chain: false, pair: false });
   const renderZhong = (t: number) => worldShot(zhongCam(t), t, { chain: true });
   /**
-   * 大家来了（镜头钉在街上）→ 一路往上爬过每个人、爬到他 → 顺着他的视线摇到白的边上的她：睁眼、看见、认出来、翻身攥住栏杆 →
-   * 第四声从她的脸往后拉开到整条人链，人链先往右、再往左荡（2026-10-26 第九次改）
+   * 第三声从他往下一张脸一张脸看到街上 → 第四声从街上往后拉开到整条人链，人链先往右、再往左荡。
+   * （原来「去」的长音里有一道淡光沿人链从街上描到他；现在第三声的镜头自己把每个人看过一遍，光去掉了）
    */
   const renderChain = (t: number) => {
     const cam = chainCam(t);
     worldShot(cam, t);
-    // 往上爬的时候镜头走得快：轻轻的竖向拖影（按这一帧镜头在画面上竖着走了多少；人画在拖影后面清楚不了，所以很轻）
-    if (climbing(t)) {
+    // 往下看的时候镜头走得快：轻轻的竖向拖影（按这一帧镜头在画面上竖着走了多少；人画在拖影后面清楚不了，所以很轻）
+    if (t > TE.look0 && t < TE.sweepEnd) {
       const prev = chainCam(t - 1 / 60);
       smearV((cam.y - prev.y) * cam.z * 0.2);
     }
