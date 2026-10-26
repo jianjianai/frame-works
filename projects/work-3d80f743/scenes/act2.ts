@@ -13,8 +13,8 @@
 //      镜头跟着慢慢升起来，门口沉到画面最下面。（2026-10-20 用户重排：原来红线在④就断了，开锁在⑤）
 //   ⑥ 26.0–27.8「其实还想要说很多」（lib/sky.ts）：切到高空，她吊着哑铃悬住，拔下发卡开锁「咔」（底鼓），
 //      铁链连着哑铃掉下去，她张开手越飘越快；镜头推到锁上一顿，再跟着她往上退开，露出头顶的白和最高那栋楼的楼顶。
-//   ⑦ 27.8–29.79「请你等等我」（lib/roof.ts，和⑥是一个镜头，不切）：楼顶上收床单的沉沉看见她，一惊，冲出去在她碰到白之前
-//      从身后抱住，两个人在天上带着惯性慢慢往左飘、往下落，29.01 千斤在半空里转过身来抱住她；镜头两人越近推得越近，抱住一震，跟着飘、退开一点。
+//   ⑦ 27.8–29.79「请你等等我」（lib/roof.ts，和⑥是一个镜头，不切）：「很多」里楼顶上收床单的沉沉看见她，一惊，冲出去在她碰到白之前
+//      「请」27.84 从身后抱住（2026-10-25 提前），千斤一下转过身来抱住她，两个人在天上带着惯性慢慢往左飘、往下落；镜头两人越近推得越近，抱住一震，跟着飘、退开一点。
 //   ⑧ 29.79–31.97「请你等等我」第二句（lib/roof.ts 的 HUG_T，还是同一个镜头）：30.01 两个人一起坐着落到千斤家楼顶上（不站着落地），
 //      「等等我」在她耳边说；天黑下来，城里的窗一组组亮（lib/night.ts），镜头越推越慢地推近两张脸。31.97 切进她的屋子（lib/room.ts）。
 //   ⑨ 31.97–33.9「两块五的签字笔」（lib/write.ts）：在屋里推到桌上，笔杆上「2.5元」的价签；「签、字、笔」写出「活、下、去」。
@@ -113,10 +113,14 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       const sh = shake(t, eleven ? give.shakeK(t) : six ? roofShake(t) : skyShake(t));
       // 远处满天往上飘的人：画在各自那一层的楼后面、空气前面
       const setCam = (D: number) => applyCam(g, base, cam, D, sh);
+      // ⑦ 抱住以后满天往上飘的人慢慢淡掉（近的几乎没了，远的剩一点）：抱着的时候四周不再是「一个个飘走、化成灰」的人
+      const hush = six ? E.io(ph(t, ROOF_T.catch, ROOF_T.catch + 0.8)) : 0;
       drawWorld(g, cam, t, sh, (D) => {
-        if (D === 4) sky.drawFar(g, t, 4, 99, setCam);
-        else if (D === 2.2) sky.drawFar(g, t, 2.2, 4, setCam);
+        if (D === 4) sky.drawFar(g, t, 4, 99, setCam, 1 - 0.6 * hush);
+        else if (D === 2.2) sky.drawFar(g, t, 2.2, 4, setCam, 1 - 0.92 * hush);
       });
+      // ⑦⑧ 抱住以后的暖光铺满背景（画在人后面，不给人物染色）
+      if (six) roof.drawHugWash(g, base, cam, t);
       applyCam(g, base, cam, 1, sh);
       // 千斤家楼顶的栏杆和人（黄昏、夜里一起蒙上那层色，人蒙得浅一点，看得清）
       const people = (gg: CanvasRenderingContext2D) => {
@@ -128,7 +132,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         }
         if (eleven) give.draw(gg, t, cam.z);
       };
-      if (tintK > 0) drawTinted(g, [QJ_HOME.x - 520, RAIL_TOP - 820, QJ_HOME.x + QJ_HOME.w + 1200, QJ_ROOF + 40], people, (0.85 - 0.3 * roof.hugLight(t)) * tintK);
+      if (tintK > 0) drawTinted(g, [QJ_HOME.x - 520, RAIL_TOP - 820, QJ_HOME.x + QJ_HOME.w + 1200, QJ_ROOF + 40], people, (0.85 - (eleven ? 0.3 : 0.45) * roof.hugLight(t)) * tintK);
       else people(g);
       // ⑧ 抱在一起的两个人身上的暖光、⑪ 砖暖起来的光（画在夜色上面）
       if (six) roof.drawHugGlow(g, t);

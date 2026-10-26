@@ -1835,6 +1835,23 @@ function hollow(): Pcm {
   return finish(L, R, { fadeOut: 0.12 });
 }
 
+/**
+ * 30. 耳鸣（终章慢放：她升到白的边上，别的声音都没了，只剩一声越来越响的细高的「嘤——」，到全曲最静的那一下断掉）：
+ * 3.6 kHz 的正弦带一点慢的颤（5 Hz、±5 Hz），更轻的 7.2 kHz 泛音，底下一层极轻的高频气声；1.6 秒慢慢起来，之后持平。
+ * 2.4 秒，起点 0 秒；片段在断掉的那一刻结束（fadeOut 0.02）。
+ */
+function tinnitus(): Pcm {
+  const r = prng(0x7a11);
+  const [L, R] = stereo(2.4);
+  const len = L.length;
+  const env = (t: number) => ramp(0, 1.6, t) * (0.92 + 0.08 * Math.sin(t * 2.2));
+  const f = (t: number) => 3600 + 5 * Math.sin(TAU * 5 * t);
+  layerMono(L, R, sine(len, f, env), 0.6, -0.05);
+  layerMono(L, R, sine(len, (t) => 2 * f(t) + 3, (t) => 0.25 * env(t)), 0.12, 0.08);
+  layerMono(L, R, shape(level(filt(white(len, r), "bp", 5200, 2.5)), (t) => 0.5 * env(t)), 0.05);
+  return finish(L, R, { fadeOut: 0.02 });
+}
+
 const sfx = createPcmAudio(
   {
     stomp,
@@ -1866,6 +1883,7 @@ const sfx = createPcmAudio(
     chain,
     snap,
     hollow,
+    tinnitus,
   },
   SR,
   { lazy: true },

@@ -2,8 +2,9 @@
 // 2026-10-20 用户重排（「请你等等我：主角冲出来抱住她，飘到另外一栋楼」）：原来⑥这一段整个往后挪一小节（2 秒，卡的底鼓不变）。
 // 最高那栋楼的楼顶，白就压在头顶上。沉沉一直在楼顶晾衣绳边收白床单（第六镜退开时就在右上角：用户 2026-10-19
 // 「这一幕主角应该就在右上角了。不用切镜头，改为运镜」）。一扯下来就看见千斤张着手往白里飘——一惊（底鼓），
-// 床单脱手被风卷走，她踩着铁靴冲到楼边、蹬出去，「等」在千斤的手快碰到白的地方从身后一把抱住；两个人在天上带着往左的惯性
-// 慢慢飘、慢慢往下落（用户：「抱住她之后，在天上慢慢往左边飘，惯性飘到左边的房子上」），29.51 千斤在半空里转过身来抱住她，
+// 床单脱手被风卷走，她踩着铁靴冲到楼边、蹬出去，「请」在千斤的手快碰到白的地方从身后一把抱住（2026-10-25 从「等」提前到「请」，
+// 扯床单、冲出去挪进上一句「很多」里）；两个人在天上带着往左的惯性慢慢飘、慢慢往下落（用户：「抱住她之后，在天上慢慢往左边飘，
+// 惯性飘到左边的房子上」），千斤一抱住就转过身来抱住她，
 // 第二句「请你等等我」刚开头（30.01）正好飘到千斤家那栋楼的楼顶，**落下来就是坐着的**（2026-10-20 用户：「两人不要站着落地，
 // 也不是蹲着，是直接落地就坐在地上」）：沉沉在半空里就把腿往前伸成坐的样子，屁股先着地、两只铁靴搁在前面。
 // 镜头：第六镜往上退开的那个镜头接着走、不切；她一惊一顿；按两个人的距离推近（越近越近），抱住一震；跟着两个人往左飘，
@@ -12,7 +13,7 @@
 import { beatAt } from "@frame/engine/tempo";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
-import { type Cam, E, aim, camLerp, kick, ph } from "./cam";
+import { type Cam, E, H, W, aim, camLerp, kick, ph, toScreen } from "./cam";
 import { INK, QJ_HOME, TOWER, drawGlow, part } from "./world";
 import { drawPerson } from "./people";
 import { ARMS, LIMP, fade, hitch, live, withDrag } from "./motion";
@@ -26,20 +27,21 @@ type V2 = [number, number];
 const b = beatAt;
 
 export const ROOF_T = {
-  /** 第六镜的镜头从这里交给这一镜（「请」27.84；不切镜头） */
-  cut: 27.8,
-  /** 把床单从绳子上扯下来、看见她 */
-  pull: 27.84,
-  see: 27.96,
-  /** 一惊（小节线的底鼓） */
-  shock: b(56),
+  /** 第六镜的镜头从这里交给这一镜（锁开、铁链掉下去以后；不切镜头） */
+  cut: 27.1,
+  /** 把床单从绳子上扯下来、看见她（2026-10-25 用户：「她跳下就救她的时间提前，让请你等等我这句开始时刚好抱住她，把向左飘的时间延长」——
+   *  扯床单到抱住整段提前 0.62 秒，放进「很多」里） */
+  pull: 27.24,
+  see: 27.32,
+  /** 一惊（「多」） */
+  shock: 27.38,
   /** 床单脱手、冲 */
-  letgo: 28.07,
-  run0: 28.06,
+  letgo: 27.43,
+  run0: 27.42,
   /** 蹬着楼边跳出去（她在巷子正中间，离楼边约 460：一步冲到楼边就跳，跳起来划一道弧、在往下落的那段抱住她） */
-  jump: 28.17,
-  /** 「等」半空里从身后抱住她 */
-  catch: 28.46,
+  jump: 27.53,
+  /** 「请」半空里从身后抱住她（之后往左飘 2.17 秒） */
+  catch: 27.84,
   /** 坐着落在千斤家那栋楼的楼顶（第二句「请你等等我」刚开头、鼓停的那一下） */
   land: b(60),
   /** 下一句「请你等等我」（第二句） */
@@ -60,10 +62,10 @@ const SIT0 = b(60) + 0.11;
 const SIT1 = b(60) + 0.44;
 export const HUG_T = {
   start: 29.79,
-  /** 抱住那一下她就扑进沉沉怀里（照草稿：一抱住就搂住、把脸埋进去，不先张着手愣着）：2026-10-24 从 29.01 挪到抱住后 0.12 */
-  turn: 28.58,
+  /** 抱住那一下她就扑进沉沉怀里（照草稿：一抱住就搂住、把脸埋进去，不先张着手愣着）：抱住后 0.12 */
+  turn: ROOF_T.catch + 0.12,
   /** 两只手环到她背上、脸埋在她胸口 */
-  hug1: 28.86,
+  hug1: ROOF_T.catch + 0.4,
   /** 「等、等、我」在她耳边说 */
   say: [30.42, 30.6, 30.78],
   /** 「我」千斤抬起头，靠在她身上 */
@@ -227,7 +229,7 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     const S0 = T.land - T.catch;
     const u = ph(t, T.catch, T.land);
     const m = (1 - Math.exp(-u / 0.08)) / (1 - Math.exp(-1 / 0.08));
-    // 退远的那一段（29.0–29.65）她们还悬在巷子中间，29.55 前后才飘过千斤家楼顶的边
+    // 前面一段她们还悬在巷子中间，快落地时才飘过千斤家楼顶的边
     const v = ph(u, 0.15, 1);
     const x = C_CATCH[0] + (C_LAND[0] - C_CATCH[0]) * (XM_K * m + (1 - XM_K) * v * v * (3 - 2 * v));
     const dip = (1 - Math.exp(-s / 0.18)) / (1 - Math.exp(-S0 / 0.18));
@@ -693,6 +695,37 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
     if (fl > 0.01) drawGlow(g, m[0], m[1] - 30, 700, 0.35 * fl);
   };
 
+  /**
+   * 抱住以后铺满背景的暖光（画面坐标，画在人后面：只暖天、楼和空气，不给人物染色）（2026-10-25 照草稿：抱住以后整幅画面泡在暖光里，
+   * 原来只有人身上一小团暖光、四周是灰紫的暮色）：头顶往下打一片暖白，以两个人为中心一大团桃金色；
+   * 「等等我」说完天黑下来时收成她们身边一小片（满城冷下来，只有她们这里暖）。切进屋子（⑨）以后不画
+   */
+  const drawHugWash = (g: CanvasRenderingContext2D, base: DOMMatrix, cam: Cam, t: number) => {
+    if (t < T.catch || t >= HUG_T.end) return;
+    const w = E.io(ph(t, T.catch - 0.02, T.catch + 0.6));
+    const night = E.io(ph(t, HUG_T.say[2], HUG_T.say[2] + 0.95));
+    if (w <= 0.01) return;
+    const a = chenChest(t);
+    const b2 = qjChest(t);
+    const [sx, sy] = toScreen(cam, (a[0] + b2[0]) / 2, (a[1] + b2[1]) / 2 - 40);
+    g.save();
+    g.setTransform(base);
+    const top = g.createLinearGradient(0, 0, 0, H * 0.65);
+    top.addColorStop(0, `rgba(255,234,196,${0.42 * w * (1 - 0.8 * night)})`);
+    top.addColorStop(1, "rgba(255,234,196,0)");
+    g.fillStyle = top;
+    g.fillRect(0, 0, W, H);
+    g.globalCompositeOperation = "screen";
+    const r = 1150 - 400 * night;
+    const pool = g.createRadialGradient(sx, sy, 0, sx, sy, r);
+    pool.addColorStop(0, `rgba(255,178,100,${0.55 * w})`);
+    pool.addColorStop(0.45, `rgba(255,170,110,${0.3 * w * (1 - 0.3 * night)})`);
+    pool.addColorStop(1, "rgba(255,166,120,0)");
+    g.fillStyle = pool;
+    g.fillRect(0, 0, W, H);
+    g.restore();
+  };
+
   /** 落地：铁靴踩到楼顶上，两边扬起一小团灰 */
   function drawDust(g: CanvasRenderingContext2D, t: number) {
     const d = t - T.land;
@@ -736,7 +769,7 @@ export function makeRoof(sky: ReturnType<typeof makeSky>) {
 
   /** ⑧ 抱在一起以后：夜色在她们身上蒙得浅一点（只有她们这里是暖的） */
   const hugLight = (t: number) => (t < KITE0 ? E.io(ph(t, T.land - 0.3, T.land + 0.5)) : 0);
-  return { chenAt, qjAt, qjPosed, qjBrickAt, qjHeadAt, lapAt, brickWarm, chenChest, rootAt, drawPeople, drawChen, drawHugGlow, hugLight, facesAt, qjChestOf: (t: number) => qjChest(t) };
+  return { chenAt, qjAt, qjPosed, qjBrickAt, qjHeadAt, lapAt, brickWarm, chenChest, rootAt, drawPeople, drawChen, drawHugGlow, drawHugWash, hugLight, facesAt, qjChestOf: (t: number) => qjChest(t) };
 
   function qjChest(t: number): V2 {
     const q = qjAt(t);

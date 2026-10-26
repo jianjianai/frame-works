@@ -1,6 +1,6 @@
 // 第二幕⑧「请你等等我」第二句（29.79–31.97：请 29.79 你 30.24 等 30.42 等 30.60 我 30.78–31.83；30.0–32.0 鼓停、低音悬着）的天色：
-// 2026-10-20 用户改成「两人坐在另外一栋楼上，拥抱着」（人和镜头在 lib/roof.ts 的 HUG_T）。音乐悬着的这两秒里太阳落下去：
-// 天从杏色变成橙粉、再变成深蓝，城里的窗一组组亮起来——两个人一直这样抱着。31.97 切进她的屋子（⑨「两块五的签字笔」）。
+// 2026-10-20 用户改成「两人坐在另外一栋楼上，拥抱着」（人和镜头在 lib/roof.ts 的 HUG_T）。被抱住以后天回暖成夕阳最红的样子（HUG_DUSK），
+// 「等等我」说完太阳落下去、变成深蓝，城里的窗一组组亮起来——两个人一直这样抱着。31.97 切进她的屋子（⑨「两块五的签字笔」）。
 // （原来这里是千斤一个人攥着栏杆等、沉沉家那扇窗亮了、镜头飞进窗里：nightCam，2026-10-20 换掉。）
 // 她家那扇窗里画的就是那间屋子（lib/room.ts，缩小画在玻璃里）。
 
@@ -12,12 +12,12 @@ type V2 = [number, number];
 
 export const NIGHT_T = {
   start: 29.79,
-  /** 太阳落下去：鼓一停（30.0）起，30.45 前后傍晚最红，31.35 天黑透 */
-  dusk0: 30.0,
-  dusk1: 31.35,
+  /** 太阳落下去：「等、等、我」说完（30.8）起，31.75 天黑透（2026-10-25 从 30.0–31.35 往后挪：抱着飘、坐下、说「等等我」都在暖的夕阳里） */
+  dusk0: 30.8,
+  dusk1: 31.75,
   /** 城里的窗一组组亮起来 */
-  lights0: 30.4,
-  lights1: 31.3,
+  lights0: 30.9,
+  lights1: 31.7,
   /** 沉沉家的台灯亮了（她回家写砖：切进屋子之前，楼顶上看不见） */
   home: 31.9,
   /** 切进她的屋子：从这一刻起只画屋里 */
@@ -30,18 +30,25 @@ export const NIGHT_T = {
  * ⑥⑦ 已经是傍晚（2026-10-24 用户：「这里应该是快到晚上了，让天暗下来」）：切到高空（26.0）时天已经偏橙红、暗了一层（PRE0），
  * 一路慢慢再暗（到 30.0 是 PRE1），城里零星亮起几扇窗；鼓一停（30.0）起接着落到天黑透。
  */
-export const DUSK_PRE = { t0: 26.0, PRE0: 0.46, PRE1: 0.6, lights: 0.18 };
+export const DUSK_PRE = { t0: 26.0, t1: 30.0, PRE0: 0.46, PRE1: 0.6, lights: 0.18 };
+/**
+ * 被抱住以后天回暖（2026-10-25 用户：「为什么还是没有和草稿一样的被抱住很温暖的感觉」——草稿抱住以后整幅画面是暖的桃金色，
+ * 这里是灰紫的暮色、落地就转蓝）：抱住（lib/roof.ts 的 ROOF_T.catch）起 0.9 秒退回傍晚最红的那一刻（d，夕阳最浓、几乎没有夜色），
+ * 一直暖到「等等我」说完，再落到天黑
+ */
+export const HUG_DUSK = { t0: 27.84, t1: 28.74, d: 0.38 };
 export function duskAt(t: number): [number, number] {
   const T = NIGHT_T;
   const P = DUSK_PRE;
   if (t < T.dusk0) {
     if (t < P.t0) return [0, 0];
-    const v = ph(t, P.t0, T.dusk0);
-    return [P.PRE0 + (P.PRE1 - P.PRE0) * v, P.lights * v];
+    const v = ph(t, P.t0, P.t1);
+    const pre = P.PRE0 + (P.PRE1 - P.PRE0) * v;
+    return [pre + (HUG_DUSK.d - pre) * E.io(ph(t, HUG_DUSK.t0, HUG_DUSK.t1)), P.lights * v];
   }
   const u = ph(t, T.dusk0, T.dusk1);
   const lights = P.lights + (1 - P.lights) * Math.pow(ph(t, T.lights0, T.lights1), 1.3);
-  return [P.PRE1 + (1 - P.PRE1) * (1 - Math.pow(1 - u, 1.6)), lights];
+  return [HUG_DUSK.d + (1 - HUG_DUSK.d) * (1 - Math.pow(1 - u, 1.6)), lights];
 }
 /** 沉沉家的台灯：啪地亮起来，闪一下 */
 export function lampAt(t: number) {

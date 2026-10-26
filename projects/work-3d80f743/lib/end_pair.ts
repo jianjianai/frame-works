@@ -1,0 +1,1142 @@
+// 终章（lib/end_t.ts）的两个人：路线、动作、铁靴从她脚上换到他脚上、两块砖、他妈妈那件外套。世界坐标（街面 y = 0，往上为负）。
+//
+// 路线（占位见 lib/end_map.ts：一条竖线上，风往左吹）：
+//   他：老钟窗户左边（X_K）脱下外套、举起「妈妈，明天见」，95.30 脚跟离地，越飞越快，被风往左带一点，99.02 在楼的一半被她抱住。
+//   她：顶层最右那扇窗撞开防飘栏，97.92 往右下扑，头朝下越冲越快，正好在 99.02 迎上他；铁靴带着两个人往下坠、越坠越慢，
+//       往右漂回 X_K 上方，100.27 靴底离地一点停住；又慢慢往上飘；交靴、掰手，103.45 松手。
+//   他穿着铁靴往下坠，104.02「咚」落回 X_K；她光着脚一下子冲上去，越升越慢，被风往左带到楼顶的角上，112.0 停在白的边上。
+//   他跺地（109.02）、从靴子里出来（113.96 / 114.46）往上飘，老钟攥住他的脚踝（115.02）；人链（lib/end_rise.ts）一节节把他送上去，
+//   最后一个人站在街上不离地，整条人链绕着地上那一点随风摆，130.42 一阵风把他荡到她跟前。她一直停在白的边上，发梢一点点化成光；
+//   他正好把砖递到她手里（不翻面），132.42 亮起来，132.72 往下一沉抱住他；136.3 人链散开，她抱着他慢慢落下来，142.03 光着脚落在
+//   坑的左边（X_LAND）；放下他（砖给他抱着），去捡他妈妈的外套，回来跪下给他穿上；往后退一步，148.53 光着脚跺一下，地上一个坑。
+
+import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, figurePose, jointsOf } from "@materials/剪纸角色/code/chengtuo";
+import { CAST, type CastSpec, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
+import { E, ph } from "./cam";
+import { part } from "./world";
+import { ARMS, hitch, live, withDrag } from "./motion";
+import { armL, armR, legL, legR } from "./poses";
+import { drawPerson } from "./people";
+import { TE, type V2, mix } from "./end_t";
+import { HER, KID } from "./end_poses";
+import { CORNER, RAIL_TOP, X_K, herWindow } from "./end_map";
+import { BS, HALF, drawEndBrick } from "./end_brick";
+import { RIM_TOP, bootPt, drawBoot, shinRot } from "./end_boot";
+import { H_GRAB, K_ARRIVE, chainTop } from "./end_rise";
+
+// ——————————————— 地方 ———————————————
+/** 他抱着她落回街上以后：她站在坑的左边，他被放在她右边，他妈妈那件外套（被跺地那一下掀到坑的左边）在他右边 */
+export const X_LAND = X_K - 700;
+const KID_DOWN = X_LAND + 120;
+/** 外套：脱下来堆在他脚边（左前）→ 跺地那一下被掀飞到她落地那块地方的左边（她去捡起来给他穿上） */
+export const COAT_X0 = X_K - 170;
+export const COAT_X1 = X_K - 840;
+/** 坑（两只铁靴底下）；跺下去那一下铁靴陷进去多深 */
+export const CRATER_X = X_K - 14;
+export const STOMP_SINK = 24;
+/** 穿着她的铁靴站在街上时他的根：铁靴的底（脚踝下面 63.6）踩在街面上，他的脚踝在根上方 39 */
+export const KID_BOOT_Y = 39 - 63.6;
+
+// ——————————————— 他飞上去（被抱住以前） ———————————————
+const STONE_COAT = CAST.小石头穿妈妈的外套;
+export const STONE: CastSpec = { ...CAST.小石头, coat: undefined };
+const SC = STONE.scale;
+/** 他胸口相对根（飘着、被抱着的姿势） */
+const KID_CHEST: V2 = [4, -232];
+/** 抱住时他的根离地多高（楼的一半）、被风往左带到哪 */
+const H_C = 4100;
+const X_C = X_K - 300;
+function kidSolo(t: number): V2 {
+  if (t < TE.lift0) return [X_K, 0];
+  const u = Math.min(1, (t - TE.lift0) / (TE.catch - TE.lift0));
+  return [X_K + (X_C - X_K) * Math.pow(u, 1.5), -H_C * Math.pow(u, 1.7)];
+}
+
+// ——————————————— 她的胸口 ———————————————
+/** 胸口：两肩中点往胯那边挪 1/4（转身、倒过来时跟着身子转） */
+export const chestOf = (j: { shoulderL: number[]; shoulderR: number[]; hip: number[] }): V2 => {
+  const sx = (j.shoulderL[0] + j.shoulderR[0]) / 2;
+  const sy = (j.shoulderL[1] + j.shoulderR[1]) / 2;
+  return [sx + 0.25 * (j.hip[0] - sx), sy + 0.25 * (j.hip[1] - sy)];
+};
+const herOff = (p: PoseIn) => chestOf(jointsOf(p));
+const BOOTED = { boots: true, bricks: 2 };
+const BARE = { boots: false, bricks: 0 };
+const OFF_REACH = herOff(figurePose({ ...HER.够地 }, 0, CHENGTUO, BOOTED));
+const OFF_HOVER = herOff(figurePose({ ...HER.开 }, 0, CHENGTUO, BARE));
+const OFF_STAND = herOff(figurePose({ ...HER.站抱 }, 0, CHENGTUO, BARE));
+
+const WIN = herWindow();
+const WIN_C: V2 = [WIN.x + WIN.w / 2, WIN.y + WIN.h / 2];
+/** 撞开防飘栏那一下她在窗口（胸口）；扑出去那一刻 */
+const BURST: V2 = [WIN_C[0] + 40, WIN_C[1] + 70];
+const FALL_START: V2 = [WIN_C[0] + 150, WIN_C[1] + 150];
+/** 抱住那一刻（她头朝下）她的胸口相对他的胸口；身子甩过来以后（面对面，他在她右边低一点） */
+const CATCH_OFF: V2 = [-20, -190];
+const HOLD_OFF: V2 = [-60, -112];
+const KID_AT_CATCH = kidSolo(TE.catch);
+const CHEST_AT_CATCH: V2 = [KID_AT_CATCH[0] + KID_CHEST[0] + CATCH_OFF[0], KID_AT_CATCH[1] + KID_CHEST[1] + CATCH_OFF[1]];
+/** 停住：她的靴底离地 280（够地的姿势；原来 30，用户：「离地面太近了，需要远一点」） */
+const STOP_Y = -280 + OFF_REACH[1];
+/** 抱着他时她胸口横着在哪，他才正好在 X_K 上方 */
+const X_STOP = X_K - KID_CHEST[0] + HOLD_OFF[0];
+const T_IN = TE.stop - TE.catch;
+/** 惯性：从抱住那一刻的速度匀减速，停在 STOP_Y */
+const V_CATCH = (2 * (STOP_Y - CHEST_AT_CATCH[1])) / T_IN;
+/** 扑下来：从窗口起步，越冲越快，到抱住时正好是 V_CATCH（速度接上） */
+const FALL = TE.catch - TE.jump;
+const FALL_V0 = (2 * (CHEST_AT_CATCH[1] - FALL_START[1])) / FALL - V_CATCH;
+const FALL_A = (V_CATCH - FALL_V0) / FALL;
+const DX_DIVE = CHEST_AT_CATCH[0] - FALL_START[0];
+/** 惯性往右漂：起步速度接上扑下来时横着的速度 */
+const DX_FALL = X_STOP - CHEST_AT_CATCH[0];
+const K_FALL = Math.max(1.2, ((1.15 * DX_DIVE) / FALL) * T_IN / Math.max(1, DX_FALL));
+/** 又飘起来：每秒往上 160（柔和地起来） */
+const RISE_V = 160;
+const riseS = (s: number, tau: number) => Math.max(0, s - tau * (1 - Math.exp(-s / tau)));
+
+/** 白的边上停住的地方（胸口）：楼顶右边那个角的外面（悬在半空），头顶刚好在白底下，光着的脚在栏杆旁边 */
+const HOVER: V2 = [CORNER[0] + 96, -8560 + OFF_HOVER[1]];
+/** 倒挂：两只手攥着楼顶右边那个角的栏杆，身子被白往上拽（用户 2026-10-26：「这里主角不应该是抓住楼顶的栅栏吗？」） */
+const HANG_J = jointsOf(figurePose({ ...HER.倒挂 }, 0, CHENGTUO, BARE));
+const RAIL_GRIP: V2 = [CORNER[0] - 20, RAIL_TOP + 3];
+const HOLD_ROOT: V2 = [RAIL_GRIP[0] - (HANG_J.palmL[0] + HANG_J.palmR[0]) / 2, RAIL_GRIP[1] - (HANG_J.palmL[1] + HANG_J.palmR[1]) / 2];
+const HOLD_C: V2 = [HOLD_ROOT[0] + chestOf(HANG_J)[0], HOLD_ROOT[1] + chestOf(HANG_J)[1]];
+/** 两只手攥栏杆的地方（远处那只、近处那只） */
+const RAIL_L: V2 = [CORNER[0] + 2, RAIL_TOP + 4];
+const RAIL_R: V2 = [CORNER[0] - 46, RAIL_TOP + 3];
+/** 他到她跟前时的根（举过头顶的砖正好在她胸口前面） */
+export const K_ARR: V2 = K_ARRIVE;
+/** 落地那一刻她的胸口（站着、抱着他） */
+const P_LAND: V2 = [X_LAND + OFF_STAND[0], OFF_STAND[1]];
+
+// 松手以后往上冲：一下子轻了，越升越快、再越升越慢地停在白底下（按速度积出来的表）
+const UP0 = TE.release;
+const UP1 = 112.0;
+let UP: { y: Float64Array; x0: number; y0: number } | null = null;
+function upTable() {
+  if (UP) return UP;
+  const c0 = chestHold(UP0);
+  const T = UP1 - UP0;
+  const n = Math.ceil(T * 120) + 2;
+  const D = c0[1] - HOVER[1];
+  // 速度：从每秒 160 柔和地接过去，冲到最快，再按 (1 − u)^1.5 慢下来；先积两部分，再按总高度定最快多快
+  const w = (s: number) => 1 - Math.exp(-s / 0.12);
+  let I0 = 0;
+  let I1 = 0;
+  for (let i = 0; i < n - 1; i++) {
+    const s = (i + 0.5) / 120;
+    const u = Math.min(1, s / T);
+    I0 += (RISE_V * (1 - w(s))) / 120;
+    I1 += (Math.pow(1 - u, 1.5) * w(s)) / 120;
+  }
+  const c = (D - I0) / I1;
+  const y = new Float64Array(n);
+  for (let i = 1; i < n; i++) {
+    const s = (i - 0.5) / 120;
+    const u = Math.min(1, s / T);
+    y[i] = y[i - 1] + (RISE_V * (1 - w(s)) + c * Math.pow(1 - u, 1.5) * w(s)) / 120;
+  }
+  UP = { y, x0: c0[0], y0: c0[1] };
+  return UP;
+}
+/** 抱住以后到松手：两个人按她的胸口走 */
+function chestHold(t: number): V2 {
+  if (t < TE.stop) {
+    const s = t - TE.catch;
+    const v = s / T_IN;
+    return [CHEST_AT_CATCH[0] + DX_FALL * (1 - Math.pow(1 - v, K_FALL)), CHEST_AT_CATCH[1] + V_CATCH * s - (V_CATCH * s * s) / (2 * T_IN)];
+  }
+  const s = t - TE.stop;
+  return [X_STOP, STOP_Y - RISE_V * riseS(s, 0.3)];
+}
+/** 她的胸口（世界坐标）：落地以前 */
+export function herChest(t: number): V2 {
+  if (t < TE.jump) return mix(BURST, FALL_START, E.out(ph(t, TE.bang, TE.jump)));
+  if (t < TE.catch) {
+    const s = t - TE.jump;
+    return [FALL_START[0] + DX_DIVE * Math.pow(s / FALL, 1.15), FALL_START[1] + FALL_V0 * s + 0.5 * FALL_A * s * s];
+  }
+  if (t < TE.release) return chestHold(t);
+  if (t < UP1) {
+    const U = upTable();
+    const s = t - UP0;
+    const f = Math.min(U.y.length - 1.001, s * 120);
+    const i = Math.floor(f);
+    const up = U.y[i] + (U.y[i + 1] - U.y[i]) * (f - i);
+    const u = Math.min(1, s / (UP1 - UP0));
+    return [U.x0 + (HOVER[0] - U.x0) * (1 - Math.pow(1 - u, 2.2)), U.y0 - up];
+  }
+  const bob = (t0: number): V2 => {
+    const k = E.io(ph(t0, UP1, UP1 + 0.8));
+    return [HOVER[0] + 6 * Math.sin((t0 - UP1) * 1.1) * k, HOVER[1] + 9 * Math.sin((t0 - UP1) * 0.8) * k];
+  };
+  if (t < TE.flip0) return bob(t);
+  if (t < TE.hug) {
+    // 翻身：胸口从停着的地方挪到倒挂的地方（身子在原地翻过来）；倒挂着轻轻晃
+    const a = mix(bob(TE.flip0), HOLD_C, E.io(ph(t, TE.flip0, TE.hang)));
+    const k = E.io(ph(t, TE.hang, TE.hang + 0.6));
+    return [a[0] + 5 * Math.sin((t - TE.hang) * 1.3) * k, a[1] + 4 * Math.sin((t - TE.hang) * 2.1) * k];
+  }
+  if (t < TE.pairDown) {
+    // 砖亮起来以后有了分量：松开栏杆抱住他，被砖坠着慢慢转正（胸口落到他左上方，和抱着往下坠时一样）
+    const k = kidRoot(t);
+    const hold = mix(HOLD_C, [HOLD_C[0] + 5 * Math.sin((TE.hug - TE.hang) * 1.3), HOLD_C[1] + 4 * Math.sin((TE.hug - TE.hang) * 2.1)], 1);
+    return mix(hold, [k[0] + KID_CHEST[0] + HOLD_OFF[0], k[1] + KID_CHEST[1] + HOLD_OFF[1]], E.io(ph(t, TE.hug, TE.upright)));
+  }
+  // 人链散开，抱着他慢慢落回街上：开头几乎不动，越落越快，到一半最快，再越落越慢，落地那一刻速度是 0
+  const p0 = herChest(TE.pairDown - 1e-4);
+  const u = ph(t, TE.pairDown, TE.herLand);
+  const s = u * u * u * (u * (6 * u - 15) + 10);
+  const sway = 14 * Math.sin(u * Math.PI * 2) * (1 - u);
+  return [p0[0] + (P_LAND[0] - p0[0]) * s + sway, p0[1] + (P_LAND[1] - p0[1]) * s];
+}
+
+// ——————————————— 他的根 ———————————————
+/** 抱着时他的胸口相对她的胸口：抱住那一下从头朝下的位置甩到面对面 */
+function holdOff(t: number): V2 {
+  return mix(CATCH_OFF, HOLD_OFF, E.io(ph(t, TE.catch, TE.catch + 0.36)));
+}
+let DROP0: { p: V2; v: V2 } | null = null;
+const KID_DROP = TE.land - TE.release;
+/** 从铁靴里出来的那一刻他的根 */
+const OUT_ROOT: V2 = [X_K, KID_BOOT_Y + STOMP_SINK];
+/** 老钟攥住他那一刻他的根（老钟窗户左边，脚踝在老钟探出窗的手上） */
+const GRAB_ROOT: V2 = [X_K + 10, -H_GRAB];
+/** 被放下、去捡外套、走回来 */
+const kidStreetX = (t: number) => {
+  const toCoat = E.io(ph(t, 139.36, 139.86));
+  const back = E.io(ph(t, 140.06, 140.5));
+  return KID_DOWN + (COAT_X1 - 70 - KID_DOWN) * toCoat - (COAT_X1 - 70 - KID_DOWN) * back + 20 * back;
+};
+export function kidRoot(t: number): V2 {
+  if (t < TE.catch) return kidSolo(t);
+  if (t < TE.release) {
+    const c = herChest(t);
+    const o = holdOff(t);
+    return [c[0] - o[0] - KID_CHEST[0], c[1] - o[1] - KID_CHEST[1]];
+  }
+  if (t < TE.land) {
+    if (!DROP0) {
+      const a = kidRoot(TE.release - 1e-4);
+      const b = kidRoot(TE.release - 0.01);
+      DROP0 = { p: a, v: [(a[0] - b[0]) / (0.01 - 1e-4), (a[1] - b[1]) / (0.01 - 1e-4)] };
+    }
+    const s = t - TE.release;
+    const g = (2 * (KID_BOOT_Y - DROP0.p[1] - DROP0.v[1] * KID_DROP)) / (KID_DROP * KID_DROP);
+    const u = s / KID_DROP;
+    return [DROP0.p[0] + (X_K - DROP0.p[0]) * u, DROP0.p[1] + DROP0.v[1] * s + 0.5 * g * s * s];
+  }
+  if (t < TE.out1) return [X_K, KID_BOOT_Y + STOMP_SINK * E.out(ph(t, TE.stomp, TE.stomp + 0.05))];
+  if (t < TE.zGrab) {
+    // 一只脚、再一只脚拔出来（身子提起来 140），离了地往上冲，被老钟一把攥住
+    if (t < TE.out2 + 0.1) {
+      const u = E.io(ph(t, TE.out1, TE.out2 + 0.1));
+      return [OUT_ROOT[0], OUT_ROOT[1] - 140 * u];
+    }
+    const D = TE.zGrab - (TE.out2 + 0.1);
+    const u = (t - (TE.out2 + 0.1)) / D;
+    const h = (a: number, va: number, b: number, vb: number) => {
+      const u2 = u * u;
+      const u3 = u2 * u;
+      return (2 * u3 - 3 * u2 + 1) * a + (u3 - 2 * u2 + u) * D * va + (-2 * u3 + 3 * u2) * b + (u3 - u2) * D * vb;
+    };
+    return [h(OUT_ROOT[0], 0, GRAB_ROOT[0], 0), h(OUT_ROOT[1] - 140, -420, GRAB_ROOT[1], -500)];
+  }
+  if (t < TE.pairDown) {
+    // 被攥住：一拽一顿；之后人链一节节把他送上去，随风摆，一阵风把他荡到她跟前（lib/end_rise.ts 的 chainTop）
+    const s = t - TE.zGrab;
+    const tug = 34 * Math.exp(-s / 0.14) * Math.sin(s * 26);
+    const strain = t < TE.zOut ? 4 * Math.sin(t * 13) * E.io(ph(t, TE.zGrab + 0.4, TE.zOut)) : 0;
+    const c = chainTop(t);
+    const bob = t > TE.arrive ? 5 * Math.sin((t - TE.arrive) * 2.3) * E.io(ph(t, TE.arrive, TE.arrive + 0.6)) : 0;
+    return [c[0], c[1] + tug + strain + bob];
+  }
+  if (t < TE.putDown) {
+    // 在她怀里（落回街上）
+    const c = t < TE.herLand ? herChest(t) : landedChest(t);
+    return [c[0] - HOLD_OFF[0] - KID_CHEST[0], c[1] - HOLD_OFF[1] - KID_CHEST[1]];
+  }
+  // 放下来，站在她右边
+  const held = (() => {
+    const c = landedChest(TE.putDown);
+    return [c[0] - HOLD_OFF[0] - KID_CHEST[0], c[1] - HOLD_OFF[1] - KID_CHEST[1]] as V2;
+  })();
+  const u = E.io(ph(t, TE.putDown, TE.putDown + 0.4));
+  return [held[0] + (KID_DOWN - held[0]) * u, held[1] * (1 - u)];
+}
+
+// ——————————————— 动作 ———————————————
+const KID_KEYS: MoveKey[] = [
+  { t: 94.0, x: 0, p: KID.仰望 },
+  { t: TE.shrug0, p: KID.仰望 },
+  { t: TE.shrug0 + 0.14, ease: "out", p: KID.脱 },
+  { t: TE.off + 0.16, p: KID.脱 },
+  { t: TE.raise1, ease: "inOut", p: KID.举 },
+  { t: TE.lift0, p: KID.举 },
+  { t: TE.lift0 + 0.4, ease: "inOut", p: KID.飘 },
+  // 看见她从上面扑下来：一惊，把砖收到胸前
+  { t: 98.66, p: KID.飘 },
+  { t: 98.84, ease: "out", p: KID.惊 },
+  { t: TE.catch + 0.02, p: KID.惊 },
+  { t: TE.catch + 0.3, ease: "inOut", p: KID.被抱 },
+  // 快到地面：低头看着底下的街面
+  { t: 99.78, p: KID.被抱 },
+  { t: 100.05, ease: "inOut", p: KID.看地 },
+  { t: 100.42, p: KID.看地 },
+  { t: 100.72, ease: "inOut", p: KID.被抱 },
+  // 她看自己的铁靴：他看着她
+  { t: TE.decide + 0.1, p: KID.被抱 },
+  { t: TE.decide + 0.32, ease: "inOut", p: KID.看她 },
+  // 铁靴套上一只，那条腿就被坠直一条
+  { t: TE.boot1[2] - 0.02, p: KID.看她 },
+  { t: TE.boot1[2] + 0.12, ease: "out", p: { ...KID.看她, ...legL(-4, -6, 0) } },
+  { t: TE.boot2[2] - 0.02, p: { ...KID.看她, ...legL(-4, -6, 0) } },
+  { t: TE.boot2[2] + 0.1, ease: "out", p: KID.套 },
+  // 明白过来：攥住她的围巾，拼命摇头
+  { t: TE.clutch - 0.04, p: KID.套 },
+  { t: TE.clutch + 0.1, ease: "out", p: KID.攥 },
+  { t: TE.peel1, p: KID.攥 },
+  // 松手：铁靴一沉，往下坠，远处那只手往上伸着够她
+  { t: TE.release + 0.04, ease: "inOut", p: { ...KID.攥, handR: "open" } },
+  { t: TE.release + 0.24, ease: "inOut", p: KID.坠 },
+  { t: TE.land - 0.02, p: KID.坠 },
+  { t: TE.land + 0.1, ease: "out", squash: 0.1, p: KID.站仰 },
+  // 天上掉下来一块砖：伸着的手垂下来，头跟着它一路低下来；「咚」砸在靴尖前面，一惊，低头看着它
+  { t: TE.land + 0.12, p: KID.站仰 },
+  { t: TE.brickHit - 0.2, ease: "inOut", p: { ...KID.看砖, neck: 24, lookY: -0.9, expression: "吓一跳" } },
+  { t: TE.brickHit - 0.04, ease: "inOut", p: { ...KID.看砖, neck: 2, lookY: 0.3, expression: "吓一跳" } },
+  { t: TE.brickHit + 0.06, ease: "out", squash: 0.04, p: { ...KID.看砖, expression: "吓一跳" } },
+  { t: TE.brickHit + 0.24, ease: "inOut", p: KID.看砖 },
+  // （第一视角里捡起她那块砖）抱在胸口，仰着头
+  { t: TE.pov + 0.1, p: KID.看砖 },
+  { t: TE.smile - 0.1, ease: "inOut", p: KID.抱砖仰 },
+  // 跺地：拼命抬起一只铁靴，跺下去
+  { t: TE.heave0, p: KID.抱砖仰 },
+  { t: TE.heave1, ease: "inOut", p: KID.抬靴 },
+  { t: TE.stomp - 0.05, p: { ...KID.抬靴, legR: undefined, ...legR(92, -86, 0) } as never },
+  { t: TE.stomp, ease: "in", squash: 0.14, p: KID.跺 },
+  { t: TE.stomp + 0.12, ease: "out", p: KID.跺 },
+  { t: TE.stomp + 0.7, ease: "inOut", p: KID.仰 },
+  // 一只、再一只脚从她的铁靴里拔出来，往上冲；老钟攥住他的脚踝
+  { t: TE.out1 - 0.12, p: KID.仰 },
+  { t: TE.out1 + 0.1, ease: "inOut", p: KID.出L },
+  { t: TE.out2 + 0.1, ease: "inOut", p: KID.出R },
+  { t: TE.out2 + 0.34, ease: "inOut", p: KID.飞 },
+  { t: TE.zGrab - 0.02, p: KID.飞 },
+  { t: TE.zGrab + 0.08, ease: "out", squash: -0.06, p: KID.被拽 },
+  { t: TE.zGrab + 0.4, ease: "inOut", p: KID.被拽 },
+  { t: TE.zGrab + 0.8, ease: "inOut", p: KID.挣 },
+  { t: TE.zOut, p: KID.挣 },
+  { t: TE.zOut + 0.1, ease: "out", squash: -0.04, p: KID.挣 },
+  // 低头看见街上的人一个个跑来抓住、救他：哭着笑（眼睛先往下、头再跟）
+  { t: TE.joins[0] + 0.1, p: KID.挣 },
+  { t: TE.joins[0] + 0.25, ease: "out", p: { ...KID.挣, lookX: 0.1, lookY: 0.9 } },
+  { t: TE.joins[0] + 0.55, ease: "inOut", p: KID.看人 },
+  // 越飘越高：两只手抱着砖，随风晃，往下看着大家；再抬头找她
+  { t: 121.5, p: KID.看人 },
+  { t: 122.0, ease: "inOut", p: KID.高处 },
+  { t: 124.6, p: KID.高处 },
+  { t: 125.2, ease: "inOut", p: KID.高处仰 },
+  // 风把他往左吹：看见她，把砖举起来伸过去——第一次差一点没够到；荡回去，第二次正好递到她手里
+  { t: 126.7, p: KID.高处仰 },
+  { t: 127.35, ease: "inOut", p: KID.举砖 },
+  { t: 127.9, ease: "inOut", p: KID.递 },
+  { t: 128.25, p: KID.递 },
+  { t: 128.7, ease: "inOut", p: KID.高处仰 },
+  { t: 129.15, p: KID.高处仰 },
+  { t: 129.7, ease: "inOut", p: KID.举砖 },
+  { t: TE.hand - 0.22, p: KID.举砖 },
+  { t: TE.hand, ease: "inOut", p: KID.递 },
+  { t: TE.hand + 0.36, ease: "inOut", p: KID.伸 },
+  { t: TE.hug - 0.1, p: KID.伸 },
+  { t: TE.hug + 0.4, ease: "inOut", p: KID.被抱2 },
+  // 落回街上，被放下来：站着，抱着砖，仰头看她
+  { t: TE.putDown, p: KID.被抱2 },
+  { t: TE.putDown + 0.4, ease: "inOut", p: KID.站看 },
+  // 她给他披上外套：低下头看看身上的外套，又抬头看她
+  { t: TE.coatOn0, p: KID.站看 },
+  { t: TE.coatOn0 + 0.3, ease: "inOut", p: { ...KID.站看, neck: 4, lookY: -0.1 } },
+  { t: TE.coatOn1, p: { ...KID.站看, neck: 4, lookY: -0.1 } },
+  { t: TE.coatOn1 + 0.3, ease: "inOut", p: { ...KID.站看, neck: -16, lookX: -0.1, lookY: 0.8 } },
+  { t: TE.stand, p: { ...KID.站看, neck: -16, lookX: -0.1, lookY: 0.8 } },
+  { t: TE.stand + 0.4, ease: "inOut", p: KID.站看 },
+  // 她光着脚跺下去：一惊，低头看坑，再抬头看她，哭着笑
+  { t: TE.stomp2, p: KID.站看 },
+  { t: TE.stomp2 + 0.08, ease: "out", squash: 0.04, p: { ...KID.站看, expression: "吓一跳", neck: -18, lookX: -0.4, lookY: 0.9 } },
+  { t: TE.stomp2 + 0.9, p: { ...KID.站看, expression: "吓一跳", neck: -18, lookX: -0.4, lookY: 0.9 } },
+  { t: TE.stomp2 + 1.3, ease: "inOut", p: { ...KID.站看, expression: "哭着笑", neck: 16, lookY: -0.5 } },
+  { t: 153, p: { ...KID.站看, expression: "哭着笑", neck: 16, lookY: -0.5 } },
+] as MoveKey[];
+
+const HER_KEYS: MoveKey[] = [
+  { t: 97.4, x: 0, items: BOOTED, p: HER.扑 },
+  { t: TE.jump + 0.02, p: HER.扑 },
+  { t: TE.jump + 0.2, ease: "inOut", p: HER.冲 },
+  // 头朝下一直冲到他跟前，两只手环住他；抱住以后身子才甩过来
+  { t: TE.catch + 0.02, p: HER.冲 },
+  { t: TE.catch + 0.36, ease: "inOut", p: HER.抱 },
+  { t: TE.catch + 0.62, ease: "inOut", p: HER.抱坠 },
+  // 快到地面：两只脚使劲往下够石板——差一点
+  { t: 99.86, p: HER.抱坠 },
+  { t: 100.14, ease: "inOut", p: HER.够地 },
+  { t: TE.stop + 0.18, p: HER.够地 },
+  // 又飘起来了：看着他（心疼）；窗一扇扇关上，她看了一眼
+  { t: TE.stop + 0.5, ease: "inOut", p: HER.抱升 },
+  { t: 100.95, p: HER.抱升 },
+  { t: 101.15, ease: "inOut", p: HER.看窗 },
+  { t: 101.5, p: HER.看窗 },
+  { t: 101.72, ease: "inOut", p: HER.抱升 },
+  // 看看他，看看自己的铁靴
+  { t: TE.decide, p: HER.抱升 },
+  { t: TE.decide + 0.08, ease: "inOut", p: HER.看靴 },
+  // 近处那只（L）：膝盖抬起来，近处那只手攥住靴口拔下来，翻过来套到他近处那只脚上；再远处那只（R）
+  { t: TE.boot1[0] - 0.06, ease: "inOut", p: HER.拔L },
+  { t: TE.boot1[1], p: HER.拔L },
+  { t: TE.boot1[2] - 0.04, ease: "inOut", p: { ...HER.看靴, ...legL(-6, -20, -46) } },
+  { t: TE.boot2[0] + 0.04, ease: "inOut", p: { ...HER.拔R, ...legL(-6, -20, -46) } },
+  { t: TE.boot2[1], p: { ...HER.拔R, ...legL(-6, -20, -46) } },
+  { t: TE.boot2[2] - 0.02, ease: "inOut", p: HER.光脚抱 },
+  // 他攥着围巾摇头：她冲他笑，把他的手指一根根掰开
+  { t: TE.peel0 - 0.06, p: HER.光脚抱 },
+  { t: TE.peel0 + 0.1, ease: "inOut", p: HER.掰 },
+  { t: TE.release, p: HER.掰 },
+  // 松手：光着脚一下子轻了，往上冲，低头冲他笑
+  { t: TE.release + 0.22, ease: "out", p: HER.放 },
+  { t: 104.4, p: HER.放 },
+  { t: 104.9, ease: "inOut", p: HER.升 },
+  { t: TE.smile + 0.08, p: HER.升 },
+  { t: TE.smile + 0.42, ease: "inOut", p: HER.笑 },
+  { t: TE.faceUp0, p: HER.笑 },
+  { t: TE.faceUp1, ease: "inOut", p: HER.仰 },
+  // 慢放：到了白的边上，闭上眼睛，张开手
+  { t: 109.95, p: HER.仰 },
+  { t: 111.2, ease: "inOut", p: HER.开 },
+  // 睁开眼想最后看他一眼——看见他从靴子里出来往上追她；翻身扑向栏杆，攥住，倒挂（画外）
+  { t: TE.flip0 - 0.5, p: HER.开 },
+  { t: TE.flip0 - 0.3, ease: "out", p: HER.看见 },
+  { t: TE.flip0, p: HER.看见 },
+  { t: TE.grip - 0.04, ease: "inOut", p: HER.翻 },
+  { t: TE.hang, ease: "out", p: HER.倒挂 },
+  { t: 120.6, p: HER.倒挂 },
+  { t: 121.0, ease: "inOut", p: HER.倒挂哭 },
+  { t: 127.5, p: HER.倒挂哭 },
+  { t: 127.9, ease: "inOut", p: HER.倒挂 },
+  // 远处那只手松开栏杆接住砖；看见是自己写的「活下去」（不翻面）；哭着笑，砖亮起来
+  { t: TE.hand - 0.12, p: HER.倒挂 },
+  { t: TE.hand + 0.16, ease: "inOut", p: HER.接 },
+  { t: TE.look1, p: HER.接 },
+  { t: TE.look1 + 0.3, ease: "inOut", p: HER.哭笑 },
+  // 松开栏杆抱住他，被砖坠着慢慢转正：腿从左边（楼那边）荡下来，不从他身上扫过去（180° 和 −180° 是同一个样子，换过去不动）
+  { t: TE.hug, p: HER.哭笑 },
+  { t: TE.hug + 0.001, ease: "hold", p: { ...HER.哭笑, rot: -180 } },
+  { t: TE.upright, ease: "inOut", p: HER.抱他 },
+  // 抱着他慢慢落下来
+  { t: TE.pairDown + 0.2, p: HER.抱他 },
+  { t: TE.pairDown + 0.9, ease: "inOut", p: HER.落 },
+  { t: TE.herLand - 0.3, p: HER.落 },
+  { t: TE.herLand, ease: "inOut", squash: 0.05, p: HER.站抱 },
+  { t: TE.herLand + 0.2, p: HER.站抱 },
+  // 放下他（砖给他抱着）
+  { t: TE.putDown, ease: "inOut", p: HER.放下 },
+  { t: TE.putDown + 0.25, p: HER.放下 },
+  // 转身往左走两步，弯腰捡起他妈妈的外套
+  { t: TE.coat0, ease: "inOut", p: HER.走左 },
+  { t: TE.coatPick - 0.25, x: -50, ease: "inOut", p: { ...HER.走左, ...legR(-12, -10), ...legL(16, -14) } },
+  { t: TE.coatPick, x: -80, ease: "inOut", p: HER.捡 },
+  { t: TE.coatPick + 0.2, p: HER.捡 },
+  // 拎着外套转回来，走到他跟前跪下，两只手举着领子给他披上
+  { t: TE.coatPick + 0.5, x: -60, ease: "inOut", p: HER.走右 },
+  { t: TE.coatOn0 - 0.05, x: -30, ease: "inOut", p: { ...HER.走右, ...legR(-12, -10), ...legL(16, -14) } },
+  { t: TE.coatOn0 + 0.25, ease: "inOut", p: HER.跪披 },
+  { t: TE.coatOn1 + 0.1, p: HER.跪披 },
+  { t: TE.coatOn1 + 0.45, ease: "inOut", p: { ...HER.跪, ...armL(30, 30, 0, "relax", 6), ...armR(36, 30, 0, "open", 6), expression: "哭着笑", lookX: 0.4, lookY: -0.1 } },
+  // 站起来，往后退一步，看着他
+  { t: TE.stand - 0.1, p: { ...HER.跪, ...armL(30, 30, 0, "relax", 6), ...armR(36, 30, 0, "open", 6), expression: "哭着笑", lookX: 0.4, lookY: -0.1 } },
+  { t: TE.stand + 0.35, ease: "inOut", p: HER.站空 },
+  { t: TE.back, x: -120, ease: "inOut", p: HER.站空 },
+  // 抬起一只光脚，憋一口气——「嘭」跺下去，地上一个坑
+  { t: TE.stomp2 - 0.42, p: HER.站空 },
+  { t: TE.stomp2 - 0.14, ease: "inOut", p: HER.抬脚 },
+  { t: TE.stomp2, ease: "in", squash: 0.08, p: HER.跺2 },
+  { t: TE.stomp2 + 0.2, ease: "out", p: HER.跺2 },
+  { t: TE.stomp2 + 1.1, ease: "inOut", p: HER.笑看 },
+  { t: 153, p: HER.笑看 },
+] as MoveKey[];
+
+/** 她：手臂、脖子按弹簧跟；倒挂时手臂一直在抖（使劲攥着），哭的时候肩膀一抽一抽 */
+const herMove = live(HER_KEYS, {
+  look: CHENGTUO,
+  base: { chestL: "under", chestR: "under", wind: -0.6 },
+  idle: true,
+  seed: 1021,
+  springs: ARMS,
+  follow: 0,
+  add: (t, o) => {
+    // 倒挂着使劲攥着：手臂一直在抖；哭的时候肩膀一抽一抽
+    if (t > TE.hang && t < TE.hand) {
+      o.elbowL += 2.5 * Math.sin(t * 31);
+      o.elbowR += 2.5 * Math.sin(t * 29 + 1);
+      o.neck += 3 * hitch(t, 1.1);
+    }
+    if (t > TE.read0 && t < TE.glow) o.neck += 3 * hitch(t, 1.1);
+  },
+});
+const kidMove = live(KID_KEYS, {
+  look: lookOf(STONE),
+  base: { wind: -0.7 },
+  idle: true,
+  seed: 1011,
+  springs: ARMS,
+  follow: 0,
+  add: (t, o) => {
+    // 攥着她的围巾拼命摇头
+    if (t > TE.clutch && t < TE.release + 0.1) o.neck += 9 * Math.sin((t - TE.clutch) * 21) * Math.min(1, (t - TE.clutch) / 0.1) * (1 - ph(t, TE.peel1 - 0.05, TE.release + 0.1));
+  },
+});
+
+// ——————————————— 铁靴：她脚上 → 被她近处那只手拔下来、翻过来 → 套在他脚上 → 留在坑里 ———————————————
+type Side = "L" | "R";
+const BOOT_T = (side: Side) => (side === "L" ? TE.boot1 : TE.boot2);
+const OUT_T = (side: Side) => (side === "L" ? TE.out1 : TE.out2);
+function herRaw(t: number) {
+  return herMove(t).pose;
+}
+/** 落地以后她的根是固定的（往前一步时按钉住的脚挪） */
+const landedRoot = (t: number): V2 => [X_LAND + herMove(t).x, 0];
+function landedChest(t: number): V2 {
+  const r = landedRoot(t);
+  const c = herOff(herRaw(t));
+  return [r[0] + c[0], r[1] + c[1]];
+}
+/** 她的根（世界坐标） */
+function herRootRaw(t: number): V2 {
+  if (t >= TE.herLand) return landedRoot(t);
+  const c = herChest(t);
+  const o = herOff(herRaw(t));
+  return [c[0] - o[0], c[1] - o[1]];
+}
+function herBootOn(t: number, side: Side) {
+  const r = herRootRaw(t);
+  const j = jointsOf(herRaw(t));
+  const a = side === "L" ? j.ankleL : j.ankleR;
+  const k = side === "L" ? j.kneeL : j.kneeR;
+  const ankle: V2 = [r[0] + a[0], r[1] + a[1]];
+  const knee: V2 = [r[0] + k[0], r[1] + k[1]];
+  return { a: ankle, rot: shinRot(knee, ankle) };
+}
+/** 他的两条腿（只看腿：手的 IK 不影响） */
+function kidLegs(t: number) {
+  const p = kidMove(t).pose;
+  const root = kidRoot(t);
+  const j = castJoints(STONE, p);
+  const at = (q: number[]): V2 => [root[0] + q[0], root[1] + q[1]];
+  return { ankleL: at(j.ankleL), ankleR: at(j.ankleR), kneeL: at(j.kneeL), kneeR: at(j.kneeR) };
+}
+function kidBootOn(t: number, side: Side) {
+  const k = kidLegs(t);
+  const a = side === "L" ? k.ankleL : k.ankleR;
+  return { a, rot: shinRot(side === "L" ? k.kneeL : k.kneeR, a) };
+}
+const STAY = new Map<Side, { a: V2 }>();
+/** 一只靴子这一刻：在谁脚上 / 在她手里 / 留在坑里，脚踝点、转角、镜像 */
+export function bootState(t: number, side: Side): { on: "her" | "hand" | "kid" | "stay"; a: V2; rot: number; sx: number } {
+  // 跺下去以后铁靴陷在坑里；他一只脚、再一只脚从靴子里出来，靴子留在坑里立着
+  if (t >= OUT_T(side) + 0.1) {
+    let s = STAY.get(side);
+    if (!s) STAY.set(side, (s = { a: kidBootOn(OUT_T(side) - 0.12, side).a }));
+    return { on: "stay", a: s.a, rot: 0, sx: 1 };
+  }
+  const [b0, b1, b2] = BOOT_T(side);
+  if (t < b0 + 0.1) {
+    const h = herBootOn(t, side);
+    return { on: "her", a: h.a, rot: h.rot, sx: -1 };
+  }
+  if (t < b2) {
+    // 拔下来（顺着小腿往下拽 60）→ 拿过去、一边翻过来 → 套上他的脚
+    const h = herBootOn(b0 + 0.1, side);
+    const pull = E.out(ph(t, b0 + 0.1, b1));
+    const pulled: V2 = [h.a[0] - 60 * Math.sin(h.rot) * pull, h.a[1] + 60 * Math.cos(h.rot) * pull];
+    const k = kidBootOn(Math.min(t, b2), side);
+    const u = E.io(ph(t, b1, b2));
+    const a = mix(pulled, [k.a[0], k.a[1] - 20 * (1 - u)], u);
+    const sx = -1 + 2 * E.io(ph(t, b1 + 0.04, b2 - 0.06));
+    return { on: "hand", a, rot: h.rot + (k.rot - h.rot) * u + 0.5 * Math.sin(Math.PI * u), sx: Math.sign(sx || 1) * Math.max(0.08, Math.abs(sx)) };
+  }
+  const k = kidBootOn(t, side);
+  // 跺下去：铁靴陷进坑里（脚踝跟着根往下）
+  return { on: "kid", a: k.a, rot: t > TE.land + 0.2 && t < TE.out1 ? 0 : k.rot, sx: 1 };
+}
+/** 靴口上沿的中点（世界坐标） */
+export function bootRim(t: number, side: Side): V2 {
+  const s = bootState(t, side);
+  return bootPt(s.a, s.rot, s.sx, RIM_TOP);
+}
+
+// ——————————————— 两块砖 ———————————————
+interface BrickNow {
+  c: V2;
+  rot: number;
+  flipY: number;
+}
+const RAISE_Y = 355;
+/** 他那块「妈妈，明天见」：拎在身边 → 举过头顶 → 收到胸前 → 落地以后插在近处那只铁靴的靴口上（跟着铁靴留在坑里） */
+export function giftAt(t: number, root: V2, palmL: V2): BrickNow {
+  if (t >= TE.land + 0.05) {
+    const rim = bootRim(t, "L");
+    return { c: [rim[0] + 8, rim[1] - 14], rot: -Math.PI / 2 + 0.08, flipY: -1 };
+  }
+  const hang: V2 = [palmL[0] - 6, palmL[1] + 20];
+  const raised: V2 = [root[0] - 2, root[1] - RAISE_Y];
+  const chest: V2 = [root[0] + KID_CHEST[0] - 30, root[1] + KID_CHEST[1] + 22];
+  const u = E.io(ph(t, TE.raise0, TE.raise1));
+  let c = mix(hang, raised, u);
+  const h = E.io(ph(t, 98.68, 98.86));
+  c = mix(c, chest, h);
+  return { c, rot: -0.08 * (1 - u) + 0.06 * h, flipY: -1 };
+}
+/** 他那块砖画在哪一层：拎在身边（人后面）、举过头顶（人前面）、抱在胸前（身子前面、近处那只手臂后面） */
+const giftLayer = (t: number): "back" | "front" | "arms" | "boot" => {
+  if (t >= TE.land + 0.05) return "boot";
+  if (t >= 98.7) return "arms";
+  return t > (TE.raise0 + TE.raise1) / 2 ? "front" : "back";
+};
+/**
+ * 她那块「活下去」：他落地以后从天上掉下来（她丢下来的，和十二年前妈妈丢给她的木牌一样），104.52「咚」砸在他靴尖前面（「活下去」朝上），
+ * 一弹；第一视角里捡起来以后在他手里。落地那一刻还在画面上面：落地以后才从画面上边掉进来
+ */
+export const HB_REST: V2 = [X_K - 160, -12];
+const HB_V = 2800;
+const HB_G = 2200;
+export function herBrickAt(t: number, kid?: { root: V2 }): BrickNow | null {
+  if (t < TE.land) return null;
+  const d = TE.brickHit - t;
+  if (d > 0) {
+    // 倒着算：砸地时每秒 2800 往下，越往上越慢；慢慢翻着落下来
+    const y = HB_REST[1] - (HB_V * d - 0.5 * HB_G * d * d);
+    return { c: [HB_REST[0] - 160 * d, y], rot: 0.9 * d + 0.05 * Math.sin(d * 14), flipY: -1 };
+  }
+  const e = -d;
+  if (t < TE.pov + 0.2) {
+    const hop = 16 * Math.exp(-e / 0.07) * Math.abs(Math.sin(e * 26));
+    return { c: [HB_REST[0], HB_REST[1] - hop], rot: 0.08 * Math.exp(-e / 0.06) * Math.sin(e * 45), flipY: -1 };
+  }
+  if (t < TE.hand) {
+    // 他手里：抱在胸口（「活下去」朝外）；人链升到顶上时两只手举过头顶
+    const r = kid ? kid.root : kidRoot(t);
+    const chest: V2 = [r[0] + KID_CHEST[0] - 30, r[1] + KID_CHEST[1] + 22];
+    const raised: V2 = [r[0] - 2, r[1] - RAISE_Y];
+    // 举过头顶伸给她：第一次（没够到）、第二次（正好递到她手里）
+    const up = Math.max(E.io(ph(t, 127.0, 127.45)) * (1 - E.io(ph(t, 128.35, 128.8))), E.io(ph(t, 129.3, 129.75)));
+    const c = mix(chest, raised, up);
+    return { c, rot: 0.04 * (1 - up), flipY: -1 };
+  }
+  if (t < TE.putDown + 0.15) return herHoldBrick(t);
+  // 落地放下他：交给他抱在胸口
+  const r = kid ? kid.root : kidRoot(t);
+  const chest: V2 = [r[0] + KID_CHEST[0] - 30, r[1] + KID_CHEST[1] + 22];
+  const from = herHoldBrick(TE.putDown + 0.15);
+  return { c: mix(from.c, chest, E.io(ph(t, TE.putDown + 0.15, TE.putDown + 0.45))), rot: from.rot * (1 - E.io(ph(t, TE.putDown + 0.15, TE.putDown + 0.45))), flipY: -1 };
+}
+/** 在她手里的砖（不翻面，「活下去」一直朝外）：接过来 → 倒挂着举到脸的右边看 → 抱住他时夹在两个人中间 → 落地放下他时交给他 */
+function herHoldBrick(t: number): BrickNow {
+  const k = kidRoot(Math.min(t, TE.hand));
+  const handed: V2 = [k[0] - 2, k[1] - RAISE_Y];
+  const r = herRootRaw(t);
+  const j = jointsOf(herRaw(t));
+  const head: V2 = [r[0] + j.head[0], r[1] + j.head[1]];
+  let c = mix(handed, [head[0] + 96, head[1] + 4], E.io(ph(t, TE.hand, TE.read0)));
+  // 抱住他：夹在两个人中间（她胸口右边）
+  if (t > TE.hug) {
+    const ch = t < TE.herLand ? herChest(t) : landedChest(t);
+    c = mix(c, [ch[0] + 46, ch[1] + 40], E.io(ph(t, TE.hug, TE.hug + 0.5)));
+  }
+  return { c, rot: t > TE.hug ? -0.15 * E.io(ph(t, TE.hug, TE.hug + 0.5)) : 0, flipY: -1 };
+}
+/** 砖亮到多亮：132.42 那一下 0.4 秒亮到头，之后很慢地一明一暗 */
+export const warmAt = (t: number) => (t < TE.glow ? 0 : E.out(ph(t, TE.glow, TE.glow + 0.4)) * (0.94 + 0.06 * Math.sin((t - TE.glow) * 5.2)));
+
+/** 她围巾垂在胸前那一头（他攥着的地方）：按她没加 IK 的姿势算 */
+function scarfOf(t: number): V2 {
+  const hr = herRootRaw(t);
+  const hj = jointsOf(herRaw(t));
+  return [hr[0] + hj.neck[0] + 14, hr[1] + hj.neck[1] + 70];
+}
+
+// ——————————————— 他这一刻 ———————————————
+export interface KidNow {
+  spec: CastSpec;
+  pose: PoseIn;
+  root: V2;
+  chest: V2;
+  head: V2;
+  ankleL: V2;
+  ankleR: V2;
+  gift: BrickNow;
+  her: BrickNow | null;
+}
+const kidMemo = new Map<number, KidNow>();
+export function kidAt(t: number): KidNow {
+  const key = Math.round(t * 1e4);
+  const hit = kidMemo.get(key);
+  if (hit) return hit;
+  const spec = t < TE.off || t >= TE.coatOn1 ? STONE_COAT : STONE;
+  const p: PoseIn = { ...kidMove(t).pose };
+  const root = kidRoot(t);
+  {
+    const r0 = kidRoot(t - 0.05);
+    withDrag(p, [-(root[0] - r0[0]) / 0.05, (root[1] - r0[1]) / 0.05], 0.5, 0.8);
+  }
+  const sc = spec.scale;
+  const loc = (q: V2): V2 => [(q[0] - root[0]) / sc, (q[1] - root[1]) / sc];
+  const ik = (side: "L" | "R", q: V2, w: number) => {
+    if (w <= 0.001) return;
+    const k = side === "L" ? "armL" : "armR";
+    p[k] = { ...(p[k] as object), to: loc(q), ik: Math.min(1, w) } as PoseIn["armL"];
+  };
+  const j0 = castJoints(spec, p);
+  const palmL: V2 = [root[0] + j0.palmL[0], root[1] + j0.palmL[1]];
+  const gift = giftAt(t, root, palmL);
+  const her = herBrickAt(t, { root });
+  const ends = (b: BrickNow): [V2, V2] => {
+    const cs = Math.cos(b.rot);
+    const sn = Math.sin(b.rot);
+    return [
+      [b.c[0] + HALF * cs - 4 * sn, b.c[1] + HALF * sn + 4 * cs],
+      [b.c[0] - HALF * cs - 4 * sn, b.c[1] - HALF * sn + 4 * cs],
+    ];
+  };
+  // 他那块：举起来以后两只手在砖的两头；收到胸前抱着；攥她围巾时只剩远处那只手抱着；坠的时候近处那只抱着、远处那只往上够她
+  if (t > TE.raise0 && t < TE.land + 0.05) {
+    const [e1, e2] = ends(gift);
+    const w = E.io(ph(t, TE.raise0, TE.raise0 + 0.16));
+    const cl = E.io(ph(t, TE.clutch - 0.06, TE.clutch + 0.06)) * (1 - E.io(ph(t, TE.release - 0.02, TE.release + 0.14)));
+    ik("L", e1, w * (1 - cl));
+    ik("R", e2, w * (1 - E.io(ph(t, TE.release, TE.release + 0.14))));
+  }
+  // 近处那只手攥着她的围巾（垂在她胸前那一头）；被她一根根掰开
+  if (t > TE.clutch - 0.08 && t < TE.release + 0.1) {
+    ik("L", scarfOf(t), E.io(ph(t, TE.clutch - 0.08, TE.clutch + 0.06)) * (1 - E.io(ph(t, TE.peel1 - 0.04, TE.release + 0.1))));
+  }
+  // 她那块（第一视角以后）：抱在胸口；举过头顶；交出去
+  if (her && t > TE.pov && t < TE.hand + 0.1) {
+    const [e1, e2] = ends(her);
+    ik("L", e1, 1 - E.io(ph(t, TE.hand, TE.hand + 0.1)));
+    const far = t < TE.out2 ? 1 : t < 121.8 ? 1 - E.io(ph(t, TE.out2, TE.out2 + 0.25)) : E.io(ph(t, 121.8, 122.2));
+    ik("R", e2, far * (1 - E.io(ph(t, TE.hand, TE.hand + 0.1))));
+  }
+  // 落回街上：她把砖给他抱着
+  if (her && t > TE.putDown + 0.1) {
+    const [e1, e2] = ends(her);
+    const w = E.io(ph(t, TE.putDown + 0.1, TE.putDown + 0.4));
+    ik("L", e1, w);
+    ik("R", e2, w);
+  }
+  const j = castJoints(spec, p);
+  const at = (q: number[]): V2 => [root[0] + q[0], root[1] + q[1]];
+  const chest = at(chestOf(j));
+  const out: KidNow = { spec, pose: p, root, chest, head: at(j.head), ankleL: at(j.ankleL), ankleR: at(j.ankleR), gift, her };
+  if (kidMemo.size > 400) kidMemo.clear();
+  kidMemo.set(key, out);
+  return out;
+}
+
+// ——————————————— 她这一刻 ———————————————
+export interface HerNow {
+  pose: PoseIn;
+  root: V2;
+  chest: V2;
+  head: V2;
+}
+const herMemo = new Map<number, HerNow>();
+export function herAt(t: number): HerNow {
+  const key = Math.round(t * 1e4);
+  const hit = herMemo.get(key);
+  if (hit) return hit;
+  const p: PoseIn = { ...herRaw(t) };
+  const root = herRootRaw(t);
+  // 头发、围巾的「下」：顺着身子往脚那头；失重再乘上去。倒挂时白把她往上拽：头发、围巾往脚那头（朝着白）
+  const fl = (p.float as number | undefined) ?? 0;
+  const r = (p.rot as number | undefined) ?? 0;
+  p.gravity = [-Math.sin(r) * (1 - 2 * fl), Math.cos(r) * (1 - 2 * fl)];
+  if (t >= TE.flip0 && t < TE.hug + 0.6) {
+    // 翻过来以后被白往上拽（世界里朝上）
+    const k = E.io(ph(t, TE.flip0, TE.hang)) * (1 - E.io(ph(t, TE.hug, TE.hug + 0.6)));
+    const g = p.gravity as V2;
+    p.gravity = [g[0] * (1 - k), g[1] * (1 - k) - 1 * k];
+  }
+  // 头发、围巾按她在世界里的速度往反方向甩（往下冲时往上扬，往上冲时往下拖）；朝右的人横着取反
+  if (t < TE.herLand) {
+    const c0 = herChest(t - 0.05);
+    const c1 = herChest(t);
+    const v: V2 = [(c1[0] - c0[0]) / 0.05, (c1[1] - c0[1]) / 0.05];
+    withDrag(p, [-v[0], v[1]], 0.55, 0.85);
+  }
+  // 铁靴拔下来以后那只脚光着
+  if (t >= TE.boot1[0] + 0.1) p.legL = { ...(p.legL as object), boot: false } as PoseIn["legL"];
+  if (t >= TE.boot2[0] + 0.1) p.legR = { ...(p.legR as object), boot: false } as PoseIn["legR"];
+  // 她朝右：局部坐标横着取反（落地以后转身朝左去捡外套时不取反）
+  const mir = ((p.face as number | undefined) ?? 1) > 0 ? -1 : 1;
+  const loc = (q: V2): V2 => [mir * (q[0] - root[0]), q[1] - root[1]];
+  const ik = (side: "L" | "R", q: V2, w: number, chest?: "over" | "under") => {
+    if (w <= 0.001) return;
+    const k = side === "L" ? "armL" : "armR";
+    p[k] = { ...(p[k] as object), to: loc(q), ik: Math.min(1, w), ...(chest ? { chest } : {}) } as PoseIn["armL"];
+  };
+  // 抱着他：两只手环在他背上；拔靴时近处那只手去攥靴口；掰他的手指；松手时张开
+  const hold = E.io(ph(t, TE.catch - 0.1, TE.catch)) * (1 - E.io(ph(t, TE.release, TE.release + 0.15)));
+  if (hold > 0) {
+    const k = kidRoot(t);
+    const kc: V2 = [k[0] + KID_CHEST[0], k[1] + KID_CHEST[1]];
+    const back: V2 = [kc[0] + 40, kc[1] + 10];
+    const back2: V2 = [kc[0] + 34, kc[1] - 22];
+    ik("R", back2, hold);
+    let near = back;
+    for (const side of ["L", "R"] as Side[]) {
+      const [b0, , b2] = BOOT_T(side);
+      const w = E.io(ph(t, b0 - 0.12, b0 + 0.02)) * (1 - E.io(ph(t, b2, b2 + 0.12)));
+      if (w > 0) {
+        const rim = bootRim(t, side);
+        near = mix(near, [rim[0] - 4, rim[1] + 6], w);
+      }
+    }
+    // 掰开他攥着围巾的手：近处那只手盖到他手上，一根根掰开
+    const pw = E.io(ph(t, TE.peel0 - 0.08, TE.peel0 + 0.06)) * (1 - E.io(ph(t, TE.release, TE.release + 0.1)));
+    if (pw > 0) {
+      const sc = scarfOf(t);
+      near = mix(near, [sc[0] + 10 + 8 * Math.sin((t - TE.peel0) * 28) * (1 - ph(t, TE.peel1 - 0.1, TE.peel1)), sc[1] + 10], pw);
+    }
+    ik("L", near, hold, "over");
+  }
+  // 倒挂：两只手攥着楼顶栏杆；远处那只松开去接砖
+  const grip = E.io(ph(t, TE.grip - 0.12, TE.grip)) * (1 - E.io(ph(t, TE.hug, TE.hug + 0.12)));
+  if (grip > 0) {
+    ik("L", RAIL_L, grip);
+    const b = t > TE.hand - 0.1 ? herHoldBrick(t) : null;
+    if (b) {
+      const cs = Math.cos(b.rot);
+      const sn = Math.sin(b.rot);
+      const end: V2 = [b.c[0] - HALF * cs, b.c[1] - HALF * sn + 4];
+      const w = E.io(ph(t, TE.hand - 0.1, TE.hand + 0.05));
+      ik("R", mix(RAIL_R, end, w), grip);
+    } else ik("R", RAIL_R, grip);
+  }
+  // 抱住他（往下一沉、抱着落下来、落地）；放下他时松开
+  if (t > TE.hug - 0.1 && t < TE.putDown + 0.4) {
+    const k = kidRoot(t);
+    const kc: V2 = [k[0] + KID_CHEST[0], k[1] + KID_CHEST[1]];
+    const w = E.io(ph(t, TE.hug - 0.1, TE.hug + 0.3)) * (1 - E.io(ph(t, TE.putDown, TE.putDown + 0.35)));
+    ik("R", [kc[0] + 34, kc[1] - 18], w);
+    ik("L", [kc[0] + 40, kc[1] + 14], w, "over");
+  }
+  // 外套：捡起来、拎着走回来、举着领子给他披上
+  if (t > TE.coatPick - 0.2 && t < TE.coatOn1 + 0.35) {
+    const c = coatHands(t);
+    const w = E.io(ph(t, TE.coatPick - 0.2, TE.coatPick)) * (1 - E.io(ph(t, TE.coatOn1, TE.coatOn1 + 0.35)));
+    ik("L", c[0], w);
+    ik("R", c[1], w);
+  }
+  const j = jointsOf(p);
+  const chest = chestOf(j);
+  const out: HerNow = { pose: p, root, chest: [root[0] + chest[0], root[1] + chest[1]], head: [root[0] + j.head[0], root[1] + j.head[1]] };
+  if (herMemo.size > 400) herMemo.clear();
+  herMemo.set(key, out);
+  return out;
+}
+
+// ——————————————— 他妈妈那件外套 ———————————————
+/** 她捡起外套、拎着领子的两只手（世界坐标）：弯腰捏住 → 拎起来 → 转回来拎着走到他跟前 → 举到他肩上 */
+function coatHands(t: number): [V2, V2] {
+  const r = landedRoot(t);
+  const pick: V2 = [COAT_X1 + 6, -36];
+  const lifted: V2 = [r[0] - 60, -330];
+  const carry: V2 = [r[0] + 84, -350];
+  const k = kidAt(Math.min(t, TE.coatOn1));
+  const j = castJoints(k.spec, k.pose);
+  const onKid: V2 = [k.root[0] + (j.shoulderL[0] + j.shoulderR[0]) / 2, k.root[1] + Math.min(j.shoulderL[1], j.shoulderR[1]) - 14];
+  let c = mix(pick, lifted, E.io(ph(t, TE.coatPick + 0.05, TE.coatPick + 0.35)));
+  c = mix(c, carry, E.io(ph(t, TE.coatPick + 0.3, TE.coatPick + 0.6)));
+  c = mix(c, onKid, E.io(ph(t, TE.coatOn0, TE.coatOn1 - 0.15)));
+  return [
+    [c[0] - 26, c[1]],
+    [c[0] + 26, c[1] - 4],
+  ];
+}
+
+// ——————————————— 画 ———————————————
+const lineOf = (z: number) => 1 / Math.sqrt(Math.max(0.3, z));
+/** 他（世界坐标）：手里的砖、脚上的铁靴（套上以后，跺地以后留在坑里的由 drawStayBoots 画） */
+export function drawKid(g: CanvasRenderingContext2D, t: number, z: number, opts: { boots?: boolean } = {}) {
+  const k = kidAt(t);
+  const line = lineOf(z);
+  const M = g.getTransform();
+  const layer = giftLayer(t);
+  // 手里的砖画在他身子前面、近处那只手臂后面
+  const before = (cc: CanvasRenderingContext2D) => {
+    cc.save();
+    cc.setTransform(M);
+    if (layer === "arms") drawEndBrick(cc, "gift", k.gift.c, k.gift.rot, BS, -1, 0, line);
+    if (k.her && ((t >= TE.pov && t < TE.hand + 0.05) || t >= TE.putDown + 0.15)) drawEndBrick(cc, "her", k.her.c, k.her.rot, BS, k.her.flipY, t >= TE.putDown ? warmAt(t) : 0, line);
+    cc.restore();
+  };
+  if (layer === "back") drawEndBrick(g, "gift", k.gift.c, k.gift.rot, BS, -1, 0, line);
+  drawPerson(g, k.spec, k.pose, k.root[0], k.root[1], z, { beforeFrontArms: before });
+  if (layer === "front") drawEndBrick(g, "gift", k.gift.c, k.gift.rot, BS, -1, 0, line);
+  if (opts.boots !== false) drawKidBoots(g, t, z);
+}
+/** 他脚上的铁靴：远处那只、插在靴口上的「妈妈，明天见」、近处那只 */
+export function drawKidBoots(g: CanvasRenderingContext2D, t: number, z: number) {
+  const line = lineOf(z);
+  const r = bootState(t, "R");
+  const l = bootState(t, "L");
+  if (r.on === "kid" || r.on === "stay") drawBoot(g, r.a, r.rot, line, 1, true);
+  if (t >= TE.land + 0.05 && (l.on === "kid" || l.on === "stay")) {
+    const gift = giftAt(t, [0, 0], [0, 0]);
+    drawEndBrick(g, "gift", gift.c, gift.rot, BS, -1, 0, line);
+  }
+  if (l.on === "kid" || l.on === "stay") drawBoot(g, l.a, l.rot, line, 1, t < TE.land + 0.05);
+}
+/** 她（世界坐标）；inner：抱着他时他画在她的身子和近处那只手臂之间 */
+export function drawHer(g: CanvasRenderingContext2D, t: number, z: number, inner?: (g: CanvasRenderingContext2D) => void) {
+  const h = herAt(t);
+  const line = lineOf(z);
+  const M = g.getTransform();
+  g.save();
+  g.translate(h.root[0], h.root[1]);
+  drawChengtuo(g, h.pose, {
+    line,
+    beforeFrontArms: (cc) => {
+      cc.save();
+      cc.setTransform(M);
+      inner?.(cc);
+      // 她手里的砖（接过来以后、交给他以前）画在她身子前面、手臂后面
+      if (t >= TE.hand + 0.05 && t < TE.putDown + 0.15) {
+        const b = herHoldBrick(t);
+        drawEndBrick(cc, "her", b.c, b.rot, BS, b.flipY, warmAt(t), line);
+      }
+      cc.restore();
+    },
+  });
+  g.restore();
+  // 在她手里的那只靴子
+  for (const side of ["R", "L"] as Side[]) {
+    const s = bootState(t, side);
+    if (s.on === "hand") drawBoot(g, s.a, s.rot, line, s.sx, true);
+  }
+}
+/** 抱着他的时候：两个人一起画 */
+export const holding = (t: number) => (t >= TE.catch && t < TE.release) || (t >= TE.hug && t < TE.putDown + 0.2);
+/** 她那块砖：从天上掉下来、落在地上（第一视角以前） */
+export function drawGroundBrick(g: CanvasRenderingContext2D, t: number, z: number) {
+  if (t < TE.land || t >= TE.pov + 0.2) return;
+  const b = herBrickAt(t);
+  if (b) drawEndBrick(g, "her", b.c, b.rot, BS, b.flipY, 0, lineOf(z));
+}
+
+// 外套：从肩上滑下去、掉在他脚边（左前）→ 跺地那一下被掀到坑的左边 → 他捡起来 → 披在她肩上
+let COAT_FROM: { a: V2; b: V2 } | null = null;
+const ORANGE = "#f29a4a";
+const ORANGE_SH = "#de8538";
+function heapPath(cx: number, floor: number, lift: number, w = 115, ht = 46) {
+  const heap = new Path2D();
+  heap.moveTo(cx - w, floor);
+  heap.quadraticCurveTo(cx - w * 0.95, floor - ht * 0.9 - lift, cx - w * 0.2, floor - ht - lift);
+  heap.quadraticCurveTo(cx + w * 0.45, floor - ht * 1.12 - lift, cx + w * 0.92, floor - ht * 0.45);
+  heap.quadraticCurveTo(cx + w * 1.08, floor - 4, cx + w * 0.86, floor);
+  heap.closePath();
+  return heap;
+}
+function drawHeap(g: CanvasRenderingContext2D, cx: number, floor: number, lift: number, lw: number, rot = 0) {
+  const w = 115;
+  const ht = 46;
+  g.save();
+  g.translate(cx, floor);
+  g.rotate(rot);
+  g.translate(-cx, -floor);
+  const heap = heapPath(cx, floor, lift, w, ht);
+  part(g, heap, ORANGE, ORANGE_SH, 3.2 * lw, [5, 4]);
+  g.save();
+  g.clip(heap);
+  g.fillStyle = "#8a6a5a";
+  g.fillRect(cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht);
+  g.strokeStyle = "rgba(160,80,30,0.45)";
+  g.lineWidth = 3;
+  g.beginPath();
+  g.moveTo(cx - w * 0.3, floor - ht * 0.9);
+  g.quadraticCurveTo(cx - w * 0.12, floor - ht * 0.55, cx - w * 0.22, floor - ht * 0.2);
+  g.moveTo(cx + w * 0.3, floor - ht * 0.95);
+  g.quadraticCurveTo(cx + w * 0.46, floor - ht * 0.55, cx + w * 0.4, floor - ht * 0.2);
+  g.stroke();
+  g.restore();
+  g.restore();
+}
+/** 地上的外套（滑下去、掉下来、堆着、被掀开；捡起来以后不画） */
+export function drawCoat(g: CanvasRenderingContext2D, t: number, z: number) {
+  if (t < TE.off || t > TE.coatPick + 0.15) return;
+  const lw = lineOf(z);
+  if (t < TE.thud) {
+    if (!COAT_FROM) {
+      const k = kidAt(TE.off - 0.001);
+      const sp = STONE_COAT;
+      const j = castJoints(sp, k.pose);
+      COAT_FROM = { a: [k.root[0] + j.shoulderR[0], k.root[1] + j.shoulderR[1]], b: [k.root[0] + j.shoulderL[0], k.root[1] + j.shoulderL[1]] };
+    }
+    const { a, b } = COAT_FROM;
+    const floor = 6;
+    const len = 170;
+    const fall = Math.min(1, (t - TE.off) / (TE.thud - TE.off));
+    const top0 = Math.min(a[1], b[1]);
+    const yTop = top0 + (floor - 30 - top0) * fall * fall;
+    const lo = Math.min(yTop + len, floor);
+    const h = lo - yTop;
+    const spread = 1 + 0.8 * Math.max(0, 1 - h / len);
+    const cx = (a[0] + b[0]) / 2 + (COAT_X0 - (a[0] + b[0]) / 2) * fall * fall;
+    const half = (Math.abs(b[0] - a[0]) / 2 + 14) * spread;
+    const A: V2 = [cx - half, yTop];
+    const B: V2 = [cx + half, yTop];
+    const path = new Path2D();
+    path.moveTo(A[0], A[1]);
+    path.quadraticCurveTo(cx, yTop + 24, B[0], B[1]);
+    path.quadraticCurveTo(B[0] + 14 * spread, yTop + h * 0.5, B[0] + 26 * spread, lo);
+    path.lineTo(A[0] - 26 * spread, lo);
+    path.quadraticCurveTo(A[0] - 14 * spread, yTop + h * 0.5, A[0], A[1]);
+    path.closePath();
+    part(g, path, ORANGE, ORANGE_SH, 3.2 * lw, [5, 4]);
+    g.save();
+    g.clip(path);
+    g.fillStyle = "#8a6a5a";
+    g.fillRect(cx - 200, lo - 24, 400, 30);
+    g.restore();
+    return;
+  }
+  // 堆在地上：落地一弹；跺地那一下被掀起来、翻着落到坑的左边
+  const ds = t - TE.stomp;
+  if (ds < 0) {
+    const settle = Math.exp(-(t - TE.thud) / 0.06) * Math.sin((t - TE.thud) * 40) * 8;
+    drawHeap(g, COAT_X0, 6, settle, lw);
+    return;
+  }
+  if (t < TE.coatPick - 0.05) {
+    const fly = 0.62;
+    const u = Math.min(1, ds / fly);
+    const x = COAT_X0 + (COAT_X1 - COAT_X0) * E.out(u);
+    const hop = 120 * Math.sin(Math.PI * u) * (1 - u * 0.3);
+    const rot = -0.5 * Math.sin(Math.PI * u);
+    const settle = u >= 1 ? Math.exp(-(ds - fly) / 0.08) * Math.sin((ds - fly) * 36) * 10 : 0;
+    drawHeap(g, x, 6 - hop, settle, lw, rot);
+    return;
+  }
+  // 她捏住领子拎起来：一团从地上被提起来
+  const c = coatHands(t);
+  const lift = E.io(ph(t, TE.coatPick - 0.05, TE.coatPick + 0.15));
+  const hx = (c[0][0] + c[1][0]) / 2;
+  const hy = (c[0][1] + c[1][1]) / 2;
+  drawHeap(g, COAT_X1 + (hx - COAT_X1) * lift, 6 + (hy + 60 - 6) * lift, 0, lw);
+}
+/**
+ * 一件挂着的外套（他妈妈那件：橘色，下摆缝了铅）：领子在 (cx, top)，肩宽 w，长 len。
+ * part：all 整件（拎在手里）、back 后片和袖子（披在她身上时画在她后面）、front 两片前襟和领子（压在她身子上、手臂后面）
+ */
+function hangingCoat(g: CanvasRenderingContext2D, cx: number, top: number, w: number, len: number, lw: number, part0: "all" | "back" | "front", sway = 0) {
+  const sh = top + len * 0.12;
+  const hemY = top + len;
+  const hw = w / 2;
+  const sleeve = (side: number) => {
+    const p = new Path2D();
+    const x0 = cx + side * hw * 0.92;
+    p.moveTo(x0 - side * 6, sh - 8);
+    p.quadraticCurveTo(x0 + side * hw * 0.3, sh + len * 0.1, x0 + side * hw * 0.26 + sway, sh + len * 0.56);
+    p.lineTo(x0 + side * hw * 0.02 + sway, sh + len * 0.58);
+    p.quadraticCurveTo(x0 - side * hw * 0.06, sh + len * 0.3, x0 - side * hw * 0.16, sh + 6);
+    p.closePath();
+    part(g, p, ORANGE_SH, null, 3 * lw);
+    // 袖口一圈
+    g.strokeStyle = "rgba(150,70,30,0.6)";
+    g.lineWidth = 4 * lw;
+    g.beginPath();
+    g.moveTo(x0 + side * hw * 0.26 + sway, sh + len * 0.53);
+    g.lineTo(x0 + side * hw * 0.04 + sway, sh + len * 0.55);
+    g.stroke();
+  };
+  const body = () => {
+    const p = new Path2D();
+    p.moveTo(cx - hw * 0.3, top);
+    p.quadraticCurveTo(cx, top + len * 0.05, cx + hw * 0.3, top);
+    p.lineTo(cx + hw, sh);
+    p.quadraticCurveTo(cx + hw * 1.06, top + len * 0.6, cx + hw * 1.12 + sway, hemY);
+    p.lineTo(cx - hw * 1.12 + sway, hemY);
+    p.quadraticCurveTo(cx - hw * 1.06, top + len * 0.6, cx - hw, sh);
+    p.closePath();
+    return p;
+  };
+  const hem = (p: Path2D) => {
+    g.save();
+    g.clip(p);
+    g.fillStyle = "#8a6a5a";
+    g.fillRect(cx - w * 1.4, hemY - len * 0.07, w * 2.8, len * 0.08);
+    g.restore();
+  };
+  if (part0 === "all") {
+    sleeve(-1);
+    sleeve(1);
+    const p = body();
+    part(g, p, ORANGE, ORANGE_SH, 3.2 * lw, [5, 4]);
+    hem(p);
+    // 前襟敞开的那道缝、两个口袋
+    g.strokeStyle = "rgba(150,70,30,0.55)";
+    g.lineWidth = 3 * lw;
+    g.beginPath();
+    g.moveTo(cx, top + len * 0.05);
+    g.lineTo(cx + sway, hemY);
+    g.moveTo(cx - hw * 0.7, top + len * 0.62);
+    g.lineTo(cx - hw * 0.3, top + len * 0.62);
+    g.moveTo(cx + hw * 0.3, top + len * 0.62);
+    g.lineTo(cx + hw * 0.7, top + len * 0.62);
+    g.stroke();
+    return;
+  }
+  if (part0 === "back") {
+    sleeve(-1);
+    sleeve(1);
+    const p = body();
+    part(g, p, ORANGE_SH, null, 3.2 * lw);
+    hem(p);
+    return;
+  }
+  // 前襟：从两个肩头垂下来的两片（中间敞开，露出她的毛衣和围巾）
+  for (const side of [-1, 1]) {
+    const p = new Path2D();
+    p.moveTo(cx + side * hw * 0.3, top);
+    p.lineTo(cx + side * hw, sh);
+    p.quadraticCurveTo(cx + side * hw * 1.06, top + len * 0.6, cx + side * hw * 1.12 + sway, hemY);
+    p.lineTo(cx + side * hw * 0.5 + sway, hemY);
+    p.quadraticCurveTo(cx + side * hw * 0.44, top + len * 0.5, cx + side * hw * 0.3, top);
+    p.closePath();
+    part(g, p, ORANGE, ORANGE_SH, 3.2 * lw, [4, 3]);
+    hem(p);
+  }
+}
+/** 她手里拎着的外套（捡起来 → 拎着走回来 → 举着领子给他披上：抖开、绕到他身后）；披好那一刻换成他穿着外套的样子 */
+export function drawCoatInHands(g: CanvasRenderingContext2D, t: number, z: number) {
+  if (t < TE.coatPick + 0.15 || t > TE.coatOn1 + 0.15) return;
+  const lw = lineOf(z);
+  const [a, b] = coatHands(t);
+  const cx = (a[0] + b[0]) / 2;
+  const top = Math.min(a[1], b[1]) + 4;
+  // 先拎着一小团，披上去那一下才抖开（他的个子：肩宽约 120，长到膝盖）
+  const open = E.io(ph(t, TE.coatOn0, TE.coatOn1 - 0.2));
+  const w = 120 + 50 * open;
+  const len = Math.min(-top - 6, 170 + 70 * open);
+  g.save();
+  g.globalAlpha = 1 - E.io(ph(t, TE.coatOn1 - 0.02, TE.coatOn1 + 0.15));
+  hangingCoat(g, cx, top, w, Math.max(60, len), lw, "all", 8 * Math.sin((t - TE.coatPick) * 5));
+  g.restore();
+}
+/** 她光着脚跺下去的地方（远处那只脚落下的地方） */
+export function herStompX(): number {
+  const h = herAt(TE.stomp2);
+  return h.root[0] + jointsOf(h.pose).ankleR[0];
+}
+/** 她落地以后的根（往前一步时挪） */
+export const herLandRoot = landedRoot;
+export { herMove, kidMove, armL, armR };

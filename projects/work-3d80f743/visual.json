@@ -124,7 +124,7 @@
         "engine": "canvas"
       },
       "start": 91.99,
-      "duration": 3.531,
+      "duration": 2.031,
       "offset": 105.99,
       "phase": 0,
       "rate": 1,
@@ -132,32 +132,16 @@
       "blend": "source-over"
     },
     {
-      "id": "act8",
-      "name": "副歌二 + 静：扑下去、铁靴给他、赤脚升天、白的边上",
+      "id": "finale",
+      "name": "终章：醒来、扑下、交靴、捡砖、跺地、白的边上、人链、交砖、落回人间",
       "source": {
         "kind": "scene",
-        "module": "act8",
+        "module": "finale",
         "engine": "canvas"
       },
-      "start": 95.521,
-      "duration": 18.359,
-      "offset": 95.521,
-      "phase": 0,
-      "rate": 1,
-      "fit": "contain",
-      "blend": "source-over"
-    },
-    {
-      "id": "act9",
-      "name": "活下去 + 尾奏：跺地、人链、抓住她、落回街上、背面的字",
-      "source": {
-        "kind": "scene",
-        "module": "act9",
-        "engine": "canvas"
-      },
-      "start": 113.88,
-      "duration": 38.12,
-      "offset": 113.88,
+      "start": 94.021,
+      "duration": 57.979,
+      "offset": 94.021,
       "phase": 0,
       "rate": 1,
       "fit": "contain",

@@ -57,8 +57,10 @@ const TAU = 0.4;
 /** 锁开以后往上飘：最后的速度、多快加上去 */
 // 2026-10-24 照草稿改慢（1150 → 900）：⑦ 沉沉从楼顶扑下去时她还在楼顶那么高（不是快碰到白），抱住以后两个人离千斤家楼顶不远，
 // 带着扑下去的那一沉被托住，就在巷子中间慢慢飘过去
-const V_FREE = 900;
-const TAU_FREE = 0.3;
+// 2026-10-25 抱住提前到「请」27.84（原来 28.46）：她要在更短的时间里飘到差不多的高度（比千斤家楼顶高出一截，抱住以后才有得往下飘），
+// 改成更快地加速到 1500（原来 900、0.3）——27.84 时和原来 28.46 差不多高
+const V_FREE = 1500;
+const TAU_FREE = 0.15;
 /** 铁链从锁到哑铃中心多长（和第四镜一样） */
 const CHAIN = 505;
 const G = 2600;
@@ -219,8 +221,9 @@ export function makeSky() {
     g.restore();
   };
 
-  /** 远处的人：画 D 在 [d0, d1) 里的那几层（setCam 按那一层设好变换） */
-  const drawFar = (g: CanvasRenderingContext2D, t: number, d0: number, d1: number, setCam: (D: number) => void) => {
+  /** 远处的人：画 D 在 [d0, d1) 里的那几层（setCam 按那一层设好变换）；k：整体淡多少（⑦ 抱住以后淡掉） */
+  const drawFar = (g: CanvasRenderingContext2D, t: number, d0: number, d1: number, setCam: (D: number) => void, k = 1) => {
+    if (k <= 0.01) return;
     let last = 0;
     for (const p of far) {
       if (p.D < d0 || p.D >= d1) continue;
@@ -229,8 +232,8 @@ export function makeSky() {
         last = p.D;
       }
       const y = p.y0 - p.v * (t - T.cut);
-      drawGlow(g, p.x, y - p.h * 0.45, p.h * 1.2, 0.5 * p.a);
-      drawSilhouette(g, p.x, y, p.h, t, p.ph, 0.45 * p.a, "120,84,100");
+      drawGlow(g, p.x, y - p.h * 0.45, p.h * 1.2, 0.5 * p.a * k);
+      drawSilhouette(g, p.x, y, p.h, t, p.ph, 0.45 * p.a * k, "120,84,100");
     }
   };
 
@@ -339,8 +342,9 @@ export function skyCam(t: number, sky: ReturnType<typeof makeSky>): Cam {
   }
   // 锁开以后：跟着她往上退开（一直跟着她的胸口，先快后稳），落在「白在最上面、楼顶在右上、她在左下往上飘」上
   if (t > T.drop) {
-    // 27.6 就退到能看见整个楼顶：右上角楼顶上收床单的沉沉（用户 2026-10-19：「这一幕主角应该就在右上角了」）
-    const u = E.out(ph(t, T.drop + 0.02, 27.62));
+    // 27.4 就退到能看见整个楼顶：右上角楼顶上收床单的沉沉（用户 2026-10-19：「这一幕主角应该就在右上角了」；
+    // 2026-10-25 沉沉扯床单、冲出去提前到「很多」里，退开从 27.62 提前到 27.4）
+    const u = E.out(ph(t, T.drop + 0.02, 27.4));
     const q = sky.chestOf(sky.qjAt(t));
     // （她在巷子正中间，离最高那栋楼远了：退得更开一点、她更靠左下，楼顶上的沉沉才整个在画面里）
     const C = aim(q[0], q[1], 540 + (250 - 540) * u, 900 + (1400 - 900) * u, 2.35 * Math.pow(0.78 / 2.35, u));
