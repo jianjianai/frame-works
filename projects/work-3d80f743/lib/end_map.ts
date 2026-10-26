@@ -181,21 +181,27 @@ interface Watcher {
   shut: number | null;
   /** 打开的时刻 */
   open: number;
+  /** 探出头看了一眼以后转身走开（下楼来救人）的时刻；没有就一直站在窗前 */
+  leave?: number;
   curtain: string;
   /** 人站在窗的哪边、伸哪边的手 */
   side: number;
   /** 有没有防飘栏（画回去压在上面） */
   cage: boolean;
 }
-/** 五层楼靠老钟家那一列（他们飘起来的时候就在旁边）先关上；人链往上时这几扇先打开，再往上楼上的窗一扇扇亮起来、有人探出来 */
+/**
+ * 五层楼靠老钟家那一列（他们飘起来的时候就在旁边）先关上；2026-10-26 第九次改：大家跑来救他的时候（镜头钉在街上），
+ * 这几扇按关上时反过来的顺序一扇扇推开，有的人探出头看了一眼就转身不见了（下楼来救人），有的站在窗前伸着手；
+ * 再往上楼上的窗一扇扇亮起来、有人探出来（镜头往上爬、拉开看整条人链时看得见）
+ */
 const WATCHERS: Watcher[] = [
-  { b: FIVE, f: 2, i: 1, shut: TE.shut[0], open: 121.62, curtain: "#9b5a52", side: 1, cage: true },
-  { b: FIVE, f: 1, i: 1, shut: TE.shut[1], open: 121.9, curtain: "#5d6d86", side: -1, cage: true },
-  { b: FIVE, f: 3, i: 1, shut: TE.shut[2], open: 121.4, curtain: "#8a7a52", side: 1, cage: true },
-  { b: FIVE, f: 0, i: 1, shut: TE.shut[3], open: 122.18, curtain: "#6f5a7a", side: -1, cage: true },
-  { b: FIVE, f: 1, i: 0, shut: TE.shut[4], open: 122.0, curtain: "#7f6550", side: 1, cage: true },
-  // 最高那栋楼右边那一列：人链从窗前升过去时一扇扇亮起来，窗里的人走到窗前看
-  ...[20, 17, 14, 11, 8, 5].map((f, k): Watcher => ({ b: TOWER, f, i: 2, shut: null, open: 122.5 + k * 0.42, curtain: ["#9b5a52", "#5d6d86", "#8a7a52", "#6f5a7a", "#7f6550", "#5f7f6a"][k], side: k % 2 ? -1 : 1, cage: true })),
+  { b: FIVE, f: 2, i: 1, shut: TE.shut[0], open: 117.85, curtain: "#9b5a52", side: 1, cage: true },
+  { b: FIVE, f: 1, i: 1, shut: TE.shut[1], open: 117.62, leave: 118.55, curtain: "#5d6d86", side: -1, cage: true },
+  { b: FIVE, f: 3, i: 1, shut: TE.shut[2], open: 117.4, curtain: "#8a7a52", side: 1, cage: true },
+  { b: FIVE, f: 0, i: 1, shut: TE.shut[3], open: 117.15, leave: 118.05, curtain: "#6f5a7a", side: -1, cage: true },
+  { b: FIVE, f: 1, i: 0, shut: TE.shut[4], open: 116.9, leave: 117.75, curtain: "#7f6550", side: 1, cage: true },
+  // 最高那栋楼右边那一列：从下往上一扇扇亮起来，窗里的人走到窗前看
+  ...[20, 17, 14, 11, 8, 5].map((f, k): Watcher => ({ b: TOWER, f, i: 2, shut: null, open: 120.4 + k * 0.32, curtain: ["#9b5a52", "#5d6d86", "#8a7a52", "#6f5a7a", "#7f6550", "#5f7f6a"][k], side: k % 2 ? -1 : 1, cage: true })),
 ];
 /** 这扇窗的玻璃中心（给镜头、人链对时刻用） */
 export const watcherAt = (k: number) => {
@@ -233,6 +239,12 @@ export function drawWatchers(g: CanvasRenderingContext2D, t: number, pair: V2, v
       shut = Math.min(shut, 1 - E.io(ph(o, 0.08, 0.3)));
       come = Math.max(come, E.io(ph(o, 0.15, 0.5)));
       reach = Math.max(reach, E.io(ph(o, 0.4, 0.75)));
+    }
+    // 转身走开（下楼来救人）：人影往屋里退、淡掉，窗开着、灯亮着
+    if (W.leave !== undefined && t > W.leave) {
+      const lv = E.io(ph(t, W.leave, W.leave + 0.35));
+      come *= 1 - lv;
+      reach *= 1 - lv;
     }
     if (lamp <= 0.01 && come <= 0.01 && shut <= 0.01) continue;
     g.save();

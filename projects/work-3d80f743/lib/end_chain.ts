@@ -1,13 +1,14 @@
 // 终章的人链（时刻、谁、多高、怎么摆在 lib/end_rise.ts；他在 lib/end_pair.ts；老钟在窗里那段在 lib/end_zhong.ts）。
-// 用户 2026-10-25 第二次改：下面的人是在救他。老钟被拽出窗（118.1）以后吊在他脚下；她救过的人一个接一个从街两边、铺子里跑来，
+// 用户 2026-10-25 第二次改：下面的人是在救他。老钟被拽出窗（117.0）以后吊在他脚下；她救过的人一个接一个从街两边、铺子里、楼门里跑来，
 // 在老钟家窗户底下（X_JOIN）蹲一下、跳起来，两只手攥住最下面那个人的脚踝，被一起拽上去；最后一个（ANCHOR）不跳，两腿蹬开站在街上
 // 攥住，人链钉在地上的那一点（PIVOT）不动。整条人链从他的脚踝连到 PIVOT，跟着他绕 PIVOT 左右摆；他那头一摆，一节节往下传，
 // 中间弯成一道波浪（lib/end_rise.ts 的 waveDev），再加一点风往左吹的弯。「后奏二」（TE.let0）人链的形状定住，从上往下一个个松手，各自从原本的位置像花一样散开慢慢飘下来，落在街上；最后一个松开手站着。
 
-import { type MoveKey, type PoseIn } from "@materials/剪纸角色/code/chengtuo";
+import { type HoldFn, type MoveKey, type PoseIn } from "@materials/剪纸角色/code/chengtuo";
 import { castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { type Cam, E, ph, viewOf } from "./cam";
 import { drawTinted } from "./world";
+import { CASE, drawBriefcase } from "./props";
 import { ARMS, live } from "./motion";
 import { drawPerson } from "./people";
 import { TE, type V2, mix } from "./end_t";
@@ -30,8 +31,8 @@ const ANCHOR_AT = (() => {
 })();
 /** 起跳的地方：X_JOIN 跑过来的那一边；最后一个跑到 ANCHOR_AT 站住 */
 const TAKEOFF = MEMBERS.map((m) => (m.anchor ? ANCHOR_AT[0] : X_JOIN + (m.from < X_JOIN ? -150 : 150)));
-/** 门（铺子）里出来的人：门开的时刻（先站住抬头看一下） */
-const DOOR_T: Record<string, number> = { 阿满: 118.3, 年轻人: 118.55 };
+/** 门里出来的人：出门的时刻（先站住抬头看一下）。阿满从五层楼的楼门里冲出来（楼上关上的窗刚一扇扇推开，探出头的人转身不见了），年轻人从铺子里 */
+const DOOR_T: Record<string, number> = { 阿满: 116.55, 年轻人: 117.25 };
 
 interface Plan {
   m: Member;
@@ -280,24 +281,83 @@ export function memberAt(t: number, k: number): MemberNow {
   return { m: p.m, pose, R: [p.spot, 0], th: 0, on: true };
 }
 
-/** 画一个人（根在 R，绕根转 −th） */
-function drawMember(g: CanvasRenderingContext2D, n: MemberNow, z: number) {
+// ——————————————— 周磊的公文包：跑来时远处那只手拎着，蹲下起跳那一下甩到身后（开场他绝望时松开过它，这次是为了腾出手），落在街上 ———————————————
+const ZHOU = 1;
+/** 甩出去的时刻：蹲下攒劲那一下 */
+const caseFling = () => PLANS[ZHOU].join - 0.3;
+const CASE_G = 3400;
+/** 甩出去的速度：往身后（他朝左跑，往右）、往上一点 */
+const CASE_V: V2 = [380, -240];
+const CASE_GROUND = -CASE.h / 2 + 4;
+/** 远处那只手（R）拎着时公文包的中心：提手在手心里，包垂在手下面 */
+function caseHeld(t: number): V2 {
+  const n = memberAt(t, ZHOU);
+  const j = castJoints(n.m.spec, n.pose);
+  const c = Math.cos(-n.th);
+  const s = Math.sin(-n.th);
+  return [n.R[0] + j.palmR[0] * c - j.palmR[1] * s, n.R[1] + j.palmR[0] * s + j.palmR[1] * c + CASE.h / 2 + 22];
+}
+let CASE_FROM: V2 | null = null;
+/** 公文包这一刻在哪；held：还拎在手里（画在他的手后面） */
+export function zhouCaseAt(t: number): { x: number; y: number; r: number; held: boolean } | null {
+  if (t < PLANS[ZHOU].appear) return null;
+  const tf = caseFling();
+  if (t < tf) {
+    const c = caseHeld(t);
+    return { x: c[0], y: c[1], r: 0.08 * Math.sin(t * 11), held: true };
+  }
+  CASE_FROM ??= caseHeld(tf);
+  const p0 = CASE_FROM;
+  // 落地的时刻：p0.y + v·s + g·s²/2 = 地面
+  const T = (-CASE_V[1] + Math.sqrt(CASE_V[1] * CASE_V[1] + 2 * CASE_G * Math.max(0, CASE_GROUND - p0[1]))) / CASE_G;
+  const s = t - tf;
+  if (s < T) return { x: p0[0] + CASE_V[0] * s, y: p0[1] + CASE_V[1] * s + 0.5 * CASE_G * s * s, r: 2.2 * s, held: false };
+  // 落地：一弹、往前滑一小段停住，摆正
+  const d = s - T;
+  const slide = 90 * (1 - Math.exp(-d / 0.14));
+  const hop = 26 * Math.exp(-d / 0.07) * Math.abs(Math.sin(d * 28));
+  return { x: p0[0] + CASE_V[0] * T + slide, y: CASE_GROUND - hop, r: 2.2 * T * Math.exp(-d / 0.08) + 0.04 * (1 - Math.exp(-d / 0.08)), held: false };
+}
+/** 公文包落地那一刻（音效对这里） */
+export const zhouCaseLandAt = () => {
+  const tf = caseFling();
+  CASE_FROM ??= caseHeld(tf);
+  return tf + (-CASE_V[1] + Math.sqrt(CASE_V[1] * CASE_V[1] + 2 * CASE_G * Math.max(0, CASE_GROUND - CASE_FROM[1]))) / CASE_G;
+};
+
+/** 画一个人（根在 R，绕根转 −th）；hold：远处那只手里拎着的东西（世界坐标里画） */
+function drawMember(g: CanvasRenderingContext2D, n: MemberNow, z: number, holdR?: (cc: CanvasRenderingContext2D) => void) {
+  const worldM = g.getTransform();
   g.save();
   g.translate(n.R[0], n.R[1]);
   g.rotate(-n.th);
-  drawPerson(g, n.m.spec, n.pose, 0, 0, z);
+  const hold: HoldFn | undefined = holdR
+    ? (cc, _hand, _mir, info) => {
+        if (info.layer !== "back") return;
+        cc.save();
+        cc.setTransform(worldM);
+        holdR(cc);
+        cc.restore();
+      }
+    : undefined;
+  drawPerson(g, n.m.spec, n.pose, 0, 0, z, hold ? { hold: { R: hold } } : {});
   g.restore();
 }
 /** 人链里的人、街上的人（老钟出窗以前由 lib/end_zhong.ts 画）。only：只画哪几个（按序号） */
 export function drawChain(g: CanvasRenderingContext2D, t: number, cam: Cam, only?: (k: number) => boolean) {
   const v = viewOf(cam, 1);
+  // 周磊甩掉的公文包（飞出去、落在街上）：画在人后面
+  const bc = !only || only(ZHOU) ? zhouCaseAt(t) : null;
+  if (bc && !bc.held && bc.x > v.x0 - 200 && bc.x < v.x1 + 200 && bc.y > v.y0 - 200 && bc.y < v.y1 + 200)
+    drawTinted(g, [bc.x - 160, bc.y - 160, bc.x + 160, bc.y + 160], (gg) => drawBriefcase(gg, bc.x, bc.y, bc.r, 0), 0.85);
   // 上面的人先画：下面的人攥着他的脚踝，手压在上面
   for (let k = 0; k < N; k++) {
     if (only && !only(k)) continue;
     const n = memberAt(t, k);
     if (!n.on) continue;
     if (n.R[0] < v.x0 - 700 || n.R[0] > v.x1 + 700 || n.R[1] < v.y0 - 900 || n.R[1] > v.y1 + 900) continue;
-    drawTinted(g, [n.R[0] - 700, n.R[1] - 900, n.R[0] + 700, n.R[1] + 400], (gg) => drawMember(gg, n, cam.z), 0.85);
+    const holdR = k === ZHOU && bc?.held ? (cc: CanvasRenderingContext2D) => drawBriefcase(cc, bc.x, bc.y, bc.r, 0) : undefined;
+    drawTinted(g, [n.R[0] - 700, n.R[1] - 900, n.R[0] + 700, n.R[1] + 400], (gg) => drawMember(gg, n, cam.z, holdR), 0.85);
   }
 }
 /** 人链顶上往下第 s（0 = 他的脚踝，1 = 最下面那个人的脚踝 / 最后一个人的手）处在世界里的哪（镜头顺着人链用） */

@@ -1,7 +1,7 @@
 // 终章的老钟和他家（第一幕同一条街，lib/dawn.ts 的 ZHONG_HOUSE；他一楼那扇窗就在小石头右边）：
 // 天快亮他在屋里（窗里亮着灯，人不在窗前）；跺地那一下（109.02）窗玻璃震裂一道，他端着茶杯走到窗前；
 // 静里（112.02）往外看：坑里站着小石头，穿着沉沉的铁靴——没有沉沉；明白过来，慢慢抬头看天。
-// 「活」小石头从靴子里出来往上冲：他放下茶杯，推开窗，探出身子两只手攥住他的脚踝；被拽着往上，118.1 被拽出窗（之后在 lib/end_chain.ts 里吊着）。
+// 「活」小石头从靴子里出来往上冲：他放下茶杯，推开窗，探出身子两只手攥住他的脚踝；被拽着往上，117.0 被拽出窗（之后在 lib/end_chain.ts 里吊着）。
 
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { type MoveKey, type PoseIn } from "@materials/剪纸角色/code/chengtuo";
@@ -23,6 +23,8 @@ const WN = ZHONG_HOUSE.win;
 export const ZHONG_IN: V2 = [WN.x + 10, -10];
 /** 放下茶杯（窗台上） */
 const CUP_DOWN = TE.zOpen - 0.16;
+/** 攥住他（TE.zGrab）到被拽出窗、交给人链（TE.zOut）这一段里比例 u 的时刻（2026-10-26 第九次改把这一段从 3.1 秒压到 2 秒，动作的先后不变） */
+const drag = (u: number) => TE.zGrab + u * (TE.zOut - TE.zGrab);
 
 const KEYS: MoveKey[] = [
   { t: 111.6, x: 0, p: ZHONG.窗后 },
@@ -41,14 +43,14 @@ const KEYS: MoveKey[] = [
   // 探出窗口，两只手攥住他的脚踝；被拽着往上，咬着牙
   { t: TE.zGrab, ease: "out", p: ZHONG.扑 },
   { t: TE.zGrab + 0.3, ease: "inOut", p: ZHONG.拽 },
-  // 被拽起来（时刻按他离地多高：116.35 脚离地，117.6–117.9 滑过窗台，TE.zOut 交给人链）：脚一离地就吊在胳膊下面、腿垂下来；
+  // 被拽起来（时刻按他离地多高，攥住到交给人链这一段里的比例：0.42 脚离地，0.8–0.9 滑过窗台，TE.zOut 交给人链）：脚一离地就吊在胳膊下面、腿垂下来；
   // 滑过窗台时腿被挂住拖在后面，脱开往前荡一下，落到人链里吊着的样子（lib/end_chain.ts 的 HANG，交接不跳）
-  { t: 116.3, p: ZHONG.拽 },
-  { t: 116.8, ease: "inOut", p: ZHONG.离地 },
-  { t: 117.25, ease: "inOut", p: ZHONG.吊起 },
-  { t: 117.5, ease: "inOut", p: { ...ZHONG.吊起, ...legR(10, -20, -46), ...legL(-14, -18, -50) } },
-  { t: 117.74, ease: "inOut", p: ZHONG.拖 },
-  { t: 117.93, ease: "inOut", p: ZHONG.荡 },
+  { t: drag(0.42), p: ZHONG.拽 },
+  { t: drag(0.58), ease: "inOut", p: ZHONG.离地 },
+  { t: drag(0.72), ease: "inOut", p: ZHONG.吊起 },
+  { t: drag(0.8), ease: "inOut", p: { ...ZHONG.吊起, ...legR(10, -20, -46), ...legL(-14, -18, -50) } },
+  { t: drag(0.88), ease: "inOut", p: ZHONG.拖 },
+  { t: drag(0.945), ease: "inOut", p: ZHONG.荡 },
   { t: TE.zOut, ease: "inOut", p: HANG(-0.45, 0) },
   { t: 125, p: HANG(-0.45, 0) },
 ] as MoveKey[];

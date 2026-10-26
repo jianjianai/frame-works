@@ -123,7 +123,7 @@ function drawRow(g: CanvasRenderingContext2D, base: DOMMatrix, cam: Cam, row: Pe
 /** 马路上的几排（D 1.05–1.2）：画在远处的城和对面人行道之后、人这一层的楼之前（drawCity 的 between，D = 对面人行道那一层） */
 export function drawCrowdFar(g: CanvasRenderingContext2D, base: DOMMatrix, cam: Cam, t: number, wide: number) {
   // 退远以前那几秒，每帧先把两个人的小图画好（全在退开那一帧现画，播放会顿一下）
-  if (t > TE.chainCut + 1.5 && t < TE.highCut + 1.6) {
+  if (t > TE.chainCut + 1.5 && t < TE.climbTop + 1.6) {
     let n = 0;
     for (const p of [...rows().flat(), ...nearRow()]) {
       if (sprites.has(p)) continue;
