@@ -739,6 +739,16 @@ export function kidAt(t: number): KidNow {
     ik("L", e1, w);
     ik("R", e2, w);
   }
+  // 被她抱住以后（砖滑出去了）：两只手搂住她的脖子（近处那只搭在她脖子这边，远处那只绕到她脖子后面）；攥围巾时近处那只换过去，松手时放开
+  // （原来只摆角度，拳头缩在自己脸跟前，用户 2026-10-26：「小石头胳膊的动作优化一下」）
+  if (t > GIFT_DROP + 0.1 && t < TE.release + 0.15) {
+    const hr = herRootRaw(t);
+    const neck = jointsOf(herRaw(t)).neck;
+    const nk: V2 = [hr[0] + neck[0], hr[1] + neck[1]];
+    const w = E.io(ph(t, GIFT_DROP + 0.1, GIFT_DROP + 0.3)) * (1 - E.io(ph(t, TE.release, TE.release + 0.15)));
+    ik("L", [nk[0] - 4, nk[1] + 34], w * (1 - E.io(ph(t, TE.clutch - 0.2, TE.clutch - 0.08))));
+    ik("R", [nk[0] - 36, nk[1] + 10], w);
+  }
   // 近处那只手攥着她的围巾（垂在她胸前那一头）；被她一根根掰开
   if (t > TE.clutch - 0.08 && t < TE.release + 0.1) {
     ik("L", scarfOf(t), E.io(ph(t, TE.clutch - 0.08, TE.clutch + 0.06)) * (1 - E.io(ph(t, TE.peel1 - 0.04, TE.release + 0.1))));

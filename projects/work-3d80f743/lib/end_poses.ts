@@ -231,8 +231,11 @@ const RAISED = (l: number): Angles => ({ shoulderL: 165 + l, elbowL: 20, wristL:
 const HUGB = (l: number): Angles => ({ ...armL(36, 110, 0, "grip", l), ...armR(40, 110, 0, "grip", l) });
 /** 近处那只手把砖抱在胸口，远处那只伸上去（张开） */
 const UPB = (l: number, up = 160): Angles => ({ ...armL(36, 110, 0, "grip", l), ...armR(up, 14, 0, "open", l) });
-/** 被她抱住以后（他那块「妈妈，明天见」抱住那一下就掉了，用户 2026-10-26）：两只手往前攥着她的衣服 */
-const HUGH = (l: number): Angles => ({ ...armL(64, 64, 0, "grip", l), ...armR(72, 56, 0, "grip", l) });
+/**
+ * 被她抱住以后（他那块「妈妈，明天见」抱住那一下就掉了，用户 2026-10-26）：两只手往上搂住她的脖子，攥着她的衣服
+ * （原来两只手往前平端、拳头缩在自己脸跟前，用户：「小石头胳膊的动作优化一下」）
+ */
+const HUGH = (l: number): Angles => ({ ...armL(132, 74, 0, "grip", l), ...armR(150, 58, 0, "grip", l) });
 /** 两只手都往上伸着够她（手里没有砖） */
 const UP2 = (l: number, up = 160): Angles => ({ ...armL(up - 28, 22, 0, "open", l), ...armR(up, 14, 0, "open", l) });
 export const KID = {

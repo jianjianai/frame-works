@@ -17,7 +17,7 @@
 import { type Angles, type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf } from "@materials/剪纸角色/code/chengtuo";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, kick, ph } from "./cam";
+import { type Cam, E, H as SH, W as SW, kick, ph } from "./cam";
 import { INK, drawGlow, drawGrade } from "./world";
 import { ARMS, LIMP, live, smoothTrack } from "./motion";
 import { armL, armR, legL, legR } from "./poses";
@@ -25,7 +25,7 @@ import { pose } from "./dawn";
 import { drawPerson } from "./people";
 import { drawKnife } from "./knife";
 import { ROOM, bootLow, looseBoot } from "./room";
-import { WIN, W_FLOOR, applyWall, drawOutside, drawWallLight, drawWallSet } from "./winwall";
+import { WIN, W_FLOOR, applyWall, drawOutside, drawWallLight, drawWallSet, wallToScreen } from "./winwall";
 
 type V2 = [number, number];
 const mix = (a: V2, b: V2, u: number): V2 => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
@@ -389,10 +389,13 @@ const HIM = {
     ...armL(16, 30, 0, "relax", l),
     ...armR(-6, 16, 0, "relax", l),
   })),
-  /** 就地蹲下：单膝跪下去（同 sill.ts 系绳子的跪法）、身子往前压，近处那只手伸到脚边的刀上（小孩胳膊短，弯腰够不着地） */
-  蹲: pose(46, { face: 0.6, ...legR(96, -98), ...legL(-6, -134, -140), thighR: 0.65, neck: 8, expression: "忍着哭", tears: 1, lookX: 0.3, lookY: 0.9 }, (l) => ({
-    ...armL(60, 10, 0, "grip", l),
-    ...armR(10, 60, 0, "relax", l),
+  /**
+   * 就地蹲下：单膝跪下去、上身只往前倾一点，后面那只脚脚尖着地，近处那只手伸到脚边的刀上，远处那只手垂在膝盖边
+   * （原来前倾 46°、后脚翘在半空，外套跟着身子斜成一块板，看着像侧身摔倒；检查页 sheets/捡刀.ts）
+   */
+  蹲: pose(26, { face: 0.6, ...legR(92, -96), ...legL(-4, -92, -96), thighR: 0.65, neck: -6, expression: "忍着哭", tears: 1, lookX: 0.3, lookY: 0.9 }, (l) => ({
+    ...armL(40, 10, 0, "grip", l),
+    ...armR(-14, 34, 0, "relax", l),
   })),
   /** 站起来低头看着手里的刀（妈妈的刀） */
   看: pose(8, { face: 0.6, ...legR(8, -6), ...legL(-8, -6), thighR: 1, neck: -20, expression: "忍着哭", sad: 1, tears: 1, lookX: 0.2, lookY: 0.9 }, (l) => ({
@@ -552,19 +555,37 @@ function knifeAt(t: number): KnifeState | null {
 // ——— 镜头 ———
 const centerOf = (h: ReturnType<typeof herAt>): V2 => h.toW([(h.j.shoulderL[0] + h.j.shoulderR[0] + 2 * h.j.hip[0]) / 4, (h.j.shoulderL[1] + h.j.shoulderR[1] + 2 * h.j.hip[1]) / 4]);
 let FOLLOW: ((t: number) => V2) | null = null;
-/** 「挣」以后镜头跟着她（晚一点到，带惯性）：身子的中间往拴着的脚踝挪一点（横过来时框住整个人） */
+/** 「做」以后镜头跟着她（晚一点到，带惯性）：身子的中间往拴着的脚踝挪一点（横过来时框住整个人，头不出画） */
 function follow(t: number): V2 {
   if (!FOLLOW)
     FOLLOW = smoothTrack(
       (tt) => {
         const h = herAt(tt);
-        return mix(centerOf(h), h.ankleL, 0.3);
+        return mix(centerOf(h), h.ankleL, 0.2);
       },
       T.pull1 - 0.05,
       T.end,
-      10,
+      13,
     );
   return FOLLOW(t);
+}
+/** ②「不想」刀落地以后推向她的脸：脸在世界里的位置（悬着时取一次）、推完脸在画面上的位置、推多少 */
+let HANG_FACE: V2 | null = null;
+const hangFace = (): V2 => (HANG_FACE ??= herAt(74.75).head);
+const FACE_TO: V2 = [310, 970];
+const Z_FACE = 1.14;
+/** 推近的进度：「不想」刀落地起越推越慢（「诺」被拽的时候还在动），「诺」一拽，镜头被拽开 */
+const faceE = (t: number) => E.settle(ph(t, T.clang + 0.05, T.clang + 1.25)) * (1 - E.out(ph(t, T.pull2, T.pull2 + 0.25)));
+/** 推近 f 倍，同时把世界里的一点 p 挪到画面上的 s（e 是进度；镜头转着也对） */
+function pushTo(c: Cam, p: V2, s: V2, f: number, e: number): Cam {
+  if (e <= 0) return c;
+  const s0 = wallToScreen(c, p);
+  const z = c.z * Math.pow(f, e);
+  const dx = s0[0] + (s[0] - s0[0]) * e - SW / 2;
+  const dy = s0[1] + (s[1] - s0[1]) * e - SH / 2;
+  const cs = Math.cos(-c.r);
+  const sn = Math.sin(-c.r);
+  return { ...c, x: p[0] - (dx * cs - dy * sn) / z, y: p[1] - (dx * sn + dy * cs) / z, z };
 }
 /** ① 镜头推完停在哪（窗墙坐标；倒着看，往真实的左上挪就是画面里往右下） */
 const CAM1: V2 = [575, 700];
@@ -573,16 +594,28 @@ const Z_HANG = 1.12;
 /** ② 拉远以后两个人都在画面里：他在左下、她浮在右上，窗在她身后 */
 const WIDE: V2 = [150, 1010];
 const Z_WIDE = 1.06;
-/** ③ 抱住、落进铁靴时往两个人推近一点 */
-const PAIR: V2 = [150, 1290];
-const Z_PAIR = 1.24;
-/** ④ 刀扔出窗：抬到窗口，窗和窗下的两个人都在画面里 */
-const WV: V2 = [400, 1040];
-const Z_WV = 1.0;
+/** ③ 第二把：镜头被她带着往下一截、往前挤一点 */
+const STEP: V2 = [150, 1090];
+const Z_STEP = 1.11;
+/** ③ 抱住以后推近两个人（两张脸在画面上 4 成，脚下留着地上的刀，窗在她身后露一截） */
+const PAIR: V2 = [185, 1300];
+const Z_PAIR = 1.32;
+/** ④ 他跪下去捡刀：顺着他的视线跟着往下多少 */
+const KNEEL_DY = 85;
+/** ④ 刀扔出窗：抬到窗口，窗和窗下的两个人都在画面里（他不贴画面左边） */
+const WV: V2 = [350, 1095];
+const Z_WV = 1.12;
+/** ④ 静着的时候往两个人那边很慢地推 */
+const HUSH: V2 = [170, 1250];
+/** 以世界里的一点 p 为中心推近 f 倍（p 在画面上不动） */
+const pushAt = (c: Cam, p: V2, f: number): Cam => ({ ...c, x: p[0] + (c.x - p[0]) / f, y: p[1] + (c.y - p[1]) / f, z: c.z * f });
 /**
  * 镜头（窗墙坐标）：① 倒着，对着窗和坐在框上的她，几乎不动、很慢地推向刀和绳子；「挣」一震，往后让到 1.12 倍、跟着横过来的她（他还在画面外）；
- * ②「做」和她一起转回正（r π → 2π），一边转一边往后拉远到两个人；③ 往下、往两个人推近一点，每一把一沉，「咚」一沉；
- * ④ 他蹲下时跟着低一点，扔出去时跟着刀抬到窗口，停住（不说话），只很慢地推一点
+ * ②「做」和她一起转回正（r π → 2π），一边转一边往后拉远到两个人；
+ * ③ 第二把镜头被她带着往下一截、往前挤一点（晚一点到，带着惯性）；他扑上去抱住时屏一下，抱住起柔和起步、越推越慢地推近两个人
+ *   （拥抱不猛推，温暖靠光），跟着她落进铁靴；每一把一沉，「咚」一沉一顶；
+ * ④ 他低头看刀、跪下去捡，镜头顺着他的视线跟着往下，站起来跟着回来；看刀、往后抡时屏住；扔出去跟着刀抬到窗口（刀在前、镜头晚一点），
+ *   之后不停死：往两个人那边很慢地推，到切还在动（沉默）
  */
 export function nwCam(t: number): Cam {
   const PI = Math.PI;
@@ -591,12 +624,13 @@ export function nwCam(t: number): Cam {
   let c: Cam = { x: CAM1[0] + 24 * (1 - u1), y: CAM1[1] - 40 * (1 - u1), z: 1.34 * (1 + 0.06 * u1), r: PI };
   c = { ...c, x: c.x + 2 * Math.sin(t * 1.3), y: c.y + 2 * Math.sin(t * 0.9 + 1) };
   if (t < T.pull1) return c;
-  // 「挣」：往后让一点、跟着她；对准点不往他那边去（x ≥ 600：他在倒着的画面右边外面）
+  // 「做」：被她一把带过去（起步就快、很快停住），往后让一点、跟着她；对准点不往他那边去（x ≥ 600：他在倒着的画面右边外面）
   const f = follow(t);
-  const w1 = E.io(ph(t, T.pull1 + 0.04, T.pull1 + 0.7));
+  const w1 = E.out(ph(t, T.pull1 + 0.02, T.pull1 + 0.38));
   c = { ...c, x: c.x + (Math.max(f[0], 600) - c.x) * w1, y: c.y + (f[1] - c.y) * w1, z: c.z * Math.pow(Z_HANG / c.z, w1) };
   c = { ...c, z: c.z * (1 + 0.04 * kick(t, T.pull1, 0.09)) };
-  if (t < T.pull2) return c;
+  // 「不想」刀落地（她手里什么都没了）：以她的脸为中心越推越慢地推近，脸挪到画面左边三分之一；她回头看白、闭上眼（认了）
+  if (t < T.pull2) return pushTo(c, hangFace(), FACE_TO, Z_FACE, faceE(t));
   // ②「做」：和她一起转回正，跟着她，再往后拉远到两个人
   c = { ...c, r: PI * (1 + turnE(t)) };
   const fx = f[0] + (Math.max(f[0], 600) - f[0]) * (1 - E.io(ph(t, T.pull2, T.turn1)));
@@ -604,20 +638,30 @@ export function nwCam(t: number): Cam {
   const ww = E.io(ph(t, T.wide0, T.wide1));
   c = { ...c, x: c.x + (WIDE[0] - c.x) * ww, y: c.y + (WIDE[1] - c.y) * ww, z: Z_HANG * Math.pow(Z_WIDE / Z_HANG, ww) };
   c = { ...c, z: c.z * (1 + 0.035 * kick(t, T.pull2, 0.09)) };
-  if (t < H2 - 0.1) return c;
-  // ③ 往下、往两个人推近一点
-  const w3 = E.io(ph(t, H2 - 0.1, T.land + 0.3));
-  c = { ...c, x: c.x + (PAIR[0] - c.x) * w3, y: c.y + (PAIR[1] - c.y) * w3, z: c.z * Math.pow(Z_PAIR / c.z, w3) };
+  c = pushTo(c, hangFace(), FACE_TO, Z_FACE, faceE(t));
+  if (t < H1) return c;
+  const to = (a: Cam, p: V2, z: number, w: number): Cam => ({ ...a, x: a.x + (p[0] - a.x) * w, y: a.y + (p[1] - a.y) * w, z: a.z * Math.pow(z / a.z, w) });
+  // ③ 第二把：被她带着往下一截、往前挤一点（晚一点到）；他撒手扑过去时屏住
+  c = to(c, STEP, Z_STEP, E.out(ph(t, H2 + 0.02, H2 + 0.34)));
+  // 抱住：柔和起步、越推越慢地推近两个人，跟着她往下落进铁靴（「咚」以后还在很慢地凑近）
+  c = to(c, PAIR, Z_PAIR, E.settle(ph(t, T.hug, T.hug + 1.3)));
+  // ④ 他低头看刀、跪下去：顺着他的视线跟着往下；站起来跟着回来，看刀、往后抡时屏住
+  const w4a = E.io(ph(t, T.look + 0.04, T.pick + 0.06)) * (1 - E.io(ph(t, T.pick + 0.08, T.up + 0.1)));
+  c = { ...c, y: c.y + KNEEL_DY * w4a };
+  // 扔出去：跟着刀抬到窗口（刀在前，镜头晚一点），之后不停死，往两个人那边很慢地推
+  c = to(c, WV, Z_WV, E.out(ph(t, T.rel - 0.03, T.rel + 0.5)));
+  c = pushAt(c, HUSH, 1 + 0.03 * ph(t, T.rel + 0.1, T.end));
+  // 冲击（套在所有分支外面）：每一把一沉，「咚」一沉一顶，捡起刀一顿
   for (const P of [H1, H2]) c = { ...c, y: c.y + (14 * kick(t, P + 0.03, 0.1)) / c.z };
   c = { ...c, y: c.y + (18 * kick(t, T.land, 0.1)) / c.z, z: c.z * (1 + 0.02 * kick(t, T.land, 0.12)) };
-  if (t < T.look) return c;
-  // ④ 他蹲下时跟着低一点；扔出去时跟着刀抬到窗口，停住，很慢地推一点
-  const w4a = E.io(ph(t, T.look + 0.05, T.pick)) * (1 - E.io(ph(t, T.up, T.rel)));
-  c = { ...c, y: c.y + 40 * w4a };
-  const w4b = E.out(ph(t, T.rel - 0.05, T.rel + 0.45));
-  c = { ...c, x: c.x + (WV[0] - c.x) * w4b, y: c.y + (WV[1] - c.y) * w4b, z: c.z * Math.pow(Z_WV / c.z, w4b) };
-  return { ...c, z: c.z * (1 + 0.03 * E.soft(ph(t, T.rel + 0.45, T.end))) };
+  return { ...c, z: c.z * (1 + 0.012 * kick(t, T.pick, 0.12)) };
 }
+/** 抱住起两个人身边的一团暖光（画在人后面，不给人物染色）：满屋夜色里只有他们暖 */
+const warmAt = (t: number) => 0.2 * E.settle(ph(t, T.hug - 0.05, T.hug + 0.8));
+/** ④ 扔完以后静着：四周慢慢压暗 */
+const hushAt = (t: number) => 0.12 * E.soft(ph(t, T.rel + 0.3, T.end));
+/** ② 刀落地到「诺」：她认了，四周慢慢收暗；被拽回来、转正看见他时松开 */
+const resignAt = (t: number) => 0.14 * E.soft(ph(t, T.clang, T.pull2)) * (1 - E.out(ph(t, T.pull2, T.turn1)));
 /** 镜头一震（画面像素）：两下拽、两把拉、抱住、「咚」 */
 function nwShake(t: number) {
   return 9 * kick(t, T.pull1, 0.08) + 8 * kick(t, T.pull2, 0.08) + 4 * (kick(t, H1 + 0.03, 0.1) + kick(t, H2 + 0.03, 0.1)) + 3 * kick(t, T.hug, 0.08) + 9 * kick(t, T.land, 0.1);
@@ -704,6 +748,7 @@ export function drawNightWindow(g: CanvasRenderingContext2D, base: DOMMatrix, gr
   }
   applyWall(g, base, c, sh);
   drawWallSet(g);
+  drawGlow(g, 175, 1380, 700, warmAt(t));
   // 地上的东西：落在地上的刀（靠墙，在铁靴和他后面）、铁靴
   const onFloor = t >= T.clang - 0.02 && t < T.pick;
   if (kn && onFloor) drawKnifeAt(g, kn);
@@ -732,5 +777,5 @@ export function drawNightWindow(g: CanvasRenderingContext2D, base: DOMMatrix, gr
   applyWall(g, base, c, sh);
   drawWallLight(g, 1);
   drawGlow(g, (WIN.x0 + WIN.x1) / 2, WIN.y0 + 60, 300, 0.12);
-  drawGrade(g, base, grain, 0.6, 0.3);
+  drawGrade(g, base, grain, 0.6, 0.3 + resignAt(t) + hushAt(t));
 }

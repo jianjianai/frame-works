@@ -82,7 +82,8 @@ const MOM_BARE: CastSpec = { ...MOM, coat: undefined };
 const STONE_COAT = CAST.小石头穿妈妈的外套;
 
 // ——————————————————— 姿势 ———————————————————
-const MF = { face: -0.2, ground: false } as const;
+/** 差不多正对镜头、稍微朝左（|face| ≥ 0.25 两只鞋尖才都朝左；−0.2 时右脚鞋尖朝外，用户：「妈妈的右脚姿势奇怪」「是否能改成朝左」） */
+const MF = { face: -0.26, ground: false } as const;
 const SF = { face: 0.6, ground: false } as const;
 const CF = { face: 1, ground: false } as const;
 
