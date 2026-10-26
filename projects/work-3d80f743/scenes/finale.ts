@@ -3,13 +3,14 @@
 //   街（94.02）→ 天花板她醒来（95.40）→ 一镜到底（96.02：他冲上去、她扑下来、抱住、下坠、停住、交靴、松手、他落地）→
 //   （他落地以后天上掉下来一块砖，104.52 砸在靴尖前面）→ 第一视角（104.8：捡起来、看）→ 她越升越快冲他笑（106.02）→ 跺地（108.02）→ 慢放：白的边上（109.89）→
 //   静：老钟的特写（112.02，屋里墙上的钟跳两下）→ 窗外：他从靴子里出来往上飘、老钟攥住他、被拽出窗（113.88）→
-//   人链（118.02 街上一个抓住一个 → 121.89 高处的他随风摆 → 125.82 退到整幅，一阵风把他荡到她跟前）→
-//   推到两个人：把砖递给她、全片最强的光、抱住（130.03）→ 尾奏：退到整幅 → 散开、落下来 → 落地、给他穿外套 → 光脚跺一下（134.03）。
+//   人链（118.02 街上一个抓住一个，退到 119.45 改成跟着他往上 → 121.89 退到整幅，整条人链在空中先向右、再向左摆）→
+//   推到他（125.82）：跟着他往左荡过去把砖递给她、一接过来就亮（128.02）、在这反乌托邦里松开栏杆抱住他（130.03），后半句拉远、整个画面暗下去（132.6）→ 尾奏：这句唱完光直接炸开、铺满整个画面（134.02）→ 散开、落下来、推向两个人 →
+//   落地、给他穿外套 → 光脚跺一下（134.03）。
 //   （用户 2026-10-25 第二次改 112.02 以后：下面的人是在救他；人链钉在地上的那一点不动，随风摆；砖不翻面；她给他穿外套，光着脚跺出一个坑）
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
 import { type Cam, applyCam, kick, toScreen, viewOf } from "../lib/cam";
-import { drawStreet, drawTinted, makeGrain, prepareCity, setDusk } from "../lib/world";
+import { drawGlow, drawStreet, drawTinted, makeGrain, prepareCity, setDusk } from "../lib/world";
 import { loadHandFont } from "../lib/note";
 import { drawCeiling } from "../lib/bed";
 import { TE, type V2 } from "../lib/end_t";
@@ -18,7 +19,8 @@ import { wakeCast } from "../lib/end_ceil";
 import { ceilCam, chainCam, endCam, handCam, oneTakeCam, slowCam, smileCam, stompCam, streetCam, zhongCam, zhongCloseCam } from "../lib/end_cam";
 import { HB_REST, drawCoat, drawCoatInHands, drawGroundBrick, drawHer, drawKid, drawKidBoots, herAt, herBrickAt, holding, kidAt, warmAt } from "../lib/end_pair";
 import { drawZhongHouse } from "../lib/end_zhong";
-import { drawChain } from "../lib/end_chain";
+import { chainPoint, drawChain } from "../lib/end_chain";
+import { PIVOT } from "../lib/end_rise";
 import { drawBigLight, drawBrickLight, drawCrater, drawCraterFront, drawDiveLines, drawFloatTears, drawLandBurst, drawLightMotes, drawRiseGlow, drawStompBurst, stompFlash } from "../lib/end_fx";
 import { drawPov } from "../lib/end_pov";
 import { X_K } from "../lib/end_map";
@@ -156,6 +158,15 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const prev = oneTakeCam(t - 1 / 60);
     const dy = (cam.y - prev.y) * cam.z + Math.log(cam.z / prev.z) * 300;
     worldShot(cam, t, { smear: t < TE.stop ? dy * 0.8 : 0, chain: false, flash: 0.25 * kick(t, TE.catch, 0.18) });
+    // 天上掉下来的那块砖（她的「活下去」）带一点暖光，一眼看得见；落地一亮，之后慢慢收
+    if (t > TE.land) {
+      const b = herBrickAt(t);
+      if (b) {
+        applyCam(ctx, base, cam, 1);
+        const a = 0.55 * E_io((t - TE.land - 0.05) / 0.15) * (1 - 0.5 * E_io((t - TE.brickHit - 0.1) / 0.4)) + 0.35 * kick(t, TE.brickHit, 0.2);
+        drawGlow(ctx, b.c[0], b.c[1], 110, a);
+      }
+    }
   };
   const renderPov = (t: number) => {
     if (t > TE.lookUp) {
@@ -189,14 +200,49 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   };
   const renderZhongClose = (t: number) => worldShot(zhongCloseCam(t), t, { chain: false, pair: false });
   const renderZhong = (t: number) => worldShot(zhongCam(t), t, { chain: true });
+  /**
+   * 第三声：一道细细的暖光沿人链从街上描到天上（用户 2026-10-26：「你想一个新的震撼方案吧，把倾斜的这个想法撤销」→
+   * 「这个光貌似把注意力从人链很长的震撼感抢走了，有优化方案吗？」）：不要亮光团、不在顶上炸开；
+   * 光是一道描线，经过的每个人轻轻一亮再留一层很淡的余光——眼睛跟着它从街上走到天上，把人链有多长走一遍。推到他身上时退掉
+   */
+  const chainGlow = (cam: Cam, t: number) => {
+    if (t < TE.glow0 || t > TE.corner + 1) return;
+    applyCam(ctx, base, cam, 1);
+    const u = Math.min(1, (t - TE.glow0) / (TE.glowTop - TE.glow0));
+    const front = Math.pow(u, 1.25) * 1.03;
+    const fade = 1 - E_io((t - TE.corner) / 0.9);
+    const at = (h: number): V2 => {
+      const p = h <= 0 ? ([PIVOT[0], PIVOT[1]] as V2) : chainPoint(t, 1 - h);
+      return [p[0], p[1] - 200];
+    };
+    const n = 64;
+    for (let i = 0; i <= n; i++) {
+      // h：0 = 街上最后那个人（攥着的那一点），1 = 顶上的他
+      const h = i / n;
+      const lit = E_io((front - h) / 0.04 + 0.5);
+      if (lit <= 0.001) continue;
+      // 刚经过时亮一下（只比余光亮一点），之后留一层很淡的余光
+      const pass = Math.exp(-(((front - h) / 0.07) ** 2));
+      const p = at(h);
+      drawGlow(ctx, p[0], p[1], 110 + 40 * pass, (0.16 * lit + 0.28 * pass) * fade);
+    }
+  };
   const renderChain = (t: number) => {
     const cam = chainCam(t);
     worldShot(cam, t);
+    // 往下扫的中段很快：竖着的拖影（按这一帧镜头在画面上竖着走了多少）
+    if (t > TE.look0 && t < TE.sweep1) {
+      const prev = chainCam(t - 1 / 60);
+      smearV((cam.y - prev.y) * cam.z * 0.3);
+    }
+    chainGlow(cam, t);
     herLight(cam, t);
   };
+  /** 推到他：跟着他荡过去把砖递给她，一接过来就亮，她松开栏杆抱住他 */
   const renderHand = (t: number) => {
     const cam = handCam(t);
     worldShot(cam, t);
+    chainGlow(cam, t);
     herLight(cam, t);
     // 全片最强的暖光：以砖为中心；亮起来那一下一闪
     const b = herBrickAt(t);
@@ -208,9 +254,22 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     worldShot(cam, t);
     const b = herBrickAt(t);
     if (b) {
-      drawBrickLight(ctx, base, cam, b.c, warmAt(t) * (0.55 + 0.45 * Math.exp(-(t - TE.descend) / 2.5)), t);
-      // 后奏一：退到整幅，她那里一团很强的光，占满半个画面；落下来时慢慢收回去
-      drawBigLight(ctx, base, cam, b.c, E_io((t - TE.descend) / 1.2) * (1 - E_io((t - TE.let0 - 0.4) / 4.5)), t);
+      // 「在这反乌托邦里」后半句：整个画面（连天上的白）暗下去，只剩她的光在画面正中；
+      // 这句唱完（后奏一 134.02）光直接炸开，铺满整个画面；之后慢慢退去，退完正好人链散开
+      const back = E_io((t - TE.rev0) / (TE.let0 - TE.rev0));
+      const dark = 0.88 * E_io((t - TE.dim0 - 0.1) / 1.1) * (1 - back);
+      if (dark > 0.003) {
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = dark;
+        ctx.fillStyle = "#140f17";
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+      }
+      const grow = E_io((t - TE.descend) / (TE.lit - TE.descend));
+      drawBrickLight(ctx, base, cam, b.c, warmAt(t) * (0.6 + 0.4 * (1 - back)), t);
+      drawBigLight(ctx, base, cam, b.c, (0.75 + 0.25 * grow) * E_io((t - TE.dim0) / 0.6) * (1 - 0.85 * back), t, 0.32 + 2.6 * grow * grow);
+      white(0.85 * grow * grow * (1 - back) + 0.3 * kick(t, TE.descend, 0.2), "#fff4dc");
     }
     // 淡出
     if (t > TE.fade0) {
@@ -237,7 +296,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         else if (t < TE.zWide) renderZhongClose(t);
         else if (t < TE.chainCut) renderZhong(t);
         else if (t < TE.corner) renderChain(t);
-        else if (t < TE.descend) renderHand(t);
+        else if (t < TE.dim0) renderHand(t);
         else renderEnd(t);
       } finally {
         setDusk(0);

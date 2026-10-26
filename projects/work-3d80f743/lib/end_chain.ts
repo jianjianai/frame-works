@@ -2,7 +2,7 @@
 // 用户 2026-10-25 第二次改：下面的人是在救他。老钟被拽出窗（118.1）以后吊在他脚下；她救过的人一个接一个从街两边、铺子里跑来，
 // 在老钟家窗户底下（X_JOIN）蹲一下、跳起来，两只手攥住最下面那个人的脚踝，被一起拽上去；最后一个（ANCHOR）不跳，两腿蹬开站在街上
 // 攥住，人链钉在地上的那一点（PIVOT）不动。整条人链从他的脚踝连到 PIVOT，跟着他绕 PIVOT 左右摆；他那头一摆，一节节往下传，
-// 中间弯成一道波浪（lib/end_rise.ts 的 waveDev），再加一点风往左吹的弯。「后奏二」（TE.let0）从上往下一个个松手，像花一样散开慢慢飘下来，落在街上；最后一个松开手站着。
+// 中间弯成一道波浪（lib/end_rise.ts 的 waveDev），再加一点风往左吹的弯。「后奏二」（TE.let0）人链的形状定住，从上往下一个个松手，各自从原本的位置像花一样散开慢慢飘下来，落在街上；最后一个松开手站着。
 
 import { type MoveKey, type PoseIn } from "@materials/剪纸角色/code/chengtuo";
 import { castJoints, lookOf } from "@materials/剪纸角色/code/cast";
@@ -91,7 +91,9 @@ function moves() {
         // 蹲一下攒劲、跳起来够、攥住
         keys.push({ t: p.join - 0.3, ease: "inOut", p: CROUCH(f) });
         keys.push({ t: p.join - 0.06, ease: "out", p: LEAP(f) });
-        keys.push({ t: p.join + 0.3, ease: "inOut", p: HANG(f, p.k) });
+        // 越接越快，最后 0.1 秒就有下一个人抓上来：吊好的姿势要在那之前到
+        const gap = PLANS[p.k + 1] ? PLANS[p.k + 1].join - p.join : 0.3;
+        keys.push({ t: p.join + Math.min(0.3, gap - 0.06), ease: "inOut", p: HANG(f, p.k) });
       }
     }
     // 下面的人抓住了自己的脚踝：那条腿拽直、往下一坠
@@ -141,6 +143,8 @@ interface Link {
  */
 const layoutMemo = new Map<number, Link[]>();
 function layout(t: number): Link[] {
+  // 松手以后，还攥着的人留在各自原本的位置（不往上收到他脚下），从那里一个个松开、飘下来（用户 2026-10-26）
+  if (t >= TE.let0) t = TE.let0 - 1e-3;
   const key = Math.round(t * 1e4);
   const hit = layoutMemo.get(key);
   if (hit) return hit;
@@ -308,4 +312,12 @@ export function chainPoint(t: number, s: number): V2 {
 }
 /** 人链最下面那个人的脚踝 */
 export const chainBottom = (t: number) => chainPoint(t, 1);
+/** 人链里第 k 个人的头在世界里的哪（画的时候从根 R 转 −th） */
+export function memberHead(t: number, k: number): V2 {
+  const n = memberAt(t, k);
+  const h = castJoints(n.m.spec, n.pose).head;
+  const c = Math.cos(-n.th);
+  const sn = Math.sin(-n.th);
+  return [n.R[0] + h[0] * c - h[1] * sn, n.R[1] + h[0] * sn + h[1] * c];
+}
 export { zhongNow, ANCHOR_AT };

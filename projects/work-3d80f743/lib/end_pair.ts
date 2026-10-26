@@ -6,8 +6,8 @@
 //       往右漂回 X_K 上方，100.27 靴底离地一点停住；又慢慢往上飘；交靴、掰手，103.45 松手。
 //   他穿着铁靴往下坠，104.02「咚」落回 X_K；她光着脚一下子冲上去，越升越慢，被风往左带到楼顶的角上，112.0 停在白的边上。
 //   他跺地（109.02）、从靴子里出来（113.96 / 114.46）往上飘，老钟攥住他的脚踝（115.02）；人链（lib/end_rise.ts）一节节把他送上去，
-//   最后一个人站在街上不离地，整条人链绕着地上那一点随风摆，130.42 一阵风把他荡到她跟前。她一直停在白的边上，发梢一点点化成光；
-//   他正好把砖递到她手里（不翻面），132.42 亮起来，132.72 往下一沉抱住他；136.3 人链散开，她抱着他慢慢落下来，142.03 光着脚落在
+//   最后一个人站在街上不离地，整条人链绕着地上那一点随风摆，127.96 荡到她跟前。她翻身攥住楼顶的栏杆倒挂着，脚尖一点点化成光；
+//   他正好把砖递到她手里（不翻面），128.02 立即亮起来，130.03 松开栏杆抱住他；136.3 人链散开，她抱着他慢慢落下来，142.03 光着脚落在
 //   坑的左边（X_LAND）；放下他（砖给他抱着），去捡他妈妈的外套，回来跪下给他穿上；往后退一步，148.53 光着脚跺一下，地上一个坑。
 
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, figurePose, jointsOf } from "@materials/剪纸角色/code/chengtuo";
@@ -333,20 +333,17 @@ const KID_KEYS: MoveKey[] = [
   { t: TE.joins[0] + 0.1, p: KID.挣 },
   { t: TE.joins[0] + 0.25, ease: "out", p: { ...KID.挣, lookX: 0.1, lookY: 0.9 } },
   { t: TE.joins[0] + 0.55, ease: "inOut", p: KID.看人 },
-  // 越飘越高：两只手抱着砖，随风晃，往下看着大家；再抬头找她
-  { t: 121.5, p: KID.看人 },
-  { t: 122.0, ease: "inOut", p: KID.高处 },
+  // 越飘越高，往下看着大家；第三声「活」更深地低下头看（镜头从他往下扫过下面的人），哭着笑；
+  // 退到整条人链时两只手抱好砖，「去」的长音里抬头找她
+  { t: TE.sweep0 - 0.35, p: KID.看人 },
+  { t: TE.sweep0 + 0.05, ease: "inOut", p: { ...KID.看人, neck: -34, lookX: 0, lookY: 1 } },
+  { t: 123.3, p: { ...KID.看人, neck: -34, lookX: 0, lookY: 1 } },
+  { t: 123.9, ease: "inOut", p: KID.高处 },
   { t: 124.6, p: KID.高处 },
-  { t: 125.2, ease: "inOut", p: KID.高处仰 },
-  // 风把他往左吹：看见她，把砖举起来伸过去——第一次差一点没够到；荡回去，第二次正好递到她手里
+  { t: 125.3, ease: "inOut", p: KID.高处仰 },
+  // 风把他往左吹：看见她，把砖举起来伸过去，这一下就递到她手里
   { t: 126.7, p: KID.高处仰 },
-  { t: 127.35, ease: "inOut", p: KID.举砖 },
-  { t: 127.9, ease: "inOut", p: KID.递 },
-  { t: 128.25, p: KID.递 },
-  { t: 128.7, ease: "inOut", p: KID.高处仰 },
-  { t: 129.15, p: KID.高处仰 },
-  { t: 129.7, ease: "inOut", p: KID.举砖 },
-  { t: TE.hand - 0.22, p: KID.举砖 },
+  { t: TE.hand - 0.55, ease: "inOut", p: KID.举砖 },
   { t: TE.hand, ease: "inOut", p: KID.递 },
   { t: TE.hand + 0.36, ease: "inOut", p: KID.伸 },
   { t: TE.hug - 0.1, p: KID.伸 },
@@ -420,10 +417,9 @@ const HER_KEYS: MoveKey[] = [
   { t: TE.hang, ease: "out", p: HER.倒挂 },
   { t: 120.6, p: HER.倒挂 },
   { t: 121.0, ease: "inOut", p: HER.倒挂哭 },
-  { t: 127.5, p: HER.倒挂哭 },
-  { t: 127.9, ease: "inOut", p: HER.倒挂 },
-  // 远处那只手松开栏杆接住砖；看见是自己写的「活下去」（不翻面）；哭着笑，砖亮起来
-  { t: TE.hand - 0.12, p: HER.倒挂 },
+  { t: TE.hand - 0.5, p: HER.倒挂哭 },
+  // 远处那只手松开栏杆接住砖，一接过来就亮（不翻面）；看一眼，抬头看他，哭着笑
+  { t: TE.hand - 0.12, ease: "inOut", p: HER.倒挂 },
   { t: TE.hand + 0.16, ease: "inOut", p: HER.接 },
   { t: TE.look1, p: HER.接 },
   { t: TE.look1 + 0.3, ease: "inOut", p: HER.哭笑 },
@@ -479,7 +475,7 @@ const herMove = live(HER_KEYS, {
       o.elbowR += 2.5 * Math.sin(t * 29 + 1);
       o.neck += 3 * hitch(t, 1.1);
     }
-    if (t > TE.read0 && t < TE.glow) o.neck += 3 * hitch(t, 1.1);
+    if (t > TE.look1 && t < TE.hug) o.neck += 3 * hitch(t, 1.1);
   },
 });
 const kidMove = live(KID_KEYS, {
@@ -626,8 +622,8 @@ export function herBrickAt(t: number, kid?: { root: V2 }): BrickNow | null {
     const r = kid ? kid.root : kidRoot(t);
     const chest: V2 = [r[0] + KID_CHEST[0] - 30, r[1] + KID_CHEST[1] + 22];
     const raised: V2 = [r[0] - 2, r[1] - RAISE_Y];
-    // 举过头顶伸给她：第一次（没够到）、第二次（正好递到她手里）
-    const up = Math.max(E.io(ph(t, 127.0, 127.45)) * (1 - E.io(ph(t, 128.35, 128.8))), E.io(ph(t, 129.3, 129.75)));
+    // 举过头顶伸给她（荡过去的路上举起来，到她跟前正好递到她手里）
+    const up = E.io(ph(t, TE.hand - 0.9, TE.hand - 0.45));
     const c = mix(chest, raised, up);
     return { c, rot: 0.04 * (1 - up), flipY: -1 };
   }
@@ -653,7 +649,7 @@ function herHoldBrick(t: number): BrickNow {
   }
   return { c, rot: t > TE.hug ? -0.15 * E.io(ph(t, TE.hug, TE.hug + 0.5)) : 0, flipY: -1 };
 }
-/** 砖亮到多亮：132.42 那一下 0.4 秒亮到头，之后很慢地一明一暗 */
+/** 砖亮到多亮：一接过来（「去」128.02）0.4 秒亮到头，之后很慢地一明一暗 */
 export const warmAt = (t: number) => (t < TE.glow ? 0 : E.out(ph(t, TE.glow, TE.glow + 0.4)) * (0.94 + 0.06 * Math.sin((t - TE.glow) * 5.2)));
 
 /** 她围巾垂在胸前那一头（他攥着的地方）：按她没加 IK 的姿势算 */

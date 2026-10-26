@@ -416,13 +416,13 @@ void applyCam;
 void toScreen;
 
 /** 后奏一：退到整幅时她那里一团很强的光，占满半个画面（screen 叠一大团暖白，中间一颗很亮的芯）；落下来时慢慢收回去 */
-export function drawBigLight(g: CanvasRenderingContext2D, base: DOMMatrix, cam: Cam, c: V2, w: number, t: number) {
+export function drawBigLight(g: CanvasRenderingContext2D, base: DOMMatrix, cam: Cam, c: V2, w: number, t: number, size = 1) {
   if (w <= 0.003) return;
   const [sx, sy] = toScreen(cam, c[0], c[1]);
   g.save();
   g.setTransform(base);
   g.globalCompositeOperation = "screen";
-  const R = 1050 * (1 + 0.04 * Math.sin(t * 2.3));
+  const R = 1050 * size * (1 + 0.04 * Math.sin(t * 2.3));
   const gr = g.createRadialGradient(sx, sy, 0, sx, sy, R);
   gr.addColorStop(0, `rgba(255,250,232,${w})`);
   gr.addColorStop(0.12, `rgba(255,244,214,${0.95 * w})`);
