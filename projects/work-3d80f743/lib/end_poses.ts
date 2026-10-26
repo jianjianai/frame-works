@@ -68,6 +68,11 @@ export const HER = {
     ...armL(10, 60, 0, "grip", l),
     ...armR(50, 80, 0, "relax", l),
   })),
+  /** 摸摸他的头（和第一天在街上一样）：近处那只手（IK）放在他头顶，低头看着他，含着泪笑 */
+  摸头: pose(8, { face: 1, ground: false, rot: 0, chestL: "over", float: 0.25, ...legL(-6, -20, -46), ...legR(10, -28, -46), neck: -26, expression: "微笑", smile: 0.6, tears: 1, sad: 0.85, blink: 0.15, lookX: 0.35, lookY: 0.75 }, (l) => ({
+    ...armL(10, 60, 0, "flat", l),
+    ...armR(50, 80, 0, "relax", l),
+  })),
   /** 松手：光着脚一下子轻了，两只手张着朝下伸向他，低头冲他笑（含着泪） */
   放: pose(-4, { face: 1, ground: false, rot: 8, float: 0.5, ...legL(-8, -20, -40), ...legR(10, -34, -40), neck: -28, expression: "微笑", smile: 0.6, tears: 1, lookX: 0.2, lookY: 1 }, (l) => ({
     ...armL(28, 6, 0, "open", l),
@@ -130,6 +135,11 @@ export const HER = {
   })),
   /** 松开栏杆，两只手抱住他（IK），慢慢转正；闭着眼哭着笑 */
   抱他: pose(10, { face: 0.4, ground: false, rot: 0, float: 0.3, chestL: "over", ...legL(-8, -20, -40), ...legR(10, -30, -40), neck: -16, expression: "哭着笑", tears: 1, blink: 0.6, lookX: 0.3, lookY: 0.6 }, (l) => ({
+    ...armL(40, 70, 0, "grip", l),
+    ...armR(50, 80, 0, "grip", l),
+  })),
+  /** 转正以后睁开眼：低头看着夹在两个人中间的砖（自己写的「活下去」），哭着笑 */
+  抱他看: pose(10, { face: 0.4, ground: false, rot: 0, float: 0.3, chestL: "over", ...legL(-8, -20, -40), ...legR(10, -30, -40), neck: -22, expression: "微笑", smile: 0.6, tears: 1, sad: 0.85, blink: 0.25, lookX: 0.25, lookY: 0.9 }, (l) => ({
     ...armL(40, 70, 0, "grip", l),
     ...armR(50, 80, 0, "grip", l),
   })),
@@ -335,6 +345,11 @@ export const KID = {
   套: pose(-4, { face: -0.7, ground: false, float: 0.1, ...legR(4, -6, 0), ...legL(-4, -6, 0), neck: 18, expression: "担心", tears: 1, lookX: -0.5, lookY: -0.8 }, HUGH),
   /** 明白过来：远处那只手攥住她的围巾（IK），拼命摇头，哭 */
   攥: pose(-4, { face: -0.7, ground: false, float: 0.1, ...legR(4, -6, 0), ...legL(-4, -6, 0), neck: 22, expression: "忍着哭", tears: 1, sad: 1, open: 0.3, lookX: -0.4, lookY: -0.8 }, (l) => ({
+    ...armL(36, 110, 0, "grip", l),
+    ...armR(120, 40, 0, "grip", l),
+  })),
+  /** 被她摸着头：不摇了，缩着脖子，闭着眼哭（和第一天被她摸头时一样缩着脖子、眯着眼；这次在哭），近处那只手还攥着围巾 */
+  被摸: pose(-2, { face: -0.7, ground: false, float: 0.1, ...legR(4, -6, 0), ...legL(-4, -6, 0), neck: 10, expression: "哭着笑", tears: 1, sad: 1, blink: 0.85, lookX: -0.4, lookY: -0.5 }, (l) => ({
     ...armL(36, 110, 0, "grip", l),
     ...armR(120, 40, 0, "grip", l),
   })),

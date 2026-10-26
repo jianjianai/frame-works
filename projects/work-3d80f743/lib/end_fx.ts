@@ -332,7 +332,8 @@ export function drawFloatTears(g: CanvasRenderingContext2D, t: number, eye: V2, 
     const side = i % 2 ? 1 : -1;
     const x = eye[0] + side * 22 + side * 10 * a + 4 * Math.sin(a * 5 + i);
     const y = eye[1] - 50 * a - 18 * a * a;
-    g.globalAlpha = Math.min(1, a * 5) * (1 - a / 1.4);
+    const al = Math.min(1, a * 5) * (1 - a / 1.4);
+    g.globalAlpha = al;
     g.fillStyle = "rgba(226,240,255,0.95)";
     g.strokeStyle = "rgba(120,140,190,0.8)";
     g.lineWidth = 1.6;
@@ -340,6 +341,92 @@ export function drawFloatTears(g: CanvasRenderingContext2D, t: number, eye: V2, 
     g.ellipse(x, y, 4.2, 5.6, 0, 0, Math.PI * 2);
     g.fill();
     g.stroke();
+    // 高光；飘到一半被上面的光照到，亮一下
+    g.fillStyle = "rgba(255,255,255,0.95)";
+    g.beginPath();
+    g.arc(x - 1.4, y - 1.9, 1.3, 0, Math.PI * 2);
+    g.fill();
+    const flash = Math.exp(-((a - 0.55) ** 2) / 0.018);
+    if (flash > 0.04) drawGlow(g, x, y, 15, 0.55 * flash * al);
+  }
+  g.restore();
+}
+
+/**
+ * 她接过砖以后的那一滴眼泪：t0 起在眼角鼓起来，t1 离开眼角往下掉（越掉越快），t2 砸在砖上溅开（前面她往上飘时眼泪是往上飘的，
+ * 这一滴往下掉：她又有了分量）。eye、hit：这一刻眼角、砖面上的落点（世界坐标）；z：镜头倍数（描边按 1/√z）
+ */
+export function drawFallTear(g: CanvasRenderingContext2D, t: number, eye: V2, hit: V2, t0: number, t1: number, t2: number, z: number) {
+  if (t < t0 || t > t2 + 1.4) return;
+  const lw = 1.6 / Math.sqrt(Math.max(0.3, z));
+  const drop = (x: number, y: number, r: number, stretch: number, a: number) => {
+    g.globalAlpha = a;
+    g.fillStyle = "rgba(228,242,255,0.96)";
+    g.strokeStyle = "rgba(112,134,186,0.85)";
+    g.lineWidth = lw;
+    // 上尖下圆的一滴
+    g.beginPath();
+    g.moveTo(x, y - r * stretch);
+    g.bezierCurveTo(x + r * 0.35, y - r * stretch * 0.45, x + r, y - r * 0.15, x + r, y + r * 0.25);
+    g.arc(x, y + r * 0.25, r, 0, Math.PI);
+    g.bezierCurveTo(x - r, y - r * 0.15, x - r * 0.35, y - r * stretch * 0.45, x, y - r * stretch);
+    g.closePath();
+    g.fill();
+    g.stroke();
+    // 高光（砖的暖光照在上面）
+    g.fillStyle = "rgba(255,248,226,0.95)";
+    g.beginPath();
+    g.arc(x - r * 0.35, y, r * 0.28, 0, Math.PI * 2);
+    g.fill();
+  };
+  g.save();
+  if (t < t1) {
+    // 在眼角鼓起来
+    const u = (t - t0) / (t1 - t0);
+    drop(eye[0], eye[1] + 3 * u, 1.5 + 3.5 * u * u, 1.3 + 0.5 * u, Math.min(1, u * 3));
+  } else if (t < t2) {
+    // 往下掉：匀加速，落在砖上
+    const u = (t - t1) / (t2 - t1);
+    const x = eye[0] + (hit[0] - eye[0]) * u;
+    const y = eye[1] + 3 + (hit[1] - eye[1] - 3) * u * u;
+    drop(x, y, 5, 1.8 + 1.2 * u, 1);
+  } else {
+    // 砸在砖上：砖面上洇开一小块湿印（落在字上，水把砖面浸深一点），溅开几颗小水珠
+    const e = t - t2;
+    const sp = 1 - Math.exp(-e / 0.07);
+    const rx = 5 + 11 * sp;
+    g.globalAlpha = Math.min(1, e / 0.06) * (1 - Math.max(0, (e - 0.8) / 0.6));
+    g.save();
+    g.translate(hit[0], hit[1] + 3);
+    g.rotate(-0.15);
+    g.scale(1, 0.55);
+    const wet = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+    wet.addColorStop(0, "rgba(128,84,58,0.34)");
+    wet.addColorStop(0.7, "rgba(128,84,58,0.22)");
+    wet.addColorStop(1, "rgba(128,84,58,0)");
+    g.fillStyle = wet;
+    g.beginPath();
+    g.arc(0, 0, rx, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+    const k = 1 - e / 0.32;
+    if (k > 0) {
+      g.lineWidth = lw * 0.8;
+      g.strokeStyle = "rgba(112,134,186,0.85)";
+      g.fillStyle = "rgba(232,244,255,0.95)";
+      for (const [vx, vy, r] of [
+        [-80, -130, 3.2],
+        [72, -150, 2.9],
+        [-20, -185, 2.4],
+        [40, -105, 2.1],
+      ]) {
+        g.globalAlpha = k;
+        g.beginPath();
+        g.arc(hit[0] + vx * e, hit[1] + vy * e + 900 * e * e, r, 0, Math.PI * 2);
+        g.fill();
+        g.stroke();
+      }
+    }
   }
   g.restore();
 }
@@ -435,9 +522,10 @@ export function drawBigLight(g: CanvasRenderingContext2D, base: DOMMatrix, cam: 
 }
 /**
  * 全片最强的暖光（砖翻过来那一下亮起来）：整个画面 soft-light 提暖，再 screen 一层暖雾压过白的冷光，几道慢慢转的光芒从砖上散出去，
- * 砖跟前一团最亮的。c：砖的中心（世界坐标），w：亮到多少（0–1），t：时间（光芒转）
+ * 砖跟前一团最亮的。c：砖的中心（世界坐标），w：亮到多少（0–1），t：时间（光芒转）；
+ * soft：光收在砖上（0–1，1 是全开）——她接过砖以后镜头停在她脸上那一会儿，暖雾、光芒和大团的光收小，不把两个人的脸照白
  */
-export function drawBrickLight(g: CanvasRenderingContext2D, base: DOMMatrix, cam: Cam, c: V2, w: number, t: number) {
+export function drawBrickLight(g: CanvasRenderingContext2D, base: DOMMatrix, cam: Cam, c: V2, w: number, t: number, soft = 1) {
   if (w <= 0.003) return;
   const [sx, sy] = toScreen(cam, c[0], c[1]);
   g.save();
@@ -450,15 +538,16 @@ export function drawBrickLight(g: CanvasRenderingContext2D, base: DOMMatrix, cam
   g.fillStyle = wash;
   g.fillRect(0, 0, W, H);
   g.globalCompositeOperation = "screen";
+  const hz = w * (0.3 + 0.7 * soft);
   const haze = g.createRadialGradient(sx, sy, 0, sx, sy, 1300);
-  haze.addColorStop(0, `rgba(255,214,150,${0.42 * w})`);
-  haze.addColorStop(0.5, `rgba(255,196,128,${0.15 * w})`);
+  haze.addColorStop(0, `rgba(255,214,150,${0.42 * hz})`);
+  haze.addColorStop(0.5, `rgba(255,196,128,${0.15 * hz})`);
   haze.addColorStop(1, "rgba(255,196,128,0)");
   g.fillStyle = haze;
   g.fillRect(0, 0, W, H);
-  // 光芒：几道细长的暖光，慢慢转（镜头退远时短一点、淡一点）
+  // 光芒：几道细长的暖光，慢慢转（镜头退远时短一点、淡一点；光收在砖上时只留一点）
   g.globalCompositeOperation = "lighter";
-  const near = Math.min(1, Math.max(0.25, cam.z / 1.6));
+  const near = Math.min(1, Math.max(0.25, cam.z / 1.6)) * (0.2 + 0.8 * soft);
   for (let i = 0; i < 14; i++) {
     const a = (i / 14) * Math.PI * 2 + t * 0.12 + 0.3 * Math.sin(i * 1.7);
     const len = (900 + 500 * ((i * 37) % 7) / 7) * (0.6 + 0.4 * w) * (0.4 + 0.6 * near);
@@ -477,9 +566,9 @@ export function drawBrickLight(g: CanvasRenderingContext2D, base: DOMMatrix, cam
   g.restore();
   g.save();
   applyCam(g, base, cam, 1);
-  drawGlow(g, c[0], c[1], 44 + 14 * w, 0.72 * w);
-  drawGlow(g, c[0], c[1], 160 * w, 0.26 * w);
-  drawGlow(g, c[0], c[1] - 30, 460 * w, 0.1 * w);
+  drawGlow(g, c[0], c[1], 44 + 14 * w, 0.72 * w * (0.3 + 0.7 * soft));
+  drawGlow(g, c[0], c[1], (60 + 100 * soft) * w, 0.26 * w * (0.5 + 0.5 * soft));
+  drawGlow(g, c[0], c[1] - 30, 460 * w, 0.1 * w * soft);
   const far = Math.min(1, Math.max(0, (1 - cam.z) / 0.75));
   if (far > 0) {
     drawGlow(g, c[0], c[1], 36 / cam.z, 0.6 * w * far);

@@ -299,9 +299,13 @@ const KID_KEYS: MoveKey[] = [
   // 明白过来：攥住她的围巾，拼命摇头
   { t: TE.clutch - 0.04, p: KID.套 },
   { t: TE.clutch + 0.1, ease: "out", p: KID.攥 },
-  { t: TE.peel1, p: KID.攥 },
+  // 她摸他的头：不摇了，缩着脖子闭上眼哭（和第一天被她摸头时一样缩着脖子）；自己松开攥着围巾的手
+  { t: TE.patOn - 0.02, p: KID.攥 },
+  { t: TE.patOn + 0.16, ease: "inOut", p: KID.被摸 },
+  { t: TE.letGo, p: KID.被摸 },
+  { t: TE.letGo + 0.12, ease: "inOut", p: { ...KID.被摸, handL: "open" } },
   // 松手：铁靴一沉，往下坠，远处那只手往上伸着够她
-  { t: TE.release + 0.04, ease: "inOut", p: { ...KID.攥, handR: "open" } },
+  { t: TE.release + 0.04, ease: "inOut", p: { ...KID.被摸, handL: "open", handR: "open", blink: 0 } },
   { t: TE.release + 0.24, ease: "inOut", p: KID.坠 },
   { t: TE.land - 0.02, p: KID.坠 },
   { t: TE.land + 0.1, ease: "out", squash: 0.1, p: KID.站仰 },
@@ -395,10 +399,10 @@ const HER_KEYS: MoveKey[] = [
   { t: TE.boot2[0] + 0.04, ease: "inOut", p: { ...HER.拔R, ...legL(-6, -20, -46) } },
   { t: TE.boot2[1], p: { ...HER.拔R, ...legL(-6, -20, -46) } },
   { t: TE.boot2[2] - 0.02, ease: "inOut", p: HER.光脚抱 },
-  // 他攥着围巾摇头：她冲他笑，把他的手指一根根掰开
-  { t: TE.peel0 - 0.06, p: HER.光脚抱 },
-  { t: TE.peel0 + 0.1, ease: "inOut", p: HER.掰 },
-  { t: TE.release, p: HER.掰 },
+  // 他攥着围巾摇头：她含着泪冲他笑，伸手摸摸他的头（和第一天一样）
+  { t: TE.pat0 - 0.04, p: HER.光脚抱 },
+  { t: TE.patOn, ease: "inOut", p: HER.摸头 },
+  { t: TE.release, p: HER.摸头 },
   // 松手：光着脚一下子轻了，往上冲，低头冲他笑
   { t: TE.release + 0.22, ease: "out", p: HER.放 },
   { t: 104.4, p: HER.放 },
@@ -427,8 +431,11 @@ const HER_KEYS: MoveKey[] = [
   { t: TE.hug, p: HER.哭笑 },
   { t: TE.hug + 0.001, ease: "hold", p: { ...HER.哭笑, rot: -180 } },
   { t: TE.upright, ease: "inOut", p: HER.抱他 },
+  // 转正以后睁开眼，低头看着手里的砖（自己写的「活下去」），哭着笑，一滴眼泪往下掉在砖上
+  { t: TE.eyesOpen - 0.04, p: HER.抱他 },
+  { t: TE.eyesOpen + 0.16, ease: "inOut", p: HER.抱他看 },
   // 抱着他慢慢落下来
-  { t: TE.pairDown + 0.2, p: HER.抱他 },
+  { t: TE.pairDown + 0.2, p: HER.抱他看 },
   { t: TE.pairDown + 0.9, ease: "inOut", p: HER.落 },
   { t: TE.herLand - 0.3, p: HER.落 },
   { t: TE.herLand, ease: "inOut", squash: 0.05, p: HER.站抱 },
@@ -495,8 +502,8 @@ const kidMove = live(KID_KEYS, {
   springs: ARMS,
   follow: 0,
   add: (t, o) => {
-    // 攥着她的围巾拼命摇头
-    if (t > TE.clutch && t < TE.release + 0.1) o.neck += 9 * Math.sin((t - TE.clutch) * 21) * Math.min(1, (t - TE.clutch) / 0.1) * (1 - ph(t, TE.peel1 - 0.05, TE.release + 0.1));
+    // 攥着她的围巾拼命摇头；她的手落到他头上就不摇了
+    if (t > TE.clutch && t < TE.patOn + 0.2) o.neck += 9 * Math.sin((t - TE.clutch) * 21) * Math.min(1, (t - TE.clutch) / 0.1) * (1 - E.io(ph(t, TE.patOn - 0.04, TE.patOn + 0.14)));
   },
 });
 
@@ -725,17 +732,38 @@ export function herBrickAt(t: number, kid?: { root: V2 }): BrickNow | null {
 /** 在她手里的砖（不翻面，「活下去」一直朝外）：接过来 → 立即抱住他，夹在两个人中间 → 落地放下他时交给他 */
 function herHoldBrick(t: number): BrickNow {
   const k = kidRoot(Math.min(t, TE.hand));
-  let c: V2 = [k[0] - 2, k[1] - RAISE_Y];
-  // 抱住他：夹在两个人中间（她胸口右边）
+  // 砖落进她手里，手一坠（和第一幕周磊接砖一样：别人用心送的东西拿在手里格外沉）；就是这一坠把她拽正
+  let c: V2 = [k[0] - 2, k[1] - RAISE_Y + 30 * (1 - Math.exp(-Math.max(0, t - TE.hand) / 0.035))];
+  // 抱住他：夹在两个人中间（她胸口右边；靠右一点，她近处那只前臂不挡住「活」字）
   if (t > TE.hug) {
     const ch = t < TE.herLand ? herChest(t) : landedChest(t);
-    c = mix(c, [ch[0] + 46, ch[1] + 40], E.io(ph(t, TE.hug, TE.hug + 0.5)));
+    c = mix(c, [ch[0] + 80, ch[1] + 36], E.io(ph(t, TE.hug, TE.hug + 0.5)));
   }
   return { c, rot: t > TE.hug ? -0.15 * E.io(ph(t, TE.hug, TE.hug + 0.5)) : 0, flipY: -1 };
 }
 /** 砖亮到多亮：一接过来（「去」128.02）0.4 秒亮到头，之后很慢地一明一暗 */
 export const warmAt = (t: number) => (t < TE.glow ? 0 : E.out(ph(t, TE.glow, TE.glow + 0.4)) * (0.94 + 0.06 * Math.sin((t - TE.glow) * 5.2)));
 
+/**
+ * 摸头时她近处那只手的手腕：手掌贴在他头顶的头发上（离头的中心 44 + 8），手指朝他后脑勺那边，手腕在靠她这边；
+ * 揉的时候沿着头顶来回两下（和第一幕摸他的头一样）
+ */
+function patAt(t: number): { wrist: V2; dir: V2 } {
+  const k = kidAt(t);
+  const j = castJoints(k.spec, k.pose);
+  const hs = k.spec.headScale ?? 1;
+  const d: V2 = [(j.head[0] - j.neck[0]) * hs, (j.head[1] - j.neck[1]) * hs];
+  const l = Math.hypot(d[0], d[1]) || 1;
+  const up: V2 = [d[0] / l, d[1] / l];
+  // 横着朝他后脑勺（他朝左，后脑勺在右边）
+  const side: V2 = [-up[1], up[0]];
+  const rub = t > TE.patOn && t < TE.patUp ? Math.sin(4 * Math.PI * ph(t, TE.patOn, TE.patUp)) : 0;
+  const s = -17 + 11 * rub;
+  // 手指顺着头顶往后脑勺、稍微往下（贴着头形）
+  const a = 0.42 + 0.06 * rub;
+  const dir: V2 = [side[0] * Math.cos(a) - side[1] * Math.sin(a), side[0] * Math.sin(a) + side[1] * Math.cos(a)];
+  return { wrist: [k.root[0] + j.neck[0] + d[0] + up[0] * 52 + side[0] * s, k.root[1] + j.neck[1] + d[1] + up[1] * 52 + side[1] * s], dir };
+}
 /** 她围巾垂在胸前那一头（他攥着的地方）：按她没加 IK 的姿势算 */
 function scarfOf(t: number): V2 {
   const hr = herRootRaw(t);
@@ -805,9 +833,9 @@ export function kidAt(t: number): KidNow {
     ik("L", [nk[0] - 4, nk[1] + 34], w * (1 - E.io(ph(t, TE.clutch - 0.2, TE.clutch - 0.08))));
     ik("R", [nk[0] - 36, nk[1] + 10], w);
   }
-  // 近处那只手攥着她的围巾（垂在她胸前那一头）；被她一根根掰开
+  // 近处那只手攥着她的围巾（垂在她胸前那一头）；她摸着他的头，他自己松开了手
   if (t > TE.clutch - 0.08 && t < TE.release + 0.1) {
-    ik("L", scarfOf(t), E.io(ph(t, TE.clutch - 0.08, TE.clutch + 0.06)) * (1 - E.io(ph(t, TE.peel1 - 0.04, TE.release + 0.1))));
+    ik("L", scarfOf(t), E.io(ph(t, TE.clutch - 0.08, TE.clutch + 0.06)) * (1 - E.io(ph(t, TE.letGo, TE.release + 0.1))));
   }
   // 她那块（第一视角以后）：抱在胸口；举过头顶；交出去
   if (her && t > TE.pov && t < TE.hand + 0.1) {
@@ -891,13 +919,22 @@ export function herAt(t: number): HerNow {
         near = mix(near, [rim[0] - 4, rim[1] + 6], w);
       }
     }
-    // 掰开他攥着围巾的手：近处那只手盖到他手上，一根根掰开
-    const pw = E.io(ph(t, TE.peel0 - 0.08, TE.peel0 + 0.06)) * (1 - E.io(ph(t, TE.release, TE.release + 0.1)));
-    if (pw > 0) {
-      const sc = scarfOf(t);
-      near = mix(near, [sc[0] + 10 + 8 * Math.sin((t - TE.peel0) * 28) * (1 - ph(t, TE.peel1 - 0.1, TE.peel1)), sc[1] + 10], pw);
-    }
+    // 摸摸他的头（和第一天在街上一样）：近处那只手从靴口上抬起来，放到他头顶，手掌贴着头发揉两下，松手前一直放在他头上
+    const pw = E.io(ph(t, TE.pat0, TE.patOn)) * (1 - E.io(ph(t, TE.release, TE.release + 0.12)));
+    const pat = pw > 0 ? patAt(t) : null;
+    if (pat) near = mix(near, pat.wrist, pw);
     ik("L", near, hold, "over");
+    if (pat) {
+      // 手掌平贴着头发：按 IK 定下来的前臂算手腕要翻多少（最多 75°）；她朝右，画面里的角度镜像回局部的
+      const jj = jointsOf(p);
+      const ang = (a: number[], b: number[]) => Math.atan2(-(b[0] - a[0]), b[1] - a[1]);
+      let dh = Math.atan2(-pat.dir[0], pat.dir[1]) - ang(jj.elbowL, jj.wristL);
+      while (dh > Math.PI) dh -= 2 * Math.PI;
+      while (dh < -Math.PI) dh += 2 * Math.PI;
+      const arm = p.armL as { h: number };
+      const h = mir * Math.max(-1.3, Math.min(1.3, dh));
+      p.armL = { ...(p.armL as object), h: arm.h + (h - arm.h) * pw } as PoseIn["armL"];
+    }
   }
   // 倒挂：两只手攥着楼顶栏杆；他荡过来的最后半秒，远处那只松开栏杆朝他伸过去，他到跟前时砖正好放进她手里
   // （原来递到的前 0.1 秒才松手，接住以后紧接着就翻身抱他，「接住」那一下看不出来）
@@ -919,7 +956,8 @@ export function herAt(t: number): HerNow {
     const kc: V2 = [k[0] + KID_CHEST[0], k[1] + KID_CHEST[1]];
     const w = E.io(ph(t, TE.hug - 0.1, TE.hug + 0.3)) * (1 - E.io(ph(t, TE.putDown, TE.putDown + 0.35)));
     ik("R", [kc[0] + 34, kc[1] - 18], w);
-    ik("L", [kc[0] + 40, kc[1] + 14], w, "over");
+    // 转正以后近处那只手搂在他腰上（低一点，前臂不挡住夹在两个人中间的砖：镜头停在她脸上时看得见「活下去」和掉在上面的眼泪）
+    ik("L", [kc[0] + 40, kc[1] + 14 + 56 * E.io(ph(t, TE.upright - 0.25, TE.upright + 0.2))], w, "over");
   }
   // 外套：捡起来、拎着走回来、举着领子给他披上
   if (t > TE.coatPick - 0.2 && t < TE.coatOn1 + 0.35) {

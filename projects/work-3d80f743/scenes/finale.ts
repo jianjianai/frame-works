@@ -6,7 +6,8 @@
 //   人链（118.02 街上一个抓住一个，退到 119.45 改成跟着他往上）→ 第三声（121.75）从他往下一张脸一张脸看到街上最后那个人 →
 //   第四声（126.01）从街上往后拉开到整条人链，人链先往右、再往左荡 → 在这反乌托邦里（129.55 起推）推到他，跟着他往左荡过去，
 //   句子唱完把砖递到她手里（131.96）、鼓回来那一下一接过来就亮（132.01）、她立即松开栏杆抱住他、转正（132.58）→
-//   拉远、整个画面暗下去（132.75）→ 尾奏：光直接炸开、铺满整个画面（134.02）→ 散开、落下来、推向两个人 →
+//   推到她脸上：睁开眼看砖，一滴眼泪往下掉在「活」字上（133.02）→
+//   拉远、整个画面暗下去（133.3）→ 尾奏：光直接炸开、铺满整个画面（134.02），白里留着两个人的影子 → 散开、落下来、推向两个人 →
 //   落地、给他穿外套 → 光脚跺一下（134.03）。
 //   （用户 2026-10-25 第二次改 112.02 以后：下面的人是在救他；人链钉在地上的那一点不动，随风摆；砖不翻面；她给他穿外套，光着脚跺出一个坑）
 
@@ -22,7 +23,7 @@ import { ceilCam, chainCam, endCam, handCam, oneTakeCam, slowCam, smileCam, stom
 import { HB_REST, drawCoat, drawCoatInHands, drawGroundBrick, drawHer, drawKid, drawKidBoots, drawLooseGift, herAt, herBrickAt, holding, kidAt, warmAt } from "../lib/end_pair";
 import { drawZhongHouse } from "../lib/end_zhong";
 import { drawChain } from "../lib/end_chain";
-import { drawBigLight, drawBrickLight, drawCrater, drawCraterFront, drawDiveLines, drawFloatTears, drawLandBurst, drawLightMotes, drawRiseGlow, drawStompBurst, stompFlash } from "../lib/end_fx";
+import { drawBigLight, drawBrickLight, drawCrater, drawCraterFront, drawDiveLines, drawFallTear, drawFloatTears, drawLandBurst, drawLightMotes, drawRiseGlow, drawStompBurst, stompFlash } from "../lib/end_fx";
 import { drawPov } from "../lib/end_pov";
 import { X_K } from "../lib/end_map";
 import { drawCrowdFar, drawCrowdNear } from "../lib/end_crowd";
@@ -221,25 +222,69 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     }
     herLight(cam, t);
   };
-  /** 「在这反乌托邦里」：推到他，跟着他荡过去把砖递给她，一接过来就亮，她立即松开栏杆抱住他、转正 */
+  /** 她的近处那只眼的眼角（相对头；转正抱着他、低头看砖时） */
+  const EYE: V2 = [22, 18];
+  const eyeAt = (t: number): V2 => {
+    const h = herAt(t).head;
+    return [h[0] + EYE[0], h[1] + EYE[1]];
+  };
+  /**
+   * 「在这反乌托邦里」：推到他，跟着他荡过去把砖递给她，一接过来就亮，她立即松开栏杆抱住他、转正；
+   * 镜头推到她脸上停住：她睁开眼看着砖，一滴眼泪往下掉在砖上，砖跟着一亮
+   */
   const renderHand = (t: number) => {
     const cam = handCam(t);
     worldShot(cam, t);
     herLight(cam, t);
-    // 全片最强的暖光：以砖为中心；亮起来那一下一闪
+    // 全片最强的暖光：以砖为中心；亮起来那一下一闪，之后镜头推到她脸上，光收在砖上（不把两个人的脸照白），拉远时再放开（renderEnd）
     const b = herBrickAt(t);
-    if (b) drawBrickLight(ctx, base, cam, b.c, warmAt(t), t);
+    if (b) drawBrickLight(ctx, base, cam, b.c, warmAt(t), t, 1 - 0.75 * E_io((t - TE.glow - 0.12) / 0.4));
     white(0.4 * kick(t, TE.glow, 0.22), "#fff3d8");
+    tearFx(cam, t);
+  };
+  /** 她那一滴眼泪：从眼角直直地往下掉，砸在砖面上（落点横着在眼角正下方，不出砖；砸下去以后跟着砖走），砖跟着一亮 */
+  const tearFx = (cam: Cam, t: number) => {
+    const b = herBrickAt(t);
+    if (!b || t < TE.tear0) return;
+    applyCam(ctx, base, cam, 1);
+    const hb = herBrickAt(TE.tearHit)!.c;
+    const e1 = eyeAt(TE.tear1);
+    const off: V2 = [Math.min(36, Math.max(-36, e1[0] - hb[0])), -4];
+    const hit: V2 = t < TE.tearHit ? [hb[0] + off[0], hb[1] + off[1]] : [b.c[0] + off[0], b.c[1] + off[1]];
+    drawFallTear(ctx, t, eyeAt(Math.min(t, TE.tear1)), hit, TE.tear0, TE.tear1, TE.tearHit, cam.z);
+    drawGlow(ctx, hit[0], hit[1], 60, 0.32 * kick(t, TE.tearHit, 0.3));
+  };
+  /** 两个人抱在一起的影子（暖褐，糊一点），画在全白上面；光的芯在两个人中间（砖） */
+  const pairShadow = (cam: Cam, t: number, c: V2, a: number) => {
+    bctx.setTransform(1, 0, 0, 1, 0, 0);
+    bctx.clearRect(0, 0, width, height);
+    applyCam(bctx, base, cam, 1);
+    drawHer(bctx, t, cam.z, (cc) => drawKid(cc, t, cam.z, { boots: false }));
+    bctx.setTransform(1, 0, 0, 1, 0, 0);
+    bctx.globalCompositeOperation = "source-in";
+    bctx.fillStyle = "#9c6a48";
+    bctx.fillRect(0, 0, width, height);
+    bctx.globalCompositeOperation = "source-over";
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 0.34 * a;
+    ctx.filter = `blur(${Math.max(1, Math.round((3 * width) / 1080))}px)`;
+    ctx.drawImage(buf, 0, 0);
+    ctx.restore();
+    applyCam(ctx, base, cam, 1);
+    drawGlow(ctx, c[0], c[1], 26 / cam.z, 0.9 * a);
   };
   const renderEnd = (t: number) => {
     const cam = endCam(t);
     worldShot(cam, t);
+    tearFx(cam, t);
     const b = herBrickAt(t);
     if (b) {
       // 「在这反乌托邦里」后半句：整个画面（连天上的白）暗下去，只剩她的光在画面正中；
       // 这句唱完（后奏一 134.02）光直接炸开，铺满整个画面；之后慢慢退去，退完正好人链散开
       const back = E_io((t - TE.rev0) / (TE.let0 - TE.rev0));
-      const dark = 0.88 * E_io((t - TE.dim0 - 0.1) / 1.1) * (1 - back);
+      // 从她脸上拉远时暗下去（原来 1.2 秒，现在先在她脸上停了一会儿，0.75 秒暗下去，光炸开以前暗透）
+      const dark = 0.88 * E_io((t - TE.dim0) / 0.75) * (1 - back);
       if (dark > 0.003) {
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -249,9 +294,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         ctx.restore();
       }
       const grow = E_io((t - TE.descend) / (TE.lit - TE.descend));
-      drawBrickLight(ctx, base, cam, b.c, warmAt(t) * (0.6 + 0.4 * (1 - back)), t);
+      drawBrickLight(ctx, base, cam, b.c, warmAt(t) * (0.6 + 0.4 * (1 - back)), t, 0.25 + 0.75 * E_io((t - TE.dim0) / 0.5));
       drawBigLight(ctx, base, cam, b.c, (0.75 + 0.25 * grow) * E_io((t - TE.dim0) / 0.6) * (1 - 0.85 * back), t, 0.32 + 2.6 * grow * grow);
-      white(0.85 * grow * grow * (1 - back) + 0.3 * kick(t, TE.descend, 0.2), "#fff4dc");
+      const wa = 0.85 * grow * grow * (1 - back);
+      white(wa + 0.3 * kick(t, TE.descend, 0.2), "#fff4dc");
+      // 全白的时候中间留着两个人抱在一起的影子（光是从他们中间来的）；光退下去时他们先露出来
+      if (wa > 0.02) pairShadow(cam, t, b.c, wa);
     }
     // 淡出
     if (t > TE.fade0) {
