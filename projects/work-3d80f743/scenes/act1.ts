@@ -293,8 +293,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       const passing = t < T.walk0 + 1.2;
       const seeZhong = t >= T.zhong - 0.45 && t < T.zhong + 0.02;
       const pat = t >= T.pat - 0.3 && t < T.pat + 0.5;
+      // 摸头时近处的手由 IK 放到他头顶（patAt）；远处的手往后收在胯后面、只小小地摆（弯着腰时垂下来正好挨着他的耳朵，像两只手捧着他的头）。
+      // 手落下时弯腰到 28°，边揉边直起身：肩膀往后让，抵掉往前走的那一段，胳膊一直是伸着的，不折起来
+      const farSwing = ((sw(p).shoulderR as number) - (p.lean as number)) * 0.3 - 26;
+      const bow = t < T.pat + 0.12 ? 14 + 14 * clamp01((t - T.pat + 0.3) / 0.42) : 28 - 24 * clamp01((t - T.pat - 0.12) / 0.32);
       const extra: Angles = pat
-        ? { lean: 12, ...armL(50 + (k % 2 ? -8 : 6), 26, -26, "flat", 12), neck: -14, expression: "微笑", squint: 0.4, lookX: -0.4, lookY: 0.9 }
+        ? { lean: bow, ...armL(50 + (k % 2 ? -8 : 6), 26, -26, "flat", bow), ...armR(farSwing, 14, 0, "relax", bow), neck: -14, expression: "微笑", squint: 0.4, lookX: -0.4, lookY: 0.9 }
         : wave > 0.5
           ? { ...WAVE_R, shoulderR: (WAVE_R.shoulderR as number) + (k % 2 ? -14 : 14), neck: 18, expression: "笑", lookX: -0.7, lookY: -0.7 }
           : passing
@@ -632,8 +636,9 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   }
   kidKeys.push(
     { t: T.kidStop + 0.26, ease: "out", plant: "R", squash: 0, p: KID.仰头笑 },
-    { t: T.pat + 0.1, ease: "inOut", plant: "R", p: KID.被摸头 },
-    { t: T.pat + 0.45, ease: "inOut", plant: "R", p: KID.被摸头 },
+    // 她的手伸过来时就缩脖子、眯眼，只低一半头、身子不往前倾（仰着的头整个低下来，头顶往她那边送 50 多，她的胳膊只能折起来）
+    { t: T.pat + 0.06, ease: "inOut", plant: "R", p: { ...KID.被摸头, neck: 21, lean: -4 } },
+    { t: T.pat + 0.45, ease: "inOut", plant: "R", p: { ...KID.被摸头, neck: 21, lean: -4 } },
     // 她摸完接着往前走：他转过来一点，仰着头笑着目送她、挥挥手
     { t: T.pat + 0.85, ease: "inOut", plant: "R", p: { ...KID.仰头笑, face: 0.45, lookX: -0.8 } },
     { t: T.pat + 1.2, ease: "inOut", plant: "R", p: { ...KID.挥手, face: 0.45 } },
@@ -642,11 +647,99 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     { t: T.pat + 1.95, ease: "inOut", plant: "R", p: { ...KID.挥手, face: 0.45, shoulderR: 132 } },
   );
   const kidMove = live(kidKeys, { look: lookOf(STONE), base: { wind: WIND * 0.6 }, idle: true, seed: 7, springs: ARMS });
-  const kidX0 = chenAt(T.pat).x + jointsOf(chenAt(T.pat).pose).palmL[0] - 30 + kidMove(T.pat).x;
+
+  // 摸头（用户 2026-10-26：「这里摸小石头没摸到」——原来近处的手是一个固定姿势，跟着她走从他头顶上方一滑而过，还画在他后面被头挡住；
+  // 接着「这个手的姿势很奇怪，需要调整小石头的占位」——他站得太近，她肩膀快到他头顶正上方，胳膊折成 L 形、前臂横着按在头上）：
+  // 他站在她前面，手从摆臂的位置伸出去、胳膊伸直落到他头顶（手腕 IK），手掌平贴着头发揉两下；她弯着腰边走边直起身，肩膀往后让，
+  // 胳膊从伸直慢慢弯一点（肘往下、往后，和摆臂同一个方向）按在他头上，揉完顺着后脑勺往前（她走的方向）离开头发，一路接回摆臂。
+  // 手离开头发以前，他画在她身子前面、她近处那只手后面（beforeFrontArms）
+  const PAT_IN = T.pat - 0.2;
+  const PAT_ON = T.pat + 0.12;
+  const PAT_UP = T.pat + 0.44;
+  const PAT_END = PAT_UP + 0.28;
+  /** 他的头顶（相对他的根）和头顶朝上的方向：头以脖子为中心放大 headScale 倍 */
+  const KID_HEAD_R = 44;
+  const kidCrown = (pose: PoseIn): { top: V2; up: V2 } => {
+    const j = castJoints(STONE, pose);
+    const hs = STONE.headScale ?? 1;
+    const d: V2 = [(j.head[0] - j.neck[0]) * hs, (j.head[1] - j.neck[1]) * hs];
+    const l = Math.hypot(d[0], d[1]);
+    const up: V2 = [d[0] / l, d[1] / l];
+    return { top: [j.neck[0] + d[0] + up[0] * KID_HEAD_R, KID_Y + j.neck[1] + d[1] + up[1] * KID_HEAD_R], up };
+  };
+  // 他停在她前面：手落到头上那一刻，头顶在她肩膀前面 PAT_REACH（胳膊正好伸直）
+  const PAT_REACH = 122;
+  const kidX0 = (() => {
+    const c = chenAt(PAT_ON);
+    const f = kidMove(PAT_ON);
+    return c.x + jointsOf(c.pose).shoulderL[0] - PAT_REACH - kidCrown(f.pose).top[0] + f.x;
+  })();
   // 朝右的人整套镜像：脚钉在地上算出来的根的 x 要取反
   const kidAt = memoT((t: number) => {
     const f = kidMove(t);
     return { pose: f.pose, x: kidX0 - f.x };
+  });
+  /** 手掌朝下、手指朝他后脑勺（画面左边）微微往下顺着头形 */
+  const PAT_HAND = 100 * (Math.PI / 180);
+  const PAT_WRIST = 75 * (Math.PI / 180);
+  const angleOf = (from: number[], to: number[]) => Math.atan2(-(to[0] - from[0]), to[1] - from[1]);
+  const bez = (a: V2, b: V2, e: V2, s: number) => [0, 1].map((i) => (1 - s) ** 2 * a[i] + 2 * s * (1 - s) * b[i] + s * s * e[i]) as V2;
+  /** 这一刻手心的位置、手的朝向（还没 IK） */
+  const patPath = (t: number) => {
+    const c = chenAt(t);
+    const k = kidAt(t);
+    const cr = kidCrown(k.pose);
+    // 头顶往上 d、往他脸那边（画面右，她那边）side
+    const crown = (d: number, side: number): V2 => [k.x + cr.top[0] + cr.up[0] * d - cr.up[1] * side, cr.top[1] + cr.up[1] * d + cr.up[0] * side];
+    // 原来摆臂的手：伸过去从它出发，抬起来以后回到它（位置和手的朝向都接得上，不跳）
+    const j0 = jointsOf(c.pose);
+    const swing: V2 = [c.x + j0.palmL[0], c.y + j0.palmL[1]];
+    const swingHand = angleOf(j0.wristL, j0.palmL);
+    const u = ph(t, PAT_ON, PAT_UP);
+    const rub = t > PAT_ON && t < PAT_UP ? Math.sin(4 * Math.PI * u) : 0;
+    let palm: V2;
+    let hand: number;
+    if (t < PAT_ON) {
+      const x = ph(t, PAT_IN, PAT_ON);
+      palm = bez(swing, crown(66, 46), crown(8, 0), x * (2 - x));
+      hand = swingHand + (PAT_HAND - swingHand) * E.out(x);
+    } else if (t < PAT_UP) {
+      // 手掌中心在头发上面 8（手的厚度）
+      palm = crown(8, 11 * rub);
+      hand = PAT_HAND + 0.06 * rub;
+    } else {
+      const s = E.io(ph(t, PAT_UP, PAT_END));
+      palm = bez(crown(8, 0), crown(22, -70), swing, s);
+      hand = PAT_HAND + (swingHand - PAT_HAND) * s;
+    }
+    // 手掌中心离他头的中心多远（离开头发以后胳膊回到他后面）
+    const off = Math.hypot(palm[0] - (k.x + cr.top[0] - cr.up[0] * KID_HEAD_R), palm[1] - (cr.top[1] - cr.up[1] * KID_HEAD_R));
+    return { c, palm, hand, off };
+  };
+  const firstAt = (t0: number, t1: number, ok: (t: number) => boolean) => {
+    for (let t = t0; t < t1; t += 1 / 240) if (ok(t)) return t;
+    return t1;
+  };
+  // 手离开头发：只换一次前后（收回摆臂时手还会从他后脑勺后面经过）
+  const FRONT_OFF = firstAt(PAT_UP, PAT_END, (t) => patPath(t).off >= KID_HEAD_R + 34);
+  const patAt = memoT((t: number): { pose: PoseIn; front: boolean } | null => {
+    if (t <= PAT_IN || t >= PAT_END) return null;
+    const { c, palm } = patPath(t);
+    let { hand } = patPath(t);
+    const front = t < FRONT_OFF;
+    const p: PoseIn = { ...c.pose };
+    const arm = p.armL as { a: number; b: number; h: number };
+    // 肘只往正常的方向弯（bend −1，和摆臂一样；用户 2026-10-26：「手臂怎么能向下弯呢？这个拐弯不对」——肘往外拱时前臂反着折，是反关节）。
+    // 前臂由 IK 定下来以后再转手腕，手掌保持平贴，手腕最多翻 75°
+    for (let i = 0; i < 2; i++) {
+      const wrist: V2 = [palm[0] + 17 * Math.sin(hand), palm[1] - 17 * Math.cos(hand)];
+      p.armL = { ...arm, to: [wrist[0] - c.x, wrist[1] - c.y], ik: 1, bend: -1, chest: front ? "over" : "under" } as PoseIn["armL"];
+      const j = jointsOf(p);
+      const fa = angleOf(j.elbowL, j.wristL);
+      hand = Math.min(hand, fa + PAT_WRIST);
+      (p.armL as { h: number }).h = hand - fa;
+    }
+    return { pose: p, front };
   });
 
   // ——————————— 老钟：一楼窗后，看见她走过来，举起茶杯 ———————————
@@ -1365,12 +1458,28 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       cc.restore();
     };
     const late: (() => void)[] = [];
+    // 小石头：摸头时画在她身子和她近处那只手之间
+    let kidDrawn = false;
+    const drawKid = () => {
+      kidDrawn = true;
+      const k = kidAt(t);
+      if (k.x > view.x0 - 300 && k.x < view.x1 + 300) drawPerson(g, STONE, k.pose, k.x, KID_Y, zl());
+    };
+    const pat = patAt(t);
     const drawHer = () => {
       if (c.x < view.x0 - 400 || c.x > view.x1 + 400) return;
       const hasBrick = t >= T.pull && t < T.take;
+      const kidBetween = pat?.front
+        ? (cc: CanvasRenderingContext2D) => {
+            cc.save();
+            cc.setTransform(worldM);
+            drawKid();
+            cc.restore();
+          }
+        : undefined;
       g.save();
       g.translate(c.x, c.y);
-      drawChengtuo(g, c.pose, { line: 1 / Math.sqrt(cam.z), hold: hasBrick ? { L: brickHold(() => 0, brickPos, late) } : undefined });
+      drawChengtuo(g, pat ? pat.pose : c.pose, { line: 1 / Math.sqrt(cam.z), hold: hasBrick ? { L: brickHold(() => 0, brickPos, late) } : undefined, beforeFrontArms: kidBetween });
       g.restore();
     };
     const drawHim = () => {
@@ -1415,10 +1524,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     for (const f of late) f();
     if (t >= T.drop && t < T.slam) drawBell(g, bc, cam.z);
     // 小石头
-    if (t > kid0 - 0.2) {
-      const k = kidAt(t);
-      if (k.x > view.x0 - 300 && k.x < view.x1 + 300) drawPerson(g, STONE, k.pose, k.x, KID_Y, zl());
-    }
+    if (t > kid0 - 0.2 && !kidDrawn) drawKid();
     // 尘土：砸地、刹车、落地
     const puff = (x0: number, t0: number, n: number, seed: number, dur: number, spread: number, rise: number, size: number, alpha: number) => {
       const a = t - t0;

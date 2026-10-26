@@ -5,7 +5,7 @@ import { type Cam, E, aim, camLerp, kick, ph } from "./cam";
 import { TE, type V2, breath, herm, lerp, mix } from "./end_t";
 import { X_K, ZW } from "./end_map";
 import { HB_REST, X_LAND, herAt, herBrickAt, herChest, kidAt, kidRoot } from "./end_pair";
-import { X_JOIN, chainH } from "./end_rise";
+import { MEMBERS, X_JOIN, chainH } from "./end_rise";
 import { memberHead } from "./end_chain";
 
 const KID_CHEST: V2 = [4, -232];
@@ -120,11 +120,12 @@ export function oneTakeCam(t: number): Cam {
 
 // ——————————————— 她越升越快，低头冲他笑（接第一视角抬头：镜头往上甩，追上她） ———————————————
 export function smileCam(t: number): Cam {
-  const h = herAt(t).head;
+  const her = herAt(t);
+  const h = her.head;
   // 甩上来：起先镜头比她快（她从画面上面落进来），追上以后和她一样快；最后她仰起脸，镜头慢一点（她往画面上面走）
   const sy = 860 - 520 * (1 - E.out(ph(t, TE.smile, TE.smile + 0.4))) - 140 * E.io(ph(t, TE.faceUp0, TE.stompCut));
-  // 她在画面右边一点，左边是她家那栋楼的右墙（窗一排排往下刷，看得出升得快）
-  return withBreath(aim(h[0] - 170, h[1] + 160, 540, sy, 1.3), t, 2.5, E.io(ph(t, TE.smile + 0.3, TE.smile + 0.8)));
+  // 横着对准她（用户 2026-10-26，1:46.50：「这里镜头对准主角」；原来她在画面右边、左边留给她家那栋楼的右墙）
+  return withBreath(aim(her.chest[0], h[1] + 160, 540, sy, 1.3), t, 2.5, E.io(ph(t, TE.smile + 0.3, TE.smile + 0.8)));
 }
 
 // ——————————————— 跺地 ———————————————
@@ -230,76 +231,122 @@ const streetChain = (t: number): Cam => {
   return { ...c, z: c.z * (1 + 0.012 * k) };
 };
 /**
- * 整幅（用户 2026-10-26：倾斜的两版都不对——「感觉还是不对，你想一个新的震撼方案吧，把倾斜的这个想法撤销」）：
- * 画面是正的，退到整座城：地面在画面下面（1760），人链成了一根细线从街上一直伸进头顶的白里，倒挂的她在左上楼顶上（倍数 0.15）。
- * 镜头从他往下扫过几个人、边扫边退，一路退到这里（chainCam），之后极慢地往后漂，
- * 和一道细细的暖光沿人链从街上描到天上（scenes/finale.ts 的 chainGlow），带着眼睛把人链有多长走一遍
+ * 整幅：画面是正的，地面贴着画面下边，人链从街上一直伸进头顶的白里，倒挂的她在左上楼顶上，街坊仰着头站在街上
+ * （用户 2026-10-26：倾斜的两版都不对，「把倾斜的这个想法撤销」；2:04.65「感觉这里拉得太远了」：0.15 → 0.195，正好装下整条人链）
  */
-// （2:04.65）「感觉这里拉得太远了，你适当调整一下」：0.15 → 0.195，正好装下整条人链（地面贴着画面下边，他的头离画面上边一百多，上面一条白）
 const WIDE: Cam = aim(-1800, 0, 540, 1880, 0.195);
 /**
- * 退到以后不停：继续极慢地往后漂（屏着一口气看着整条人链，越漂越慢），一直漂到推向他；
- * 他往左荡向她时镜头也跟着往左（用户 2026-10-26，2:05.12：「这里小石头向左，镜头也跟着向左」）：跟他横着走的七成，0.8 秒柔和地跟上
+ * 拉到以后不停：继续极慢地往后漂（屏着一口气看着整条人链，越漂越慢），一直漂到推向他；
+ * 他往左荡向她时镜头也跟着往左（用户 2026-10-26，2:05.12：「这里小石头向左，镜头也跟着向左」），只跟他横着走的三成
+ * （原来七成；2:13.10 用户要「展示整个人链，先向右摇，之后向左摇」，跟得多了画面里看不出人链在往左荡），0.8 秒柔和地跟上
  */
 let KX_WIDE = NaN;
-const wideAt = (t: number): Cam => {
+function wideAt(t: number): Cam {
   if (Number.isNaN(KX_WIDE)) KX_WIDE = kidChest(TE.wide1)[0];
-  const pan = t > TE.wide1 ? 0.7 * (kidChest(t)[0] - KX_WIDE) * E.io(ph(t, TE.wide1, TE.wide1 + 0.8)) : 0;
+  const pan = t > TE.wide1 ? 0.3 * (kidChest(t)[0] - KX_WIDE) * E.io(ph(t, TE.wide1, TE.wide1 + 0.8)) : 0;
   return { ...WIDE, x: WIDE.x + pan, z: WIDE.z * (1 - 0.035 * E.out(ph(t, TE.wide1 - 0.3, TE.corner))) };
-};
+}
 /**
- * 第三声：镜头像目光一样从他身上往下走，在阿满（绿帽子，她在前面救过他）脸上流连，再越退越慢地退到整条人链。
- * 用户 2026-10-26 先后要过：边扫边退 → 不要边扫边退、扫到人链中间 → 扫到上 1/3 → 对准绿帽子慢慢放大 →「太弹性了，把感动的情绪搞没了」
- * →「放大不太行，改成停一下」→「不要完全停住……你用最好的情绪运镜方法设计一下」。现在的做法：
- *  - 他开始低头（TE.look0）镜头就跟着往下走，「活」上已经在动；一路一个平稳的速度，脸一张张经过；镜头悄悄松 8%（画面上走得慢一点）。
- *  - 到阿满不刹车：越走越慢，慢到每秒 150 一直往下漂，他的脸从画面中间缓缓滑过（目光在他身上多停了一会儿），不停、不推。
- *  - 退开从这份漂里接上：起步极轻，之后越退越慢（余韵），退到整条人链。
+ * 第三声（用户 2026-10-26，2:13.10：「把所有人从上到下全部逐个扫一遍」）：镜头像他的目光，从他身上往下，把人链上的人一张脸一张脸看过去
+ * （每个人都仰着头往上看他：使劲、哭着笑、咬着牙），一直看到街上最后那个人（两腿蹬开站在街上攥着），在街上停住；第四声从这里往后拉开。
+ * 她救过、认得出的那几张脸（老钟、周磊、千斤、千斤的妈妈、阿满、老太太、年轻人、戴眼镜的大叔、扎马尾的女学生）走得慢一点，
+ * 后面的路人快一点，到街上越走越慢地停住。经过每张脸的时刻按单调三次插值连成一条平滑的速度曲线（中间不顿、不刹）；
+ * 横着按「他—街上最后那个人」这条线走（不跟着每个人左右的错落晃）。
+ * 原来（2:03.60 那版）只扫到上 1/3，在阿满脸上流连，再退到整条人链。
  */
-const AMAN = 4;
-const V_LINGER = 150;
+/** 经过每张脸的时刻：他（胸口），再是人链上从上往下第 0…16 个人 */
+const SWEEP_AT: number[] = (() => {
+  const gaps = [0.32, 0.26, 0.26, 0.26, 0.25, 0.25, 0.24, 0.24, 0.23, 0.21, 0.2, 0.2, 0.19, 0.19, 0.19, 0.2, 0.24];
+  const out = [TE.look0 + 0.05];
+  for (const g of gaps) out.push(out[out.length - 1] + g);
+  // 最后一个正好是 TE.sweepEnd
+  const k = (TE.sweepEnd - out[0]) / (out[out.length - 1] - out[0]);
+  return out.map((v) => out[0] + (v - out[0]) * k);
+})();
+/** 单调三次插值（Fritsch–Carlson，两头速度为 0）：过每个点、不冲过头 */
+function monoCubic(xs: number[], ys: number[], x: number): number {
+  const n = xs.length;
+  if (x <= xs[0]) return ys[0];
+  if (x >= xs[n - 1]) return ys[n - 1];
+  const d: number[] = [];
+  for (let i = 0; i < n - 1; i++) d.push((ys[i + 1] - ys[i]) / (xs[i + 1] - xs[i]));
+  const m: number[] = [0];
+  for (let i = 1; i < n - 1; i++) {
+    if (d[i - 1] * d[i] <= 0) m.push(0);
+    else {
+      const w1 = 2 * (xs[i + 1] - xs[i]) + (xs[i] - xs[i - 1]);
+      const w2 = (xs[i + 1] - xs[i]) + 2 * (xs[i] - xs[i - 1]);
+      m.push((w1 + w2) / (w1 / d[i - 1] + w2 / d[i]));
+    }
+  }
+  m.push(0);
+  let i = 0;
+  while (x > xs[i + 1]) i++;
+  return herm(ys[i], m[i], ys[i + 1], m[i + 1], xs[i + 1] - xs[i], (x - xs[i]) / (xs[i + 1] - xs[i]));
+}
+/** 扫的时候的倍数：从跟着他往上的那个取景（约 0.95）松到 0.8（画面里同时看得见两三个人，脸经过得不那么急） */
+const Z_SWEEP = 0.8;
+/** 停在街上时：最后那个人的头在画面上 1364，地面在画面 1650（第四声从这里往后拉开，地面一直在画面下面） */
+const SWEEP_END_Y = 1364;
 function sweepCam(t: number): Cam {
-  const top = -chestFollowH(t);
-  const kid: V2 = [kidChest(t)[0], top];
-  const am0 = memberHead(t, AMAN);
-  const am: V2 = [am0[0], am0[1] + 40];
-  const D = Math.hypot(am[0] - kid[0], am[1] - kid[1]);
-  // 走到阿满脸上以前 0.3 秒的漂移量处换成匀速漂：他的脸在 sweep1 以后 0.3 秒正好过画面中间
-  const S1 = D - V_LINGER * 0.3;
-  const dt = TE.sweep1 - TE.look0;
-  let s = 0;
-  if (t >= TE.sweep1) s = S1 + V_LINGER * (t - TE.sweep1);
-  else if (t > TE.look0) s = herm(0, 0, S1, V_LINGER, dt, (t - TE.look0) / dt);
-  const e = s / D;
-  const p: V2 = [kid[0] + (am[0] - kid[0]) * e, kid[1] + (am[1] - kid[1]) * e];
-  const f = Math.min(1, e);
-  const follow = 0.3 + 0.7 * f;
-  const z = Z_FOLLOW * 1.64 * (1 - 0.08 * ss(ph(t, TE.look0, TE.sweep1)));
-  return aim(X_JOIN + follow * (p[0] - X_JOIN), p[1], 540, KID_Y + (880 - KID_Y) * ss(f), z);
+  // 这一刻每张脸在哪（人链在轻轻动，按这一刻的位置）：他用胸口（和上一个取景对准的一样），其他人用头
+  const ys = [-chestFollowH(t)];
+  for (let i = 0; i < MEMBERS.length; i++) ys.push(memberHead(t, i)[1] + 30);
+  const y = monoCubic(SWEEP_AT, ys, t);
+  // 横着：沿「他—最后那个人」这条线（起头只跟三成，和上一个取景一样，慢慢变成整个跟上）
+  const kx = kidChest(t)[0];
+  const ax = memberHead(t, MEMBERS.length - 1)[0];
+  const f = Math.max(0, Math.min(1, (y - ys[0]) / (ys[ys.length - 1] - ys[0])));
+  const lineX = kx + (ax - kx) * f;
+  const follow = 0.3 + 0.7 * ss(ph(t, TE.look0, TE.look0 + 1.2));
+  const z = Z_FOLLOW * 1.64 * Math.pow(Z_SWEEP / (Z_FOLLOW * 1.64), ss(ph(t, TE.look0, TE.look0 + 0.9)));
+  // 画面上：看着的那张脸一直在画面上 1/3（640，和上一个取景他的胸口一样；下面留出要来的人），到街上越走越慢时落到 SWEEP_END_Y
+  //（起头往画面中间挪的话，镜头还没走起来他先往下一滑，像先抬一下再往下）
+  const sy = 640 + (SWEEP_END_Y - 640) * ss(ph(t, TE.sweepEnd - 0.8, TE.sweepEnd + 0.1));
+  return aim(X_JOIN + follow * (lineX - X_JOIN), y, 540, sy, z);
 }
 /** 最温和的缓入缓出（两头速度为 0，中段只比平均快一半） */
 const ss = (x: number) => x * x * (3 - 2 * x);
 /** 退开：起步极轻（前 45% 里从 0 慢慢加上来），之后越退越慢（二次方减速，比三次方柔） */
 const pullCurve = (u: number) => (1 - (1 - u) * (1 - u)) * ss(Math.min(1, u / 0.45));
 /**
- * 退到整条人链（TE.out0 → wide1）；「去」的长音里停在整条人链上（极慢地往后漂，他往左荡时跟着往左），一道淡光从街上描到他；
- * 之后推向他
+ * 第四声（用户：「镜头从下面开始拉远，展示整个人链，先向右摇，之后向左摇」）：从街上那个人往后拉开，地面一直钉在画面下面，
+ * 整条人链从下往上一节节露出来（街坊仰着头站在街上），拉到整幅时人链正往右荡到最远，接着往左荡
+ */
+function pullCam(t: number): Cam {
+  const a = sweepCam(TE.pull0);
+  const b = wideAt(t);
+  const e = pullCurve(ph(t, TE.pull0, TE.wide1));
+  const z = a.z * Math.pow(b.z / a.z, e);
+  // 地面（y = 0）在画面上的高度：从停在街上的那个取景到整幅的
+  const gA = 960 - a.y * a.z;
+  const gB = 960 - b.y * b.z;
+  const g = gA + (gB - gA) * e;
+  return { x: a.x + (b.x - a.x) * e, y: -(g - 960) / z, z, r: 0 };
+}
+/**
+ * 第三声从他往下一张脸一张脸看到街上 → 第四声从街上往后拉开到整条人链（人链先往右、再往左荡）→ 停在整幅上，他往左荡时跟着往左；
+ * 「在这反乌托邦里」推向他（handCam）
  */
 export function chainCam(t: number): Cam {
   if (t < TE.look0) return withBreath(streetChain(t), t, 2);
-  const c = camLerp(sweepCam(t), wideAt(t), pullCurve(ph(t, TE.out0, TE.wide1)));
+  let c = t < TE.pull0 ? sweepCam(t) : pullCam(t);
+  // 从跟着他往上的那个取景接过来（0.25 秒，起步时本来就慢）
+  if (t < TE.look0 + 0.25) c = camLerp(streetChain(t), c, ss(ph(t, TE.look0, TE.look0 + 0.25)));
   return withBreath(c, t, 2);
 }
 
-// ——————————————— 推到他：荡过去把砖递给她 → 一接过来就亮 → 在这反乌托邦里：松开栏杆抱住他 ———————————————
+// ——————————————— 在这反乌托邦里：推到他，荡过去把砖递给她 → 一接过来就亮 → 立即松开栏杆抱住他、转正 ———————————————
 /**
  * 用户 2026-10-26：「下一个镜头拉近到小石头，跟着小石头向左摇，把砖递给主角」（之前：「砖递给主角之后立即发光，不要等」）。
  * 从整幅推过来（不切）：对准他的胸口跟着往左（他在画面右边一点，左边留出他要去的地方，倒挂着的她从左边进来）；递到她手里那 0.65 秒过渡到框住两个人（她的脸和他）；她松开栏杆抱住他时柔和起步、越推越慢地推近一点
  */
 export function handCam(t: number): Cam {
-  // 第四声（用户：「下一个镜头拉近到小石头，跟着小石头向左摇，把砖递给主角」）：从整幅柔和起步地推到他身上（他正荡到右边最远），
-  // 推到了就对准他跟着往左荡
+  // 「在这反乌托邦里」（用户 2026-10-26：「镜头拉近到小石头，继续向左摇，结束时小石头成功把砖递给主角」）：
+  // 从整幅（还在跟着他往左）柔和起步地推到他身上，推到了就对准他跟着往左荡；他荡到她跟前时过渡到框住两个人
   const c = handRaw(t);
-  return withBreath(t < TE.closeIn ? camLerp(wideAt(TE.corner), c, E.io(ph(t, TE.corner, TE.closeIn))) : c, t, 1.5 + 0.5 * (1 - ph(t, TE.corner, TE.closeIn)));
+  const e = E.io(ph(t, TE.corner, TE.closeIn));
+  return withBreath(e < 1 ? camLerp(wideAt(t), c, e) : c, t, 1.5 + 0.5 * (1 - e));
 }
 function handRaw(t: number): Cam {
   const k = kidChest(t);

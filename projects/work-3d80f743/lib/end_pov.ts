@@ -1,4 +1,4 @@
-// 终章「这段胡乱拼凑的词语」（104.8–106.02）：第一视角——他低头：脚上是她那双大得不像话的铁靴（靴口插着他那块「妈妈，明天见」），
+// 终章「这段胡乱拼凑的词语」（104.8–106.02）：第一视角——他低头：脚上是她那双大得不像话的铁靴，
 // 她从天上丢下来的那块砖砸在靴尖前面；两只小手伸下去捡起来，捧到眼前：「活下去」，她写给自己的；两滴眼泪砸在字上，手一直在抖；
 // 他抬头（105.84）：整个画面带着竖向拖影往下滑走，接她往上升的那一镜。用户 2026-10-25：「⑥ 简化一下，改成捡和看」（不翻、不下笔）。
 // 设计坐标 1080×1920，自己画（不是世界里的镜头）；颜色、描边和街上一样。
@@ -77,12 +77,13 @@ function drawCoatHeap(g: CanvasRenderingContext2D) {
   g.fillRect(-60, 790, 420, 60);
   g.restore();
 }
-/** 脚上她的那双铁靴（从上往下看：靴口箍着他的大腿，在画面最底下；靴筒往前斜下去，靴尖在前面；左边那只靴口插着「妈妈，明天见」） */
+/** 脚上她的那双铁靴（从上往下看：靴口箍着他的大腿，在画面最底下；靴筒往前斜下去，靴尖在前面）。
+ *  原来左边那只靴口插着「妈妈，明天见」；用户 2026-10-26 改成被她抱住那一下就掉了，靴口上不再有 */
 function drawBootsFromAbove(g: CanvasRenderingContext2D) {
   const K = CHEN_COLORS;
-  for (const [cx, tilt, gift] of [
-    [300, -0.16, true],
-    [790, 0.14, false],
+  for (const [cx, tilt] of [
+    [300, -0.16],
+    [790, 0.14],
   ] as const) {
     g.save();
     g.translate(cx, 1560);
@@ -149,14 +150,6 @@ function drawBootsFromAbove(g: CanvasRenderingContext2D) {
     const leg = new Path2D();
     leg.ellipse(0, 470, 160, 70, 0, 0, Math.PI * 2);
     part(g, leg, "#4f5f86", "#435276", 5, [4, 4]);
-    if (gift) {
-      // 插在靴口上的「妈妈，明天见」（露出上面一截）
-      g.save();
-      g.translate(-110, 360);
-      g.rotate(-1.25);
-      drawEndBrick(g, "gift", [0, 0], 0, 3.6, -1, 0, 1.6);
-      g.restore();
-    }
     g.restore();
   }
 }

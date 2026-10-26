@@ -2,10 +2,10 @@
 // 2026-10-25 用户重做：「用过度的方法切两次地点……安排她救两个人，也是同样的，跑，拉，给」；第一版（一直在跑、背景横着拖成一片换地方）
 // 用户：「屏幕向右太快了，把跑的去掉，改成站起来走两步场景切换，跳起来救人，给砖，之后站起来走两步，跳起来救人，给砖，场景用另外一种切换方式，
 // 人物保持在中间。把时间都安排给 跳起来救人，给砖。最后一个给砖就不用站起来，直接切场景到回到她和小男孩抱在一起」。现在：
-//   64.02 七岁的她把妈妈的木牌插进前面那只大铁靴里，站起来走两步——第二步落下去溶成秋天早上的公交站，她十岁；
-//   公交站上空飘着一个戴眼镜的大叔：她停下来仰头、蹲下攒劲，跳到最高才攥住他的脚踝，66.024「咚」带着他摔下来、跪在地上（拼命）；
-//     从靴筒里抽出砖放进他手里，66.77 砖暖暖地亮起来，他抬头看她（温暖：第一次把「活下去」交出去）；
-//   她站起来走两步——第二步落下去溶成冬天傍晚的学校门口，她十六岁；刚飘起来的女学生，她一步跨上去攥住，68.52「咚」单膝稳稳落地（坚定）；
+//   七岁的她跪着抱着妈妈的木牌望着天（⑧ 里画），64.013（间奏第一拍）溶成秋天早上的公交站，她十岁；
+//   公交站上空飘着一个戴眼镜的大叔：她站着仰头望着他，蹲下攒劲，跳到最高才攥住他的脚踝，吊着拽下来，65.513「咚」跪在地上（拼命）；
+//     从靴筒里抽出砖放进他手里，66.26 砖暖暖地亮起来，他抬头看她（温暖：第一次把「活下去」交出去）；
+//   她站起来迈一步——这一步落下去溶成冬天傍晚的学校门口，她十六岁；刚飘起来的女学生，落脚一沉就跨上去攥住，68.013「咚」（小节线）单膝稳稳落地（坚定）；
 //     砖放进她手里亮起来，两只手把她的手合拢包住，看着她笑——像当年妈妈把木牌给她（温柔：传下去）；
 //   砖放进她手里、包住她的手以后，低头闭上眼抱住（和现在一样的姿势）；70.026 不站起来，溶回现在：清晨的街上，她跪着抱着小石头；71.02 她抬起头看着天。
 // 换地方：叠化（用户：「改成不硬切，用叠加的方式过度」；试过背景横着拖、四周虚掉、暖光漫过去、直接切）。第二步落脚前后 0.4 秒，
@@ -24,47 +24,55 @@ import { drawPerson } from "./people";
 import { brickHold } from "./props";
 import { pose } from "./dawn";
 import { KID } from "./memory";
-import { BOARD, KID8_KEYS, SIGN_T, drawBoard, kidAt8 } from "./sign";
+import { SIGN_T, kidAt8 } from "./sign";
 import { knifeAt } from "./mother";
 import { STUDENT, UNCLE } from "./saved";
 import { drawGlow } from "./world";
 
 type V2 = [number, number];
-const mix = (a: V2, b: V2, u: number): V2 => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
 const add = (a: V2, b: V2): V2 => [a[0] + b[0], a[1] + b[1]];
 const b = beatAt;
-const BEAT = () => beatAt(1) - beatAt(0);
 
 export const GROW_T = {
   start: SIGN_T.end,
-  /** 木牌插进前面那只靴筒（第一拍） */
-  slide0: 64.06,
-  slide1: 64.32,
-  rise: 64.3,
-  /** 站起来走两步（一拍一步）：第一步（七岁）；第二步落下去的那一下直接切到公交站，她十岁，站住 */
-  step0: b(129),
-  sw1: b(130),
-  stop1: b(130),
-  /** 仰头看见飘着的大叔；蹲下攒劲、蹬地；跳到最高攥住他的脚踝；「咚」带着他摔下来跪下（小节线） */
-  look1: b(130.2),
-  jump1: b(131),
-  grab1: b(131.5),
-  land1: b(132),
-  /** 砖放进他手里，暖暖地亮起来 */
-  give1: b(133.5),
-  /** 站起来走两步：第一步；第二步落下去的那一下直接切到学校门口，她十六岁，站住 */
-  rise1: b(134),
-  step1: b(134.5),
-  sw2: b(135.5),
-  stop2: b(135.5),
-  /** 仰头看见刚飘起来的女学生；一步跨上去攥住；「咚」单膝稳稳落地 */
-  look2: b(135.7),
-  jump2: b(136.4),
-  grab2: b(136.75),
-  land2: b(137),
-  /** 砖放进她手里亮起来；两只手把她的手合拢包住 */
-  give2: b(138.5),
-  wrap: b(138.65),
+  /**
+   * 七岁的她跪着抱着木牌望着天（⑧ 里画，lib/sign.ts），不再做别的动作；间奏第一拍溶到公交站，十岁的她已经站在那里仰头望着飘着的大叔
+   * （2026-10-26 用户：「把前面的几个镜头缩短时间给这几个镜头，但是需要对上音乐的节奏」：溶过去从 65.013 提前到间奏第一拍 64.013，
+   * 多出来的 1 秒两次救人各分一半；接着「这个改成她拿着砖看天空，不做其他动作了」：插木牌、站起来、迈步都去掉）
+   */
+  step0: b(128),
+  sw1: b(128),
+  stop1: b(128),
+  /**
+   * 落脚时已经仰头看见飘着的大叔，站着望他一下；蹲下攒劲、蹬地；第 130 拍跳到最高攥住他的脚踝；
+   * 吊在他脚踝上往下一拽，拽着他坠下来（0.5 秒，和前奏攥住周磊一样），「咚」跪下
+   */
+  look1: b(128),
+  jump1: b(129.6),
+  grab1: b(130),
+  land1: b(131),
+  /** 手伸进靴筒、抽出砖（小节线）；砖放进他手里，暖暖地亮起来 */
+  dig1: b(131.74),
+  pull1: b(132.02),
+  give1: b(132.5),
+  /**
+   * 看着他、他抬头冲她哭着笑，停一下；站起来（眼睛还看着他）迈一步，这一步落下去就溶成学校门口，她十六岁
+   * （2026-10-26 用户：「我感觉应该做减法」：原来站起来走两步才换，省下的一拍给学校门口）
+   */
+  rise1: b(133.4),
+  step1: b(134),
+  sw2: b(134),
+  stop2: b(134),
+  /** 迈出去时已经仰头看见刚飘起来的女学生，站着望她一下；浅浅一蹲、一步跨上去攥住；「咚」单膝稳稳落地（小节线） */
+  look2: b(134),
+  jump2: b(135.3),
+  grab2: b(135.62),
+  land2: b(136),
+  /** 心疼地看她一眼，掏砖；砖放进她手里亮起来；两只手把她的手合拢包住，看着她笑，女学生抬头哭着笑（时间留给这里） */
+  dig2: b(136.84),
+  pull2: b(137.14),
+  give2: b(137.66),
+  wrap: b(137.84),
   /** 低头闭眼抱住（和现在抱着小石头一样的姿势） */
   hug: b(139.3),
   /** 不站起来，溶回现在（小节线；名字沿用以前的「跪下」，act3 按它溶） */
@@ -149,90 +157,67 @@ const scaleOf = (age: number) => (age <= 12 ? KIDS[age - 7].scale : SCALE[age - 
 // ——— 她的动作 ———
 /** 前奏那套姿势是朝左写的：朝右时翻 face，眼睛看的左右也翻过来 */
 const R = (p: Angles): Angles => ({ ...p, face: 1, ...(typeof p.lookX === "number" ? { lookX: -p.lookX } : {}) });
-const G8 = {
-  /** 低头把木牌往前面那只靴筒里插（还跪着） */
-  插: pose(30, { face: 0.72, ...legR(96, -98), ...legL(-6, -134, -140), thighR: 0.65, neck: -20, expression: "含泪", sad: 0.8, tears: 0.6, lookX: 0.3, lookY: 1 }, (l) => ({
-    ...armL(40, 70, 0, "grip", l),
-    ...armR(40, 70, 0, "grip", l),
-  })),
-};
-/** 走（铁靴，一拍一步「咚」）：落地 → 下沉 → 经过 → 蹬地，前奏那套 */
-const WALK: [number, Angles, number][] = [
-  [0, CHEN.走_落地, 0.03],
-  [0.2, CHEN.走_下沉, 0.05],
-  [0.48, CHEN.走_经过, 0],
-  [0.74, CHEN.走_蹬地, 0],
-];
-/** 走两步：t0 第一步落地，一拍一步；第二步只到落地（站住），后面接仰头 */
-function walkKeys(t0: number, face: (t: number) => Angles, items?: (t: number) => object | undefined): MoveKey[] {
-  const out: MoveKey[] = [];
-  for (let k = 0; k < 2; k++) {
-    const foot = k === 0 ? "L" : "R";
-    const prev = k === 0 ? "R" : "L";
-    for (const [at, p, squash] of WALK) {
-      if (k === 1 && at > 0) break;
-      const t = t0 + (k + at) * BEAT();
-      out.push({ t, ease: SMOOTH, squash, plant: at === 0 ? prev : foot, items: items?.(t), p: { ...R(foot === "L" ? p : swapSides(p)), ...face(t) } } as MoveKey);
-    }
-  }
-  return out;
-}
-/** 每个年纪走路的脸：七岁含着泪；十岁、十六岁坚定，眼睛看着前面 */
-const FACE7: Angles = { expression: "忍着哭", sad: 0.55, tears: 0.5, lookX: 0.5, lookY: 0, neck: 4 };
+/** 每个年纪走路的脸：十岁、十六岁坚定，眼睛看着前面 */
 const FACE10: Angles = { expression: "坚定", tears: 0.15, lookX: 0.5, lookY: -0.1, neck: 6 };
 const FACE16: Angles = { expression: "坚定", lookX: 0.5, lookY: -0.1, neck: 6 };
+/** 迈一步落下去（换地方）时已经仰头看见要救的人 */
+const UP16: Angles = { ...FACE16, lookX: 0.2, lookY: -1, neck: 22 };
 /** 跳起来往前飞多远（素材库单位：十岁的她拼命跳得高、往前冲一点；十六岁一步跨上去） */
 const LEAP1 = 240;
 const LEAP2 = 200;
+/** 站着仰头望着要救的人（L 在前，左右对调、钉 L） */
+const LOOKUP: Angles = R(swapSides(CHEN.仰头));
 /** 十六岁浅浅一蹲 */
 const GATHER2: Angles = { ...CHEN.蹲, lean: 22, ...legR(54, -66), ...legL(46, -58), thighL: 0.8, thighR: 0.8 };
 /** 包住女学生的手以后：抬眼看着她，温柔地笑（不站起来，直接溶回现在） */
-const HOLD: Angles = { ...R(CHEN.跪_放), lean: 36, neck: 6, expression: "微笑", smile: 0.75, tears: 0.4, lookX: 0.4, lookY: 0.05 };
+const HOLD: Angles = { ...R(CHEN.跪_放), lean: 30, neck: 6, expression: "微笑", smile: 0.75, tears: 0.4, lookX: 0.4, lookY: 0.05 };
 /** 低头闭眼抱住：和现在抱着小石头的「抱紧」同一组角度（lib/mother.ts 的 CHEN_P.抱紧，风也一样大），溶回现在时姿势一模一样 */
 const HUG: Angles = pose(26, { face: 1, ...legR(84, -96, 0), ...legL(36, -112, 0), thighR: 1, neck: -18, expression: "难过", blink: 0.9, lookY: 0.6, wind: 0.6 }, (l) => ({
   ...armL(60, 90, 0, "grip", l),
   ...armR(70, 84, 0, "grip", l),
 }));
 const KEYS: MoveKey[] = [
-  ...KID8_KEYS,
-  // 第一拍：低头把木牌插进前面那只靴筒；站起来（前脚钉在原地），迈出第一步
-  { t: G.slide0 + 0.08, ease: "inOut", plant: "R", p: G8.插 },
-  { t: G.slide1, plant: "R", p: G8.插 },
-  { t: G.rise + 0.1, ease: "inOut", plant: "R", p: { ...R(CHEN.起身), ...FACE7 } },
-  { t: G.step0 - 0.1, ease: "inOut", plant: "R", p: { ...R(swapSides(CHEN.走_经过)), ...FACE7 } },
-  ...walkKeys(G.step0, (t) => (t < G.sw1 ? FACE7 : FACE10)),
-  // 公交站：停下来仰头，看见飘着的大叔（下定决心）→ 蹲下攒劲（拉满的弓）→ 蹬地弹出去 → 跳到最高攥住他的脚踝 → 一口气带着他摔下来，「咚」跪下
-  { t: G.look1, ease: "inOut", plant: "R", p: { ...R(CHEN.仰头), expression: "坚定", tears: 0.2 } },
-  { t: G.jump1 - 0.1, ease: "inOut", plant: "R", squash: 0.1, p: { ...R(CHEN.蹲), tears: 0.2 } },
-  { t: G.jump1 + 0.05, ease: "in", squash: -0.1, dx: -LEAP1 * 0.25, p: { ...R(CHEN.起跳), lift: 160 } },
-  { t: G.grab1, ease: "out", squash: -0.02, dx: -LEAP1 * 0.45, p: { ...R(CHEN.抓住), lift: 340 } },
-  { t: G.land1 - 0.02, ease: "in", squash: -0.03, dx: -LEAP1 * 0.3, p: { ...R(CHEN.拽着坠), lift: 0 } },
+  // 七岁那一层在 ⑧ 里画（跪着抱着木牌望着天，lib/sign.ts 的 kidAt8）；这里从十岁开始：
+  // 公交站：溶过来时她已经站在那里仰头望着飘着的大叔（和七岁的她望天叠在一起）→ 蹲下攒劲（拉满的弓）→ 蹬地弹出去 →
+  // 跳到最高攥住他的脚踝 → 吊在他脚踝上往下一拽（膝盖收起来，他还往上飘，坠得慢）→ 越坠越快，带着他摔下来，「咚」跪下
+  { t: G.start, x: 0, p: { ...LOOKUP, tears: 0.2 } },
+  { t: G.jump1 - 0.32, plant: "L", p: { ...LOOKUP, tears: 0.2 } },
+  { t: G.jump1 - 0.08, ease: "inOut", plant: "L", squash: 0.1, p: { ...R(swapSides(CHEN.蹲)), tears: 0.2 } },
+  { t: G.jump1 + 0.04, ease: "in", squash: -0.1, dx: -LEAP1 * 0.25, p: { ...R(CHEN.起跳), lift: 160 } },
+  { t: G.grab1, ease: "out", squash: -0.02, dx: -LEAP1 * 0.4, p: { ...R(CHEN.抓住), lift: 340 } },
+  { t: G.grab1 + 0.2, ease: "inOut", squash: -0.02, dx: -LEAP1 * 0.1, p: { ...R(CHEN.拽着坠), lift: 290 } },
+  { t: G.land1 - 0.02, ease: "in", squash: -0.03, dx: -LEAP1 * 0.25, p: { ...R(CHEN.拽着坠), lift: 0 } },
   { t: G.land1 + 0.06, ease: "out", squash: 0.14, plant: "L", p: { ...R(CHEN.跪_缓冲), lift: 0, handR: "open" } },
-  // 跪着喘一口气、心疼地看着他 → 弯腰手伸进前面那只靴筒 → 抽出砖（很沉）→ 身子往前倾递过去 → 放进他搭在膝盖上的手里
+  // 跪着喘一口气、心疼地看着他 → 弯腰手伸进前面那只靴筒 → 抽出砖（很沉）→ 身子往前倾递过去，放进他搭在膝盖上的手里
+  // （递是一口气送过去：抽出 → 递 加速、递 → 放 减速，中间不停）
   { t: G.land1 + 0.24, ease: "inOut", squash: 0, plant: "L", p: { ...R(CHEN.单膝跪), expression: "心疼", tears: 0.3 } },
-  { t: G.land1 + 0.36, ease: "inOut", plant: "R", p: R(CHEN.跪_掏砖) },
-  { t: G.land1 + 0.46, ease: "out", plant: "R", p: R(CHEN.跪_抽出) },
-  { t: G.give1 - 0.12, ease: "inOut", plant: "R", p: R(CHEN.跪_递) },
-  { t: G.give1, ease: "inOut", plant: "R", p: R(CHEN.跪_放) },
-  // 放下了：手一松开就垂下来，身子收回来一点，含着泪冲他笑（第一次把「活下去」交出去）
-  { t: G.give1 + 0.16, ease: "out", plant: "R", p: { ...R(CHEN.跪_看他), expression: "哭着笑", tears: 0.45, lookX: 0.4, lookY: 0.3 } },
-  // 站起来走两步（换到学校门口，十六岁）
-  { t: G.rise1 + 0.1, ease: "inOut", plant: "R", p: { ...R(CHEN.起身), ...FACE10 } },
-  { t: G.step1 - 0.08, ease: "inOut", plant: "R", p: { ...R(swapSides(CHEN.走_经过)), ...FACE10 } },
-  ...walkKeys(G.step1, (t) => (t < G.sw2 ? FACE10 : FACE16), (t) => (t >= G.sw2 ? teenItems(16) : undefined)),
-  // 学校门口：仰头看见刚飘起来的女学生 → 浅浅一蹲、一步跨上去攥住她的脚踝 → 带着她落下来，单膝稳稳跪住
-  { t: G.look2, ease: "inOut", plant: "R", p: { ...R(CHEN.仰头), expression: "坚定" } },
-  { t: G.jump2 - 0.08, ease: "inOut", plant: "R", squash: 0.07, p: { ...R(GATHER2), expression: "坚定", teeth: 0, lookX: 0.2, lookY: -1 } },
+  { t: G.dig1, ease: "inOut", plant: "R", p: R(CHEN.跪_掏砖) },
+  { t: G.pull1, ease: "inOut", plant: "R", p: R(CHEN.跪_抽出) },
+  { t: (G.pull1 + G.give1) / 2, ease: "in", plant: "R", p: R(CHEN.跪_递) },
+  { t: G.give1, ease: "out", plant: "R", p: R(CHEN.跪_放) },
+  // 放下了：手一松开就垂下来，身子收回来一点，含着泪冲他笑（第一次把「活下去」交出去）；他抬头冲她哭着笑，停一下
+  { t: G.give1 + 0.2, ease: "out", plant: "R", p: { ...R(CHEN.跪_看他), expression: "哭着笑", tears: 0.45, lookX: 0.4, lookY: 0.3 } },
+  { t: G.rise1, ease: "inOut", plant: "R", p: { ...R(CHEN.跪_看他), expression: "哭着笑", smile: 0.7, tears: 0.45, lookX: 0.4, lookY: 0.4, neck: -4 } },
+  // 站起来（眼睛还看着他）迈一步，迈出去时抬头看向前上方，这一步落下去就换到学校门口（十六岁）
+  { t: G.rise1 + 0.16, ease: "in", plant: "R", p: { ...R(CHEN.起身), expression: "微笑", tears: 0.3 } },
+  { t: G.sw2 - 0.08, ease: SMOOTH, plant: "R", p: { ...R(swapSides(CHEN.走_经过)), ...FACE10, lookY: -0.6, neck: 14 } },
+  { t: G.sw2, ease: SMOOTH, squash: 0.03, plant: "R", items: teenItems(16), p: { ...R(CHEN.走_落地), ...UP16 } },
+  // 学校门口：仰头看见刚飘起来的女学生，站着望她一下 → 浅浅一蹲、一步跨上去攥住她的脚踝 → 带着她落下来，单膝稳稳跪住。
+  // 迈的是近处那只脚（L 在前），站、蹲都用左右对调的、钉 L
+  { t: G.sw2 + 0.22, ease: "out", plant: "L", p: { ...LOOKUP, expression: "坚定" } },
+  { t: G.jump2 - 0.3, plant: "L", p: { ...LOOKUP, expression: "坚定" } },
+  { t: G.jump2 - 0.08, ease: "inOut", plant: "L", squash: 0.07, p: { ...R(swapSides(GATHER2)), expression: "坚定", teeth: 0, lookX: 0.2, lookY: -1 } },
   { t: G.jump2 + 0.04, ease: "in", squash: -0.07, dx: -LEAP2 * 0.25, p: { ...R(CHEN.起跳), lift: 120, expression: "坚定", open: 0.1 } },
   { t: G.grab2, ease: "out", squash: -0.02, dx: -LEAP2 * 0.45, p: { ...R(CHEN.抓住), lift: 230, expression: "坚定" } },
   { t: G.land2 - 0.02, ease: "in", squash: -0.02, dx: -LEAP2 * 0.3, p: { ...R(CHEN.拽着坠), lift: 0, expression: "坚定" } },
   { t: G.land2 + 0.06, ease: "out", squash: 0.08, plant: "L", p: { ...R(CHEN.跪_缓冲), lift: 0, handR: "open", expression: "坚定" } },
-  // 心疼地看她一眼 → 掏砖、递过去，放进她手里（比公交站那次慢一点，稳一点）
-  { t: G.land2 + 0.28, ease: "inOut", squash: 0, plant: "L", p: { ...R(CHEN.单膝跪), expression: "心疼" } },
-  { t: G.land2 + 0.44, ease: "inOut", plant: "R", p: R(CHEN.跪_掏砖) },
-  { t: G.land2 + 0.58, ease: "out", plant: "R", p: R(CHEN.跪_抽出) },
-  { t: G.give2 - 0.16, ease: "inOut", plant: "R", p: R(CHEN.跪_递) },
-  { t: G.give2, ease: "inOut", plant: "R", items: teenItems(16, 1), p: R(CHEN.跪_放) },
+  // 心疼地看她一眼 → 掏砖、递过去，放进她手里（比公交站那次稳一点）。她比十岁时高、女学生坐得近，身子不用压那么低
+  // （原来照十岁那次前倾 46°，头压到女学生的头上；抽出和递只隔 0.01 秒，一下跳过去）
+  { t: G.land2 + 0.26, ease: "inOut", squash: 0, plant: "L", p: { ...R(CHEN.单膝跪), expression: "心疼" } },
+  { t: G.dig2, ease: "inOut", plant: "R", p: R(CHEN.跪_掏砖) },
+  { t: G.pull2, ease: "inOut", plant: "R", p: R(CHEN.跪_抽出) },
+  { t: (G.pull2 + G.give2) / 2, ease: "in", plant: "R", p: { ...R(CHEN.跪_递), lean: 24 } },
+  { t: G.give2, ease: "out", plant: "R", items: teenItems(16, 1), p: { ...R(CHEN.跪_放), lean: 28 } },
   // 两只手把她的手合拢包住（手按 IK，见 girlAt），抬眼看着她，温柔地笑；不站起来，四周虚掉，溶回现在
   { t: G.wrap + 0.2, ease: "inOut", plant: "R", p: { ...HOLD, smile: 0.4, lookY: 0.15, neck: 2 } },
   { t: G.hug, ease: "inOut", plant: "R", p: HOLD },
@@ -248,7 +233,7 @@ const OPTS: Omit<LiveOpts, "look"> = {
   follow: 0,
   // 摔下来跪住以后喘一口气：肩膀随呼吸起伏
   add: (t: number, o: Record<string, number>) => {
-    const pant = ph(t, G.land1 + 0.1, G.land1 + 0.2) * (1 - ph(t, G.land1 + 0.3, G.land1 + 0.4)) + ph(t, G.land2 + 0.1, G.land2 + 0.2) * (1 - ph(t, G.land2 + 0.34, G.land2 + 0.44));
+    const pant = ph(t, G.land1 + 0.1, G.land1 + 0.2) * (1 - ph(t, G.land1 + 0.3, G.land1 + 0.4)) + ph(t, G.land2 + 0.1, G.land2 + 0.2) * (1 - ph(t, G.land2 + 0.3, G.land2 + 0.4));
     if (pant > 0) {
       const h = Math.sin(t * 9) * pant;
       o.lean += 2.2 * h;
@@ -327,8 +312,8 @@ function savedKeys(T: { grab: number; land: number; give: number }, P: Record<st
   return [
     { t: 60, x: 0, p: P.飘 },
     { t: T.grab - 0.03, p: P.飘 },
-    { t: T.grab + 0.08, ease: "out", p: P.一惊 },
-    { t: T.land - 0.08, ease: "inOut", p: P.被拽 },
+    { t: T.grab + Math.min(0.08, (T.land - T.grab) * 0.3), ease: "out", p: P.一惊 },
+    { t: T.land - Math.min(0.08, (T.land - T.grab) * 0.3), ease: "inOut", p: P.被拽 },
     { t: T.land + 0.04, ease: "out", squash: 0.08, p: P.坐下 },
     { t: T.land + 0.3, ease: "inOut", squash: 0, p: P.瘫坐 },
     { t: T.give - 0.04, p: P.瘫坐 },
@@ -349,10 +334,10 @@ const sobAdd = (T: { land: number; give: number }) => (t: number, o: Record<stri
 };
 const uncleMove = live(
   savedKeys({ grab: G.grab1, land: G.land1, give: G.give1 }, U2, [
-    // 看着手里亮起来的砖，眼泪掉下来 → 抬起头看她，哭着笑 → 她走了，望着她
-    { t: G.give1 + 0.32, ease: "inOut", p: U2.坐_捧着哭 },
-    { t: G.rise1 + 0.2, ease: "out", p: U2.坐_哭着笑 },
-    { t: G.step1 + 0.2, ease: "inOut", p: U2.坐_望她 },
+    // 看着手里亮起来的砖，眼泪掉下来 → 抬起头看她，哭着笑（她还跪着，两个人对看一下）→ 她站起来走了，望着她
+    { t: G.give1 + 0.3, ease: "inOut", p: U2.坐_捧着哭 },
+    { t: G.rise1 - 0.02, ease: "inOut", p: U2.坐_哭着笑 },
+    { t: G.rise1 + 0.3, ease: "inOut", p: U2.坐_望她 },
     { t: 72, p: U2.坐_望她 },
   ]),
   { look: lookOf(UNCLE), base: { wind: 0.4 }, idle: true, seed: 73, springs: ARMS, follow: 0, add: sobAdd({ land: G.land1, give: G.give1 }) },
@@ -385,10 +370,18 @@ function makeSaved(spec: CastSpec, move: ReturnType<typeof live>, T: { grab: num
   let END: V2 | null = null;
   const grabPt = () => (A0 ??= add(palmOf(girlBase(T.grab), "R"), [4, -6]));
   const endPt = () => (END ??= add(palmOf(girlBase(T.land + 0.06), "R"), [8, 0]));
+  const wob = (t: number): V2 => [18 * Math.sin(t * 1.3), 6 * Math.sin(t * 2.1)];
   const ankle = (t: number): V2 => {
     const a0 = grabPt();
-    if (t <= T.grab) return [a0[0] + 18 * Math.sin(t * 1.3), a0[1] + rise * (T.grab - t) + 6 * Math.sin(t * 2.1)];
-    return mix(a0, endPt(), E.in2(ph(t, T.grab, T.land)));
+    if (t <= T.grab) {
+      const w = wob(t);
+      const w0 = wob(T.grab);
+      return [a0[0] + w[0] - w0[0], a0[1] + rise * (T.grab - t) + w[1] - w0[1]];
+    }
+    // 攥住以后：横着匀匀地往她跪下来的地方挪，竖着越坠越快（原来横竖一起越来越快，最后 0.1 秒一下甩到她右边）
+    const e = endPt();
+    const u = ph(t, T.grab, T.land);
+    return [a0[0] + (e[0] - a0[0]) * E.io(u), a0[1] + (e[1] - a0[1]) * E.in2(u)];
   };
   const at = (t: number) => {
     const p: PoseIn = { ...move(t).pose };
@@ -413,7 +406,7 @@ const STU = makeSaved(STUDENT, studentMove, { grab: G.grab2, land: G.land2 }, 11
 /** 她落地跪下的地方（两个地方按它摆） */
 export const landX = (i: 1 | 2) => rootAt(i === 1 ? G.land1 + 0.3 : G.land2 + 0.3);
 
-/** 她这一刻（世界坐标）：姿势、根、年纪；插木牌、攥人、包住女学生的手按 IK */
+/** 她这一刻（世界坐标）：姿势、根、年纪；攥人、递砖、包住女学生的手按 IK */
 export function girlAt(t: number, ageOverride?: number) {
   const { age, pose, root, j0 } = girlBase(t, ageOverride);
   const s = scaleOf(age);
@@ -424,14 +417,6 @@ export function girlAt(t: number, ageOverride?: number) {
     pose[k] = { ...(pose[k] as object), to: loc(to), ik: w, ...(shape ? { shape } : {}) } as PoseIn["armL"];
   };
   // 第一拍：两只手扶着木牌插进靴筒，插到底松开
-  const wb = 1 - E.io(ph(t, G.slide1 - 0.06, G.slide1 + 0.1));
-  const bd = wb > 0.001 ? boardGrow(t) : null;
-  if (bd) {
-    const rotV = (p: V2, r: number): V2 => [p[0] * Math.cos(r) - p[1] * Math.sin(r), p[0] * Math.sin(r) + p[1] * Math.cos(r)];
-    const top = Math.min(bd.clip - 8, bd.c[1] + 6);
-    ik("L", add([bd.c[0], top], rotV([-(BOARD.w / 2 + 2), 0], bd.rot)), wb);
-    ik("R", add([bd.c[0], top], rotV([BOARD.w / 2 + 2, -4], bd.rot)), wb);
-  }
   // 跳到最高攥住他（她）的脚踝，带着落下来，落地就松手
   const w1 = E.io(ph(t, G.jump1 + 0.1, G.grab1 - 0.02)) * (1 - E.io(ph(t, G.land1 - 0.02, G.land1 + 0.1)));
   if (w1 > 0.001) ik("R", UNC.ankle(t), w1, "grip");
@@ -510,27 +495,13 @@ export function drawGrowFront(g: CanvasRenderingContext2D, t: number, z: number,
   g.save();
   g.fillStyle = `rgba(96,62,70,${0.22 * Math.max(0.3, 1 - up)})`;
   g.beginPath();
-  g.ellipse(k.root[0] + 10, 6, 120 * (0.6 + (0.4 * (k.age - 7)) / 12) * Math.max(0.5, 1 - up * 0.5), 18, 0, 0, Math.PI * 2);
+  g.ellipse(k.root[0] + 10, 6, (k.age === 7 ? 120 : 120 * (0.6 + (0.4 * (k.age - 7)) / 12)) * Math.max(0.5, 1 - up * 0.5), 18, 0, 0, Math.PI * 2);
   g.fill();
   g.restore();
-  const bd = boardGrow(t);
-  const wm = g.getTransform();
-  const brickIn = (t >= G.land1 + 0.4 && t < G.give1) || (t >= G.land2 + 0.52 && t < G.give2);
+  const brickIn = (t >= G.dig1 + 0.04 && t < G.give1) || (t >= G.dig2 + 0.04 && t < G.give2);
   drawGirl(g, k.pose, k.root, k.age, z, {
     hold: brickIn ? { L: brickHold(() => 0, { p: null }, late) } : undefined,
   });
-  // 木牌往靴筒里插：靴筒口以下的那截看不见（插进去了）
-  if (bd) {
-    g.save();
-    g.setTransform(wm);
-    if (bd.clip < 1e4) {
-      g.beginPath();
-      g.rect(bd.c[0] - 400, bd.clip - 2000, 800, 2000);
-      g.clip();
-    }
-    drawBoard(g, bd.c, bd.rot, t, z);
-    g.restore();
-  }
 }
 
 /** 砖亮起来：一团暖光从他（她）手里的砖上漫开（画在最上面，lighter；画布像素坐标） */
@@ -548,22 +519,6 @@ export function drawGrowGlow(g: CanvasRenderingContext2D, t: number, px: number,
   if (seg === 2) one(STUDENT_BRICK, G.give2, G.dis1);
 }
 
-/** 木牌：从怀里挪到前面那只靴筒口上面，竖着插下去（clip = 靴筒口的高度） */
-function boardGrow(t: number): { c: V2; rot: number; clip: number } | null {
-  if (t >= G.slide1 + 0.02) return null;
-  const a = kidAt8(G.start);
-  const k = girlBase(Math.min(t, G.slide1));
-  const knee = add(k.root, k.j0.kneeR as V2);
-  const ankle = add(k.root, k.j0.ankleR as V2);
-  const mouth: V2 = [ankle[0] + (knee[0] - ankle[0]) * 0.82, ankle[1] + (knee[1] - ankle[1]) * 0.82];
-  const above: V2 = [mouth[0], mouth[1] - BOARD.h / 2 - 4];
-  const inside: V2 = [mouth[0], mouth[1] + BOARD.h / 2 + 6];
-  const u1 = E.io(ph(t, G.slide0, G.slide0 + 0.14));
-  const u2 = E.in2(ph(t, G.slide0 + 0.14, G.slide1));
-  const c = u2 > 0 ? mix(above, inside, u2) : mix(a.boardC, above, u1);
-  return { c, rot: a.boardRot * (1 - u1), clip: u1 >= 1 ? mouth[1] : 1e5 };
-}
-
 // ——— 镜头 ———
 /** 走着的时候她在画面正中，脚下的地面在画面 1500；倍数一个地方比一个地方近，只推不拉：十二年前和公交站 1.2，第一次递砖推到 1.5，第二次推到 1.8 */
 const Z0 = 1.2;
@@ -572,7 +527,7 @@ const Z2 = 1.8;
 const GY = 1500;
 /** 镜头跟着她的根走：按 0.12 秒的高斯平滑（不追每一步的起伏，停下来时也是慢慢停），不滞后 */
 let TRACK: Float64Array | null = null;
-const TR0 = 63.5;
+const TR0 = 63;
 const TR1 = 72.5;
 function trackX(t: number) {
   if (!TRACK) {
@@ -613,14 +568,15 @@ const givePt = (t: number): V2 => palmOf(girlBase(t), "L");
  */
 export function growCam(t: number, base: (t: number) => Cam): Cam {
   if (t <= G.start) return base(t);
-  const up1 = 230 * E.io(ph(t, G.look1 - 0.1, G.look1 + 0.32));
-  let c = camLerp(base(t), midFrame(t, Z0, up1), E.io(ph(t, 64.36, 64.95)));
+  // 她跪着望天时镜头慢慢退开、顺着她的视线往上抬，溶过去正好是公交站里她仰头望着大叔的取景
+  const up1 = 230 * E.io(ph(t, G.sw1 - 0.5, G.sw1 + 0.5));
+  let c = camLerp(base(t), midFrame(t, Z0, up1), E.io(ph(t, G.start, G.sw1 + 0.25)));
   c = { ...c, z: c.z * (1 + 0.05 * kick(t, G.land1, 0.12)), y: c.y - (26 * kick(t, G.land1, 0.1)) / c.z };
   // 第一次递砖：推到砖上
   const gp = givePt(G.give1);
   c = camLerp(c, aim(gp[0] + 20, gp[1], 540, 1180, Z1), E.settle(ph(t, G.land1 + 0.05, G.give1 + 0.3)));
-  // 站起来走两步：她回到画面正中；学校门口仰头时往上抬
-  const up2 = 300 * E.io(ph(t, G.look2 - 0.1, G.look2 + 0.32));
+  // 站起来迈一步：她回到画面正中；换到学校门口时顺着她的视线往上抬
+  const up2 = 300 * E.io(ph(t, G.sw2 - 0.1, G.sw2 + 0.5));
   c = camLerp(c, midFrame(t, Z1, up2), E.io(ph(t, G.rise1, G.step1 + 0.25)));
   c = { ...c, z: c.z * (1 + 0.03 * kick(t, G.land2, 0.1)), y: c.y - (14 * kick(t, G.land2, 0.1)) / c.z };
   // 第二次递砖、包住她的手、抱住：落地以后一路推得更慢、更近，中心一开始就对准她（她的头放在画面正中偏上，被救的人在她右边），

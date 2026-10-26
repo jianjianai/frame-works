@@ -2,7 +2,13 @@
 // 天上的妈妈从外套怀里掏出一块小木牌，拿铅笔一个字一个字竖着写下「活下去」，低头看着女儿把牌子递出去，61.518 丢下来；
 // 镜头跟着木牌往下掉（一边掉一边退开），62.018（小节线）「咚」砸在她的铁靴跟前，弹一下靠在靴子上。两个路人低着头走过。
 // 她蹲下去捡起来抱在胸前；63.018 天上一亮——妈妈到了白里——灰像雪一样落下来，她抱着牌子仰着头，镜头慢慢推近。
-// （她把牌子插进靴子里放在间奏的第一拍，接着一年一年长大。）
+// 一亮以后她就跪着抱着木牌望着天，不再做别的动作，间奏第一拍 64.013 溶到公交站（lib/grow.ts；用户 2026-10-26：「这个改成她拿着砖看天空，不做其他动作了」，
+// 原来接着把木牌插进靴子、站起来迈一步）。镜头 63.3 起交给间奏，慢慢退开、顺着她的视线往上抬。
+// （同一天用户又说插木牌、站起来「又太快了，需要把前面的借过来一点」：整个 ⑧ 提前一拍（SHIFT），借⑦拉开以后跟着妈妈往上漂的那 0.7 秒；
+// ⑧ 里各个动作之间的间隔不变、仍然一拍一拍卡着：「活」落在「邦」开头的小节线 60.02，丢 61.013，落地 61.513，天上一亮 62.513（整句最响处的一下）。
+// 以下注释里的时刻是提前以前的）
+// （2026-10-26 用户：「把前面的几个镜头缩短时间给这几个镜头，但是需要对上音乐的节奏」：原来仰着头抱着牌子停到 64.04 才插、
+// 再站起来走两步，65.013 才溶过去；⑧ 前面的写字、丢、落地、一亮都卡着拍子没动，只压了这一截，省下 1 秒给两次救人）
 
 import { castJoints, passerby } from "@materials/剪纸角色/code/cast";
 import { type MoveKey, type PoseIn } from "@materials/剪纸角色/code/chengtuo";
@@ -15,38 +21,42 @@ import { armL, armR, legL, legR } from "./poses";
 import { type Walker, drawPerson, walkerAt } from "./people";
 import { pose } from "./dawn";
 import { HAND_FONT } from "./note";
-import { KID, KID7_KEYS, KID_OPTS, KID_POSES, KID_X, MAMA, MAMA7_KEYS, MAMA_OPTS, MAMA_POSES, MEM_T, mamaRoot } from "./memory";
+import { KID, KID7_KEYS, KID_OPTS, KID_POSES, KID_X, MAMA, MAMA7_KEYS, MAMA_OPTS, MAMA_POSES, mamaRoot } from "./memory";
 
 type V2 = [number, number];
 const mix = (a: V2, b: V2, u: number): V2 => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
 const add = (a: V2, b: V2): V2 => [a[0] + b[0], a[1] + b[1]];
 const rotV = (p: V2, r: number): V2 => [p[0] * Math.cos(r) - p[1] * Math.sin(r), p[0] * Math.sin(r) + p[1] * Math.cos(r)];
 
+/** ⑧ 整个提前一拍（借⑦最后跟着妈妈往上漂的那一截，留给最后她抱着木牌望天） */
+const SHIFT = -0.5;
 export const SIGN_T = {
-  start: MEM_T.end,
+  /** 从⑦接过来（妈妈要动之前） */
+  start: 59.5,
   /** 近处的手伸进外套怀里，掏出木牌，远处的手接住 */
-  pocket: 60.05,
-  out: 60.2,
-  hand: 60.42,
-  /** 半拍一个字：活 下 去（竖着写） */
+  pocket: 60.05 + SHIFT,
+  out: 60.2 + SHIFT,
+  hand: 60.42 + SHIFT,
+  /** 半拍一个字：活 下 去（竖着写；「活」在「邦」开头的小节线上） */
   chars: [
-    [60.518, 60.72],
-    [60.768, 60.97],
-    [61.018, 61.24],
+    [60.518 + SHIFT, 60.72 + SHIFT],
+    [60.768 + SHIFT, 60.97 + SHIFT],
+    [61.018 + SHIFT, 61.24 + SHIFT],
   ] as [number, number][],
   /** 两只手捧着递出去，低头看着女儿；往下一送，丢下来 */
-  show: 61.3,
-  toss: 61.42,
-  rel: beatAt(123),
-  /** 「咚」砸在她的铁靴跟前（小节线） */
-  land: beatAt(124),
+  show: 61.3 + SHIFT,
+  toss: 61.42 + SHIFT,
+  rel: beatAt(122),
+  /** 「咚」砸在她的铁靴跟前 */
+  land: beatAt(123),
   /** 蹲下去、捡起来、抱在胸前 */
-  crouch: 62.2,
-  grab: 62.45,
-  hug: 62.75,
-  /** 天上一亮：妈妈到了白里 */
-  flash: beatAt(126),
-  end: beatAt(128),
+  crouch: 62.2 + SHIFT,
+  grab: 62.45 + SHIFT,
+  hug: 62.75 + SHIFT,
+  /** 天上一亮：妈妈到了白里（整句最响处的一下） */
+  flash: beatAt(125),
+  /** 镜头交给间奏（lib/grow.ts）；她这一层一直画到溶完（act3 的 drawPast：十二年前那一层都走这里） */
+  end: 63.3,
 };
 const T = SIGN_T;
 
@@ -189,10 +199,10 @@ const M8 = {
 };
 const mamaMove8 = live(
   [
-    ...MAMA7_KEYS,
-    { t: 60.3, ease: "inOut", p: M8.写 },
-    { t: 61.26, p: M8.写 },
-    { t: 61.4, ease: "inOut", p: M8.给 },
+    ...MAMA7_KEYS.filter((k) => k.t < T.start),
+    { t: 60.3 + SHIFT, ease: "inOut", p: M8.写 },
+    { t: 61.26 + SHIFT, p: M8.写 },
+    { t: 61.4 + SHIFT, ease: "inOut", p: M8.给 },
     { t: T.rel + 0.04, p: M8.给 },
     { t: T.rel + 0.3, ease: "inOut", p: MAMA_POSES.看她 },
     { t: 64.5, p: MAMA_POSES.看她 },
@@ -331,9 +341,10 @@ const K8 = {
 };
 /** 她的关键帧（间奏原样抄过去再往后接；最后一帧停在间奏要动之前） */
 export const KID8_KEYS: MoveKey[] = [
-    ...KID7_KEYS,
+    ...KID7_KEYS.filter((k) => k.t < T.start),
+    { t: T.rel + 0.09, p: KID_POSES.够 },
     // 木牌掉下来时（镜头在跟着木牌往下扎，看不见她）两只手放下来，落地时已经低头看着它（手臂按弹簧跟，要早一点放）
-    { t: 61.92, ease: "inOut", p: K8.看牌 },
+    { t: T.rel + 0.41, ease: "inOut", p: K8.看牌 },
     { t: T.crouch, p: K8.看牌 },
     { t: T.grab - 0.03, ease: "inOut", p: K8.跪 },
     { t: T.grab + 0.05, p: K8.跪 },
@@ -383,8 +394,8 @@ const WALKERS: Walker[] = [
   { spec: passerby(25), x0: -2324, dir: 1, step: 0.5, t0: 0, seed: 81, wind: 0.3 },
   { spec: passerby(12), x0: -2615, dir: -1, step: 0.5, t0: 0.3, seed: 82, wind: 0.3 },
 ];
-const WALK_FROM = 61.6;
-const WALK_TO = 63.2;
+const WALK_FROM = 61.6 + SHIFT;
+const WALK_TO = 63.2 + SHIFT;
 
 /** 画⑧里街上和天上的人（人这一层，世界坐标）；木牌在谁手里就画在谁的身子和近处那只手臂之间 */
 export function drawSign8(g: CanvasRenderingContext2D, t: number, z: number) {
@@ -525,10 +536,10 @@ const C0 = aim(KID_X + 40, -190, 540, 1180, 1.5);
  */
 export function signCam(t: number, base: (t: number) => Cam): Cam {
   if (t <= T.start) return base(t);
-  const zA = (tt: number) => 2.9 * (1 + 0.06 * E.io(ph(tt, 60.6, T.rel)));
+  const zA = (tt: number) => 2.9 * (1 + 0.06 * E.io(ph(tt, 60.6 + SHIFT, T.rel)));
   const holdPt = (tt: number) => add(mamaRoot8(Math.min(tt, T.rel)), [-34, -340]);
   const camA = (tt: number) => aim(...holdPt(tt), 540, 1100, zA(tt));
-  if (t < T.rel) return camLerp(base(t), camA(t), E.settle(ph(t, T.start, 60.95)));
+  if (t < T.rel) return camLerp(base(t), camA(t), E.settle(ph(t, T.start, 60.95 + SHIFT)));
   if (t < T.land) {
     // 按「木牌在画面上的位置」算镜头（它在画面上只往下走）：刚松手时镜头不动，看着它从她手里掉下去，0.1 秒里镜头越来越跟得上
     // （镜头的速度 = 木牌的速度 × smoothstep）；之后跟着它往下扎、一边退开，它在画面上慢慢挪到落地时 C0 里的位置；
@@ -550,7 +561,7 @@ export function signCam(t: number, base: (t: number) => Cam): Cam {
   }
   // 推近：跪着的她在画面下三分之一（地面一直在画面 1465–1500 附近，不上下晃），上面是走过去的路人和落下来的灰
   let c = { ...C0, z: C0.z * (1 + 0.03 * kick(t, T.land, 0.1)) };
-  const u = E.io(ph(t, T.grab, 64.35));
+  const u = E.io(ph(t, T.grab, T.end + 0.3));
   if (u > 0) c = camLerp(c, aim(KID_X, -130, 470, 1250, 2.1), u);
   return c;
 }

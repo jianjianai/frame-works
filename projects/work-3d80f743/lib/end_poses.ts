@@ -231,6 +231,10 @@ const RAISED = (l: number): Angles => ({ shoulderL: 165 + l, elbowL: 20, wristL:
 const HUGB = (l: number): Angles => ({ ...armL(36, 110, 0, "grip", l), ...armR(40, 110, 0, "grip", l) });
 /** 近处那只手把砖抱在胸口，远处那只伸上去（张开） */
 const UPB = (l: number, up = 160): Angles => ({ ...armL(36, 110, 0, "grip", l), ...armR(up, 14, 0, "open", l) });
+/** 被她抱住以后（他那块「妈妈，明天见」抱住那一下就掉了，用户 2026-10-26）：两只手往前攥着她的衣服 */
+const HUGH = (l: number): Angles => ({ ...armL(64, 64, 0, "grip", l), ...armR(72, 56, 0, "grip", l) });
+/** 两只手都往上伸着够她（手里没有砖） */
+const UP2 = (l: number, up = 160): Angles => ({ ...armL(up - 28, 22, 0, "open", l), ...armR(up, 14, 0, "open", l) });
 export const KID = {
   /** 穿着妈妈的外套，仰头看着白：近处那只手拎着砖垂在身边，含着泪 */
   仰望: pose(-4, { face: -0.7, ...legR(4, -4, 0), ...legL(-4, -4, 0), neck: 30, expression: "仰望", tears: 1, sad: 0.5, lookX: -0.2, lookY: -1 }, (l) => ({
@@ -261,22 +265,22 @@ export const KID = {
   /** 看见她从上面扑下来：一惊，把砖收到胸前两只手抱着 */
   惊: pose(-6, { face: -0.7, ground: false, float: 0.3, ...legR(8, -22, -50), ...legL(-6, -18, -54), neck: 26, expression: "吓一跳", tears: 1, lookX: -0.3, lookY: -1 }, HUGB),
   /** 被她抱着：砖抱在胸前，含着泪仰头看着她 */
-  被抱: pose(-4, { face: -0.7, ground: false, float: 0.2, ...legR(8, -24, -50), ...legL(-6, -18, -54), neck: 22, expression: "含泪", tears: 1, lookX: -0.5, lookY: -0.6 }, HUGB),
+  被抱: pose(-4, { face: -0.7, ground: false, float: 0.2, ...legR(8, -24, -50), ...legL(-6, -18, -54), neck: 22, expression: "含泪", tears: 1, lookX: -0.5, lookY: -0.6 }, HUGH),
   /** 快到地面：低头看着底下的街面（差一点） */
-  看地: pose(-2, { face: -0.7, ground: false, float: 0.15, ...legR(10, -14, -60), ...legL(-4, -10, -60), neck: -24, expression: "含泪", tears: 1, lookX: -0.1, lookY: 1 }, HUGB),
+  看地: pose(-2, { face: -0.7, ground: false, float: 0.15, ...legR(10, -14, -60), ...legL(-4, -10, -60), neck: -24, expression: "含泪", tears: 1, lookX: -0.1, lookY: 1 }, HUGH),
   /** 她看自己的铁靴、一只一只拔下来：他看着她，不明白（担心） */
-  看她: pose(-4, { face: -0.7, ground: false, float: 0.2, ...legR(8, -24, -50), ...legL(-6, -18, -54), neck: 18, expression: "担心", tears: 1, lookX: -0.5, lookY: -0.7 }, HUGB),
+  看她: pose(-4, { face: -0.7, ground: false, float: 0.2, ...legR(8, -24, -50), ...legL(-6, -18, -54), neck: 18, expression: "担心", tears: 1, lookX: -0.5, lookY: -0.7 }, HUGH),
   /** 铁靴套上去：两条腿被坠直 */
-  套: pose(-4, { face: -0.7, ground: false, float: 0.1, ...legR(4, -6, 0), ...legL(-4, -6, 0), neck: 18, expression: "担心", tears: 1, lookX: -0.5, lookY: -0.8 }, HUGB),
+  套: pose(-4, { face: -0.7, ground: false, float: 0.1, ...legR(4, -6, 0), ...legL(-4, -6, 0), neck: 18, expression: "担心", tears: 1, lookX: -0.5, lookY: -0.8 }, HUGH),
   /** 明白过来：远处那只手攥住她的围巾（IK），拼命摇头，哭 */
   攥: pose(-4, { face: -0.7, ground: false, float: 0.1, ...legR(4, -6, 0), ...legL(-4, -6, 0), neck: 22, expression: "忍着哭", tears: 1, sad: 1, open: 0.3, lookX: -0.4, lookY: -0.8 }, (l) => ({
     ...armL(36, 110, 0, "grip", l),
     ...armR(120, 40, 0, "grip", l),
   })),
-  /** 铁靴一沉往下坠：近处那只手抱着砖，远处那只往上伸着够她，哭着仰头看她 */
-  坠: pose(-4, { face: -0.7, ground: false, ...legR(4, -6, 0), ...legL(-4, -6, 0), neck: 28, expression: "含泪", tears: 1, sad: 1, open: 0.3, lookX: -0.2, lookY: -1 }, (l) => UPB(l, 165)),
-  /** 穿着她的铁靴站在街上，仰着头，远处那只手还往上伸着 */
-  站仰: pose(-4, { face: -0.7, ground: false, ...legR(4, -4, 0), ...legL(-4, -4, 0), neck: 32, expression: "仰望", tears: 1, sad: 0.8, lookX: -0.1, lookY: -1 }, (l) => UPB(l, 120)),
+  /** 铁靴一沉往下坠：两只手往上伸着够她，哭着仰头看她 */
+  坠: pose(-4, { face: -0.7, ground: false, ...legR(4, -6, 0), ...legL(-4, -6, 0), neck: 28, expression: "含泪", tears: 1, sad: 1, open: 0.3, lookX: -0.2, lookY: -1 }, (l) => UP2(l, 165)),
+  /** 穿着她的铁靴站在街上，仰着头，远处那只手还往上伸着，近处那只垂下来 */
+  站仰: pose(-4, { face: -0.7, ground: false, ...legR(4, -4, 0), ...legL(-4, -4, 0), neck: 32, expression: "仰望", tears: 1, sad: 0.8, lookX: -0.1, lookY: -1 }, (l) => ({ ...armL(-2, 18, 0, "relax", l), ...armR(120, 14, 0, "open", l) })),
   /** 天上掉下来的砖砸在靴尖前面：低头看着它，两只手垂下来 */
   看砖: pose(4, { face: -0.7, ground: false, ...legR(4, -4, 0), ...legL(-4, -4, 0), neck: -26, expression: "含泪", tears: 1, sad: 0.8, lookX: -0.3, lookY: 1 }, (l) => ({ ...armL(14, 30, 0, "relax", l), ...armR(18, 34, 0, "open", l) })),
   /** 两只手抱着她的砖（「活下去」朝外），仰着头哭 */

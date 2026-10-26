@@ -61,7 +61,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   /** ⑦⑧ 十二年前：同一条街，白天，颜色淡一些、旧一些；穿着妈妈铁靴的她、往天上飘的妈妈（掉在半空的木牌、灰、调色在 drawPastTop） */
   const drawPast = (g: CanvasRenderingContext2D, t: number, layer?: Layer) => {
     const cam = thenCamAt(t);
-    if (t >= GROW_T.start) {
+    // 十二年前那一层（间奏第一次叠化的前一层）一直按 ⑧ 画：她跪着抱着木牌望着天
+    if (t >= GROW_T.start && (layer?.seg ?? segAt(t)) !== 0) {
       drawYears(g, t, cam, layer);
       return;
     }

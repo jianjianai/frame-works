@@ -3,8 +3,10 @@
 //   街（94.02）→ 天花板她醒来（95.40）→ 一镜到底（96.02：他冲上去、她扑下来、抱住、下坠、停住、交靴、松手、他落地）→
 //   （他落地以后天上掉下来一块砖，104.52 砸在靴尖前面）→ 第一视角（104.8：捡起来、看）→ 她越升越快冲他笑（106.02）→ 跺地（108.02）→ 慢放：白的边上（109.89）→
 //   静：老钟的特写（112.02，屋里墙上的钟跳两下）→ 窗外：他从靴子里出来往上飘、老钟攥住他、被拽出窗（113.88）→
-//   人链（118.02 街上一个抓住一个，退到 119.45 改成跟着他往上 → 121.89 退到整幅，整条人链在空中先向右、再向左摆）→
-//   推到他（125.82）：跟着他往左荡过去把砖递给她、一接过来就亮（128.02）、在这反乌托邦里松开栏杆抱住他（130.03），后半句拉远、整个画面暗下去（132.6）→ 尾奏：这句唱完光直接炸开、铺满整个画面（134.02）→ 散开、落下来、推向两个人 →
+//   人链（118.02 街上一个抓住一个，退到 119.45 改成跟着他往上）→ 第三声（121.75）从他往下一张脸一张脸看到街上最后那个人 →
+//   第四声（126.01）从街上往后拉开到整条人链，人链先往右、再往左荡 → 在这反乌托邦里（129.55 起推）推到他，跟着他往左荡过去，
+//   句子唱完把砖递到她手里（131.96）、鼓回来那一下一接过来就亮（132.01）、她立即松开栏杆抱住他、转正（132.58）→
+//   拉远、整个画面暗下去（132.75）→ 尾奏：光直接炸开、铺满整个画面（134.02）→ 散开、落下来、推向两个人 →
 //   落地、给他穿外套 → 光脚跺一下（134.03）。
 //   （用户 2026-10-25 第二次改 112.02 以后：下面的人是在救他；人链钉在地上的那一点不动，随风摆；砖不翻面；她给他穿外套，光着脚跺出一个坑）
 
@@ -17,13 +19,13 @@ import { TE, type V2 } from "../lib/end_t";
 import { drawWatchers, makeEndStage } from "../lib/end_map";
 import { wakeCast } from "../lib/end_ceil";
 import { ceilCam, chainCam, endCam, handCam, oneTakeCam, slowCam, smileCam, stompCam, streetCam, zhongCam, zhongCloseCam } from "../lib/end_cam";
-import { HB_REST, drawCoat, drawCoatInHands, drawGroundBrick, drawHer, drawKid, drawKidBoots, herAt, herBrickAt, holding, kidAt, warmAt } from "../lib/end_pair";
+import { HB_REST, drawCoat, drawCoatInHands, drawGroundBrick, drawHer, drawKid, drawKidBoots, drawLooseGift, herAt, herBrickAt, holding, kidAt, warmAt } from "../lib/end_pair";
 import { drawZhongHouse } from "../lib/end_zhong";
-import { chainPoint, drawChain } from "../lib/end_chain";
-import { PIVOT } from "../lib/end_rise";
+import { drawChain } from "../lib/end_chain";
 import { drawBigLight, drawBrickLight, drawCrater, drawCraterFront, drawDiveLines, drawFloatTears, drawLandBurst, drawLightMotes, drawRiseGlow, drawStompBurst, stompFlash } from "../lib/end_fx";
 import { drawPov } from "../lib/end_pov";
 import { X_K } from "../lib/end_map";
+import { drawCrowdFar, drawCrowdNear } from "../lib/end_crowd";
 
 /** 天色：天快亮（还有几扇窗亮着）→ 越来越亮；砖亮起来以后太阳出来 */
 function duskAt(t: number): [number, number] {
@@ -90,13 +92,16 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
    */
   const worldShot = (cam: Cam, t: number, o: { smear?: number; flash?: number; chain?: boolean; pair?: boolean } = {}) => {
     setDusk(...duskAt(t));
-    drawWorld(ctx, cam, t, [0, 0], undefined, wideOf(cam));
+    const wide = wideOf(cam);
+    // 街坊（lib/end_crowd.ts）：马路上的几排画在对面人行道那一层（D 1.25）之后、人这一层的楼之前
+    drawWorld(ctx, cam, t, [0, 0], (D) => D < 1.3 && drawCrowdFar(ctx, base, cam, t, wide), wide);
     applyCam(ctx, base, cam, 1);
     const v = viewOf(cam, 1);
     const k = kidAt(t);
     drawWatchers(ctx, t, k.root, v);
     drawZhongHouse(ctx, t, cam);
     if (v.y1 > -400) drawStreet(ctx, cam);
+    drawCrowdNear(ctx, base, cam, t, wide);
     if (o.smear) smearV(o.smear);
     applyCam(ctx, base, cam, 1);
     // 地上的：坑、外套、她那块砖、留在坑里的铁靴、坑的前沿、碎块和灰
@@ -110,6 +115,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       drawLandBurst(ctx, t, X_K - 10, TE.land, cam.z);
       drawLandBurst(ctx, t, HB_REST[0], TE.brickHit, cam.z, 0.35);
     }
+    // 他那块「妈妈，明天见」被她抱住那一下掉了：往下掉、躺在街上（画在两个人后面）
+    drawLooseGift(ctx, t, cam.z);
     if (o.chain !== false) drawChain(ctx, t, cam);
     if (o.pair !== false) {
       const h = herAt(t);
@@ -201,48 +208,23 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const renderZhongClose = (t: number) => worldShot(zhongCloseCam(t), t, { chain: false, pair: false });
   const renderZhong = (t: number) => worldShot(zhongCam(t), t, { chain: true });
   /**
-   * 第三声：一道细细的暖光沿人链从街上描到天上（用户 2026-10-26：「你想一个新的震撼方案吧，把倾斜的这个想法撤销」→
-   * 「这个光貌似把注意力从人链很长的震撼感抢走了，有优化方案吗？」）：不要亮光团、不在顶上炸开；
-   * 光是一道描线，经过的每个人轻轻一亮再留一层很淡的余光——眼睛跟着它从街上走到天上，把人链有多长走一遍。推到他身上时退掉
+   * 第三声从他往下一张脸一张脸看到街上 → 第四声从街上往后拉开到整条人链，人链先往右、再往左荡。
+   * （原来「去」的长音里有一道淡光沿人链从街上描到他；现在第三声的镜头自己把每个人看过一遍，光去掉了）
    */
-  const chainGlow = (cam: Cam, t: number) => {
-    if (t < TE.glow0 || t > TE.corner + 1) return;
-    applyCam(ctx, base, cam, 1);
-    const u = Math.min(1, (t - TE.glow0) / (TE.glowTop - TE.glow0));
-    const front = Math.pow(u, 1.25) * 1.03;
-    const fade = 1 - E_io((t - TE.corner) / 0.9);
-    const at = (h: number): V2 => {
-      const p = h <= 0 ? ([PIVOT[0], PIVOT[1]] as V2) : chainPoint(t, 1 - h);
-      return [p[0], p[1] - 200];
-    };
-    const n = 64;
-    for (let i = 0; i <= n; i++) {
-      // h：0 = 街上最后那个人（攥着的那一点），1 = 顶上的他
-      const h = i / n;
-      const lit = E_io((front - h) / 0.04 + 0.5);
-      if (lit <= 0.001) continue;
-      // 刚经过时亮一下（只比余光亮一点），之后留一层很淡的余光
-      const pass = Math.exp(-(((front - h) / 0.07) ** 2));
-      const p = at(h);
-      drawGlow(ctx, p[0], p[1], 110 + 40 * pass, (0.16 * lit + 0.28 * pass) * fade);
-    }
-  };
   const renderChain = (t: number) => {
     const cam = chainCam(t);
     worldShot(cam, t);
-    // 往下扫的中段很快：竖着的拖影（按这一帧镜头在画面上竖着走了多少）
-    if (t > TE.look0 && t < TE.sweep1) {
+    // 往下看的时候镜头走得快：轻轻的竖向拖影（按这一帧镜头在画面上竖着走了多少；人画在拖影后面清楚不了，所以很轻）
+    if (t > TE.look0 && t < TE.sweepEnd) {
       const prev = chainCam(t - 1 / 60);
-      smearV((cam.y - prev.y) * cam.z * 0.3);
+      smearV((cam.y - prev.y) * cam.z * 0.2);
     }
-    chainGlow(cam, t);
     herLight(cam, t);
   };
-  /** 推到他：跟着他荡过去把砖递给她，一接过来就亮，她松开栏杆抱住他 */
+  /** 「在这反乌托邦里」：推到他，跟着他荡过去把砖递给她，一接过来就亮，她立即松开栏杆抱住他、转正 */
   const renderHand = (t: number) => {
     const cam = handCam(t);
     worldShot(cam, t);
-    chainGlow(cam, t);
     herLight(cam, t);
     // 全片最强的暖光：以砖为中心；亮起来那一下一闪
     const b = herBrickAt(t);
