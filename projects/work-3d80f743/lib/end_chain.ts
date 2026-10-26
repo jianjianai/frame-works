@@ -11,7 +11,7 @@ import { drawTinted } from "./world";
 import { ARMS, live } from "./motion";
 import { drawPerson } from "./people";
 import { TE, type V2, mix } from "./end_t";
-import { ANCHOR, CROUCH, DRIFT, HANG, LEAP, LOOKUP, PULLED, STRIDE, WATCH, ZHONG } from "./end_poses";
+import { ANCHOR, CROUCH, DRIFT, HANG, LEAP, LOOKUP, PULLED, STRIDE, WATCH } from "./end_poses";
 import { MEMBERS, type Member, PIVOT, X_JOIN, linkLen, wavePolyline } from "./end_rise";
 import { kidAt } from "./end_pair";
 import { zhongNow } from "./end_zhong";
@@ -64,10 +64,9 @@ function moves() {
     const f = p.m.face;
     const keys: MoveKey[] = [];
     if (p.k === 0) {
-      // 老钟：被拽出窗（窗里那个使劲的样子）以后吊着
-      keys.push({ t: TE.zOut - 0.4, x: 0, p: ZHONG.拽 });
-      keys.push({ t: TE.zOut, p: ZHONG.拽 });
-      keys.push({ t: TE.zOut + 0.4, ease: "inOut", p: HANG(f, 0) });
+      // 老钟：被拽出窗以后吊着（窗里被拽起来那段在 lib/end_zhong.ts，交接时已经是这个样子）
+      keys.push({ t: TE.zOut - 0.4, x: 0, p: HANG(f, 0) });
+      keys.push({ t: TE.zOut + 0.4, p: HANG(f, 0) });
     } else {
       const t0 = Math.min(p.appear, p.run0) - 0.4;
       if (p.m.door) {

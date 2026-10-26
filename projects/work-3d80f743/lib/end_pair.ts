@@ -30,12 +30,15 @@ export const X_LAND = X_K - 700;
 const KID_DOWN = X_LAND + 120;
 /** 外套：脱下来堆在他脚边（左前）→ 跺地那一下被掀飞到她落地那块地方的左边（她去捡起来给他穿上） */
 export const COAT_X0 = X_K - 170;
-export const COAT_X1 = X_K - 840;
+// 落在她左边稍远一点（2026-10-26 原来 X_K − 840，外套堆的右沿就在她左脚边，她往左一迈就踩在外套上）
+export const COAT_X1 = X_K - 940;
 /** 坑（两只铁靴底下）；跺下去那一下铁靴陷进去多深 */
 export const CRATER_X = X_K - 14;
 export const STOMP_SINK = 24;
 /** 穿着她的铁靴站在街上时他的根：铁靴的底（脚踝下面 63.6）踩在街面上，他的脚踝在根上方 39 */
 export const KID_BOOT_Y = 39 - 63.6;
+/** 落地以后她的几个动作的时刻：转身朝左、往左那一步落地、拎着外套转回来、往右那一步落地（根按钉住的脚算，见 PLANT） */
+const PL = { turnL0: 142.8, turnL1: 142.94, stepL: 143.2, turnR0: 143.75, turnR1: 143.95, stepR: 144.22 };
 
 // ——————————————— 他飞上去（被抱住以前） ———————————————
 const STONE_COAT = CAST.小石头穿妈妈的外套;
@@ -433,24 +436,34 @@ const HER_KEYS: MoveKey[] = [
   // 放下他（砖给他抱着）
   { t: TE.putDown, ease: "inOut", p: HER.放下 },
   { t: TE.putDown + 0.25, p: HER.放下 },
-  // 转身往左走两步，弯腰捡起他妈妈的外套
-  { t: TE.coat0, ease: "inOut", p: HER.走左 },
-  { t: TE.coatPick - 0.25, x: -50, ease: "inOut", p: { ...HER.走左, ...legR(-12, -10), ...legL(16, -14) } },
-  { t: TE.coatPick, x: -80, ease: "inOut", p: HER.捡 },
-  { t: TE.coatPick + 0.2, p: HER.捡 },
-  // 拎着外套转回来，走到他跟前跪下，两只手举着领子给他披上
-  { t: TE.coatPick + 0.5, x: -60, ease: "inOut", p: HER.走右 },
-  { t: TE.coatOn0 - 0.05, x: -30, ease: "inOut", p: { ...HER.走右, ...legR(-12, -10), ...legL(16, -14) } },
-  { t: TE.coatOn0 + 0.25, ease: "inOut", p: HER.跪披 },
+  // 松开他，手垂下来（转身过正面时往前伸着的手会变成往两边平举），转身朝左看着地上的外套，往左迈一步，屈膝弯腰捡起他妈妈的外套（根按钉住的脚算，见 PLANT）
+  { t: PL.turnL0, ease: "inOut", p: { ...HER.站空, neck: -14, lookX: -0.1, lookY: 0.6 } },
+  { t: PL.turnL1, ease: "inOut", p: HER.转左 },
+  { t: PL.stepL - 0.14, ease: "inOut", p: HER.迈左 },
+  { t: PL.stepL, ease: "inOut", squash: 0.02, p: HER.落左 },
+  { t: TE.coatPick, ease: "inOut", squash: 0, p: HER.捡 },
+  { t: TE.coatPick + 0.15, p: HER.捡 },
+  // 拎着外套直起身，转身朝右，迈一步回到他跟前，跪下，两只手举着领子给他披上
+  { t: PL.turnR0, ease: "inOut", p: HER.直起 },
+  { t: PL.turnR1, ease: "inOut", p: { ...HER.直起, face: 0.4, expression: "微笑", smile: 0.6, lookX: 0.4, lookY: 0.4 } },
+  { t: PL.stepR - 0.14, ease: "inOut", p: HER.迈右 },
+  { t: PL.stepR, ease: "inOut", squash: 0.02, p: HER.落右 },
+  { t: TE.coatOn0 + 0.25, ease: "inOut", squash: 0, p: HER.跪披 },
   { t: TE.coatOn1 + 0.1, p: HER.跪披 },
   { t: TE.coatOn1 + 0.45, ease: "inOut", p: { ...HER.跪, ...armL(30, 30, 0, "relax", 6), ...armR(36, 30, 0, "open", 6), expression: "哭着笑", lookX: 0.4, lookY: -0.1 } },
-  // 站起来，往后退一步，看着他
+  // 站起来：前脚踩实、身子往前一送 → 快站直 → 站好；往后退一步，看着他
   { t: TE.stand - 0.1, p: { ...HER.跪, ...armL(30, 30, 0, "relax", 6), ...armR(36, 30, 0, "open", 6), expression: "哭着笑", lookX: 0.4, lookY: -0.1 } },
-  { t: TE.stand + 0.35, ease: "inOut", p: HER.站空 },
-  { t: TE.back, x: -120, ease: "inOut", p: HER.站空 },
-  // 抬起一只光脚，憋一口气——「嘭」跺下去，地上一个坑
-  { t: TE.stomp2 - 0.42, p: HER.站空 },
-  { t: TE.stomp2 - 0.14, ease: "inOut", p: HER.抬脚 },
+  { t: TE.stand + 0.1, ease: "inOut", p: HER.起身 },
+  { t: TE.stand + 0.26, ease: "inOut", p: HER.起身直 },
+  { t: TE.stand + 0.44, ease: "inOut", p: HER.站弓 },
+  { t: TE.back - 0.18, ease: "inOut", p: HER.退抬 },
+  { t: TE.back, ease: "inOut", p: HER.退落 },
+  { t: TE.back + 0.14, ease: "inOut", p: HER.收 },
+  { t: TE.back + 0.3, ease: "inOut", p: HER.站空 },
+  // 抬起一只光脚、抬到最高憋一口气——「嘭」跺下去（膝盖跟着一沉），地上一个坑
+  { t: TE.stomp2 - 0.6, p: HER.站空 },
+  { t: TE.stomp2 - 0.24, ease: "inOut", p: HER.抬脚 },
+  { t: TE.stomp2 - 0.12, ease: "out", p: HER.抬脚憋 },
   { t: TE.stomp2, ease: "in", squash: 0.08, p: HER.跺2 },
   { t: TE.stomp2 + 0.2, ease: "out", p: HER.跺2 },
   { t: TE.stomp2 + 1.1, ease: "inOut", p: HER.笑看 },
@@ -494,8 +507,51 @@ const OUT_T = (side: Side) => (side === "L" ? TE.out1 : TE.out2);
 function herRaw(t: number) {
   return herMove(t).pose;
 }
-/** 落地以后她的根是固定的（往前一步时按钉住的脚挪） */
-const landedRoot = (t: number): V2 => [X_LAND + herMove(t).x, 0];
+/**
+ * 落地以后哪只脚钉在地上：从这一刻起按这只脚反推根（往左一步、屈膝捡、往右一步、跪下、站起来、退一步、跺脚都不打滑）。
+ * null：原地转身（过正面时两条腿整套镜像，不能钉脚），根不动。（用户 2026-10-26：「2:21.57~2:28.90 的动作全部优化一下」——原来是按关键帧的 x 整个人平移）
+ */
+const PLANT: [number, Side | null][] = [
+  [TE.herLand, "R"],
+  [PL.turnL0, null],
+  [PL.turnL1 + 0.02, "L"],
+  [PL.stepL, "R"],
+  [PL.turnR0, null],
+  [PL.turnR1, "L"],
+  [PL.stepR, "R"],
+  [TE.back, "L"],
+];
+const LAND_DT = 1 / 120;
+let LAND_XS: Float64Array | null = null;
+function landedX(t: number): number {
+  if (!LAND_XS) {
+    const n = Math.ceil((TE.end + 0.5 - TE.herLand) / LAND_DT) + 1;
+    const xs = new Float64Array(n);
+    let x = herMove(TE.herLand).x;
+    let prevSide: Side | null = null;
+    let prevFoot = 0;
+    for (let i = 0; i < n; i++) {
+      const tt = TE.herLand + i * LAND_DT;
+      let side: Side | null = null;
+      for (const [t0, sd] of PLANT) if (tt >= t0) side = sd;
+      if (side) {
+        const j = jointsOf(herRaw(tt));
+        const f = side === "L" ? j.ankleL[0] : j.ankleR[0];
+        if (side === prevSide) x += prevFoot - f;
+        prevFoot = f;
+      }
+      prevSide = side;
+      xs[i] = x;
+    }
+    LAND_XS = xs;
+  }
+  const u = Math.max(0, (t - TE.herLand) / LAND_DT);
+  const i = Math.min(LAND_XS.length - 2, Math.floor(u));
+  const f = Math.min(1, u - i);
+  return LAND_XS[i] + (LAND_XS[i + 1] - LAND_XS[i]) * f;
+}
+/** 落地以后她的根：按钉在地上的那只脚反推 */
+const landedRoot = (t: number): V2 => [X_LAND + landedX(t), 0];
 function landedChest(t: number): V2 {
   const r = landedRoot(t);
   const c = herOff(herRaw(t));
@@ -869,8 +925,13 @@ export function herAt(t: number): HerNow {
   if (t > TE.coatPick - 0.2 && t < TE.coatOn1 + 0.35) {
     const c = coatHands(t);
     const w = E.io(ph(t, TE.coatPick - 0.2, TE.coatPick)) * (1 - E.io(ph(t, TE.coatOn1, TE.coatOn1 + 0.35)));
-    ik("L", c[0], w);
-    ik("R", c[1], w);
+    // 两只手各捏靠自己这一侧的那一头：朝左时近处那只（L）在画面右边，捏右边那头（不隔着身子去够远的那头）。
+    // 蹲下捡的时候近处那只肩膀高、够不着地：远处那只一只手捏住领子中间拎起来，拎到半空近处那只再接过去一起拿
+    const left = ((p.face as number | undefined) ?? 1) < 0;
+    const both = E.io(ph(t, TE.coatPick + 0.12, TE.coatPick + 0.4));
+    const mid: V2 = [(c[0][0] + c[1][0]) / 2, (c[0][1] + c[1][1]) / 2];
+    ik("L", left ? c[1] : c[0], w * both);
+    ik("R", mix(mid, left ? c[0] : c[1], both), w);
   }
   const j = jointsOf(p);
   const chest = chestOf(j);
@@ -884,7 +945,8 @@ export function herAt(t: number): HerNow {
 /** 她捡起外套、拎着领子的两只手（世界坐标）：弯腰捏住 → 拎起来 → 转回来拎着走到他跟前 → 举到他肩上 */
 function coatHands(t: number): [V2, V2] {
   const r = landedRoot(t);
-  const pick: V2 = [COAT_X1 + 6, -36];
+  // 捏住靠她这一头的领子（外套堆右边那一截），拎起来时整团跟着手走
+  const pick: V2 = [COAT_X1 + 66, -48];
   const lifted: V2 = [r[0] - 60, -330];
   const carry: V2 = [r[0] + 84, -350];
   const k = kidAt(Math.min(t, TE.coatOn1));

@@ -12,9 +12,9 @@ import { ARMS, live } from "./motion";
 import { ZHONG_HOUSE } from "./dawn";
 import { drawPerson } from "./people";
 import { cupHold, drawHouse, drawHouseWindowFront } from "./props";
-import { armL } from "./poses";
+import { armL, legL, legR } from "./poses";
 import { TE, type V2, mix } from "./end_t";
-import { ZHONG } from "./end_poses";
+import { HANG, ZHONG } from "./end_poses";
 import { kidAt } from "./end_pair";
 
 export const OLD = CAST.老钟;
@@ -41,7 +41,16 @@ const KEYS: MoveKey[] = [
   // 探出窗口，两只手攥住他的脚踝；被拽着往上，咬着牙
   { t: TE.zGrab, ease: "out", p: ZHONG.扑 },
   { t: TE.zGrab + 0.3, ease: "inOut", p: ZHONG.拽 },
-  { t: 125, p: ZHONG.拽 },
+  // 被拽起来（时刻按他离地多高：116.35 脚离地，117.6–117.9 滑过窗台，TE.zOut 交给人链）：脚一离地就吊在胳膊下面、腿垂下来；
+  // 滑过窗台时腿被挂住拖在后面，脱开往前荡一下，落到人链里吊着的样子（lib/end_chain.ts 的 HANG，交接不跳）
+  { t: 116.3, p: ZHONG.拽 },
+  { t: 116.8, ease: "inOut", p: ZHONG.离地 },
+  { t: 117.25, ease: "inOut", p: ZHONG.吊起 },
+  { t: 117.5, ease: "inOut", p: { ...ZHONG.吊起, ...legR(10, -20, -46), ...legL(-14, -18, -50) } },
+  { t: 117.74, ease: "inOut", p: ZHONG.拖 },
+  { t: 117.93, ease: "inOut", p: ZHONG.荡 },
+  { t: TE.zOut, ease: "inOut", p: HANG(-0.45, 0) },
+  { t: 125, p: HANG(-0.45, 0) },
 ] as MoveKey[];
 const move = live(KEYS, { look: lookOf(OLD), base: { wind: -0.6 }, idle: true, seed: 1131, springs: ARMS, follow: 0 });
 

@@ -149,7 +149,7 @@ export const HER = {
     ...armR(40, 30, 0, "open", l),
   })),
   /** 单膝跪下（光着脚）：前腿 R 立着、后膝着地，看着他，两只手捧着砖 */
-  跪: pose(6, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(96, -98), ...legL(-6, -134, -140), thighR: 0.7, neck: -6, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.2 }, (l) => ({
+  跪: pose(6, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(96, -98), ...legL(-4, -92, -96), thighR: 0.7, neck: -6, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.2 }, (l) => ({
     ...armL(40, 100, 0, "grip", l),
     ...armR(36, 104, 0, "grip", l),
   })),
@@ -184,33 +184,91 @@ export const HER = {
     ...armL(8, 20, 0, "relax", l),
     ...armR(10, 24, 0, "relax", l),
   })),
-  /** 朝左走一步（去捡外套） */
-  走左: pose(4, { face: -0.4, ground: true, lift: 0, float: 0, ...legR(22, -16), ...legL(-14, -12), neck: -10, expression: "含泪", tears: 1, lookX: -0.2, lookY: 0.5 }, (l) => ({
-    ...armL(-16, 20, 0, "relax", l),
-    ...armR(18, 24, 0, "relax", l),
+  // ——— 2026-10-26 用户：「2:21.57~2:28.90 的动作全部优化一下」——原来往左走、走回来、往后退都是一个姿势整个人平移过去（不迈步），
+  // 弯腰捡外套是直着腿只在腰上折、像一块板，跪着后脚翘在半空，从跪直接站直、只隔 0.35 秒，跺脚几乎看不出抬腿。
+  // 现在一步一步迈（根按钉在地上的那只脚反推，lib/end_pair.ts 的 PLANT），屈膝弯腰捡，跪下后脚脚尖点地，站起来先往前一送再站直，退一步、抬腿憋一口气再跺 ———
+  /** 放下他以后转身朝左，低头看着地上的外套 */
+  转左: pose(4, { face: -0.4, ground: true, lift: 0, float: 0, ...legR(8, -6), ...legL(-4, -2), neck: -14, expression: "含泪", tears: 1, lookX: -0.2, lookY: 0.7 }, (l) => ({
+    ...armL(4, 18, 0, "relax", l),
+    ...armR(6, 22, 0, "relax", l),
   })),
-  /** 弯腰捡起外套（朝左） */
-  捡: pose(58, { face: -0.4, ground: true, lift: 0, float: 0, ...legR(28, -46), ...legL(-6, -18), neck: -12, expression: "含泪", tears: 1, lookX: 0, lookY: 0.8 }, (l) => ({
+  /** 往左迈一步：前脚（R）抬起来往前送，后脚（L）踩着；手和腿反着摆 */
+  迈左: pose(6, { face: -0.4, ground: true, lift: 0, float: 0, ...legR(24, -36, -10), ...legL(-6, -4, 0), neck: -14, expression: "含泪", tears: 1, lookX: -0.2, lookY: 0.7 }, (l) => ({
+    ...armL(16, 20, 0, "relax", l),
+    ...armR(-12, 24, 0, "relax", l),
+  })),
+  /** 前脚落地，后脚跟抬起来 */
+  落左: pose(8, { face: -0.4, ground: true, lift: 0, float: 0, ...legR(14, -6, 0), ...legL(-12, -10, -18), neck: -16, expression: "含泪", tears: 1, lookX: -0.1, lookY: 0.8 }, (l) => ({
+    ...armL(-8, 20, 0, "relax", l),
+    ...armR(10, 24, 0, "relax", l),
+  })),
+  /** 蹲下去捡起外套（朝左）：前腿大腿压到差不多水平、后膝快贴地、脚跟抬起，身子往前探，手（IK）捏住领子 */
+  捡: pose(62, { face: -0.4, ground: true, lift: 0, float: 0, ...legR(80, -124, 0), ...legL(-10, -80, -60), neck: -12, expression: "含泪", tears: 1, lookX: 0, lookY: 0.8 }, (l) => ({
     ...armL(-8, 12, 0, "grip", l),
     ...armR(2, 12, 0, "grip", l),
   })),
-  /** 拎着外套朝右走回他跟前 */
-  走右: pose(4, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(22, -16), ...legL(-14, -12), neck: -10, expression: "微笑", smile: 0.6, tears: 1, lookX: 0.4, lookY: 0.4 }, (l) => ({
+  /** 拎着外套直起身（还朝左），前脚在前 */
+  直起: pose(6, { face: -0.4, ground: true, lift: 0, float: 0, ...legR(12, -8), ...legL(-8, -6), neck: -6, expression: "微笑", smile: 0.5, tears: 1, lookX: -0.1, lookY: 0.3 }, (l) => ({
     ...armL(40, 60, 0, "grip", l),
     ...armR(46, 60, 0, "grip", l),
   })),
+  /** 拎着外套往右迈一步回到他跟前 */
+  迈右: pose(6, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(24, -36, -10), ...legL(-8, -4, 0), neck: -8, expression: "微笑", smile: 0.6, tears: 1, lookX: 0.4, lookY: 0.4 }, (l) => ({
+    ...armL(40, 60, 0, "grip", l),
+    ...armR(46, 60, 0, "grip", l),
+  })),
+  /** 前脚落在他跟前，后腿往后伸、脚跟抬起（接着就跪下去） */
+  落右: pose(8, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(18, -6, 0), ...legL(-16, -12, -20), neck: -10, expression: "微笑", smile: 0.6, tears: 1, lookX: 0.4, lookY: 0.3 }, (l) => ({
+    ...armL(40, 60, 0, "grip", l),
+    ...armR(46, 60, 0, "grip", l),
+  })),
+  /** 站起来（一）：前脚踩实，身子往前一送，后膝离地 */
+  起身: pose(22, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(52, -58), ...legL(-14, -52, -40), thighR: 1, neck: -6, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.1 }, (l) => ({
+    ...armL(20, 24, 0, "relax", l),
+    ...armR(24, 26, 0, "open", l),
+  })),
+  /** 站起来（二）：快站直，后脚刚离地 */
+  起身直: pose(8, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(24, -12), ...legL(-14, -20, -12), thighR: 1, neck: -6, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.2 }, (l) => ({
+    ...armL(10, 22, 0, "relax", l),
+    ...armR(12, 24, 0, "relax", l),
+  })),
+  /** 站起来了：前脚还踩在原地（弓步），看着他 */
+  站弓: pose(3, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(22, -8), ...legL(-12, -8), neck: -8, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.3 }, (l) => ({
+    ...armL(8, 20, 0, "relax", l),
+    ...armR(10, 24, 0, "relax", l),
+  })),
+  /** 往后退一步看着他：后脚（L）抬起来往后撤，前脚踩着 */
+  退抬: pose(-2, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(22, -10), ...legL(-26, -34, -18), neck: -8, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.3 }, (l) => ({
+    ...armL(14, 20, 0, "relax", l),
+    ...armR(-6, 24, 0, "relax", l),
+  })),
+  /** 后脚落在后面，重心挪过去 */
+  退落: pose(0, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(20, -10), ...legL(-22, -10, 0), neck: -8, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.3 }, (l) => ({
+    ...armL(6, 20, 0, "relax", l),
+    ...armR(4, 24, 0, "relax", l),
+  })),
+  /** 前脚抬起来收回去（接着站空） */
+  收: pose(1, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(10, -36, -14), ...legL(-12, -6), neck: -8, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.3 }, (l) => ({
+    ...armL(-4, 20, 0, "relax", l),
+    ...armR(10, 24, 0, "relax", l),
+  })),
   /** 跪在他跟前，两只手举着外套的领子给他披上（IK） */
-  跪披: pose(4, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(96, -98), ...legL(-6, -134, -140), thighR: 0.7, neck: 0, expression: "微笑", smile: 0.7, tears: 1, lookX: 0.4, lookY: -0.1 }, (l) => ({
+  跪披: pose(4, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(96, -98), ...legL(-4, -92, -96), thighR: 0.7, neck: 0, expression: "微笑", smile: 0.7, tears: 1, lookX: 0.4, lookY: -0.1 }, (l) => ({
     ...armL(90, 40, 0, "grip", l),
     ...armR(100, 40, 0, "grip", l),
   })),
   /** 抬起一只光脚（远处那条），憋一口气 */
-  抬脚: pose(-6, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(78, -84), ...legL(-6, -6), neck: 4, expression: "坚定", teeth: 0.4, tears: 1, lookX: 0.3, lookY: 0.4 }, (l) => ({
-    ...armL(-20, 30, 0, "fist", l),
-    ...armR(30, 40, 0, "fist", l),
+  抬脚: pose(-8, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(96, -100, -10), ...legL(-4, -10), neck: 2, expression: "坚定", teeth: 0.4, tears: 1, lookX: 0.3, lookY: 0.4 }, (l) => ({
+    ...armL(-24, 40, 0, "fist", l),
+    ...armR(36, 50, 0, "fist", l),
+  })),
+  /** 抬到最高、憋住那一口气：身子再往后仰一点，拳头攥紧 */
+  抬脚憋: pose(-11, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(100, -104, -12), ...legL(-4, -12), neck: 4, expression: "坚定", teeth: 0.7, tears: 1, lookX: 0.3, lookY: 0.5 }, (l) => ({
+    ...armL(-28, 46, 0, "fist", l),
+    ...armR(40, 56, 0, "fist", l),
   })),
   /** 跺下去：腿砸直，身子跟着往下一压 */
-  跺2: pose(6, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(10, -8), ...legL(-6, -10), neck: -10, expression: "坚定", teeth: 0.6, tears: 1, lookX: 0.3, lookY: 0.7 }, (l) => ({
+  跺2: pose(10, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(14, -16), ...legL(-6, -18), neck: -12, expression: "坚定", teeth: 0.6, tears: 1, lookX: 0.3, lookY: 0.7 }, (l) => ({
     ...armL(-30, 30, 0, "fist", l),
     ...armR(-24, 34, 0, "fist", l),
   })),
@@ -364,6 +422,16 @@ export const ZHONG = {
   扑: pose(50, { face: -0.6, ...legR(10, -8), ...legL(-14, -6), neck: 34, expression: "使劲", teeth: 0.4, lookX: -0.3, lookY: -1 }, (l) => ({ ...armL(120, 20, 0, "grip", l), ...armR(140, 10, 0, "grip", l) })),
   /** 死死攥着，被他往上拽：身子绷直，咬着牙 */
   拽: pose(30, { face: -0.6, ...legR(10, -8, -20), ...legL(-14, -6, -20), neck: 34, expression: "使劲", teeth: 0.8, lookX: -0.3, lookY: -1 }, (l) => ({ ...armL(150, 6, 0, "grip", l), ...armR(160, 6, 0, "grip", l) })),
+  // 被拽起来（2026-10-26 用户：「是优化被拉起来时的动作，不是添加动作」，1:57.70：原来一直是上面那个站着使劲的样子，
+  // 两腿叉开站在半空、身子斜成一块板）：脚离了地 → 吊在胳膊下面、腿垂下来；滑过窗台时腿被拖在后面；出了窗往前荡一下，落到人链里的 HANG
+  /** 脚离了地：身子顺着胳膊拉直一点，腿软下来、脚尖朝下 */
+  离地: pose(20, { face: -0.58, ...legR(16, -26, -44), ...legL(-4, -18, -48), neck: 32, expression: "使劲", teeth: 0.8, lookX: -0.3, lookY: -1 }, (l) => ({ ...armL(160, 4, 0, "grip", l), ...armR(166, 4, 0, "grip", l) })),
+  /** 往上拖的路上：吊直了，两条腿垂着、一前一后晃 */
+  吊起: pose(8, { face: -0.54, ...legR(4, -30, -46), ...legL(-10, -12, -50), neck: 30, expression: "使劲", teeth: 0.8, lookX: -0.3, lookY: -1 }, (l) => ({ ...armL(170, 3, 0, "grip", l), ...armR(172, 3, 0, "grip", l) })),
+  /** 滑过窗台：身子被一下拽出去，两条腿慢半拍、拖在后面（往屋里那边） */
+  拖: pose(4, { face: -0.5, ...legR(-18, -40, -54), ...legL(-28, -28, -56), neck: 28, expression: "使劲", teeth: 0.9, lookX: -0.3, lookY: -1 }, (l) => ({ ...armL(174, 2, 0, "grip", l), ...armR(172, 4, 0, "grip", l) })),
+  /** 腿脱开窗台往前荡过去一点 */
+  荡: pose(-4, { face: -0.47, ...legR(20, -24, -40), ...legL(8, -16, -44), neck: 26, expression: "使劲", teeth: 0.7, lookX: -0.2, lookY: -1 }, (l) => ({ ...armL(176, 4, 0, "grip", l), ...armR(170, 6, 0, "grip", l) })),
 };
 
 // ——————————————— 人链里的人（f：朝向，正数朝右） ———————————————
