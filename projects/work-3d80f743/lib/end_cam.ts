@@ -208,7 +208,8 @@ const fitZ = (t: number) => Math.min(1.5, (1740 - KID_Y) / chestH(t));
 /** 用户 2026-10-26（1:59.45）：「这个镜头到这里就不要继续拉远了，改成跟随小石头向上」；（1:59.61）「这里镜头拉得太远了，镜头放5个人就行」；
  * （1:58.67）「镜头对准小石头」「上下也对准小石头」——他的胸口一直在画面正中；退到画面里装下 4–5 个人（他和下面三个多人，倍数 0.58；地面装不下就让它出画）
  * 就柔和地停住，倍数不再变，之后跟着他往上（背景往下沉、街面出画） */
-const Z_FOLLOW = 0.58;
+// 用户 2026-10-27（1:59.59）：「这里镜头多推远一点，放下6个人就不推了，之后镜头也不要拉近，保持不动，直到下一个活下去」——原来 0.58（5 个人）
+const Z_FOLLOW = 0.48;
 let fitStop = 0;
 /** 退到 Z_FOLLOW 的那一刻 */
 const FIT_STOP = () => {
@@ -225,8 +226,9 @@ const FIT_STOP = () => {
 const fitChain = (t: number): Cam => {
   const z0 = fitZ(t);
   const ts = FIT_STOP();
-  // 跟着他往上的时候偷偷推近（0.58 → 0.95，两秒多，看不出在推），第三声前接着推到他朝她喊的脸上（callCam）
-  const z = z0 * Math.pow(fitZ(ts) / z0, E.io(ph(t, ts - 0.3, ts + 0.3))) * (1 + 0.64 * E.io(ph(t, 119.8, TE.call)));
+  // 退到装下 6 个人就停；跟着他往上的时候偷偷慢慢推近（0.48 → 0.86，两秒多，看不出在推），第三声前接着越推越快推到他朝她喊的脸上（callCam）
+  // （2026-10-27 试过「之后不推、到『活下去』才推」，用户：「感觉还是不行，还是改回之前得偷偷慢慢拉近吧，最后的那一下加速」）
+  const z = z0 * Math.pow(fitZ(ts) / z0, E.io(ph(t, ts - 0.3, ts + 0.3))) * (1 + 0.8 * E.io(ph(t, 119.8, TE.call)));
   // 横着对准他的胸口；人链轻轻摆的那一段（119.6 他回到人链在街上那一点的正上方以后）还原成镜头横着只跟三成
   // （用户 2026-10-26：「中间摇摆那段还原，对准小石头摇摆就体现不出来了」），他在画面里左右晃、人链跟着斜
   const kx = kidChest(t)[0];
@@ -263,12 +265,16 @@ function wideAt(t: number): Cam {
  * 原来第三声从他往下一张脸一张脸扫到街上最后那个人）。接着第二声跟着他往上时偷偷推近的那一下，越推越近推到他脸上：
  * 他的头在画面左边一点、偏下，上面留给他朝上喊；「活」上推到，「下」溶进回忆以前停稳
  */
+/** 第三声推到他喊的脸上：起、止 */
+const CALL_PUSH: [number, number] = [121.5, TE.mem0];
 function callCam(t: number): Cam {
   const c = streetChain(t);
   const h = kidAt(t).head;
   // 他的头在画面左边一点、偏下（上面留出他朝上喊的地方）：回忆溶进来时，那一夜他拽绳子的脸正好对在这里（那一夜他站在画面左下）
   const close = aim(h[0], h[1], 480, 830, 3.2);
-  return camLerp(c, close, E.io(ph(t, TE.call0, TE.call + 0.35)));
+  // 最后那一下越推越快（用户 2026-10-27：「最后的那一下加速」）：121.5 起从 0 慢慢加速，「下」溶进回忆（mem0）那一刻正好推到（叠化盖住停下来那一下；
+  // 回忆按 mem0 那一刻的镜头对上他的脸）
+  return camLerp(c, close, Math.pow(ph(t, CALL_PUSH[0], CALL_PUSH[1]), 2.4));
 }
 /**
  * 她一直抓着栏杆的近景（用户 2026-10-27：「她之前就抓好了，只放一个近景她一直抓住就行，不用抖一下」）：拍上从回忆切回来，
@@ -330,17 +336,21 @@ export function handCam(t: number): Cam {
   return withBreath(e < 1 ? camLerp(wideAt(t), c, e) : c, t, 1.5 + 0.5 * (1 - e));
 }
 function handRaw(t: number): Cam {
-  const k = kidChest(t);
-  const lag = kidChest(t - 0.1);
-  const follow = aim(lerp(k[0], lag[0], 0.5), lerp(k[1], lag[1], 0.5) - 40, 660, 900, 1.7);
+  // 用户 2026-10-27（2:11.38）：「这里镜头太近了，要拉远一点，并且对准砖」——原来推到他身上 1.7 倍、对准他的胸口；
+  // 现在对准砖（递的时候在他伸直的两只手上，接住以后在她伸直的左手上），1.25 倍，两个人伸直的胳膊都在画面里
+  const bAt = (tt: number): V2 => herBrickAt(tt)!.c;
+  const b0 = bAt(t);
+  const b1 = bAt(Math.max(TE.brickHit + 0.01, t - 0.1));
+  const bc: V2 = [lerp(b0[0], b1[0], 0.5), lerp(b0[1], b1[1], 0.5)];
   const h = herAt(t);
+  const k = kidChest(t);
   const p: V2 = [(h.head[0] + k[0]) / 2 + 10, (h.head[1] + k[1]) / 2 - 30];
   // 2026-10-27 四件事各占一小节（end_t.ts）：
-  // ① 接住、亮：过渡到框住两个人，之后一路慢慢推近两张脸和那块亮着的砖（柔和起步、越推越慢：她认出自己写的字），推到 ② 松手那一拍正好停；
-  // ② 松开栏杆翻过来那半秒镜头不推、只跟着两个人（翻身看得清），抱住以后接着推到她脸上
-  const z = 1.55 * Math.pow(1.85 / 1.55, E.settle(ph(t, TE.hand + 0.25, TE.hug)));
-  const pair = aim(p[0], p[1], 540, 900, z);
-  const c = camLerp(follow, pair, E.io(ph(t, TE.hand - 0.3, TE.hand + 0.35)));
+  // ① 接住、亮：一直对准砖，之后一路柔和起步、越推越慢地推近（她认出自己写的字），推到 ② 松手那一拍正好停；
+  // ② 松开栏杆扑过去时对准的那一点从砖慢慢挪到两个人中间，抱住以后接着推到她脸上
+  const z = 1.25 * Math.pow(1.6 / 1.25, E.settle(ph(t, TE.hand + 0.25, TE.hug)));
+  const tgt = mix(bc, p, E.io(ph(t, TE.hug, TE.upright)));
+  const c = aim(tgt[0], tgt[1], 540, 960, z);
   // ③ 转正以后推到她的脸上停住（她睁开眼看着砖、一滴眼泪往下掉在砖上、闭上眼哭着笑）：她的脸在画面上面一点，砖在画面中间偏下，他的脸挨在她下巴旁边；
   // 柔和起步、越推越慢（拥抱的推法，1.2 秒）；停住以后只极慢地再凑一点，④ 拉远（TE.dim0）从这里起
   const face = aim(h.head[0] + 40, h.head[1] + 110, 540, 820, 3.9 * (1 + 0.035 * ph(t, TE.faceSet, TE.dim0)));

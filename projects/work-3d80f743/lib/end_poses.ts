@@ -133,6 +133,16 @@ export const HER = {
     ...armL(172, 24, 0, "grip", l),
     ...armR(120, 60, 0, "grip", l),
   })),
+  /** ② 松开栏杆，头朝下朝他扑过去：腿并着拖在后面，两只胳膊朝他伸（IK），哭着笑 */
+  扑他: pose(4, { face: 0.4, ground: false, rot: -140, float: 0.2, ...legL(-4, -12, -40), ...legR(6, -18, -40), neck: 14, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: -0.3 }, (l) => ({
+    ...armL(150, 20, 0, "grip", l),
+    ...armR(140, 24, 0, "open", l),
+  })),
+  /** ② 他接住她：头朝下搂住他，腿还在上面（接着从楼那边荡下来），闭着眼 */
+  倒抱: pose(8, { face: 0.4, ground: false, rot: -128, float: 0.15, chestL: "over", ...legL(-10, -30, -40), ...legR(12, -40, -40), neck: 6, expression: "哭着笑", tears: 1, blink: 0.6, lookX: 0.3, lookY: 0.2 }, (l) => ({
+    ...armL(40, 70, 0, "grip", l),
+    ...armR(50, 80, 0, "grip", l),
+  })),
   /** 松开栏杆，两只手抱住他（IK），慢慢转正；闭着眼哭着笑 */
   抱他: pose(10, { face: 0.4, ground: false, rot: 0, float: 0.3, chestL: "over", ...legL(-8, -20, -40), ...legR(10, -30, -40), neck: -16, expression: "哭着笑", tears: 1, blink: 0.6, lookX: 0.3, lookY: 0.6 }, (l) => ({
     ...armL(40, 70, 0, "grip", l),
