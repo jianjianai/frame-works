@@ -4,10 +4,27 @@
 // |face| 0.2…0.45 时刘海按脸边外推出一根长刺。
 // 画法和秤砣一样：平涂、外轮廓描边、右下一道阴影；头发压在头发上的边不描；发梢分缝处往上一道由粗到细的发丝线。
 
-import { type Ink, type P, type V2, clamp01, drawPart, fillShaded, lerp, loopSin, ribbonPts, rowSpan, smoothPath } from "./rig";
+import {
+  type Ink,
+  type P,
+  type V2,
+  clamp01,
+  clockwisePoly,
+  drawPart,
+  fillShaded,
+  lerp,
+  lerpPts,
+  loopSin,
+  matchOutlines,
+  polylinePath,
+  ribbonPts,
+  rowSpan,
+  smoothPath,
+} from "./rig";
 import { FACE_TURN, type HeadView, type Rig, rotateV } from "./figure";
+import { TOUSLED } from "./cast-hair-art";
 
-export type HairStyle = "short" | "kid" | "curtain" | "bob" | "sidebob" | "bun" | "long" | "ponytail" | "highpony" | "receding" | "none";
+export type HairStyle = "short" | "kid" | "curtain" | "bob" | "sidebob" | "bun" | "long" | "ponytail" | "highpony" | "receding" | "tousled" | "none";
 
 /** 马尾：发根（正面、3/4 的头坐标）、长、发根处的宽、皮筋 */
 interface Tail {
@@ -37,6 +54,25 @@ interface HairDef {
   /** 头顶后面的髻：圆心（正面、3/4）、半径 */
   bun?: { c: V2; c3: V2; r: number };
   tail?: Tail;
+  /** 用户手画的发型：正面和 3/4 各一张（已经逐点对应好），转身时按比例混合，不走 turnHair；back、front、lines 不用 */
+  art?: HairArt;
+}
+
+/** 手画发型：后面那片、刘海那片各是 [正面, 3/4] 两条点数相同的轮廓；strands 只在正面画的发丝 */
+interface HairArt {
+  back: [V2[], V2[]];
+  fringe: [V2[], V2[]];
+  strands: V2[][];
+}
+/** 两张线稿的同一块按头顶、最右、最低、最左四个标志点逐点对应（和脸的 FACE_TURN 一样） */
+function artPair(front: V2[], side: V2[]): [V2[], V2[]] {
+  const marks = (p: V2[]) => {
+    const by = (f: (q: V2) => number) => p.reduce((bi, q, i) => (f(q) > f(p[bi]) ? i : bi), 0);
+    return [by((q) => -q[1]), by((q) => q[0]), by((q) => q[1]), by((q) => -q[0])];
+  };
+  const a = clockwisePoly(front);
+  const b = clockwisePoly(side);
+  return matchOutlines(a, marks(a), b, marks(b), 32);
 }
 
 // ——— 3/4 的过渡 ———
@@ -83,6 +119,14 @@ const NAPE: P[] = [[40, 20], [30, 31], [12, 35], [-12, 35], [-30, 31], [-40, 20]
 const FRONT_SIDES: P[] = [[-40, 8, 1], [-45, -10], [-49, -33], [-44, -56], [-29, -71], [-6, -77], [19, -75], [38, -64], [48, -45], [50, -24], [46, -4], [41, 8, 1]];
 
 const HAIR: Record<Exclude<HairStyle, "none">, HairDef> = {
+  // 周磊的碎发（用户 2026-10-27 照参考图手画的，cast-hair-art.ts）：头顶几撮翘起来，两鬓盖到耳朵上面，刘海一细细压到眉毛上面。
+  // 线稿按周磊的 headScale / headWidth / width 反算到头的坐标，头的比例换了要重新生成
+  tousled: {
+    back: [],
+    front: [],
+    // 刘海在换算脚本里已经逐点对应好（下沿对下沿），后面那片按四个标志点对应
+    art: { back: artPair(TOUSLED.back.front, TOUSLED.back.side), fringe: [TOUSLED.fringe.front, TOUSLED.fringe.side], strands: TOUSLED.strands },
+  },
   // 男人的侧分短发（周磊、大叔、路人）：头顶有点蓬，左边分缝，右边一片往右下梳、两绺发梢落在额头上，鬓角到耳朵上面
   short: {
     back: [...CAP_SIDES, ...NAPE],
@@ -451,6 +495,11 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
   const hair = HAIR[hp.style];
   const { head, thh, field, pose } = rig;
   const uh = clamp01(-thh / 0.62);
+  if (hair.art) {
+    const path = polylinePath(lerpPts(...hair.art.back, uh), (p) => head.p(p[0], p[1]));
+    drawPart(ctx, path, hp.color, hp.shade, ink, ink.lw * 0.9);
+    return;
+  }
   const f = rotateV(field, -head.a);
   const up = hair.pivot === undefined ? 0 : upness(f);
   const occ = hair.occiput ?? 0.5;
@@ -560,6 +609,20 @@ export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: I
   const v = hp.volume ?? 1;
   const map = (p: V2) => h.H(p[0], p[1]);
   const fine = pxPerUnit(ctx) * 130 > 60;
+  if (hair.art) {
+    const path = polylinePath(lerpPts(...hair.art.fringe, uh), map);
+    fillShaded(ctx, path, hp.color, null, ink);
+    h.strokeOnSkin(path, []);
+    // 头顶的发丝只在正面画：转到一半淡掉
+    if (fine && uh < 0.5) {
+      ctx.save();
+      ctx.clip(path);
+      ctx.globalAlpha *= 1 - uh * 2;
+      for (const l of hair.art.strands) strand(ctx, l, ink, map);
+      ctx.restore();
+    }
+    return;
+  }
   const paths: Path2D[] = [];
   for (const part of hair.front) {
     const flowed = flowHair(turned(part, uh, occ, v), f, hair.pivot, h.rig.pose.t);

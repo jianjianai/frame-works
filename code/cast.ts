@@ -9,6 +9,7 @@ import {
   type HeadView,
   type Look,
   type Palette,
+  type FaceView,
   type PoseIn,
   type Rig,
   BASE_COLORS,
@@ -19,8 +20,26 @@ import {
 } from "./figure";
 import { bootSoles, drawBoot } from "./chengtuo-draw";
 import { type HairStyle, drawBackHair, drawFrontHair } from "./cast-hair";
-import { type Garment, type Pants, type Top, drawGarment, drawPants, drawTop, fillSleeve, garmentCuff, garmentPanels, onTorso, sleeveStripe, topCuff, topHasOwnCollar } from "./cast-wear";
+import {
+  type Garment,
+  type Pants,
+  type Top,
+  drawArtShirt,
+  drawGarment,
+  drawPants,
+  drawTop,
+  fillSleeve,
+  garmentCuff,
+  garmentShirtClip,
+  garmentPanels,
+  onTorso,
+  sleeveStripe,
+  topCuff,
+  topHasOwnCollar,
+} from "./cast-wear";
+import { ZHOULEI_SUIT } from "./cast-wear-art";
 import { type BrowSpec, drawBrows, drawGlasses, drawHairclip, drawMustache, drawStubble, drawWrinkles } from "./cast-face";
+import { ZHOULEI_FACE0, ZHOULEI_FACE3 } from "./cast-face-art";
 
 export type { HairStyle } from "./cast-hair";
 export type { Garment, GarmentKind, Pants, Top, TopKind } from "./cast-wear";
@@ -306,6 +325,11 @@ export interface CastSpec {
   headScale?: number;
   /** 头再横着放宽（Look.headWidth）、眼睛连眉毛缩放（Look.eyeScale）、头发蓬松（HairPaint.volume） */
   headWidth?: number;
+  /** 脸用自己的线稿（Look.face0 正面、face3 3/4） */
+  face0?: FaceView;
+  face3?: FaceView;
+  /** 3/4 时肩关节再挪多少（Look.shoulderSide，袖子接到手画外衣的肩上） */
+  shoulderSide?: { L?: V2; R?: V2 };
   eyeScale?: number;
   hairVolume?: number;
   width?: number;
@@ -313,6 +337,8 @@ export interface CastSpec {
    *  她的小腿被铁靴盖着；配角穿矮帮鞋整条腿露出来，不加粗就是两根细棍，人显得被拉长 */
   legWidth?: number;
   legHem?: number;
+  /** 膝盖那里的裤腿粗细（Look.legKnee）：直筒宽裤 */
+  legKnee?: number;
   armWidth?: number;
 }
 
@@ -332,20 +358,29 @@ export function castLook(spec: CastSpec): Look {
     collar: topHasOwnCollar(top) ? false : (spec.collar ?? true),
     headScale: spec.headScale,
     headWidth: spec.headWidth,
+    face0: spec.face0,
+    face3: spec.face3,
+    shoulderSide: spec.shoulderSide,
+    torsoClip: coat?.art ? (rig) => garmentShirtClip(rig, coat.art!) : undefined,
     eyeScale: spec.eyeScale,
     width: spec.width,
     legWidth: spec.legWidth,
     legHem: spec.legHem,
+    legKnee: spec.legKnee,
     armWidth: spec.armWidth,
     sleeve: coat ? () => sleeve : undefined,
-    shoulderOut: coat ? () => 4 * (coat.size ?? 1) : undefined,
+    shoulderOut: coat ? () => coat.shoulderOut ?? 4 * (coat.size ?? 1) : undefined,
     armsOver: coat ? () => true : undefined,
     bodyPieces: coat ? (rig) => garmentPanels(rig, coat) : undefined,
     backHair: spec.hair === "none" ? undefined : (ctx, rig, ink) => drawBackHair(ctx, rig, ink, hp),
     neckBack: hoodBack ? (ctx, rig, ink) => drawHood(ctx, rig, ink, hoodBack.color, hoodBack.shade) : undefined,
     overTorso: (ctx, rig, ink, sides) => {
-      if (top) drawTop(ctx, rig, ink, top, col);
-      if (spec.tie) drawTie(ctx, rig, ink, spec.tie);
+      // 手画的外衣：衬衫领、领带、腰线也按线稿画
+      if (coat?.art) drawArtShirt(ctx, rig, ink, coat.art, [col.top, col.topShade], spec.tie, [col.skin, col.skinShade], col.bottom);
+      else {
+        if (top) drawTop(ctx, rig, ink, top, col);
+        if (spec.tie) drawTie(ctx, rig, ink, spec.tie);
+      }
       if (coat) drawGarment(ctx, rig, ink, sides, coat);
     },
     frontHair: (ctx, h, ink) => {
@@ -497,20 +532,17 @@ export const CAST = {
   周磊: {
     name: "周磊",
     scale: 1.06,
-    width: 1.03,
-    // 头和参考图（和秤砣同样身高、同样大的头）对齐：头收小、横着放宽、眼睛连眉毛缩小、头发两边蓬一点
-    headScale: 0.96,
-    headWidth: 1.07,
-    eyeScale: 0.8,
-    hairVolume: 1.08,
-    legWidth: 1.15,
-    legHem: 1.22,
-    armWidth: 1.08,
+    // 脸、头发、西装照用户手画的线稿（作品 3d80f743 的 public/ref/周磊-线稿.svg、周磊-侧面线稿.svg，
+    // cast-face-art.ts、cast-hair-art.ts、cast-wear-art.ts）；胳膊、脖子、腿和主角一样（用户 2026-10-27）：不加宽、不加粗、头不缩放，
+    // 用户的线原样落在主角的骨架上
+    face0: ZHOULEI_FACE0,
+    face3: ZHOULEI_FACE3,
     colors: { ...SKIN, top: "#f4f2ec", topShade: "#e2ded4", bottom: "#4f5d76", bottomShade: "#424e64" },
-    hair: "short",
+    hair: "tousled",
     hairColor: "#2f2e33",
     top: { kind: "shirt", button: "none" },
-    coat: { kind: "suit", color: "#6b7d9c", shade: "#5a6b88", size: 1.02, long: -14, button: "#2f3442" },
+    // 西装是用户画的（敞怀）；正面肩关节往外挪 6，和秤砣的外套一样
+    coat: { kind: "suit", color: "#6b7d9c", shade: "#5a6b88", shoulderOut: 6, button: "#2f3442", art: ZHOULEI_SUIT },
     tie: "#3f63a8",
     pants: { crease: true },
     brows: MAN_BROW(),

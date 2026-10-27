@@ -29,14 +29,30 @@ export function drawBrows(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink, 
   const b = BROWS[spec.kind];
   // 眼睛缩放（Look.eyeScale）时眉毛跟着眼睛：离眼珠中心的距离一起缩，粗细不变
   const es = h.rig.look.eyeScale ?? 1;
+  // 角色画了眉毛的位置（Look.face0 / face3 的 brows）：正面、转到 3/4 时整条挪到画的地方，中间过渡
+  const b0 = h.rig.look.face0?.brows;
+  const b3 = h.rig.look.face3?.brows;
+  const n = b.pts.length;
+  const onEye = (eye: ReturnType<typeof eyeAt>, s: number, d: number, y: number): V2 => [eye.x - s * d * eye.sx * es, eye.y + y * eye.sy * es];
   for (const s of [-1, 1]) {
-    const eye = eyeAt(s, h.uh);
+    const eye = eyeAt(s, h.uh, h.rig.look);
+    // 画的眉毛中心 − 按眼睛算出来的中心（u = 0 正面、1 3/4）
+    const shift = (bv: { R: V2; L: V2 } | undefined, u: number): V2 => {
+      if (!bv) return [0, 0];
+      const e1 = eyeAt(s, u, h.rig.look);
+      const mid = b.pts.map(([d, y]) => onEye(e1, s, d, y)).reduce((a, p) => [a[0] + p[0] / n, a[1] + p[1] / n], [0, 0]);
+      const want = s < 0 ? bv.R : bv.L;
+      return [want[0] - mid[0], want[1] - mid[1]];
+    };
+    const k = Math.max(0, Math.min(1, h.uh));
+    const [d0, d3] = [shift(b0, 0), shift(b3, 1)];
+    const off: V2 = [lerp(d0[0], d3[0], k), lerp(d0[1], d3[1], k)];
     // 眼睛坐标 → 头的坐标：d 往脸中间为正（左边那只眼睛往 +x）
-    const n = b.pts.length;
     const pts = b.pts.map(([d, y], i): V2 => {
       const t = i / (n - 1);
       const dy = lift + e.sad * (-5.5 * (1 - t) + 2.2 * t) + e.fierce * (5 * (1 - t) - 1.6 * t);
-      return h.H(eye.x - s * d * eye.sx * es, eye.y + (y + dy) * eye.sy * es);
+      const p = onEye(eye, s, d, y + dy);
+      return h.H(p[0] + off[0], p[1] + off[1]);
     });
     const widths = b.w.map((w) => w * (0.9 + 0.1 * eye.sx));
     ctx.fillStyle = spec.color;
@@ -80,7 +96,7 @@ export function drawWrinkles(ctx: CanvasRenderingContext2D, h: HeadView, ink: In
     ctx.stroke();
   };
   for (const s of [-1, 1]) {
-    const eye = eyeAt(s, h.uh);
+    const eye = eyeAt(s, h.uh, h.rig.look);
     const ox = eye.x + s * 12.5 * eye.sx;
     // 眼角的鱼尾纹（笑起来更深）
     for (const dy of [-1.5, 3]) seg([[ox, eye.y + dy], [ox + s * 3 * eye.sx, eye.y + dy * 1.4], [ox + s * 5.5 * eye.sx, eye.y + dy * 1.9]]);
@@ -102,7 +118,7 @@ export function drawGlasses(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink
   const a = h.rig.head.a;
   const rims: { c: V2; rx: number; ry: number }[] = [];
   for (const s of [-1, 1]) {
-    const e = eyeAt(s, h.uh);
+    const e = eyeAt(s, h.uh, h.rig.look);
     rims.push({ c: h.H(e.x, e.y + 1), rx: (shape === "round" ? 12.5 : 13.5) * e.sx, ry: shape === "round" ? 11 : 9.5 });
   }
   const rimPath = (r: (typeof rims)[number]) => {

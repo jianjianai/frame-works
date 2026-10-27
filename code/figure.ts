@@ -341,7 +341,10 @@ export function figureRig(pIn: PoseIn | Pose, look: Look = BASE_LOOK): Rig {
 
   const arm = (side: 1 | -1, ap: ArmPose): Limb => {
     // 肩关节：正面在线稿的位置，3/4 跟着侧面线稿的身子走
-    const sh = lerpV(side === 1 ? REST.shoulder : [-REST.shoulder[0], REST.shoulder[1]], SHOULDER_SIDE[side === 1 ? "L" : "R"], u);
+    const sh0 = lerpV(side === 1 ? REST.shoulder : [-REST.shoulder[0], REST.shoulder[1]], SHOULDER_SIDE[side === 1 ? "L" : "R"], u);
+    // 外衣的肩线和基础模型不一样（Look.shoulderSide）：3/4 时肩关节跟着挪
+    const so = look.shoulderSide?.[side === 1 ? "L" : "R"];
+    const sh: V2 = so ? [sh0[0] + so[0] * u, sh0[1] + so[1] * u] : sh0;
     // 厚外衣：袖子接在外衣的肩线上，正面往外挪，转到 3/4 挪回来
     const out = side * (look.shoulderOut?.(pose) ?? 0) * (1 - u);
     const root = chest.p(sh[0] + out, sh[1] - br);
@@ -497,6 +500,10 @@ export interface Look {
   hands?(rig: Rig): [string, string] | null;
   /** 厚外衣：正面时两个肩关节各往外挪多少 */
   shoulderOut?(pose: Pose): number;
+  /** 3/4 时两个肩关节再挪多少（身体坐标，按转身的程度加上去）：外衣的肩线和基础模型的不一样时，袖子接到外衣的肩上 */
+  shoulderSide?: { L?: V2; R?: V2 };
+  /** 外衣盖住整个身子时：身子（上衣）只画在这块里面（周磊的西装：只画衣襟中间敞开的那块；3/4 时基础模型的胸口比西装往前凸，会露在西装外面） */
+  torsoClip?(rig: Rig): Path2D | Path2D[];
   /** 正面时上臂压在外衣上面（默认上臂藏在身子后面，显示身子的边） */
   armsOver?(rig: Rig): boolean;
   /** 身子在画面里另外占的几块（外衣的前襟）：压在身子上的手臂按它们裁掉描边、阴影 */
@@ -531,6 +538,9 @@ export interface Look {
   headScale?: number;
   /** 人物特点：头再横着放宽多少（以脖子为中心）：基础模型是秤砣的瓜子脸，成年男人的脸宽一点（1.05–1.1） */
   headWidth?: number;
+  /** 人物特点：脸用自己的线稿（轮廓、眼睛、鼻子、嘴、耳朵、眉毛的位置）：face0 正面、face3 3/4，转身时逐点过渡；不写用基础模型的（秤砣的） */
+  face0?: FaceView;
+  face3?: FaceView;
   /** 人物特点：眼睛（连眉毛）以眼珠为中心缩放多少：基础模型是秤砣的大眼睛，成年男人小一点（0.8 左右），眉毛跟着压到眼睛上面 */
   eyeScale?: number;
   /** 人物特点：体型宽窄（横向缩放，壮的人 1.1–1.2；头不跟着变宽，脸不会被拉扁） */
@@ -539,6 +549,8 @@ export interface Look {
   legWidth?: number;
   /** 裤脚那头的粗细（不写同 legWidth）：直筒裤比大腿那头还宽一点 */
   legHem?: number;
+  /** 膝盖那里的粗细（不写同 legWidth）：大腿从 legWidth 过渡到它、小腿从它过渡到 legHem。基础模型的腿往下收细，直筒宽裤要把膝盖、裤脚放得比大腿根多 */
+  legKnee?: number;
   /** 人物特点：胳膊（袖子）粗细，横着放大，关节和手不动 */
   armWidth?: number;
 }
@@ -1212,11 +1224,13 @@ export function legPaths(rig: Rig, side: "L" | "R"): Path2D[] {
   const fS = new Frame(limb.mid[0], limb.mid[1], limb.a2);
   // 大腿朝镜头时顺着骨头压短（膝盖那个半圆也跟着压扁，膝盖的圆由小腿那头的半圆撑着）
   const k = limb.k ?? 1;
-  // 角色的裤腿粗细（Look.legWidth / legHem）：横着放大，大腿那头 legWidth、往裤脚过渡到 legHem
+  // 角色的裤腿粗细（Look.legWidth / legKnee / legHem）：横着放大，大腿根 legWidth → 膝盖 legKnee → 裤脚 legHem
   const lw = rig.look.legWidth ?? 1;
+  const kn = rig.look.legKnee ?? lw;
   const hem = rig.look.legHem ?? lw;
-  const shinK = (y: number) => lw + (hem - lw) * Math.max(0, Math.min(1, y / BODY.shin));
-  return [polyPath(P.upper, (p) => fT.p(p[0] * lw, p[1] * k)), polyPath(P.lower, (p) => fS.p(p[0] * shinK(p[1]), p[1]))];
+  const thighK = (y: number) => lw + (kn - lw) * Math.max(0, Math.min(1, y / BODY.thigh));
+  const shinK = (y: number) => kn + (hem - kn) * Math.max(0, Math.min(1, y / BODY.shin));
+  return [polyPath(P.upper, (p) => fT.p(p[0] * thighK(p[1]), p[1] * k)), polyPath(P.lower, (p) => fS.p(p[0] * shinK(p[1]), p[1]))];
 }
 
 /**
@@ -1296,17 +1310,21 @@ export function torsoPaths(rig: Rig): { neck: Path2D; torso: Path2D } {
 function drawTorso(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L" | "R")[] = []) {
   const { neck, torso } = torsoPaths(rig);
   drawPart(ctx, neck, K.skin, K.skinShade, ink, ink.lw * 0.6);
-  if (rig.look.collar === false) {
-    drawTorsoBody(ctx, rig, ink, torso, sides);
-    return;
-  }
-  const collar = collarOf(rig);
-  // 领口往下弯的那块挖掉，后面的脖子露出来
+  // 外衣盖住整个身子时（Look.torsoClip）：身子只画在外衣的轮廓里面
+  const clip = rig.look.torsoClip?.(rig);
   ctx.save();
-  ctx.clip(outside(collar.opening), "evenodd");
-  drawTorsoBody(ctx, rig, ink, torso, sides);
+  if (clip) for (const c of Array.isArray(clip) ? clip : [clip]) ctx.clip(c);
+  if (rig.look.collar === false) drawTorsoBody(ctx, rig, ink, torso, sides);
+  else {
+    const collar = collarOf(rig);
+    // 领口往下弯的那块挖掉，后面的脖子露出来
+    ctx.save();
+    ctx.clip(outside(collar.opening), "evenodd");
+    drawTorsoBody(ctx, rig, ink, torso, sides);
+    ctx.restore();
+    drawCollar(ctx, ink, collar);
+  }
   ctx.restore();
-  drawCollar(ctx, ink, collar);
 }
 
 function drawTorsoBody(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, torso: Path2D, sides: ("L" | "R")[]) {
@@ -1458,40 +1476,120 @@ const FRONT_FACE: V2[] = (() => {
   const half = bezierPolyline(FACE_CURVE, 32, false);
   return [...half, ...half.slice(1, -1).reverse().map(([x, y]): V2 => [-x, y])];
 })();
-/** 脸：头顶、最右、下巴、最左四个标志点之间逐点对应 */
-export const FACE_TURN: [V2[], V2[]] = (() => {
-  const a = clockwisePoly(FRONT_FACE);
-  const b = clockwisePoly(bezierPolyline(SIDE_FACE));
+/** 两条轮廓按最高、最右、最低、最左四个标志点逐点对应（转身时按比例混合） */
+function turnPairOf(front: V2[], side: V2[], perSeg = 32): [V2[], V2[]] {
+  const a = clockwisePoly(front);
+  const b = clockwisePoly(side);
   const marks = (p: V2[]) => {
     const by = (f: (q: V2) => number) => p.reduce((bi, q, i) => (f(q) > f(p[bi]) ? i : bi), 0);
     return [by((q) => -q[1]), by((q) => q[0]), by((q) => q[1]), by((q) => -q[0])];
   };
-  return matchOutlines(a, marks(a), b, marks(b), 32);
-})();
+  return matchOutlines(a, marks(a), b, marks(b), perSeg);
+}
+/** 脸：正面 → 3/4（side：3/4 的脸，三次贝塞尔点列） */
+const faceTurnOf = (side: V2[]) => turnPairOf(FRONT_FACE, bezierPolyline(side));
+export const FACE_TURN: [V2[], V2[]] = faceTurnOf(SIDE_FACE);
 
-/** 眼睛的位置和大小：正面在线稿的位置，3/4 按侧面线稿的眼珠放、横竖按眼珠的大小缩（s：-1 画面左，1 画面右） */
-export function eyeAt(s: number, uh: number) {
-  const side = s < 0 ? SIDE_IRIS.R : SIDE_IRIS.L;
+/** 一个人自己的脸（Look.face0 正面、face3 3/4）：头的坐标，和 figure-side.ts 的 SIDE_FACE / SIDE_IRIS 一样的写法 */
+export interface FaceView {
+  /** 脸的轮廓：三次贝塞尔点列 [起点, 控制点1, 控制点2, 终点, …] */
+  face: V2[];
+  /** 眼珠的中心和半径（R 画面左那只，L 画面右那只）；基础模型正面的眼珠半径是 6.97 × 9.96 */
+  iris: { R: Iris; L: Iris };
+  /** 鼻子：起点、控制点、终点 */
+  nose: V2[];
+  /** 嘴：两个嘴角（基础模型正面的嘴半宽 7.32） */
+  mouth: V2[];
+  /** 耳朵（三次贝塞尔点列）：L 画面左、R 画面右；3/4 只用 R（近处那只）。不写用基础模型的耳朵贴着脸边挪 */
+  ears?: { L?: V2[]; R?: V2[] };
+  /** 两条眉毛的中心（cast-face 的粗眉等按它放）；不写跟着眼珠 */
+  brows?: { R: V2; L: V2 };
+}
+type Iris = { c: V2; rx: number; ry: number };
+const FRONT_IRIS: FaceView["iris"] = { R: { c: [-EYE_X, EYE_Y], rx: IRIS_RX, ry: IRIS_RY }, L: { c: [EYE_X, EYE_Y], rx: IRIS_RX, ry: IRIS_RY } };
+
+/** 眼睛的位置和大小：正面在线稿的位置，3/4 按侧面线稿的眼珠放、横竖按眼珠的大小缩（s：-1 画面左，1 画面右；look 有自己的脸时按它的眼珠） */
+export function eyeAt(s: number, uh: number, look: Look = BASE_LOOK) {
+  const g = headOf(look);
+  const a = s < 0 ? g.iris0.R : g.iris0.L;
+  const b = s < 0 ? g.iris3.R : g.iris3.L;
   return {
-    x: lerp(s * EYE_X, side.c[0], uh),
-    y: lerp(EYE_Y, side.c[1], uh),
-    sx: lerp(1, side.rx / IRIS_RX, uh),
-    sy: lerp(1, side.ry / IRIS_RY, uh),
+    x: lerp(a.c[0], b.c[0], uh),
+    y: lerp(a.c[1], b.c[1], uh),
+    sx: lerp(a.rx, b.rx, uh) / IRIS_RX,
+    sy: lerp(a.ry, b.ry, uh) / IRIS_RY,
   };
 }
 /** 鼻子：起点、控制点、终点 */
 const NOSE_FRONT: V2[] = [[0.3, 19.1], [0.5, 20.9], [0, 22]];
 const NOSE_SIDE: V2[] = [SIDE_NOSE[0], lerpV(SIDE_NOSE[0], SIDE_NOSE[3], 0.5), SIDE_NOSE[3]];
 /** 嘴：正面线稿的嘴半宽 7.32；侧面按线稿的两个嘴角放（中点、半宽、斜度） */
-const MOUTH_SIDE = (() => {
-  const a = SIDE_MOUTH[0];
-  const b = SIDE_MOUTH[SIDE_MOUTH.length - 1];
-  return { c: lerpV(a, b, 0.5), wk: len(sub(b, a)) / 2 / 7.32, tilt: Math.atan2(b[1] - a[1], b[0] - a[0]) };
-})();
+const mouthOf = (a: V2, b: V2) => ({ c: lerpV(a, b, 0.5), wk: len(sub(b, a)) / 2 / 7.32, tilt: Math.atan2(b[1] - a[1], b[0] - a[0]) });
+const MOUTH_SIDE = mouthOf(SIDE_MOUTH[0], SIDE_MOUTH[SIDE_MOUTH.length - 1]);
+const MOUTH_FRONT = { c: [0, 32] as V2, wk: 1, tilt: 0 };
+
+/** 头上的几何：脸的轮廓（正面和 3/4 逐点对应好）、两张的眼珠、鼻子、嘴、耳朵。基础模型的（秤砣），或者 look 自己的（Look.face0 / face3，算一次存起来） */
+interface HeadGeom {
+  turn: [V2[], V2[]];
+  iris0: FaceView["iris"];
+  iris3: FaceView["iris"];
+  nose0: V2[];
+  nose3: V2[];
+  mouth0: ReturnType<typeof mouthOf>;
+  mouth3: ReturnType<typeof mouthOf>;
+  /** 正面的两只耳朵（三次贝塞尔点列） */
+  ears0: { L: V2[]; R: V2[] };
+  /** 近处的耳朵：正面 → 3/4，逐点对应好（角色画了 3/4 的耳朵时） */
+  ear3?: [V2[], V2[]];
+  /** 正面的脸在 y 处的左（s < 0）、右边：耳朵贴着它 */
+  edge: (s: number, y: number) => number;
+}
+const BASE_HEAD: HeadGeom = {
+  turn: FACE_TURN,
+  iris0: FRONT_IRIS,
+  iris3: SIDE_IRIS,
+  nose0: NOSE_FRONT,
+  nose3: NOSE_SIDE,
+  mouth0: MOUTH_FRONT,
+  mouth3: MOUTH_SIDE,
+  ears0: { L: EAR_L, R: EAR_R },
+  edge: (s, y) => s * faceHW(y),
+};
+const HEAD_GEOM = new WeakMap<Look, HeadGeom>();
+function headOf(look: Look): HeadGeom {
+  const f0 = look.face0;
+  const f3 = look.face3;
+  if (!f0 && !f3) return BASE_HEAD;
+  let g = HEAD_GEOM.get(look);
+  if (!g) {
+    const turn = turnPairOf(f0 ? bezierPolyline(f0.face) : FRONT_FACE, bezierPolyline(f3?.face ?? SIDE_FACE));
+    const ears0 = { L: f0?.ears?.L ?? EAR_L, R: f0?.ears?.R ?? EAR_R };
+    const front = turn[0];
+    g = {
+      turn,
+      iris0: f0?.iris ?? FRONT_IRIS,
+      iris3: f3?.iris ?? SIDE_IRIS,
+      nose0: f0?.nose ?? NOSE_FRONT,
+      nose3: f3?.nose ?? NOSE_SIDE,
+      mouth0: f0 ? mouthOf(f0.mouth[0], f0.mouth[f0.mouth.length - 1]) : MOUTH_FRONT,
+      mouth3: f3 ? mouthOf(f3.mouth[0], f3.mouth[f3.mouth.length - 1]) : MOUTH_SIDE,
+      ears0,
+      ear3: f3?.ears?.R ? turnPairOf(bezierPolyline(ears0.R), bezierPolyline(f3.ears.R), 12) : undefined,
+      edge: f0
+        ? (s, y) => {
+            const sp = rowSpan(front, y);
+            return sp ? (s < 0 ? sp[0] : sp[1]) : s * faceHW(y);
+          }
+        : (s, y) => s * faceHW(y),
+    };
+    HEAD_GEOM.set(look, g);
+  }
+  return g;
+}
 
 /** 脸现在的轮廓（转身时从正面线稿过渡到侧面线稿） */
 export function faceOf(rig: Rig): V2[] {
-  return lerpPts(...FACE_TURN, -rig.thh / 0.62);
+  return lerpPts(...headOf(rig.look).turn, -rig.thh / 0.62);
 }
 /** reflect：头镜像着画时（headMir），在没有镜像的画布上要用镜像过的脸 */
 export function facePathOf(rig: Rig, reflect = false): Path2D {
@@ -1506,7 +1604,8 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const ang = head.a;
   const thin = ink.lw * 0.6;
 
-  // 脸：正面线稿 → 侧面线稿
+  // 脸：正面线稿 → 侧面线稿（角色有自己的 3/4 的脸时用它的）
+  const hg = headOf(rig.look);
   const face = faceOf(rig);
   const facePath = facePathOf(rig);
   // 贴着脸边的东西（耳朵、两边的头发）跟着脸的左右边走：每一行按正面脸的左右边 → 现在脸的左右边横向映射
@@ -1514,7 +1613,7 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   const place = ([x, y]: V2): V2 => {
     if (uh <= 0) return H(x, y);
     const yy = Math.max(fy0, Math.min(fy1, y));
-    const from = rowSpan(FACE_TURN[0], yy);
+    const from = rowSpan(hg.turn[0], yy);
     const to = rowSpan(face, yy);
     if (!from || !to) return H(x, y);
     return H(to[0] + ((x - from[0]) / (from[1] - from[0])) * (to[1] - to[0]), y);
@@ -1523,15 +1622,16 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   /** 皮肤（脸、耳朵）：头发的边只在压着它们的地方描线 */
   const skins: Path2D[] = [];
   // 耳朵（画在脸后面，脸和两边的头发压住耳根）。转身时转到后面的那只缩回脸后面
-  for (const [s, ear] of [[-1, EAR_L], [1, EAR_R]] as [number, V2[]][]) {
+  for (const [s, ear] of [[-1, hg.ears0.L], [1, hg.ears0.R]] as [number, V2[]][]) {
     const z = Math.cos((s * Math.PI) / 2 + thh);
     const k = clamp01(1 + z * 3.5);
     if (k < 0.12) continue;
     const map = ([x, y]: V2): V2 => {
-      const edge = s * faceHW(y);
+      const edge = hg.edge(s, y);
       return place([edge + (x - edge) * k - (s > 0 ? EAR_SIDE_IN * uh : 0), y]);
     };
-    const earPath = cubicPath(ear, map);
+    // 角色画了 3/4 的耳朵：近处那只从正面的耳朵逐点过渡到它
+    const earPath = s > 0 && hg.ear3 && uh > 0 ? polylinePath(lerpPts(...hg.ear3, clamp01(uh)), (p) => H(p[0], p[1])) : cubicPath(ear, map);
     drawPart(ctx, earPath, K.skin, null, ink, thin);
     skins.push(earPath);
   }
@@ -1540,7 +1640,7 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   drawPart(ctx, facePath, K.skin, null, ink, thin);
   skins.push(facePath);
 
-  const eyes = [-1, 1].map((s) => ({ s, ...eyeAt(s, uh) }));
+  const eyes = [-1, 1].map((s) => ({ s, ...eyeAt(s, uh, rig.look) }));
 
   // 腮红：眼睛下面一团淡淡的晕染，裁在脸里面
   ctx.save();
@@ -1568,7 +1668,7 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   if (e.tears > 0.01) for (const { s, x, y } of eyes) drawTears(ctx, head, x, y, s, e.tears, field, pose.t, ink);
   // 鼻子：一小笔
   {
-    const [n0, n1, n2] = lerpPts(NOSE_FRONT, NOSE_SIDE, uh);
+    const [n0, n1, n2] = lerpPts(hg.nose0, hg.nose3, uh);
     ctx.save();
     ctx.translate(head.x, head.y);
     ctx.rotate(ang);
@@ -1584,8 +1684,8 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   }
   // 嘴
   {
-    const c = lerpV([0, 32], MOUTH_SIDE.c, uh);
-    drawMouth(ctx, head, c[0], c[1], lerp(1, MOUTH_SIDE.wk, uh), lerp(0, MOUTH_SIDE.tilt, uh), e, ink, pose.t);
+    const c = lerpV(hg.mouth0.c, hg.mouth3.c, uh);
+    drawMouth(ctx, head, c[0], c[1], lerp(hg.mouth0.wk, hg.mouth3.wk, uh), lerp(hg.mouth0.tilt, hg.mouth3.tilt, uh), e, ink, pose.t);
   }
 
   // 刘海、鬓发（角色的）：只描压在脸和耳朵上的边
