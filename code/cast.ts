@@ -112,27 +112,25 @@ export interface ShoeSpec {
   /** 袜子的颜色；不给就露出脚踝（皮肤色） */
   sock?: string;
 }
-// 2026-10-27 照用户给的比例参考图改成圆头、厚底、鞋帮高的鞋：原来的鞋窄、薄、尖，脚下压不住，配角站在主角（大铁靴）旁边腿显得又细又长。
-// 鞋底着地的那条线（y 66–67）没变，人站的高度和所有动作都不变。
 const SHOE_UPPER: Record<ShoeStyle, P[]> = {
-  sneaker: [[21, 18, 1], [26, 30], [27, 50], [25, 57, 1], [-58, 57, 1], [-68, 50], [-69, 36], [-60, 25], [-44, 21], [-30, 17], [-22, 11], [-11, 13], [5, 16]],
-  leather: [[21, 9, 1], [26, 22], [27, 46], [25, 55, 1], [-58, 55, 1], [-68, 48], [-70, 32], [-62, 20], [-46, 15], [-30, 12], [-20, 5], [-9, 7], [6, 8]],
-  cloth: [[21, 12, 1], [26, 26], [26, 50], [24, 56, 1], [-56, 56, 1], [-66, 49], [-67, 35], [-57, 26], [-40, 21], [-22, 16], [4, 12]],
+  sneaker: [[18, 25, 1], [22, 33], [23, 50], [21, 58, 1], [-50, 58, 1], [-57, 53], [-56, 44], [-46, 39], [-32, 35], [-22, 27], [-17, 19], [-11, 21], [2, 25]],
+  leather: [[18, 27, 1], [22, 35], [22, 52], [20, 59, 1], [-52, 59, 1], [-60, 55], [-58, 47], [-46, 42], [-30, 38], [-20, 30], [-14, 26], [2, 28]],
+  cloth: [[18, 30, 1], [22, 37], [22, 52], [20, 57, 1], [-50, 57, 1], [-57, 52], [-55, 44], [-43, 40], [-26, 36], [-14, 31], [2, 31]],
 };
-/** 帆布鞋：厚厚的白橡胶底、圆圆的橡胶包头、鞋口里面露出来的一小块里子 */
-const SNEAKER_SOLE: P[] = [[29, 53, 1], [29, 62], [25, 67], [-58, 67], [-68, 64], [-70, 55], [-66, 52, 1]];
-const SNEAKER_TOE: P[] = [[-42, 53, 1], [-46, 40], [-58, 32], [-69, 38], [-70, 50], [-66, 53, 1]];
-const SNEAKER_INSIDE: P[] = [[21, 18, 1], [5, 16], [-11, 13], [-6, 19], [11, 22]];
-/** 皮鞋：圆头，厚厚的前掌底，后面一个鞋跟 */
-const LEATHER_SOLE: P[] = [[3, 54, 1], [3, 63, 1], [-60, 64], [-71, 61], [-72, 54, 1]];
-const LEATHER_HEEL: P[] = [[28, 54, 1], [28, 67, 1], [4, 67, 1], [3, 54, 1]];
+/** 帆布鞋：白橡胶底（前头微微翘起来）、橡胶包头、鞋口里面露出来的一小块里子 */
+const SNEAKER_SOLE: P[] = [[24, 54, 1], [24, 63], [20, 67], [-48, 67], [-57, 64], [-59, 57], [-55, 54, 1]];
+const SNEAKER_TOE: P[] = [[-38, 55, 1], [-40, 47], [-50, 42], [-58, 46], [-59, 53], [-56, 55, 1]];
+const SNEAKER_INSIDE: P[] = [[18, 25, 1], [2, 25], [-11, 21], [-6, 26], [8, 29]];
+/** 皮鞋：前掌一条薄底、后面一个鞋跟（中间足弓那里空着） */
+const LEATHER_SOLE: P[] = [[-8, 57, 1], [-8, 62, 1], [-52, 63], [-62, 61], [-61, 56, 1]];
+const LEATHER_HEEL: P[] = [[21, 56, 1], [21, 67, 1], [4, 67, 1], [3, 56, 1]];
 /** 布鞋：厚厚的千层底 */
-const CLOTH_SOLE: P[] = [[28, 52, 1], [28, 63], [24, 67], [-57, 67], [-67, 63], [-68, 54], [-63, 52, 1]];
-/** 穿着鞋时着地的点（鞋底一圈）：皮鞋前掌稍微翘着、跟着地 */
+const CLOTH_SOLE: P[] = [[23, 53, 1], [23, 63], [19, 67], [-47, 67], [-57, 63], [-58, 55], [-53, 53, 1]];
+/** 穿着鞋时着地的点（鞋底一圈）：皮鞋前掌翘着、跟着地 */
 const SHOE_GROUND: Record<ShoeStyle, V2[]> = {
-  sneaker: [[-60, 66], [-30, 67], [0, 67], [25, 66]],
-  leather: [[-62, 63.5], [-30, 64], [5, 67], [24, 67]],
-  cloth: [[-60, 66], [-30, 67], [0, 67], [24, 66]],
+  sneaker: [[-50, 66], [-30, 67], [0, 67], [20, 66]],
+  leather: [[-54, 62], [-30, 62.5], [5, 67], [20, 67]],
+  cloth: [[-50, 66], [-30, 67], [0, 67], [18, 66]],
 };
 
 /**
@@ -204,16 +202,15 @@ function drawShoe(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink:
     ctx.fillStyle = "rgba(60,50,60,0.28)";
     ctx.fill(path(SNEAKER_INSIDE));
     // 鞋带：脚背上两道
-    shoeLine(ctx, [[-22, 19], [-12, 22]], m, ink.line, ink.lw * 0.55);
-    shoeLine(ctx, [[-30, 23], [-20, 26]], m, ink.line, ink.lw * 0.55);
-    shoeLine(ctx, [[-38, 27], [-29, 30]], m, ink.line, ink.lw * 0.55);
+    shoeLine(ctx, [[-20, 28], [-11, 31]], m, ink.line, ink.lw * 0.55);
+    shoeLine(ctx, [[-27, 32], [-18, 35]], m, ink.line, ink.lw * 0.55);
   } else if (style === "leather") {
     // 鞋头一道高光、脚背上系带的那一块
-    shoeLine(ctx, [[-48, 24], [-58, 27], [-65, 34]], m, "rgba(255,255,255,0.35)", ink.lw * 1.3);
-    shoeLine(ctx, [[-18, 14], [-28, 19], [-40, 22]], m, ink.line, ink.lw * 0.5);
+    shoeLine(ctx, [[-36, 44], [-45, 46], [-52, 49]], m, "rgba(255,255,255,0.35)", ink.lw * 1.3);
+    shoeLine(ctx, [[-16, 30], [-22, 36], [-30, 40]], m, ink.line, ink.lw * 0.5);
   } else {
     // 布鞋：鞋口到鞋头一道中缝
-    shoeLine(ctx, [[-20, 19], [-36, 23], [-50, 28]], m, ink.line, ink.lw * 0.5);
+    shoeLine(ctx, [[-16, 34], [-26, 39], [-36, 42]], m, ink.line, ink.lw * 0.5);
   }
   ctx.restore();
   stroke(upper);
@@ -245,7 +242,7 @@ function drawShoe(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink:
     ctx.save();
     ctx.clip(s);
     ctx.setLineDash([3, 4]);
-    shoeLine(ctx, [[24, 59], [-54, 59], [-63, 57]], m, "rgba(90,80,70,0.55)", ink.lw * 0.45);
+    shoeLine(ctx, [[19, 60], [-44, 60], [-53, 58]], m, "rgba(90,80,70,0.55)", ink.lw * 0.45);
     ctx.restore();
     stroke(s);
   }
@@ -494,11 +491,11 @@ export const CAST = {
   周磊: {
     name: "周磊",
     scale: 1.06,
-    width: 1.12,
-    headScale: 1.08,
-    legWidth: 1.25,
-    legHem: 1.55,
-    armWidth: 1.15,
+    width: 1.1,
+    headScale: 1.12,
+    legWidth: 1.22,
+    legHem: 1.32,
+    armWidth: 1.12,
     colors: { ...SKIN, top: "#f4f2ec", topShade: "#e2ded4", bottom: "#4f5d76", bottomShade: "#424e64" },
     hair: "short",
     hairColor: "#2f2e33",
@@ -514,9 +511,8 @@ export const CAST = {
     name: "称重员",
     scale: 1.1,
     width: 1.2,
-    headScale: 1.06,
+    headScale: 1.1,
     legWidth: 1.3,
-    legHem: 1.55,
     armWidth: 1.2,
     colors: { ...SKIN_WARM, top: "#3d4a6b", topShade: "#333e5a", bottom: "#323b55", bottomShade: "#2a3249" },
     collar: false,
@@ -532,17 +528,17 @@ export const CAST = {
   老钟: {
     name: "老钟",
     scale: 0.96,
-    width: 1.14,
-    headScale: 1.08,
-    legWidth: 1.25,
-    legHem: 1.55,
-    armWidth: 1.15,
+    width: 1.06,
+    headScale: 1.18,
+    legWidth: 1.2,
+    legHem: 1.28,
+    armWidth: 1.08,
     colors: { ...SKIN_OLD, top: "#9a6a4a", topShade: "#85593d", bottom: "#5e5248", bottomShade: "#4f443b" },
     hair: "receding",
-    hairColor: "#c4c1bb",
-    hairShade: "#aeaba5",
+    hairColor: "#ecebe6",
+    hairShade: "#d6d4cc",
     top: { kind: "vneck", trim: "#86593c", under: "#efe9dc" },
-    brows: { kind: "bushy", color: "#d8d5cf" },
+    brows: { kind: "bushy", color: "#e9e6df" },
     glasses: "#5a4a40",
     wrinkles: "forehead",
     pants: { crease: true },
@@ -552,11 +548,10 @@ export const CAST = {
   小石头: {
     name: "小石头",
     scale: 0.6,
-    headScale: 1.3,
-    width: 1.1,
-    legWidth: 1.35,
-    legHem: 1.5,
-    armWidth: 1.3,
+    headScale: 1.42,
+    legWidth: 1.32,
+    legHem: 1.36,
+    armWidth: 1.28,
     colors: { ...SKIN, top: "#f5f1e6", topShade: "#e3decf", bottom: "#56627a", bottomShade: "#48536a", blush: "250,140,140" },
     hair: "kid",
     hairColor: "#2f2e33",
@@ -571,11 +566,10 @@ export const CAST = {
   小石头穿妈妈的外套: {
     name: "小石头",
     scale: 0.6,
-    headScale: 1.3,
-    width: 1.1,
-    legWidth: 1.35,
-    legHem: 1.5,
-    armWidth: 1.3,
+    headScale: 1.42,
+    legWidth: 1.32,
+    legHem: 1.36,
+    armWidth: 1.28,
     colors: { ...SKIN, top: "#f5f1e6", topShade: "#e3decf", bottom: "#56627a", bottomShade: "#48536a", blush: "250,140,140" },
     hair: "kid",
     hairColor: "#2f2e33",
@@ -590,11 +584,9 @@ export const CAST = {
   小石头的妈妈: {
     name: "小石头的妈妈",
     scale: 0.98,
-    headScale: 1.06,
-    width: 1.06,
-    legWidth: 1.15,
-    legHem: 1.35,
-    armWidth: 1.1,
+    headScale: 1.08,
+    legWidth: 1.1,
+    armWidth: 1.05,
     colors: { ...SKIN, top: "#f7ead8", topShade: "#e9d8c0", bottom: "#6a5a66", bottomShade: "#5a4b56" },
     hair: "ponytail",
     hairColor: "#5b3f33",
@@ -610,9 +602,7 @@ export const CAST = {
     name: "千斤",
     scale: 0.94,
     headScale: 1.04,
-    width: 1.04,
-    legWidth: 1.1,
-    legHem: 1.25,
+    legWidth: 1.08,
     colors: { ...SKIN, top: "#e2574c", topShade: "#c9473d", bottom: "#3d3f52", bottomShade: "#333545" },
     hair: "sidebob",
     hairColor: "#2c2a30",
@@ -625,11 +615,9 @@ export const CAST = {
   千斤的妈妈: {
     name: "千斤的妈妈",
     scale: 1.0,
-    headScale: 1.06,
-    width: 1.08,
-    legWidth: 1.18,
-    legHem: 1.4,
-    armWidth: 1.12,
+    headScale: 1.08,
+    legWidth: 1.12,
+    armWidth: 1.06,
     colors: { ...SKIN_WARM, top: "#b9a3d6", topShade: "#a48ec2", bottom: "#4f465e", bottomShade: "#433b50" },
     hair: "bun",
     hairColor: "#3a3036",
@@ -642,11 +630,11 @@ export const CAST = {
   阿满: {
     name: "阿满",
     scale: 1.04,
-    width: 1.18,
-    headScale: 1.06,
-    legWidth: 1.32,
-    legHem: 1.6,
-    armWidth: 1.2,
+    width: 1.16,
+    headScale: 1.1,
+    legWidth: 1.3,
+    legHem: 1.36,
+    armWidth: 1.18,
     colors: { ...SKIN_WARM, top: "#d8cfb8", topShade: "#c6bca4", bottom: "#4f5361", bottomShade: "#434653" },
     hair: "short",
     hairColor: "#3a3539",
@@ -661,11 +649,10 @@ export const CAST = {
   老太太: {
     name: "老太太",
     scale: 0.88,
-    headScale: 1.06,
-    width: 1.08,
-    legWidth: 1.2,
-    legHem: 1.45,
-    armWidth: 1.1,
+    headScale: 1.12,
+    legWidth: 1.18,
+    legHem: 1.26,
+    armWidth: 1.06,
     colors: { ...SKIN_OLD, top: "#bfaee0", topShade: "#a998cc", bottom: "#6a6273", bottomShade: "#5a5362" },
     hair: "bun",
     hairColor: "#dcdad4",
@@ -680,11 +667,10 @@ export const CAST = {
   年轻人: {
     name: "年轻人",
     scale: 1.02,
-    headScale: 1.06,
-    width: 1.06,
-    legWidth: 1.18,
-    legHem: 1.4,
-    armWidth: 1.1,
+    headScale: 1.1,
+    legWidth: 1.16,
+    legHem: 1.2,
+    armWidth: 1.08,
     colors: { ...SKIN, top: "#4fa8a3", topShade: "#3f938e", bottom: "#3f4757", bottomShade: "#353c4a" },
     hair: "curtain",
     hairColor: "#3b3035",
@@ -698,9 +684,7 @@ export const CAST = {
     name: "秤砣的妈妈",
     scale: 1.0,
     headScale: 1.02,
-    width: 1.04,
-    legWidth: 1.06,
-    legHem: 1.15,
+    legWidth: 1.04,
     colors: { ...SKIN, top: "#f3e2d6", topShade: "#e4cfc0", bottom: "#5c4a4c", bottomShade: "#4d3d3f" },
     hair: "long",
     hairColor: "#2c2a30",
@@ -713,10 +697,9 @@ export const CAST = {
   小时候的秤砣: {
     name: "小时候的秤砣",
     scale: 0.58,
-    headScale: 1.32,
-    width: 1.08,
-    legWidth: 1.25,
-    armWidth: 1.25,
+    headScale: 1.42,
+    legWidth: 1.24,
+    armWidth: 1.24,
     bootScale: 1.55,
     colors: { ...SKIN, top: "#f4c95d", topShade: "#e2b54a", bottom: "#5d6177", bottomShade: "#4f5266", blush: "250,140,140" },
     hair: "bob",
@@ -768,11 +751,11 @@ export function passerby(i: number): CastSpec {
   return {
     name: `路人${i}`,
     scale: 0.92 + ((i * 37) % 13) / 100,
-    width: (man ? 1.1 : 1.05) + ((i * 17) % 9) / 60,
-    headScale: man ? 1.06 : 1.04,
-    legWidth: man ? 1.24 : 1.14,
-    legHem: man ? 1.5 : 1.3,
-    armWidth: man ? 1.14 : 1.08,
+    width: 1 + ((i * 17) % 9) / 60,
+    headScale: man ? 1.1 : 1.06,
+    legWidth: man ? 1.2 : 1.1,
+    legHem: man ? 1.28 : 1.12,
+    armWidth: man ? 1.1 : 1.04,
     colors: { ...(i % 3 ? SKIN : SKIN_WARM), top: tops[k], topShade: darker(tops[k], 0.92), bottom: "#4e5266", bottomShade: "#434657" },
     hair,
     hairColor: hc[j],
