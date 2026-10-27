@@ -163,6 +163,22 @@
       "fit": "contain",
       "blend": "source-over",
       "fadeIn": 0.22
+    },
+    {
+      "id": "lyrics",
+      "name": "逐字歌词",
+      "source": {
+        "kind": "scene",
+        "module": "lyrics",
+        "engine": "canvas"
+      },
+      "start": 15.8,
+      "duration": 120,
+      "offset": 15.8,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
     }
   ]
 }
