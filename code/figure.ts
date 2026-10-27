@@ -1028,7 +1028,26 @@ function drawArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: 
   unshadeShoulder(ctx, rig, side, upper, base);
   rig.look.onUpperArm?.(ctx, rig, side, upper, ink);
   rig.look.onForearm?.(ctx, rig, side, ink);
-  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), rig.look.hands?.(rig) ?? null, lower);
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, holdIn(rig, side, ap.shape, sx, opts), rig.look.hands?.(rig) ?? null, lower);
+}
+
+/**
+ * 手里拿的东西（opts.hold）：体型宽（Look.width）的人整个横着放大过，砖、笔按手腕横着缩回去，不跟着变宽（砖上的字不变形）
+ */
+function holdIn(rig: Rig, side: "L" | "R", shape: HandShape, sx: number, opts: DrawOptions) {
+  return (c: CanvasRenderingContext2D, layer: "back" | "front") => {
+    const f = opts.hold?.[side];
+    if (!f) return;
+    const tip = rig.arms[side].tip;
+    const hw = 1 / (rig.look.width ?? 1);
+    if (hw === 1) return f(c, tip, rig.mir, { layer, shape, sx });
+    c.save();
+    c.translate(tip.x, tip.y);
+    c.scale(hw, 1);
+    c.translate(-tip.x, -tip.y);
+    f(c, tip, rig.mir, { layer, shape, sx });
+    c.restore();
+  };
 }
 
 /** 压在身子上的手臂合并描边（两倍宽的边再盖上填色），但肩膀那一圈里压在身子上的边不描：身子（连外套）外面一遍、肩膀圈外面一遍 */
@@ -1106,7 +1125,7 @@ function drawForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", i
       ctx.restore();
     }
   rig.look.onForearm?.(ctx, rig, side, ink);
-  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), rig.look.hands?.(rig) ?? null, lower);
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, holdIn(rig, side, ap.shape, sx, opts), rig.look.hands?.(rig) ?? null, lower);
 }
 
 /**
