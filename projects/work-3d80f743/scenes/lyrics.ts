@@ -20,6 +20,7 @@ import type { Scene, SceneOptions } from "@frame/engine/types";
 import { nextTask } from "@frame/engine/scheduling";
 import { LYRICS, type LyricTiming } from "../lib/lyrics_t";
 import { NET_T, netCam, netShake } from "../lib/net";
+import { chainCam } from "../lib/end_cam";
 import { shake } from "../lib/cam";
 import {
   type Key,
@@ -139,6 +140,15 @@ interface Look extends Arr {
   spin?: (t: number) => number;
   /** 跟着画面抖（像素） */
   quake?: (t: number) => number;
+  /** 跟着镜头推近放大：第一个排列（re 之前的那个）绕画面上的 at 放大 s(t) 倍，max 是最大倍数（字形按它画，放大了也清楚） */
+  zoom?: { at: [number, number]; s: (t: number) => number; max: number };
+}
+
+// 第三声：跟着镜头推到他脸上一起放大（121.7 字出来那一刻算 1 倍）
+let callZ0 = 0;
+function callZoom(t: number) {
+  callZ0 ||= chainCam(121.7).z;
+  return Math.pow(chainCam(Math.min(Math.max(t, 121.7), 122.7)).z / callZ0, 0.6);
 }
 
 // ——— 每一句（和 lib/lyrics_t.ts 一一对应） ———
@@ -302,7 +312,10 @@ const LOOK: Look[] = [
     fx: [{ k: "echo", keys: [{ t: 118.0, v: 0, e: "lin" }, { t: 121.8, v: 5 }] }, { k: "glow", t0: 118.89, t1: 120.2, t2: 121.4, t3: 121.9, peak: 0.5, idx: [2] }],
   },
   // 第三声「下」溶进那一夜的回忆（他拽她的脚绳 → 落进铁靴 → 系绳）：字淡到左边竖着，躲开两个人；回到两张床那一镜再横回上面
+  // 用户 2026-10-27（2:01.82）：「这里镜头推，歌词也一起放大」——镜头越推越快推到他喊的脸上，字跟着一起越放越大（镜头倍数的 0.6 次方，
+  // 绕字自己的中心，不往画外跑），溶进回忆时大字原地淡掉
   { text: "活下去", x: 540, y: 340, font: "hand", size: 158, gap: 0.02, enter: "fade", kara: "wipe",
+    zoom: { at: [540, 340], s: callZoom, max: 2.1 },
     re: [{ t: 122.34, x: 172, y: 560, dir: "v", dur: 0.36, via: "fade" }, { t: 124.42, x: 540, y: 960, dir: "h", dur: 0.36, via: "fade" },
       // 拍上切回现在（她倒挂着攥住栏杆的近景，身子在画面中间）：字让到右边竖着
       { t: 125.44, x: 880, y: 560, dir: "v", size: 156, dur: 0.2, via: "fade" }],
@@ -414,7 +427,7 @@ function build(): Line[] {
     const particles = exit === "ash" || exit === "light" || exit === "dust";
     return {
       i, tm, L, chars, hot,
-      sprSize: Math.max(...arrs.map((a) => a.size)),
+      sprSize: Math.max(...arrs.map((a) => a.size)) * (L.zoom?.max ?? 1),
       font: L.font ?? "serif",
       tIn, dIn, out, dOut, stagger,
       until: out + dOut + n * stagger + (particles ? 1.6 : 0.05),
@@ -515,6 +528,12 @@ export function createScene({ width, height }: SceneOptions): Scene | Promise<Sc
     const withGap = (a: Line["arrs"][number]) => (gapFx ? { ...a, gap: sampleKey(gapFx.keys, t, a.gap) } : a);
     let pos = slots(withGap(ln.arrs[0]), n);
     let size = pos.map(() => ln.arrs[0].size);
+    const zm = ln.L.zoom;
+    if (zm) {
+      const z = zm.s(t);
+      pos = pos.map(([x, y]): [number, number] => [zm.at[0] + (x - zm.at[0]) * z, zm.at[1] + (y - zm.at[1]) * z]);
+      size = size.map((v) => v * z);
+    }
     let dir = ln.arrs[0].dir;
     const vis = pos.map(() => 1);
     for (let q = 1; q < ln.arrs.length; q++) {
