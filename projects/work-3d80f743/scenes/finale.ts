@@ -31,6 +31,7 @@ import { drawBigLight, drawBrickLight, drawCrater, drawCraterFront, drawDiveLine
 import { drawPov } from "../lib/end_pov";
 import { X_K } from "../lib/end_map";
 import { drawCrowdFar, drawCrowdNear } from "../lib/end_crowd";
+import { drawEndGuide } from "../lib/end_guide";
 
 /** 天色：天快亮（还有几扇窗亮着）→ 越来越亮；砖亮起来以后太阳出来 */
 function duskAt(t: number): [number, number] {
@@ -309,15 +310,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       // 全白的时候中间留着两个人抱在一起的影子（光是从他们中间来的）；光退下去时他们先露出来
       if (wa > 0.02) pairShadow(cam, t, b.c, wa);
     }
-    // 淡出
-    if (t > TE.fade0) {
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalAlpha = Math.min(1, (t - TE.fade0) / (TE.end - 0.05 - TE.fade0));
-      ctx.fillStyle = "#0d0e11";
-      ctx.fillRect(0, 0, width, height);
-      ctx.restore();
-    }
+    // 结尾：点赞引导和评论话题，叠在最后两秒、留到最后一帧（lib/end_guide.ts；2026-10-27 起不再淡黑：经验库「不用淡出收尾」）
+    drawEndGuide(ctx, base, t);
   };
 
   return {

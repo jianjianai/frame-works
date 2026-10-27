@@ -25,8 +25,8 @@ export function loadHandFont() {
 
 export interface Note {
   text: string;
-  /** 关键词（整句里的一段），用暖赭红色 */
-  accent?: string;
+  /** 关键词（整句里的一段，可以几段），用暖赭红色 */
+  accent?: string | string[];
   /** 中心（设计坐标） */
   x: number;
   y: number;
@@ -48,16 +48,18 @@ function render(n: Note, k: number) {
   const size = n.size ?? 52;
   const font = `700 ${size}px ${NOTE_FONT}, "Noto Serif SC", "Songti SC", serif`;
   const spacing = size * 0.06;
-  // 分成 前 / 关键词 / 后 三段
-  const i = n.accent ? n.text.indexOf(n.accent) : -1;
-  const parts: { s: string; c: string }[] =
-    i < 0
-      ? [{ s: n.text, c: INK_TEXT }]
-      : [
-          { s: n.text.slice(0, i), c: INK_TEXT },
-          { s: n.accent!, c: ACCENT },
-          { s: n.text.slice(i + n.accent!.length), c: INK_TEXT },
-        ].filter((p) => p.s);
+  // 按关键词分段：关键词暖赭红，其余深暖棕
+  const hot = new Array<boolean>(n.text.length).fill(false);
+  for (const a of n.accent === undefined ? [] : Array.isArray(n.accent) ? n.accent : [n.accent]) {
+    const i = n.text.indexOf(a);
+    if (i >= 0) for (let j = i; j < i + a.length; j++) hot[j] = true;
+  }
+  const parts: { s: string; c: string }[] = [];
+  for (let j = 0; j < n.text.length; j++) {
+    const c = hot[j] ? ACCENT : INK_TEXT;
+    if (parts.length && parts[parts.length - 1].c === c) parts[parts.length - 1].s += n.text[j];
+    else parts.push({ s: n.text[j], c });
+  }
   const probe = document.createElement("canvas").getContext("2d")!;
   probe.font = font;
   const widthOf = (s: string) => probe.measureText(s).width + spacing * [...s].length;
@@ -106,13 +108,18 @@ export function drawNote(g: CanvasRenderingContext2D, base: DOMMatrix, n: Note, 
   const leave = clamp01((t - n.out) / fade);
   // 慢慢淡出：开头慢、中间快、最后慢
   const alpha = 1 - leave * leave * (3 - 2 * leave);
-  if (alpha <= 0) return;
+  drawNoteAt(g, base, n, alpha, -12 * leave);
+}
+
+/** 按给定的透明度和竖着的偏移画一句（结尾的引导用：淡进来） */
+export function drawNoteAt(g: CanvasRenderingContext2D, base: DOMMatrix, n: Note, alpha: number, dy = 0) {
+  if (alpha <= 0.003) return;
   const k = Math.max(1, Math.hypot(base.a, base.b));
   let c = cache.get(n);
   if (!c || c.k !== k) cache.set(n, (c = { img: render(n, k), k }));
   g.save();
   g.setTransform(base);
-  g.translate(n.x, n.y - 12 * leave);
+  g.translate(n.x, n.y + dy);
   g.scale(1 / c.k, 1 / c.k);
   g.globalAlpha = alpha;
   g.drawImage(c.img, -c.img.width / 2, -c.img.height / 2);

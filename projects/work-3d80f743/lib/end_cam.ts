@@ -379,7 +379,8 @@ export function endCam(t: number): Cam {
   // 结尾：她放下他、往后退一步时低下来贴地拍她的光脚（和开场拍铁靴一样）；「嘭」一震，坑张开，再慢慢抬起来看两个人
   const feet = aim(X_LAND - 60, -120, 540, 1200, 2.1);
   c = camLerp(c, feet, E.settle(ph(t, TE.back - 0.25, TE.stomp2 - 0.45)));
-  const after = aim(X_LAND - 10, -330, 540, 1080, 1.05);
+  // 抬起来以后到片尾（评论题留在上面）极慢地往后漂一点，画面不死
+  const after = aim(X_LAND - 10, -330, 540, 1080, 1.05 * (1 - 0.04 * E.io(ph(t, TE.fade0 + 0.4, TE.end))));
   c = camLerp(c, after, E.settle(ph(t, TE.stomp2 + 0.5, TE.fade0 + 0.4)));
   const kk = kick(t, TE.stomp2, 0.12);
   const sh = 22 * kk;
