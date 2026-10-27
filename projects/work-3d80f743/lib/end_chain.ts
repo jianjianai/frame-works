@@ -113,6 +113,13 @@ function moves() {
       keys.push({ t: p.let, p: last });
       keys.push({ t: p.let + 0.5, ease: "inOut", p: DRIFT(f, p.k) });
       const land = landOf(p.k);
+      if (Math.sign(f) !== Math.sign(p.face)) {
+        // 要转到另一边（周磊、阿满）：飘到一半时快快地转过去（0.35 秒）——短发在 |face| 0.2…0.45 画成一根长刺，
+        // 慢慢转会在那一段停留好几帧（用户 2026-10-26：2:18.13「头发这一帧炸了」）；转的时候再跳过那一段（memberAt 的 skipSpike）
+        const tm = Math.max(p.let + 0.6, (p.let + 0.5 + land - 0.25) / 2 - 0.175);
+        keys.push({ t: tm, p: DRIFT(f, p.k) });
+        keys.push({ t: tm + 0.35, ease: "inOut", p: DRIFT(p.face, p.k) });
+      }
       keys.push({ t: land - 0.25, p: DRIFT(p.face, p.k) });
       keys.push({ t: land, ease: "inOut", squash: 0.07, p: WATCH(p.face, p.face > 0 ? 0.4 : -0.4) });
       keys.push({ t: land + 0.25, ease: "out", p: WATCH(p.face, p.face > 0 ? 0.4 : -0.4) });
@@ -223,9 +230,15 @@ const herm1 = (a: number, va: number, b: number, vb: number, dt: number, u: numb
   const u3 = u2 * u;
   return (2 * u3 - 3 * u2 + 1) * a + (u3 - 2 * u2 + u) * dt * va + (-2 * u3 + 3 * u2) * b + (u3 - u2) * dt * vb;
 };
+/** 短发在 |face| 0.2…0.45 之间画成一根长刺：转身经过这一段时直接跳过去 */
+const skipSpike = (f: number) => {
+  const a = Math.abs(f);
+  return a > 0.2 && a < 0.45 ? Math.sign(f) * (a < 0.325 ? 0.2 : 0.45) : f;
+};
 export function memberAt(t: number, k: number): MemberNow {
   const p = PLANS[k];
   const pose: PoseIn = { ...moves()[k](t).pose };
+  if (typeof pose.face === "number") pose.face = skipSpike(pose.face);
   const off: MemberNow = { m: p.m, pose, R: [0, 0], th: 0, on: false };
   if (k === 0 && t < TE.zOut) return off;
   if (k > 0 && t < p.appear) return off;
