@@ -1,6 +1,6 @@
 // 开场光里的女人（第一个镜头，留人的关键；用户 2026-10-19：「这个人建模需要好一点，漂亮一点」）：
 // 衣服是平常的上衣和裤子（用户：「正常衣服和裤子就好，裙子需要有风和失重效果，难画」）——米白的上衣外面一件浅玫瑰色的长开衫
-// （和主角外套同一套版型，素材库 cast.ts 的 coat）、浅蓝的裤子、白色的帆布鞋（素材库的 sneaker，露出脚踝；光脚时脚趾画出来像爪子，不好看）；
+// （素材库 cast-wear 的 cardigan：门襟一条罗纹边和一排小白扣子、罗纹下摆和袖口、袋口罗纹的小贴袋）、浅蓝的裤子、白色的帆布鞋（素材库的 sneaker，露出脚踝；光脚时脚趾画出来像爪子，不好看）；
 // 头发借主角秤砣那套（用户亲手定过稿的线稿，风里、失重的样子都调到用户说「完美」），换成暖棕色：她在失重里头发像在水里一样漂起来；
 // 耳边一朵小白花。颜色、衣服、花和主角都不一样，认得出不是一个人。只写外观（Look），不改素材库。
 
@@ -63,7 +63,7 @@ const SPEC: CastSpec = {
   },
   hair: "none",
   hairColor: HAIR.hair,
-  coat: { color: "#eaaeab", shade: "#d89896", long: 46 },
+  coat: { kind: "cardigan", color: "#eaaeab", shade: "#d89896", long: 46, trim: "#e09f9c", button: "#fffaf4" },
   shoes: { color: "#fbf8f3", shade: "#e6e0d6", sole: "#f1ebe1", style: "sneaker" },
 };
 const BASE = castLook(SPEC);

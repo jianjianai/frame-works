@@ -22,6 +22,7 @@ import { CHEN, armL, armR, legL, legR } from "./poses";
 import { drawPerson } from "./people";
 import { MOM, MOM_X, STONE, pose } from "./dawn";
 import { drawKnife as drawKnife0 } from "./knife";
+import { leadBand, standCollar } from "./leadcoat";
 
 type V2 = [number, number];
 const mix = (a: V2, b: V2, k: number): V2 => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
@@ -988,8 +989,8 @@ function drawCoat(g: CanvasRenderingContext2D, a: V2, b: V2, t: number) {
   part(g, p, "#f29a4a", "#de8538", 3, [6, 5]);
   g.save();
   g.clip(p);
-  g.fillStyle = "#8a6a5a";
-  g.fillRect(Math.min(a[0], b[0]) - 80, lo - 22, Math.abs(b[0] - a[0]) + 160, 40);
+  leadBand(g, Math.min(a[0], b[0]) - 80, lo - 22, Math.abs(b[0] - a[0]) + 160, 26, 11);
+  standCollar(g, a, [mid[0], mid[1] + 26], b, 9);
   g.strokeStyle = "rgba(160,80,30,0.45)";
   g.lineWidth = 3;
   for (const k of [0.36, 0.64]) {

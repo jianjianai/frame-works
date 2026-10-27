@@ -25,6 +25,7 @@ import { CHAIN_T } from "./t52";
 import { LINK_T, linkDX, linkLift } from "./t53";
 import { GIVE_T, HUG_PULL, KID_STOP } from "./t54";
 import { KID_REL, LAND_T, landChest } from "./t55";
+import { leadBand, standCollar } from "./leadcoat";
 
 type V2 = [number, number];
 const mix = (a: V2, b: V2, u: number): V2 => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
@@ -717,8 +718,8 @@ function drawLooseCoat(g: CanvasRenderingContext2D, t: number) {
     part(g, path, orange, shade, lw, [5, 4]);
     g.save();
     g.clip(path);
-    g.fillStyle = "#8a6a5a";
-    g.fillRect(cx - 200, lo - 24, 400, 30);
+    leadBand(g, cx - 200, lo - 24, 400, 24, 11);
+    standCollar(g, A, [cx, yTop + 24 * k], B, 8);
     g.strokeStyle = "rgba(160,80,30,0.45)";
     g.lineWidth = 3;
     for (const f of [-0.35, 0.35]) {
@@ -744,8 +745,7 @@ function drawLooseCoat(g: CanvasRenderingContext2D, t: number) {
   part(g, heap, orange, shade, lw, [5, 4]);
   g.save();
   g.clip(heap);
-  g.fillStyle = "#8a6a5a";
-  g.fillRect(cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht);
+  leadBand(g, cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht * 0.32, 11);
   g.strokeStyle = "rgba(160,80,30,0.45)";
   g.lineWidth = 3;
   g.beginPath();

@@ -24,6 +24,7 @@ import { CORNER, RAIL_TOP, X_K, herWindow } from "./end_map";
 import { BS, HALF, drawEndBrick } from "./end_brick";
 import { RIM_TOP, bootPt, drawBoot, shinRot } from "./end_boot";
 import { H_GRAB, K_ARRIVE, chainTop } from "./end_rise";
+import { coatButtons, leadBand, standCollar } from "./leadcoat";
 
 // ——————————————— 地方 ———————————————
 /** 他抱着她落回街上以后：她站在坑的左边，他被放在她右边，他妈妈那件外套（被跺地那一下掀到坑的左边）在他右边 */
@@ -1193,8 +1194,7 @@ function drawHeap(g: CanvasRenderingContext2D, cx: number, floor: number, lift: 
   part(g, heap, ORANGE, ORANGE_SH, 3.2 * lw, [5, 4]);
   g.save();
   g.clip(heap);
-  g.fillStyle = "#8a6a5a";
-  g.fillRect(cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht);
+  leadBand(g, cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht * 0.32, 11, lw);
   g.strokeStyle = "rgba(160,80,30,0.45)";
   g.lineWidth = 3;
   g.beginPath();
@@ -1240,8 +1240,8 @@ export function drawCoat(g: CanvasRenderingContext2D, t: number, z: number) {
     part(g, path, ORANGE, ORANGE_SH, 3.2 * lw, [5, 4]);
     g.save();
     g.clip(path);
-    g.fillStyle = "#8a6a5a";
-    g.fillRect(cx - 200, lo - 24, 400, 30);
+    leadBand(g, cx - 200, lo - 24, 400, 24, 11, lw);
+    standCollar(g, A, [cx, yTop + 24], B, 8, lw);
     g.restore();
     return;
   }
@@ -1308,8 +1308,7 @@ function hangingCoat(g: CanvasRenderingContext2D, cx: number, top: number, w: nu
   const hem = (p: Path2D) => {
     g.save();
     g.clip(p);
-    g.fillStyle = "#8a6a5a";
-    g.fillRect(cx - w * 1.4, hemY - len * 0.07, w * 2.8, len * 0.08);
+    leadBand(g, cx - w * 1.4, hemY - len * 0.07, w * 2.8, len * 0.07, 11, lw);
     g.restore();
   };
   if (part0 === "all") {
@@ -1329,6 +1328,9 @@ function hangingCoat(g: CanvasRenderingContext2D, cx: number, top: number, w: nu
     g.moveTo(cx + hw * 0.3, top + len * 0.62);
     g.lineTo(cx + hw * 0.7, top + len * 0.62);
     g.stroke();
+    // 立领、门襟一排大扣子（和穿在身上那件一样）
+    standCollar(g, [cx - hw * 0.3, top], [cx, top + len * 0.05], [cx + hw * 0.3, top], 7, lw);
+    coatButtons(g, [0.2, 0.34, 0.48].map((f) => [cx - 7 + sway * f, top + len * f] as V2), 3.2, lw);
     return;
   }
   if (part0 === "back") {
@@ -1350,6 +1352,7 @@ function hangingCoat(g: CanvasRenderingContext2D, cx: number, top: number, w: nu
     p.closePath();
     part(g, p, ORANGE, ORANGE_SH, 3.2 * lw, [4, 3]);
     hem(p);
+    if (side < 0) coatButtons(g, [0.2, 0.36, 0.52].map((f) => [cx - hw * (0.3 + 0.2 * f) + sway * f - 6, top + (hemY - top) * f] as V2), 3.2, lw);
   }
 }
 /** 她手里拎着的外套（捡起来 → 拎着走回来 → 举着领子给他披上：抖开、绕到他身后）；披好那一刻换成他穿着外套的样子 */

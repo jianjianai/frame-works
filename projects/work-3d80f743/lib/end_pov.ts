@@ -8,6 +8,7 @@ import { E, ph } from "./cam";
 import { INK, part } from "./world";
 import { TE, type V2, mix } from "./end_t";
 import { drawEndBrick } from "./end_brick";
+import { leadBand } from "./leadcoat";
 
 const W = 1080;
 const H = 1920;
@@ -73,8 +74,7 @@ function drawCoatHeap(g: CanvasRenderingContext2D) {
   part(g, p, "#f29a4a", "#de8538", 5, [10, 8]);
   g.save();
   g.clip(p);
-  g.fillStyle = "#8a6a5a";
-  g.fillRect(-60, 790, 420, 60);
+  leadBand(g, -60, 790, 420, 50, 20, 1.6);
   g.restore();
 }
 /** 脚上她的那双铁靴（从上往下看：靴口箍着他的大腿，在画面最底下；靴筒往前斜下去，靴尖在前面）。

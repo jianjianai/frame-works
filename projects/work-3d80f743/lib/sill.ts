@@ -17,6 +17,7 @@ import { pose } from "./dawn";
 import { roomMatrix, zInside } from "./night";
 import { KNOT, ROOM, type RoomAway } from "./room";
 import { drawPerson } from "./people";
+import { leadBand, standCollar } from "./leadcoat";
 
 type V2 = [number, number];
 const mix = (a: V2, b: V2, u: number): V2 => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
@@ -384,8 +385,8 @@ function drawLooseCoat(g: CanvasRenderingContext2D, t: number) {
     part(g, path, orange, shade, lw, [5, 4]);
     g.save();
     g.clip(path);
-    g.fillStyle = "#8a6a5a";
-    g.fillRect(cx - 200 * k, lo - 24 * k, 400 * k, 30 * k);
+    leadBand(g, cx - 200 * k, lo - 24 * k, 400 * k, 24 * k, 11 * k);
+    standCollar(g, A, [cx, yTop + 24 * k], B, 8 * k);
     g.strokeStyle = "rgba(160,80,30,0.45)";
     g.lineWidth = 3;
     for (const f of [-0.35, 0.35]) {
@@ -410,8 +411,7 @@ function drawLooseCoat(g: CanvasRenderingContext2D, t: number) {
   part(g, heap, orange, shade, lw, [5, 4]);
   g.save();
   g.clip(heap);
-  g.fillStyle = "#8a6a5a";
-  g.fillRect(cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht);
+  leadBand(g, cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht * 0.32, 11);
   g.strokeStyle = "rgba(160,80,30,0.45)";
   g.lineWidth = 3;
   g.beginPath();

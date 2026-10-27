@@ -12,6 +12,7 @@ import { pose } from "./dawn";
 import { drawPerson } from "./people";
 import { T8, T9 } from "./fin_t";
 import { STONE_X, herAt } from "./fin_cast";
+import { leadBand } from "./leadcoat";
 
 type V2 = [number, number];
 
@@ -34,8 +35,7 @@ export function drawCoatHeap(g: CanvasRenderingContext2D, t: number, line = 1) {
   part(g, heap, "#f29a4a", "#de8538", 3.2 * line, [5, 4]);
   g.save();
   g.clip(heap);
-  g.fillStyle = "#8a6a5a";
-  g.fillRect(cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht);
+  leadBand(g, cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht * 0.32, 11, line);
   g.strokeStyle = "rgba(160,80,30,0.45)";
   g.lineWidth = 3;
   g.beginPath();

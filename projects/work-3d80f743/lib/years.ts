@@ -471,14 +471,16 @@ function drawLamp(g: CanvasRenderingContext2D, x: number, t: number) {
   drawGlow(g, x + 115, -40, 380, 0.22);
 }
 
-/** 放学的学生（校服：浅蓝上衣、藏蓝外套），低着头往外走 */
+/** 放学的学生（校服：浅蓝衬衫、藏蓝西装外套；不穿外套时是浅蓝的运动校服），低着头往外走 */
 const UNI = (i: number, hair: CastSpec["hair"], hc: string, scale: number, coat: boolean): CastSpec => ({
   ...STUDENT,
   name: `学生${i}`,
   scale,
   hair,
   hairColor: hc,
-  coat: coat ? { color: "#4c6596", shade: "#40578a" } : undefined,
+  top: coat ? { kind: "shirt" } : STUDENT.top,
+  coat: coat ? { kind: "suit", color: "#4c6596", shade: "#40578a", long: -10, button: "#2e3a56" } : undefined,
+  brows: { kind: hair === "short" ? "thick" : "soft", color: hc },
 });
 const KIDS_OUT: Walker[] = [
   { spec: UNI(1, "short", "#2f2e33", 0.92, true), x0: -560, dir: -1, step: 0.56, t0: 0.2, seed: 1 },
