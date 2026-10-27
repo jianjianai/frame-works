@@ -146,6 +146,23 @@
       "rate": 1,
       "fit": "contain",
       "blend": "source-over"
+    },
+    {
+      "id": "recall",
+      "name": "终章 第三声的回忆：七岁的她哭着喊妈妈，妈妈飘走了，「活下去」掉在跟前（scenes/recall.ts）",
+      "source": {
+        "kind": "scene",
+        "module": "recall",
+        "engine": "canvas"
+      },
+      "start": 122.42,
+      "duration": 3.103,
+      "offset": 122.42,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over",
+      "fadeIn": 0.22
     }
   ]
 }

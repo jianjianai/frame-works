@@ -379,6 +379,13 @@ export const KID = {
   挣: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 30, expression: "坚定", tears: 1, lookX: -0.3, lookY: -1 }, (l) => UPB(l, 168)),
   /** 低头看见街上的人一个个抓上来：哭着笑 */
   看人: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: -24, expression: "哭着笑", tears: 1, lookX: 0.1, lookY: 0.9 }, (l) => UPB(l, 150)),
+  /** 第三声前抬起头找她（白的边上，左上）：近处那只手抱着砖，远处那只伸上去 */
+  找她: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 30, expression: "含泪", tears: 1, sad: 0.8, lookX: -0.4, lookY: -1 }, (l) => UPB(l, 158)),
+  /**
+   * 第三声「活」：朝她拼命喊（第三声「活下去」就是他喊的）——远处那只手伸直了够她，哭着张大嘴；
+   * 和他看着妈妈飘走时喊她、七岁的她喊妈妈是同一个样子
+   */
+  喊: pose(-8, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(22, -48, -44), neck: 36, expression: "吓一跳", wide: 0.3, sad: 1, tears: 1, open: 0.85, squint: 0.35, lookX: -0.45, lookY: -1 }, (l) => UPB(l, 172)),
   /** 两只手把砖举过头顶朝着她（「活下去」朝外） */
   举砖: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 30, expression: "坚定", tears: 1, lookX: -0.3, lookY: -1 }, RAISED),
   /** 到了她跟前：递给她，哭着笑 */

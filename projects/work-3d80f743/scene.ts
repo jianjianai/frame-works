@@ -11,5 +11,6 @@ export function createScene(options: SceneOptions) {
     act5: () => import("./scenes/act5"),
     act6: () => import("./scenes/act6"),
     finale: () => import("./scenes/finale"),
+    recall: () => import("./scenes/recall"),
   });
 }

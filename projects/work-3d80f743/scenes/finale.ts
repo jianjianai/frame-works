@@ -3,7 +3,9 @@
 //   街（94.02）→ 天花板她醒来（95.40）→ 一镜到底（96.02：他冲上去、她扑下来、抱住、下坠、停住、交靴、松手、他落地）→
 //   （他落地以后天上掉下来一块砖，104.52 砸在靴尖前面）→ 第一视角（104.8：捡起来、看）→ 她越升越快冲他笑（106.02）→ 跺地（108.02）→ 慢放：白的边上（109.89）→
 //   静：老钟的特写（112.02，屋里墙上的钟跳两下）→ 窗外：他从靴子里出来往上飘、老钟攥住他、被拽出窗（113.88）→
-//   人链（118.02 街上一个抓住一个，退到 119.45 改成跟着他往上）→ 第三声（121.75）从他往下一张脸一张脸看到街上最后那个人 →
+//   人链（118.02 街上一个抓住一个，退到 119.45 改成跟着他往上）→ 第三声前推到他脸上，「活」（122.02）他朝她拼命喊 →
+//   「下」（122.52）溶进回忆（recall 图层，scenes/recall.ts：七岁的她哭着喊妈妈，妈妈飘走了，「活下去」的木牌掉在她铁靴跟前）→
+//   125.52 拍上切回现在：她抓住楼顶栏杆的近景（翻身不拍）→
 //   第四声（126.01）从街上往后拉开到整条人链，人链先往右、再往左荡 → 在这反乌托邦里（129.55 起推）推到他，跟着他往左荡过去，
 //   句子唱完把砖递到她手里（131.96）、鼓回来那一下一接过来就亮（132.01）、她立即松开栏杆抱住他、转正（132.58）→
 //   推到她脸上：睁开眼看砖，一滴眼泪往下掉在「活」字上（133.02）→
@@ -19,7 +21,7 @@ import { drawCeiling } from "../lib/bed";
 import { TE, type V2 } from "../lib/end_t";
 import { drawWatchers, makeEndStage } from "../lib/end_map";
 import { wakeCast } from "../lib/end_ceil";
-import { ceilCam, chainCam, endCam, handCam, oneTakeCam, slowCam, smileCam, stompCam, streetCam, zhongCam, zhongCloseCam } from "../lib/end_cam";
+import { ceilCam, chainCam, endCam, gripCam, handCam, oneTakeCam, slowCam, smileCam, stompCam, streetCam, zhongCam, zhongCloseCam } from "../lib/end_cam";
 import { HB_REST, drawCoat, drawCoatInHands, drawGroundBrick, drawHer, drawKid, drawKidBoots, drawLooseGift, herAt, herBrickAt, holding, kidAt, warmAt } from "../lib/end_pair";
 import { drawZhongHouse } from "../lib/end_zhong";
 import { drawChain } from "../lib/end_chain";
@@ -143,7 +145,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const herLight = (cam: Cam, t: number, speed = 1) => {
     applyCam(ctx, base, cam, 1);
     const h = herAt(t);
-    if (t > 110.6 && t < TE.flip0 + 0.3) drawLightMotes(ctx, t, [h.head[0] - 4, h.head[1] - 70], 110.6, TE.flip0, speed);
+    // 切到攥栏杆的特写（她倒过来了）就不画了：倒着画会糊在脸上
+    if (t > 110.6 && t < TE.flip0) drawLightMotes(ctx, t, [h.head[0] - 4, h.head[1] - 70], 110.6, TE.flip0 + 0.4, speed);
     if (t > TE.hang - 0.2 && t < TE.glow + 0.6) {
       // 倒挂着：脚尖朝上碰进白里，一点点化成光（砖亮起来才停）
       const toe: V2 = [h.root[0], h.root[1] - 520];
@@ -209,18 +212,20 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const renderZhongClose = (t: number) => worldShot(zhongCloseCam(t), t, { chain: false, pair: false });
   const renderZhong = (t: number) => worldShot(zhongCam(t), t, { chain: true });
   /**
-   * 第三声从他往下一张脸一张脸看到街上 → 第四声从街上往后拉开到整条人链，人链先往右、再往左荡。
-   * （原来「去」的长音里有一道淡光沿人链从街上描到他；现在第三声的镜头自己把每个人看过一遍，光去掉了）
+   * 第二声跟着他往上 → 第三声前推到他脸上，他朝她喊 → 第四声从街上往后拉开到整条人链，人链先往右、再往左荡。
+   * （2026-10-27 重排：原来第三声从他往下一张脸一张脸看到街上最后那个人，用户：「这个从上往下的镜头有点多余」）
    */
   const renderChain = (t: number) => {
     const cam = chainCam(t);
     worldShot(cam, t);
-    // 往下看的时候镜头走得快：轻轻的竖向拖影（按这一帧镜头在画面上竖着走了多少；人画在拖影后面清楚不了，所以很轻）
-    if (t > TE.look0 && t < TE.sweepEnd) {
-      const prev = chainCam(t - 1 / 60);
-      smearV((cam.y - prev.y) * cam.z * 0.2);
-    }
     herLight(cam, t);
+  };
+  /** 她抓住栏杆的近景（从回忆切回来，翻身不拍）：倒着的脸在画面中间，两只手落到栏杆上攥紧，一震 */
+  const renderGrip = (t: number) => {
+    const cam = gripCam(t);
+    worldShot(cam, t);
+    herLight(cam, t);
+    white(0.05, "#fff6ea");
   };
   /** 她的近处那只眼的眼角（相对头；转正抱着他、低头看砖时） */
   const EYE: V2 = [22, 18];
@@ -325,6 +330,9 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         else if (t < TE.silent) renderSlow(t);
         else if (t < TE.zWide) renderZhongClose(t);
         else if (t < TE.chainCut) renderZhong(t);
+        else if (t < TE.mem0 + 0.25) renderChain(t);
+        else if (t < TE.flip0) fill(); // 回忆（recall 图层）整个盖住
+        else if (t < TE.pull0) renderGrip(t);
         else if (t < TE.corner) renderChain(t);
         else if (t < TE.dim0) renderHand(t);
         else renderEnd(t);

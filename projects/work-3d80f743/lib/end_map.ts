@@ -187,15 +187,18 @@ interface Watcher {
   /** 有没有防飘栏（画回去压在上面） */
   cage: boolean;
 }
-/** 五层楼靠老钟家那一列（他们飘起来的时候就在旁边）先关上；人链往上时这几扇先打开，再往上楼上的窗一扇扇亮起来、有人探出来 */
+/**
+ * 五层楼靠老钟家那一列（他们飘起来的时候就在旁边）先关上；第四声从街上往后拉开时这几扇从下往上一扇扇打开，再往上楼上的窗一扇扇亮起来、有人探出来
+ * （2026-10-27 重排：原来 121.4–124.6 开，那时镜头在第三声往下扫的路上；第三声改成他喊、她在白的边上，开窗挪到第四声拉开时，看得见）
+ */
 const WATCHERS: Watcher[] = [
-  { b: FIVE, f: 2, i: 1, shut: TE.shut[0], open: 121.62, curtain: "#9b5a52", side: 1, cage: true },
-  { b: FIVE, f: 1, i: 1, shut: TE.shut[1], open: 121.9, curtain: "#5d6d86", side: -1, cage: true },
-  { b: FIVE, f: 3, i: 1, shut: TE.shut[2], open: 121.4, curtain: "#8a7a52", side: 1, cage: true },
-  { b: FIVE, f: 0, i: 1, shut: TE.shut[3], open: 122.18, curtain: "#6f5a7a", side: -1, cage: true },
-  { b: FIVE, f: 1, i: 0, shut: TE.shut[4], open: 122.0, curtain: "#7f6550", side: 1, cage: true },
-  // 最高那栋楼右边那一列：人链从窗前升过去时一扇扇亮起来，窗里的人走到窗前看
-  ...[20, 17, 14, 11, 8, 5].map((f, k): Watcher => ({ b: TOWER, f, i: 2, shut: null, open: 122.5 + k * 0.42, curtain: ["#9b5a52", "#5d6d86", "#8a7a52", "#6f5a7a", "#7f6550", "#5f7f6a"][k], side: k % 2 ? -1 : 1, cage: true })),
+  { b: FIVE, f: 2, i: 1, shut: TE.shut[0], open: 126.64, curtain: "#9b5a52", side: 1, cage: true },
+  { b: FIVE, f: 1, i: 1, shut: TE.shut[1], open: 126.46, curtain: "#5d6d86", side: -1, cage: true },
+  { b: FIVE, f: 3, i: 1, shut: TE.shut[2], open: 126.82, curtain: "#8a7a52", side: 1, cage: true },
+  { b: FIVE, f: 0, i: 1, shut: TE.shut[3], open: 126.12, curtain: "#6f5a7a", side: -1, cage: true },
+  { b: FIVE, f: 1, i: 0, shut: TE.shut[4], open: 126.3, curtain: "#7f6550", side: 1, cage: true },
+  // 最高那栋楼右边那一列：镜头拉开、楼往上露出来时一扇扇亮起来，窗里的人走到窗前看
+  ...[20, 17, 14, 11, 8, 5].map((f, k): Watcher => ({ b: TOWER, f, i: 2, shut: null, open: 127.0 + k * 0.17, curtain: ["#9b5a52", "#5d6d86", "#8a7a52", "#6f5a7a", "#7f6550", "#5f7f6a"][k], side: k % 2 ? -1 : 1, cage: true })),
 ];
 /** 这扇窗的玻璃中心（给镜头、人链对时刻用） */
 export const watcherAt = (k: number) => {

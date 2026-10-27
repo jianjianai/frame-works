@@ -6,7 +6,7 @@
 //       往右漂回 X_K 上方，100.27 靴底离地一点停住；又慢慢往上飘；交靴、掰手，103.45 松手。
 //   他穿着铁靴往下坠，104.02「咚」落回 X_K；她光着脚一下子冲上去，越升越慢，被风往左带到楼顶的角上，112.0 停在白的边上。
 //   他跺地（109.02）、从靴子里出来（113.96 / 114.46）往上飘，老钟攥住他的脚踝（115.02）；人链（lib/end_rise.ts）一节节把他送上去，
-//   最后一个人站在街上不离地，整条人链绕着地上那一点随风摆，127.96 荡到她跟前。她翻身攥住楼顶的栏杆倒挂着，脚尖一点点化成光；
+//   最后一个人站在街上不离地，整条人链绕着地上那一点随风摆，131.96 荡到她跟前。他朝她喊（第三声的回忆在 scenes/recall.ts），125.52 她已经倒挂着攥住楼顶的栏杆（翻身不拍），脚尖一点点化成光；
 //   他正好把砖递到她手里（不翻面），128.02 立即亮起来，130.03 松开栏杆抱住他；136.3 人链散开，她抱着他慢慢落下来，142.03 光着脚落在
 //   坑的左边（X_LAND）；放下他（砖给他抱着），去捡他妈妈的外套，回来跪下给他穿上；往后退一步，148.53 光着脚跺一下，地上一个坑。
 
@@ -176,8 +176,10 @@ export function herChest(t: number): V2 {
   };
   if (t < TE.flip0) return bob(t);
   if (t < TE.hug) {
-    // 翻身：胸口从停着的地方挪到倒挂的地方（身子在原地翻过来）；倒挂着轻轻晃
-    const a = mix(bob(TE.flip0), HOLD_C, E.io(ph(t, TE.flip0, TE.hang)));
+    // 翻身省掉（2026-10-27 用户：「不用添加翻身的动作，给个特写就行」）：切到手攥住栏杆的特写时她已经倒挂在栏杆上方，
+    // 手砸到栏杆上那一下身子往下一沉（低 34），再被白往上拽回去；之后倒挂着轻轻晃
+    const sink = 34 * Math.sin(Math.PI * Math.min(1, ph(t, TE.flip0, TE.hang + 0.15))) * (1 - ph(t, TE.flip0, TE.hang + 0.15));
+    const a: V2 = [HOLD_C[0], HOLD_C[1] + sink];
     const k = E.io(ph(t, TE.hang, TE.hang + 0.6));
     return [a[0] + 5 * Math.sin((t - TE.hang) * 1.3) * k, a[1] + 4 * Math.sin((t - TE.hang) * 2.1) * k];
   }
@@ -340,10 +342,12 @@ const KID_KEYS: MoveKey[] = [
   { t: TE.joins[0] + 0.1, p: KID.挣 },
   { t: TE.joins[0] + 0.25, ease: "out", p: { ...KID.挣, lookX: 0.1, lookY: 0.9 } },
   { t: TE.joins[0] + 0.55, ease: "inOut", p: KID.看人 },
-  // 越飘越高，往下看着大家；第三声「活」更深地低下头看（镜头从他往下把每个人看过去），哭着笑；之后两只手抱好砖
-  { t: TE.sweep0 - 0.35, p: KID.看人 },
-  { t: TE.sweep0 + 0.05, ease: "inOut", p: { ...KID.看人, neck: -34, lookX: 0, lookY: 1 } },
-  { t: 123.3, p: { ...KID.看人, neck: -34, lookX: 0, lookY: 1 } },
+  // 越飘越高，往下看着大家；第三声前抬起头找白的边上的她，「活」朝她拼命喊（远处那只手伸直了够她）；
+  // 之后（镜头在她那边）两只手抱好砖（2026-10-27 重排：原来第三声更深地低下头，镜头从他往下把每个人看过去）
+  { t: TE.call0, p: KID.看人 },
+  { t: TE.call - 0.1, ease: "inOut", p: KID.找她 },
+  { t: TE.call + 0.1, ease: "out", p: KID.喊 },
+  { t: 123.2, p: KID.喊 },
   { t: 123.9, ease: "inOut", p: KID.高处 },
   { t: TE.pull0 - 0.4, p: KID.高处 },
   // 第四声风把他往右、再往左荡：抬头找她
@@ -414,14 +418,11 @@ const HER_KEYS: MoveKey[] = [
   // 慢放：到了白的边上，闭上眼睛，张开手
   { t: 109.95, p: HER.仰 },
   { t: 111.2, ease: "inOut", p: HER.开 },
-  // 睁开眼想最后看他一眼——看见他从靴子里出来往上追她；翻身扑向栏杆，攥住，倒挂（画外）
-  { t: TE.flip0 - 0.5, p: HER.开 },
-  { t: TE.flip0 - 0.3, ease: "out", p: HER.看见 },
-  { t: TE.flip0, p: HER.看见 },
-  { t: TE.grip - 0.04, ease: "inOut", p: HER.翻 },
-  { t: TE.hang, ease: "out", p: HER.倒挂 },
-  { t: 120.6, p: HER.倒挂 },
-  { t: 121.0, ease: "inOut", p: HER.倒挂哭 },
+  // 第三声（2026-10-27 重排）：他喊完溶进回忆，她一直在画外闭着眼；拍上切回来她已经倒挂着抓住栏杆（翻身不拍，用户：「不用添加翻身的动作」）
+  { t: TE.flip0, p: HER.开 },
+  { t: TE.flip0 + 0.001, ease: "hold", p: HER.倒挂 },
+  { t: TE.hang + 0.15, p: HER.倒挂 },
+  { t: TE.hang + 0.45, ease: "inOut", p: HER.倒挂哭 },
   { t: TE.hand - 0.5, p: HER.倒挂哭 },
   // 远处那只手松开栏杆接住砖，一接过来就亮（不翻面），哭着笑；
   // 立即松开栏杆抱住他，被砖坠着转正（用户 2026-10-26：「主角接到之后立即正过来，把之前等一会正过来情节的去掉」；
@@ -841,7 +842,8 @@ export function kidAt(t: number): KidNow {
   if (her && t > TE.pov && t < TE.hand + 0.1) {
     const [e1, e2] = ends(her);
     ik("L", e1, 1 - E.io(ph(t, TE.hand, TE.hand + 0.1)));
-    const far = t < TE.out2 ? 1 : t < 121.8 ? 1 - E.io(ph(t, TE.out2, TE.out2 + 0.25)) : E.io(ph(t, 121.8, 122.2));
+    // 从靴子里出来往上冲时远处那只手松开砖往上伸；朝她喊完（镜头在她那边）再抱好砖
+    const far = t < TE.out2 ? 1 : t < 123.3 ? 1 - E.io(ph(t, TE.out2, TE.out2 + 0.25)) : E.io(ph(t, 123.3, 123.7));
     ik("R", e2, far * (1 - E.io(ph(t, TE.hand, TE.hand + 0.1))));
   }
   // 落回街上：她把砖给他抱着
@@ -886,7 +888,8 @@ export function herAt(t: number): HerNow {
   }
   // 头发、围巾按她在世界里的速度往反方向甩（往下冲时往上扬，往上冲时往下拖）；朝右的人横着取反
   if (t < TE.herLand) {
-    const c0 = herChest(t - 0.05);
+    // 切到攥栏杆的特写那一下身子是跳过去的（翻身省掉），不算进速度
+    const c0 = herChest(t >= TE.flip0 && t - 0.05 < TE.flip0 ? TE.flip0 : t - 0.05);
     const c1 = herChest(t);
     const v: V2 = [(c1[0] - c0[0]) / 0.05, (c1[1] - c0[1]) / 0.05];
     withDrag(p, [-v[0], v[1]], 0.55, 0.85);
@@ -937,18 +940,38 @@ export function herAt(t: number): HerNow {
     }
   }
   // 倒挂：两只手攥着楼顶栏杆；他荡过来的最后半秒，远处那只松开栏杆朝他伸过去，他到跟前时砖正好放进她手里
-  // （原来递到的前 0.1 秒才松手，接住以后紧接着就翻身抱他，「接住」那一下看不出来）
-  const grip = E.io(ph(t, TE.grip - 0.12, TE.grip)) * (1 - E.io(ph(t, TE.hug, TE.hug + 0.12)));
+  // （原来递到的前 0.1 秒才松手，接住以后紧接着就翻身抱他，「接住」那一下看不出来）。
+  // 特写里（2026-10-27，翻身省掉）：切过去时两只手还在栏杆上方，越落越快地砸到栏杆上攥住（近处那只先到）
+  const grip = (t >= TE.flip0 ? 1 : 0) * (1 - E.io(ph(t, TE.hug, TE.hug + 0.12)));
+  if (t >= TE.flip0 && t < TE.flip0 + 0.45) {
+    // 切过去的那一下手臂的弹簧还停在上一个姿势（攥着拳头放在胸前），倒过来以后肘往外拱、两只前臂在脸前交叉：
+    // 先直接用倒挂的手臂角度，0.25 秒以后再交回弹簧（弹簧那时已经跟上了）
+    const w = E.io(ph(t, TE.flip0 + 0.2, TE.flip0 + 0.45));
+    const settled = herRaw(TE.flip0 + 0.8);
+    for (const k of ["armL", "armR"] as const) {
+      const a = settled[k] as { a: number; b: number; h: number };
+      const b = p[k] as { a: number; b: number; h: number };
+      p[k] = { ...(b as object), a: a.a + (b.a - a.a) * w, b: a.b + (b.b - a.b) * w, h: a.h + (b.h - a.h) * w } as PoseIn["armL"];
+    }
+  }
   if (grip > 0) {
-    ik("L", RAIL_L, grip);
+    // 砸到栏杆上：手离栏杆只差一点（差多了胳膊要弯，倒着时两只前臂会在脸前交叉），张着手落下来、碰到就攥紧
+    const down = (lead: number) => 1 - E.in2(ph(t, TE.flip0, TE.grip - lead));
+    const RAIL_R2: V2 = [RAIL_R[0], RAIL_R[1] - 9 * down(0)];
+    ik("L", [RAIL_L[0], RAIL_L[1] - 8 * down(0.04)], grip);
+    // 落到栏杆上以前手是张开的，碰到才攥起来
+    if (t >= TE.flip0 && t < TE.grip) {
+      if (t < TE.grip - 0.04) p.armL = { ...(p.armL as object), shape: "open" } as PoseIn["armL"];
+      p.armR = { ...(p.armR as object), shape: "open" } as PoseIn["armR"];
+    }
     const b = t > TE.hand - 0.5 ? (t < TE.hand ? herBrickAt(t) : herHoldBrick(t)) : null;
     if (b) {
       const cs = Math.cos(b.rot);
       const sn = Math.sin(b.rot);
       const end: V2 = [b.c[0] - HALF * cs, b.c[1] - HALF * sn + 4];
       const w = E.io(ph(t, TE.hand - 0.5, TE.hand));
-      ik("R", mix(RAIL_R, end, w), grip);
-    } else ik("R", RAIL_R, grip);
+      ik("R", mix(RAIL_R2, end, w), grip);
+    } else ik("R", RAIL_R2, grip);
   }
   // 抱住他（往下一沉、抱着落下来、落地）；放下他时松开
   if (t > TE.hug - 0.1 && t < TE.putDown + 0.4) {
