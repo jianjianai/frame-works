@@ -261,24 +261,22 @@ function wideAt(t: number): Cam {
 /**
  * 第三声前：他抬起头朝白的边上的她喊（2026-10-27 重排，用户：「这个从上往下的镜头有点多余……删除这个多余镜头，补一点新剧情」——
  * 原来第三声从他往下一张脸一张脸扫到街上最后那个人）。接着第二声跟着他往上时偷偷推近的那一下，越推越近推到他脸上：
- * 他在画面右边一点，左上留给他喊的方向（她在左上）；「活」上推到，「下」切到她以前停稳
+ * 他的头在画面左边一点、偏下，上面留给他朝上喊；「活」上推到，「下」溶进回忆以前停稳
  */
 function callCam(t: number): Cam {
   const c = streetChain(t);
   const h = kidAt(t).head;
-  const close = aim(h[0] - 10, h[1] + 70, 640, 860, 3.2);
+  // 他的头在画面左边一点、偏下（上面留出他朝上喊的地方）：回忆溶进来时，那一夜他拽绳子的脸正好对在这里（那一夜他站在画面左下）
+  const close = aim(h[0], h[1], 480, 830, 3.2);
   return camLerp(c, close, E.io(ph(t, TE.call0, TE.call + 0.35)));
 }
 /**
- * 她抓住栏杆的近景（用户 2026-10-27：「2:05.53放她抓住栏杆的近景」；翻身不拍：「不用添加翻身的动作」）：拍上从回忆切回来，
- * 她已经倒过来了——倒着的脸在画面中间，两只手落到栏杆上攥紧，一震；栏杆和楼顶的边在画面下面
+ * 她一直抓着栏杆的近景（用户 2026-10-27：「她之前就抓好了，只放一个近景她一直抓住就行，不用抖一下」）：拍上从回忆切回来，
+ * 倒着的脸在画面中间，两只手攥着栏杆在下面；不震，只极慢地凑近一点
  */
 export function gripCam(t: number): Cam {
-  const z = 3.1 * (1 + 0.03 * ph(t, TE.flip0, TE.pull0));
-  const kk = kick(t, TE.grip, 0.1);
-  const c = aim(CORNER[0] - 22, RAIL_TOP, 540, 1330, z * (1 + 0.035 * kk));
-  const sh = 8 * kk;
-  return withBreath({ ...c, x: c.x + (sh * Math.sin(t * 71)) / c.z, y: c.y + (sh * Math.sin(t * 57 + 1)) / c.z }, t, 1);
+  const c = aim(CORNER[0] - 22, RAIL_TOP, 540, 1330, 3.1 * (1 + 0.02 * ph(t, TE.gripCut, TE.pull0)));
+  return withBreath(c, t, 1);
 }
 /** 第四声开头：停在街上最后那个人身上（两腿蹬开攥着；他的头在画面上 1364，地面在 1650），从这里往后拉开 */
 const Z_STREET = 0.8;

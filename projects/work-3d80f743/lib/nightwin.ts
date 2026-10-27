@@ -509,6 +509,13 @@ function himAt(t: number) {
   return { pose: p, root, k, palmL: palm, palmR: at(j.palmR), knifeRot: Math.atan2(palm[1] - elbow[1], palm[0] - elbow[0]) };
 }
 
+/** 他的头（世界坐标）和他这一刻画的大小（k：随地板远近的缩放）；终章第三声的回忆（scenes/recall.ts）溶进来时用它对上他的脸 */
+export function nwHisHead(t: number): { head: V2; k: number } {
+  const h = himAt(t);
+  const j = castJoints(STONE, h.pose);
+  return { head: [h.root[0] + j.head[0] * h.k, h.root[1] + j.head[1] * h.k], k: h.k };
+}
+
 // ——— 刀 ———
 /**
  * 刀这一刻：她手里 →「挣」一扯甩出手，往（真实的）下掉、往他那边偏（倒着的画面里往右上掉出画面），「的」落在他脚边、弹一下 →

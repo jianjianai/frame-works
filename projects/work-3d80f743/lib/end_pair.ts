@@ -176,10 +176,8 @@ export function herChest(t: number): V2 {
   };
   if (t < TE.flip0) return bob(t);
   if (t < TE.hug) {
-    // 翻身省掉（2026-10-27 用户：「不用添加翻身的动作，给个特写就行」）：切到手攥住栏杆的特写时她已经倒挂在栏杆上方，
-    // 手砸到栏杆上那一下身子往下一沉（低 34），再被白往上拽回去；之后倒挂着轻轻晃
-    const sink = 34 * Math.sin(Math.PI * Math.min(1, ph(t, TE.flip0, TE.hang + 0.15))) * (1 - ph(t, TE.flip0, TE.hang + 0.15));
-    const a: V2 = [HOLD_C[0], HOLD_C[1] + sink];
+    // 翻身不拍（2026-10-27 用户：「不用添加翻身的动作」「她之前就抓好了」）：回忆盖着的时候她就倒挂在栏杆上方了；之后倒挂着轻轻晃
+    const a: V2 = HOLD_C;
     const k = E.io(ph(t, TE.hang, TE.hang + 0.6));
     return [a[0] + 5 * Math.sin((t - TE.hang) * 1.3) * k, a[1] + 4 * Math.sin((t - TE.hang) * 2.1) * k];
   }
@@ -943,27 +941,9 @@ export function herAt(t: number): HerNow {
   // （原来递到的前 0.1 秒才松手，接住以后紧接着就翻身抱他，「接住」那一下看不出来）。
   // 特写里（2026-10-27，翻身省掉）：切过去时两只手还在栏杆上方，越落越快地砸到栏杆上攥住（近处那只先到）
   const grip = (t >= TE.flip0 ? 1 : 0) * (1 - E.io(ph(t, TE.hug, TE.hug + 0.12)));
-  if (t >= TE.flip0 && t < TE.flip0 + 0.45) {
-    // 切过去的那一下手臂的弹簧还停在上一个姿势（攥着拳头放在胸前），倒过来以后肘往外拱、两只前臂在脸前交叉：
-    // 先直接用倒挂的手臂角度，0.25 秒以后再交回弹簧（弹簧那时已经跟上了）
-    const w = E.io(ph(t, TE.flip0 + 0.2, TE.flip0 + 0.45));
-    const settled = herRaw(TE.flip0 + 0.8);
-    for (const k of ["armL", "armR"] as const) {
-      const a = settled[k] as { a: number; b: number; h: number };
-      const b = p[k] as { a: number; b: number; h: number };
-      p[k] = { ...(b as object), a: a.a + (b.a - a.a) * w, b: a.b + (b.b - a.b) * w, h: a.h + (b.h - a.h) * w } as PoseIn["armL"];
-    }
-  }
   if (grip > 0) {
-    // 砸到栏杆上：手离栏杆只差一点（差多了胳膊要弯，倒着时两只前臂会在脸前交叉），张着手落下来、碰到就攥紧
-    const down = (lead: number) => 1 - E.in2(ph(t, TE.flip0, TE.grip - lead));
-    const RAIL_R2: V2 = [RAIL_R[0], RAIL_R[1] - 9 * down(0)];
-    ik("L", [RAIL_L[0], RAIL_L[1] - 8 * down(0.04)], grip);
-    // 落到栏杆上以前手是张开的，碰到才攥起来
-    if (t >= TE.flip0 && t < TE.grip) {
-      if (t < TE.grip - 0.04) p.armL = { ...(p.armL as object), shape: "open" } as PoseIn["armL"];
-      p.armR = { ...(p.armR as object), shape: "open" } as PoseIn["armR"];
-    }
+    const RAIL_R2 = RAIL_R;
+    ik("L", RAIL_L, grip);
     const b = t > TE.hand - 0.5 ? (t < TE.hand ? herBrickAt(t) : herHoldBrick(t)) : null;
     if (b) {
       const cs = Math.cos(b.rot);
@@ -972,6 +952,12 @@ export function herAt(t: number): HerNow {
       const w = E.io(ph(t, TE.hand - 0.5, TE.hand));
       ik("R", mix(RAIL_R2, end, w), grip);
     } else ik("R", RAIL_R2, grip);
+  }
+  // 倒挂着两只手攥着栏杆：两条胳膊画在头和身子后面（她的头比肩宽，胳膊从肩膀直着下去会挡在脸前；像倒立时胳膊在耳朵两边）。
+  // 用户 2026-10-27（2:05.80）：「手臂和头的透视有问题」。远处那只松开栏杆去接砖时、近处那只松开栏杆抱他时换回原来的画法
+  if (t >= TE.flip0 && t < TE.hug) {
+    p.armL = { ...(p.armL as object), layer: "back" } as PoseIn["armL"];
+    if (t < TE.hand - 0.5) p.armR = { ...(p.armR as object), layer: "back" } as PoseIn["armR"];
   }
   // 抱住他（往下一沉、抱着落下来、落地）；放下他时松开
   if (t > TE.hug - 0.1 && t < TE.putDown + 0.4) {

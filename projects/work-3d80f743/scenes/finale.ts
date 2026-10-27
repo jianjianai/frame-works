@@ -4,8 +4,8 @@
 //   （他落地以后天上掉下来一块砖，104.52 砸在靴尖前面）→ 第一视角（104.8：捡起来、看）→ 她越升越快冲他笑（106.02）→ 跺地（108.02）→ 慢放：白的边上（109.89）→
 //   静：老钟的特写（112.02，屋里墙上的钟跳两下）→ 窗外：他从靴子里出来往上飘、老钟攥住他、被拽出窗（113.88）→
 //   人链（118.02 街上一个抓住一个，退到 119.45 改成跟着他往上）→ 第三声前推到他脸上，「活」（122.02）他朝她拼命喊 →
-//   「下」（122.52）溶进回忆（recall 图层，scenes/recall.ts：七岁的她哭着喊妈妈，妈妈飘走了，「活下去」的木牌掉在她铁靴跟前）→
-//   125.52 拍上切回现在：她抓住楼顶栏杆的近景（翻身不拍）→
+//   「下」（122.52）溶进回忆（recall 图层，scenes/recall.ts：主歌二那一夜他把她拽回来、哭着把两根绳系在一起、两张床上牵着手）→
+//   125.52 拍上切回现在：她一直抓着楼顶栏杆的近景（翻身、抓都不拍，她早就抓好了）→
 //   第四声（126.01）从街上往后拉开到整条人链，人链先往右、再往左荡 → 在这反乌托邦里（129.55 起推）推到他，跟着他往左荡过去，
 //   句子唱完把砖递到她手里（131.96）、鼓回来那一下一接过来就亮（132.01）、她立即松开栏杆抱住他、转正（132.58）→
 //   推到她脸上：睁开眼看砖，一滴眼泪往下掉在「活」字上（133.02）→
@@ -220,7 +220,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     worldShot(cam, t);
     herLight(cam, t);
   };
-  /** 她抓住栏杆的近景（从回忆切回来，翻身不拍）：倒着的脸在画面中间，两只手落到栏杆上攥紧，一震 */
+  /** 她一直抓着栏杆的近景（从回忆切回来，翻身不拍）：倒着的脸在画面中间，两只手攥着栏杆 */
   const renderGrip = (t: number) => {
     const cam = gripCam(t);
     worldShot(cam, t);
@@ -331,7 +331,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         else if (t < TE.zWide) renderZhongClose(t);
         else if (t < TE.chainCut) renderZhong(t);
         else if (t < TE.mem0 + 0.25) renderChain(t);
-        else if (t < TE.flip0) fill(); // 回忆（recall 图层）整个盖住
+        else if (t < TE.gripCut) fill(); // 回忆（recall 图层）整个盖住
         else if (t < TE.pull0) renderGrip(t);
         else if (t < TE.corner) renderChain(t);
         else if (t < TE.dim0) renderHand(t);
