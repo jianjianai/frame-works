@@ -529,8 +529,14 @@ export interface Look {
   soles?(rig: Rig, side: "L" | "R"): V2[];
   /** 人物特点：头相对身子放大多少（小孩头大，1.25 左右），以脖子为中心 */
   headScale?: number;
-  /** 人物特点：体型宽窄（横向缩放，壮的人 1.1–1.2） */
+  /** 人物特点：体型宽窄（横向缩放，壮的人 1.1–1.2；头不跟着变宽，脸不会被拉扁） */
   width?: number;
+  /** 人物特点：裤腿（腿）粗细，横着放大，关节不动（男人的直筒裤 1.2 左右、小孩胖乎乎的腿） */
+  legWidth?: number;
+  /** 裤脚那头的粗细（不写同 legWidth）：直筒裤比大腿那头还宽一点 */
+  legHem?: number;
+  /** 人物特点：胳膊（袖子）粗细，横着放大，关节和手不动 */
+  armWidth?: number;
 }
 
 /** 基础模型本身：素色上衣、下装，光头、光手、光脚 */
@@ -589,16 +595,18 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   // 头往身体的反方向转时：头（和后面的头发）沿头的中线镜像着画，光的方向、风在头上的方向跟着换回来
   const headView = (fn: (r: Rig, k: Ink) => void) => {
     const hs = look.headScale ?? 1;
-    if (hs !== 1) {
+    // 体型宽（width）时整个人横着放大过：头按脖子再横着缩回去，脸不被拉扁
+    const hw = 1 / (look.width ?? 1);
+    if (hs !== 1 || hw !== 1) {
       // 头以脖子为中心放大（小孩头大）
       ctx.save();
       ctx.translate(rig.neck[0], rig.neck[1]);
-      ctx.scale(hs, hs);
+      ctx.scale(hs * hw, hs);
       ctx.translate(-rig.neck[0], -rig.neck[1]);
     }
     if (!rig.headMir) {
       fn(rig, ink);
-      if (hs !== 1) ctx.restore();
+      if (hs !== 1 || hw !== 1) ctx.restore();
       return;
     }
     const { head } = rig;
@@ -610,7 +618,7 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     ctx.translate(-head.x, -head.y);
     fn({ ...rig, field: reflectOnHead(rig, rig.field) }, { ...ink, shade: [-ink.shade[0], ink.shade[1]] });
     ctx.restore();
-    if (hs !== 1) ctx.restore();
+    if (hs !== 1 || hw !== 1) ctx.restore();
   };
 
   scoped(() => {
@@ -1005,7 +1013,8 @@ export function armPaths(rig: Rig, side: "L" | "R") {
   const sx = side === "L" ? 1 : -1;
   const fU = new Frame(limb.root[0], limb.root[1], limb.a1);
   const fF = new Frame(limb.mid[0], limb.mid[1], limb.a2);
-  const on = (f: Frame) => ([x, y]: V2) => f.p(x * sx, y);
+  const aw = rig.look.armWidth ?? 1;
+  const on = (f: Frame) => ([x, y]: V2) => f.p(x * sx * aw, y);
   return { limb, sx, upper: polyPath(ARM_PIECES.upper, on(fU)), lower: polyPath(ARM_PIECES.lower, on(fF)) };
 }
 
@@ -1199,7 +1208,11 @@ export function legPaths(rig: Rig, side: "L" | "R"): Path2D[] {
   const fS = new Frame(limb.mid[0], limb.mid[1], limb.a2);
   // 大腿朝镜头时顺着骨头压短（膝盖那个半圆也跟着压扁，膝盖的圆由小腿那头的半圆撑着）
   const k = limb.k ?? 1;
-  return [polyPath(P.upper, (p) => fT.p(p[0], p[1] * k)), polyPath(P.lower, (p) => fS.p(p[0], p[1]))];
+  // 角色的裤腿粗细（Look.legWidth / legHem）：横着放大，大腿那头 legWidth、往裤脚过渡到 legHem
+  const lw = rig.look.legWidth ?? 1;
+  const hem = rig.look.legHem ?? lw;
+  const shinK = (y: number) => lw + (hem - lw) * Math.max(0, Math.min(1, y / BODY.shin));
+  return [polyPath(P.upper, (p) => fT.p(p[0] * lw, p[1] * k)), polyPath(P.lower, (p) => fS.p(p[0] * shinK(p[1]), p[1]))];
 }
 
 /**

@@ -305,6 +305,11 @@ export interface CastSpec {
   collar?: boolean;
   headScale?: number;
   width?: number;
+  /** 腿（裤腿）粗细、裤脚那头的粗细、胳膊粗细（只改画法，关节位置不动）：基础模型是秤砣穿裤袜的细腿，
+   *  她的小腿被铁靴盖着；配角穿矮帮鞋整条腿露出来，不加粗就是两根细棍，人显得被拉长 */
+  legWidth?: number;
+  legHem?: number;
+  armWidth?: number;
 }
 
 /** 配置 → 外观 */
@@ -323,6 +328,9 @@ export function castLook(spec: CastSpec): Look {
     collar: topHasOwnCollar(top) ? false : (spec.collar ?? true),
     headScale: spec.headScale,
     width: spec.width,
+    legWidth: spec.legWidth,
+    legHem: spec.legHem,
+    armWidth: spec.armWidth,
     sleeve: coat ? () => sleeve : undefined,
     shoulderOut: coat ? () => 4 * (coat.size ?? 1) : undefined,
     armsOver: coat ? () => true : undefined,
@@ -484,6 +492,10 @@ export const CAST = {
     name: "周磊",
     scale: 1.06,
     width: 1.1,
+    headScale: 1.12,
+    legWidth: 1.22,
+    legHem: 1.32,
+    armWidth: 1.12,
     colors: { ...SKIN, top: "#f4f2ec", topShade: "#e2ded4", bottom: "#4f5d76", bottomShade: "#424e64" },
     hair: "short",
     hairColor: "#2f2e33",
@@ -499,6 +511,9 @@ export const CAST = {
     name: "称重员",
     scale: 1.1,
     width: 1.2,
+    headScale: 1.1,
+    legWidth: 1.3,
+    armWidth: 1.2,
     colors: { ...SKIN_WARM, top: "#3d4a6b", topShade: "#333e5a", bottom: "#323b55", bottomShade: "#2a3249" },
     collar: false,
     hair: "short",
@@ -514,6 +529,10 @@ export const CAST = {
     name: "老钟",
     scale: 0.96,
     width: 1.06,
+    headScale: 1.18,
+    legWidth: 1.2,
+    legHem: 1.28,
+    armWidth: 1.08,
     colors: { ...SKIN_OLD, top: "#9a6a4a", topShade: "#85593d", bottom: "#5e5248", bottomShade: "#4f443b" },
     hair: "receding",
     hairColor: "#ecebe6",
@@ -530,6 +549,9 @@ export const CAST = {
     name: "小石头",
     scale: 0.6,
     headScale: 1.42,
+    legWidth: 1.32,
+    legHem: 1.36,
+    armWidth: 1.28,
     colors: { ...SKIN, top: "#f5f1e6", topShade: "#e3decf", bottom: "#56627a", bottomShade: "#48536a", blush: "250,140,140" },
     hair: "kid",
     hairColor: "#2f2e33",
@@ -545,6 +567,9 @@ export const CAST = {
     name: "小石头",
     scale: 0.6,
     headScale: 1.42,
+    legWidth: 1.32,
+    legHem: 1.36,
+    armWidth: 1.28,
     colors: { ...SKIN, top: "#f5f1e6", topShade: "#e3decf", bottom: "#56627a", bottomShade: "#48536a", blush: "250,140,140" },
     hair: "kid",
     hairColor: "#2f2e33",
@@ -559,6 +584,9 @@ export const CAST = {
   小石头的妈妈: {
     name: "小石头的妈妈",
     scale: 0.98,
+    headScale: 1.08,
+    legWidth: 1.1,
+    armWidth: 1.05,
     colors: { ...SKIN, top: "#f7ead8", topShade: "#e9d8c0", bottom: "#6a5a66", bottomShade: "#5a4b56" },
     hair: "ponytail",
     hairColor: "#5b3f33",
@@ -573,6 +601,8 @@ export const CAST = {
   千斤: {
     name: "千斤",
     scale: 0.94,
+    headScale: 1.04,
+    legWidth: 1.08,
     colors: { ...SKIN, top: "#e2574c", topShade: "#c9473d", bottom: "#3d3f52", bottomShade: "#333545" },
     hair: "sidebob",
     hairColor: "#2c2a30",
@@ -585,6 +615,9 @@ export const CAST = {
   千斤的妈妈: {
     name: "千斤的妈妈",
     scale: 1.0,
+    headScale: 1.08,
+    legWidth: 1.12,
+    armWidth: 1.06,
     colors: { ...SKIN_WARM, top: "#b9a3d6", topShade: "#a48ec2", bottom: "#4f465e", bottomShade: "#433b50" },
     hair: "bun",
     hairColor: "#3a3036",
@@ -598,6 +631,10 @@ export const CAST = {
     name: "阿满",
     scale: 1.04,
     width: 1.16,
+    headScale: 1.1,
+    legWidth: 1.3,
+    legHem: 1.36,
+    armWidth: 1.18,
     colors: { ...SKIN_WARM, top: "#d8cfb8", topShade: "#c6bca4", bottom: "#4f5361", bottomShade: "#434653" },
     hair: "short",
     hairColor: "#3a3539",
@@ -612,6 +649,10 @@ export const CAST = {
   老太太: {
     name: "老太太",
     scale: 0.88,
+    headScale: 1.12,
+    legWidth: 1.18,
+    legHem: 1.26,
+    armWidth: 1.06,
     colors: { ...SKIN_OLD, top: "#bfaee0", topShade: "#a998cc", bottom: "#6a6273", bottomShade: "#5a5362" },
     hair: "bun",
     hairColor: "#dcdad4",
@@ -626,6 +667,10 @@ export const CAST = {
   年轻人: {
     name: "年轻人",
     scale: 1.02,
+    headScale: 1.1,
+    legWidth: 1.16,
+    legHem: 1.2,
+    armWidth: 1.08,
     colors: { ...SKIN, top: "#4fa8a3", topShade: "#3f938e", bottom: "#3f4757", bottomShade: "#353c4a" },
     hair: "curtain",
     hairColor: "#3b3035",
@@ -638,6 +683,8 @@ export const CAST = {
   秤砣的妈妈: {
     name: "秤砣的妈妈",
     scale: 1.0,
+    headScale: 1.02,
+    legWidth: 1.04,
     colors: { ...SKIN, top: "#f3e2d6", topShade: "#e4cfc0", bottom: "#5c4a4c", bottomShade: "#4d3d3f" },
     hair: "long",
     hairColor: "#2c2a30",
@@ -651,6 +698,8 @@ export const CAST = {
     name: "小时候的秤砣",
     scale: 0.58,
     headScale: 1.42,
+    legWidth: 1.24,
+    armWidth: 1.24,
     bootScale: 1.55,
     colors: { ...SKIN, top: "#f4c95d", topShade: "#e2b54a", bottom: "#5d6177", bottomShade: "#4f5266", blush: "250,140,140" },
     hair: "bob",
@@ -703,6 +752,10 @@ export function passerby(i: number): CastSpec {
     name: `路人${i}`,
     scale: 0.92 + ((i * 37) % 13) / 100,
     width: 1 + ((i * 17) % 9) / 60,
+    headScale: man ? 1.1 : 1.06,
+    legWidth: man ? 1.2 : 1.1,
+    legHem: man ? 1.28 : 1.12,
+    armWidth: man ? 1.1 : 1.04,
     colors: { ...(i % 3 ? SKIN : SKIN_WARM), top: tops[k], topShade: darker(tops[k], 0.92), bottom: "#4e5266", bottomShade: "#434657" },
     hair,
     hairColor: hc[j],
