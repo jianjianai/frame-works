@@ -69,7 +69,8 @@ export const PIVOT: V2 = [X_JOIN, -ANCHOR_HAND_UP];
 export const H_GRAB = 433;
 export const H_OUT = 1000;
 /** 他到她跟前时横着在哪：倒挂在楼顶右边那个角上的她右边一点，举着的砖正好在她脸跟前 */
-export const X_ARRIVE = CORNER[0] + 150;
+// 用户 2026-10-27（2:11.47）：「让他们距离远一点，小石头用力向左递，她用左手接」——原来 + 150
+export const X_ARRIVE = CORNER[0] + 360;
 
 /** 第 k 个人（k ≥ 1）跳起来攥住上面那个人的脚踝那一刻，他的根离地多高（竖着叠起来算；摆开的角度另算） */
 function hAtJoin(k: number): number {

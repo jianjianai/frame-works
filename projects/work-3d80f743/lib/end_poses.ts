@@ -393,12 +393,27 @@ export const KID = {
   喊: pose(-8, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(22, -48, -44), neck: 36, expression: "吓一跳", wide: 0.3, sad: 1, tears: 1, open: 0.85, squint: 0.35, lookX: -0.45, lookY: -1 }, (l) => UPB(l, 172)),
   /** 两只手把砖举过头顶朝着她（「活下去」朝外） */
   举砖: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 30, expression: "坚定", tears: 1, lookX: -0.3, lookY: -1 }, RAISED),
+  /** 用力往左把砖递给她：身子朝她探过去，两只胳膊伸直（手 IK 在砖上），腿往后甩，咬着牙哭 */
+  递左: pose(16, { face: -0.7, ground: false, float: 0.2, ...legR(-14, -10, -30), ...legL(-30, -30, -40), neck: 14, expression: "坚定", teeth: 0.5, tears: 1, lookX: -0.8, lookY: -0.3 }, (l) => ({
+    ...armL(112, 8, 0, "grip", l),
+    ...armR(106, 10, 0, "grip", l),
+  })),
   /** 到了她跟前：递给她，哭着笑 */
   递: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 30, expression: "哭着笑", tears: 1, lookX: -0.3, lookY: -1 }, RAISED),
   /** 交出去以后两只手还朝她伸着 */
   伸: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 28, expression: "哭着笑", tears: 1, lookX: -0.3, lookY: -1 }, (l) => ({
     ...armL(150, 30, 0, "open", l),
     ...armR(140, 30, 0, "open", l),
+  })),
+  /** ① 她接住砖以后：近处那只手去摸她的脸（IK，kidAt），远处那只攥着拳收到自己胸口，哭着笑看着她 */
+  摸脸: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 24, expression: "哭着笑", tears: 1, sad: 0.6, lookX: -0.4, lookY: -0.7 }, (l) => ({
+    ...armL(140, 40, 0, "open", l),
+    ...armR(12, 142, 0, "grip", l),
+  })),
+  /** ② 她松开栏杆翻过来：两只手张开去接她 */
+  接她: pose(-2, { face: -0.7, ground: false, float: 0.15, ...legR(4, -14, -36), ...legL(10, -30, -40), neck: 18, expression: "哭着笑", tears: 1, lookX: -0.4, lookY: -0.5 }, (l) => ({
+    ...armL(118, 26, 0, "open", l),
+    ...armR(104, 30, 0, "open", l),
   })),
   /** 被她抱住：两只手搂着她，闭着眼哭着笑 */
   被抱2: pose(4, { face: -0.7, ground: false, float: 0.1, ...legR(6, -20, -40), ...legL(-4, -16, -40), neck: 8, expression: "哭着笑", tears: 1, blink: 0.85, lookX: -0.3, lookY: 0 }, (l) => ({
