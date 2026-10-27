@@ -529,6 +529,10 @@ export interface Look {
   soles?(rig: Rig, side: "L" | "R"): V2[];
   /** 人物特点：头相对身子放大多少（小孩头大，1.25 左右），以脖子为中心 */
   headScale?: number;
+  /** 人物特点：头再横着放宽多少（以脖子为中心）：基础模型是秤砣的瓜子脸，成年男人的脸宽一点（1.05–1.1） */
+  headWidth?: number;
+  /** 人物特点：眼睛（连眉毛）以眼珠为中心缩放多少：基础模型是秤砣的大眼睛，成年男人小一点（0.8 左右），眉毛跟着压到眼睛上面 */
+  eyeScale?: number;
   /** 人物特点：体型宽窄（横向缩放，壮的人 1.1–1.2；头不跟着变宽，脸不会被拉扁） */
   width?: number;
   /** 人物特点：裤腿（腿）粗细，横着放大，关节不动（男人的直筒裤 1.2 左右、小孩胖乎乎的腿） */
@@ -595,8 +599,8 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   // 头往身体的反方向转时：头（和后面的头发）沿头的中线镜像着画，光的方向、风在头上的方向跟着换回来
   const headView = (fn: (r: Rig, k: Ink) => void) => {
     const hs = look.headScale ?? 1;
-    // 体型宽（width）时整个人横着放大过：头按脖子再横着缩回去，脸不被拉扁
-    const hw = 1 / (look.width ?? 1);
+    // 体型宽（width）时整个人横着放大过：头按脖子再横着缩回去，脸不被拉扁；headWidth 是头自己的宽窄
+    const hw = (look.headWidth ?? 1) / (look.width ?? 1);
     if (hs !== 1 || hw !== 1) {
       // 头以脖子为中心放大（小孩头大）
       ctx.save();
@@ -1558,8 +1562,9 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   }
   ctx.restore();
 
-  // 眼睛、眼泪
-  for (const { s, x, y, sx, sy } of eyes) drawEye(ctx, head, x, y, sx, sy, s, e, ink);
+  // 眼睛、眼泪（eyeScale：眼睛以眼珠为中心缩放，腮红不跟着）
+  const es = rig.look.eyeScale ?? 1;
+  for (const { s, x, y, sx, sy } of eyes) drawEye(ctx, head, x, y, sx * es, sy * es, s, e, ink);
   if (e.tears > 0.01) for (const { s, x, y } of eyes) drawTears(ctx, head, x, y, s, e.tears, field, pose.t, ink);
   // 鼻子：一小笔
   {
@@ -1607,7 +1612,7 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
   // 眉毛：透过刘海画在头发上，跟着眼睛走
   for (const [s, brow] of [[-1, BROW_L], [1, BROW_R]] as [number, V2[]][]) {
     const eye = eyes[s < 0 ? 0 : 1];
-    drawBrow(ctx, head, brow, eye.x, eye.y, eye.sx, eye.sy, s, e, ink);
+    drawBrow(ctx, head, brow, eye.x, eye.y, eye.sx * es, eye.sy * es, s, e, ink);
   }
   rig.look.face?.(ctx, view, ink);
 }

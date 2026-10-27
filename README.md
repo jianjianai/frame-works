@@ -57,6 +57,7 @@ const g = playMove([
 - 外衣 `coat: Garment`（`code/cast-wear.ts`，都从秤砣外套的两片前襟改出来，跟着转身、呼吸）：`kind` 为 `coat` 秤砣那样的敞怀外套、`suit` 西装（腰上一粒扣成 V、缺角翻领、胸袋、带盖口袋、衬衫袖口）、`jacket` 工装夹克（拉链、翻领、两个带盖胸袋、罗纹下摆和袖口）、`cardigan` 开衫（门襟罗纹边、一排小扣子）、`workcoat` 工装外套（立领、大扣子、带盖的大口袋；`hem` 给了是下摆缝铅的格子）、`hoodie` 连帽外套、`trench` 双排扣系腰带的长外套。`size` 大一号、`long` 加长（负数收短）、`rolled` 袖子卷两道、`trim` 罗纹颜色、`button` 扣子颜色。
 - 上衣 `top: Top`：`crew` 圆领、`sweater` 毛衣（`under` 领口露出衬衫领）、`shirt` 衬衫、`vneck` V 领毛衣套衬衫、`tee` T 恤（`stripes` 横条纹）、`hoodie` 连帽衫（帽子、抽绳、袋鼠兜）、`duijin` 对襟盘扣、`peter` 小圆领、`polo` 运动校服（立领、拉链、袖子白杠）。裤子 `pants`：`crease` 裤线、`cuff` 卷裤脚、`patch` 膝盖补丁、`seam` 缝线。
 - 脸（`code/cast-face.ts`）：`brows` 眉毛（`thick` 男人的粗眉、`bushy` 老人的白浓眉、`kid` 小孩、`soft` 女人；给了就换掉基础模型的细眉，照样跟着表情动）、`wrinkles`（`"forehead"` 连额头）、`glasses` + `glassesShape`（圆框 / 方框，镜片反光）、`mustache`、`stubble` 胡茬、`hairclip` 发卡；`hat` 帽子、`tie` 领带、`bell` 脚踝上的铃铛、`shoes` 三种鞋或铁靴、光脚。
+- 比例（只改画法，关节不动）：`scale` 身高、`width` 体型宽窄、`headScale` 头以脖子为中心放大、`headWidth` 头再横着放宽（成年男人的脸比秤砣的瓜子脸宽）、`eyeScale` 眼睛连眉毛缩放（秤砣是大眼睛，成年男人 0.8 左右）、`hairVolume` 头发两侧和后脑勺蓬一点、`legWidth` / `legHem` 裤腿粗细、`armWidth` 胳膊粗细。成年人的头和秤砣一样大（头顶到下巴约占身高的 0.215），周磊是对好的例子。
 - 画面上很小的时候（人不到约 260 像素高、头不到约 60 像素）发丝线、罗纹、针脚、扣眼这些细节自动不画，几十个人同场也不变慢。
 
 ## 文件

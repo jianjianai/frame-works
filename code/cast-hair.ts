@@ -435,9 +435,15 @@ export interface HairPaint {
   shade: string;
   /** 皮筋、发簪的颜色 */
   tie?: string;
+  /** 蓬松：耳朵上面、头顶两侧横着往外鼓多少（1 不变；鬓角那一行不动，还贴着脸边）。转到 3/4 时后脑勺跟着鼓 */
+  volume?: number;
 }
 
-const turned = (pts: P[], uh: number, occ: number): P[] => pts.map((p) => [...turnHair([p[0], p[1]], uh, occ), ...(p[2] ? [p[2]] : [])] as P);
+/** 按 volume 把头发横着往外鼓：y ≤ −20 全鼓，往下到鬓角（y = 8）收回 0 */
+const swell = (pts: P[], v: number): P[] =>
+  v === 1 ? pts : pts.map((p) => [p[0] * (1 + (v - 1) * clamp01((8 - p[1]) / 28)), p[1], ...(p[2] ? [p[2]] : [])] as P);
+const turned = (pts: P[], uh: number, occ: number, v = 1): P[] =>
+  swell(pts, v).map((p) => [...turnHair([p[0], p[1]], uh, occ), ...(p[2] ? [p[2]] : [])] as P);
 
 /** 后面的头发（Look.backHair） */
 export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, hp: HairPaint) {
@@ -448,6 +454,7 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
   const f = rotateV(field, -head.a);
   const up = hair.pivot === undefined ? 0 : upness(f);
   const occ = hair.occiput ?? 0.5;
+  const v = hp.volume ?? 1;
   const map = (p: V2) => head.p(p[0], p[1]);
   const fine = pxPerUnit(ctx) * 130 > 60;
   // 马尾、髻画在最后面
@@ -502,7 +509,7 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
   // 垂着的一整片和漂起来的一缕一缕之间交叉淡入淡出
   const aDown = 1 - clamp01((up - 0.35) / 0.3);
   if (aDown > 0) {
-    const pts = flowHair(turned(hair.back, uh, occ), f, hair.pivot, pose.t);
+    const pts = flowHair(turned(hair.back, uh, occ, v), f, hair.pivot, pose.t);
     const path = smoothPath(pts.map(([x, y, c]) => [...map([x, y]), ...(c ? [c] : [])] as P));
     ctx.save();
     ctx.globalAlpha *= aDown;
@@ -511,7 +518,7 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
       ctx.save();
       ctx.clip(path);
       for (const l of hair.lines.back) {
-        const q = flowHair(turned(l as P[], uh, occ), f, hair.pivot, pose.t);
+        const q = flowHair(turned(l as P[], uh, occ, v), f, hair.pivot, pose.t);
         strand(ctx, q.map((p) => [p[0], p[1]] as V2), ink, map);
       }
       ctx.restore();
@@ -536,7 +543,7 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
     for (const l of locks) ctx.stroke(l);
     for (const l of locks) fillShaded(ctx, l, hp.color, hp.shade, ink);
     // 头顶那一层还在
-    const cap = smoothPath(turned([...CAP_SIDES, ...NAPE], uh, occ).map(([x, y, c]) => [...map([x * 1.04, y]), ...(c ? [c] : [])] as P));
+    const cap = smoothPath(turned([...CAP_SIDES, ...NAPE], uh, occ, v).map(([x, y, c]) => [...map([x * 1.04, y]), ...(c ? [c] : [])] as P));
     drawPart(ctx, cap, hp.color, hp.shade, ink, ink.lw * 0.9);
     ctx.restore();
   }
@@ -550,11 +557,12 @@ export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: I
   const up = hair.pivot === undefined ? 0 : upness(f);
   const uh = clamp01(h.uh);
   const occ = hair.occiput ?? 0.5;
+  const v = hp.volume ?? 1;
   const map = (p: V2) => h.H(p[0], p[1]);
   const fine = pxPerUnit(ctx) * 130 > 60;
   const paths: Path2D[] = [];
   for (const part of hair.front) {
-    const flowed = flowHair(turned(part, uh, occ), f, hair.pivot, h.rig.pose.t);
+    const flowed = flowHair(turned(part, uh, occ, v), f, hair.pivot, h.rig.pose.t);
     // 漂起来时垂在脸边的那缕往外、往上翻（绕它的上端转）
     const pts =
       up > 0 && hair.pivot !== undefined
@@ -577,7 +585,7 @@ export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: I
     for (const p of paths) clip.addPath(p);
     ctx.clip(clip);
     for (const l of hair.lines.front) {
-      const q = flowHair(turned(l as P[], uh, occ), f, hair.pivot, h.rig.pose.t);
+      const q = flowHair(turned(l as P[], uh, occ, v), f, hair.pivot, h.rig.pose.t);
       strand(ctx, q.map((p) => [p[0], p[1]] as V2), ink, map);
     }
     ctx.restore();

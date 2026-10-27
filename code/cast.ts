@@ -304,6 +304,10 @@ export interface CastSpec {
   /** 上衣的圆领 */
   collar?: boolean;
   headScale?: number;
+  /** 头再横着放宽（Look.headWidth）、眼睛连眉毛缩放（Look.eyeScale）、头发蓬松（HairPaint.volume） */
+  headWidth?: number;
+  eyeScale?: number;
+  hairVolume?: number;
   width?: number;
   /** 腿（裤腿）粗细、裤脚那头的粗细、胳膊粗细（只改画法，关节位置不动）：基础模型是秤砣穿裤袜的细腿，
    *  她的小腿被铁靴盖着；配角穿矮帮鞋整条腿露出来，不加粗就是两根细棍，人显得被拉长 */
@@ -314,7 +318,7 @@ export interface CastSpec {
 
 /** 配置 → 外观 */
 export function castLook(spec: CastSpec): Look {
-  const hp = { style: spec.hair, color: spec.hairColor, shade: spec.hairShade ?? spec.hairColor, tie: spec.hairTie };
+  const hp = { style: spec.hair, color: spec.hairColor, shade: spec.hairShade ?? spec.hairColor, tie: spec.hairTie, volume: spec.hairVolume };
   const coat = spec.coat;
   const shoes = spec.shoes;
   const top = spec.top;
@@ -327,6 +331,8 @@ export function castLook(spec: CastSpec): Look {
     colors: spec.brows ? { ...spec.colors, brow: "rgba(0,0,0,0)" } : spec.colors,
     collar: topHasOwnCollar(top) ? false : (spec.collar ?? true),
     headScale: spec.headScale,
+    headWidth: spec.headWidth,
+    eyeScale: spec.eyeScale,
     width: spec.width,
     legWidth: spec.legWidth,
     legHem: spec.legHem,
@@ -492,7 +498,11 @@ export const CAST = {
     name: "周磊",
     scale: 1.06,
     width: 1.03,
-    headScale: 1.06,
+    // 头和参考图（和秤砣同样身高、同样大的头）对齐：头收小、横着放宽、眼睛连眉毛缩小、头发两边蓬一点
+    headScale: 0.96,
+    headWidth: 1.07,
+    eyeScale: 0.8,
+    hairVolume: 1.08,
     legWidth: 1.15,
     legHem: 1.22,
     armWidth: 1.08,

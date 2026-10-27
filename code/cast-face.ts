@@ -27,6 +27,8 @@ export function drawBrows(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink, 
   const e = h.rig.pose.expr;
   const lift = -4 * e.wide - 1 * e.happy + 0.6 * e.blink;
   const b = BROWS[spec.kind];
+  // 眼睛缩放（Look.eyeScale）时眉毛跟着眼睛：离眼珠中心的距离一起缩，粗细不变
+  const es = h.rig.look.eyeScale ?? 1;
   for (const s of [-1, 1]) {
     const eye = eyeAt(s, h.uh);
     // 眼睛坐标 → 头的坐标：d 往脸中间为正（左边那只眼睛往 +x）
@@ -34,7 +36,7 @@ export function drawBrows(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink, 
     const pts = b.pts.map(([d, y], i): V2 => {
       const t = i / (n - 1);
       const dy = lift + e.sad * (-5.5 * (1 - t) + 2.2 * t) + e.fierce * (5 * (1 - t) - 1.6 * t);
-      return h.H(eye.x - s * d * eye.sx, eye.y + (y + dy) * eye.sy);
+      return h.H(eye.x - s * d * eye.sx * es, eye.y + (y + dy) * eye.sy * es);
     });
     const widths = b.w.map((w) => w * (0.9 + 0.1 * eye.sx));
     ctx.fillStyle = spec.color;
