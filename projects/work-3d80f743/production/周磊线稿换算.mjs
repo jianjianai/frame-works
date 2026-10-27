@@ -7,8 +7,23 @@
 // 坐标：线稿 → 身体 ((X − 229.5)·0.905, (Y − 463.8)·0.905) → 头的坐标（按周磊的 headScale、headWidth / headWidthSide、width 反算，
 // 3/4 时脖子往前 6.44、头往后 8）：x = (X − X0) / kx，y = (Y − 225.68) / 1.0608。
 // 3/4 的脸用用户的线稿以后，3/4 时头不用另外收窄：headWidthSide 和 headWidth 一样（1.07）。
+// 读 SVG 路径这些通用的部分用素材库「剪纸角色」tools/线稿换算工具.mjs：先找作品里复制过来的 production/线稿工具/，
+// 再找服务器上素材库的工作目录 /data/libraries/<作品库>/剪纸角色/tools/
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+const TOOLS = (() => {
+  const local = path.join(path.dirname(new URL(import.meta.url).pathname), "线稿工具");
+  if (fs.existsSync(path.join(local, "线稿换算工具.mjs"))) return local;
+  const libs = "/data/libraries";
+  for (const repo of fs.existsSync(libs) ? fs.readdirSync(libs) : []) {
+    const d = path.join(libs, repo, "剪纸角色/tools");
+    if (fs.existsSync(path.join(d, "线稿换算工具.mjs"))) return d;
+  }
+  throw new Error("找不到素材库「剪纸角色」的 tools/：用 material_read 把它复制到 production/线稿工具/");
+})();
+const { bbox, layerPaths, parsePath, parseTransform, resample, sample } = await import(pathToFileURL(path.join(TOOLS, "线稿换算工具.mjs")).href);
 
 const root = path.dirname(path.dirname(new URL(import.meta.url).pathname));
 const outDir = process.argv[2];
@@ -23,134 +38,6 @@ const KY = ZL.hs / K;
 const MAP = {
   front: { x0: 229.5, kx: (ZL.hs * ZL.hwF) / K },
   side: { x0: 229.5 + (ZL.w * 10 * Math.sin(-0.7) + ZL.hs * ZL.hwS * 8) / K, kx: (ZL.hs * ZL.hwS) / K },
-};
-
-// ——— SVG 路径 ———
-function parseTransform(s) {
-  let m = [1, 0, 0, 1, 0, 0];
-  const mul = (a, b) => [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1], a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3], a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5]];
-  for (const [, fn, args] of (s ?? "").matchAll(/(\w+)\(([^)]*)\)/g)) {
-    const v = args.split(/[\s,]+/).filter(Boolean).map(Number);
-    if (fn === "matrix") m = mul(m, v);
-    else if (fn === "translate") m = mul(m, [1, 0, 0, 1, v[0], v[1] ?? 0]);
-    else if (fn === "scale") m = mul(m, [v[0], 0, 0, v[1] ?? v[0], 0, 0]);
-    else throw new Error("不认识的变换 " + fn);
-  }
-  return ([x, y]) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
-}
-/** d → 子路径，每条是三次贝塞尔段 [p0, c1, c2, p3] 的列表（绝对坐标），closed 标记 */
-function parsePath(d) {
-  const toks = d.match(/[a-zA-Z]|-?\d*\.?\d+(?:e-?\d+)?/g);
-  let i = 0;
-  const num = () => +toks[i++];
-  const subs = [];
-  let cur = null;
-  let p = [0, 0];
-  let start = [0, 0];
-  let lastC = null;
-  let cmd = null;
-  const line = (q) => cur.segs.push([p, [p[0] + (q[0] - p[0]) / 3, p[1] + (q[1] - p[1]) / 3], [p[0] + (2 * (q[0] - p[0])) / 3, p[1] + (2 * (q[1] - p[1])) / 3], q]);
-  while (i < toks.length) {
-    if (/[a-zA-Z]/.test(toks[i])) cmd = toks[i++];
-    const rel = cmd === cmd.toLowerCase();
-    const o = rel ? p : [0, 0];
-    const pt = () => [o[0] + num(), o[1] + num()];
-    switch (cmd.toLowerCase()) {
-      case "m": {
-        p = pt();
-        start = p;
-        cur = { segs: [], closed: false };
-        subs.push(cur);
-        cmd = rel ? "l" : "L";
-        lastC = null;
-        break;
-      }
-      case "l": {
-        const q = pt();
-        line(q);
-        p = q;
-        lastC = null;
-        break;
-      }
-      case "h": {
-        const q = [rel ? p[0] + num() : num(), p[1]];
-        line(q);
-        p = q;
-        lastC = null;
-        break;
-      }
-      case "v": {
-        const q = [p[0], rel ? p[1] + num() : num()];
-        line(q);
-        p = q;
-        lastC = null;
-        break;
-      }
-      case "c": {
-        const c1 = pt();
-        const c2 = pt();
-        const q = pt();
-        cur.segs.push([p, c1, c2, q]);
-        lastC = c2;
-        p = q;
-        break;
-      }
-      case "s": {
-        const c1 = lastC ? [2 * p[0] - lastC[0], 2 * p[1] - lastC[1]] : p;
-        const c2 = pt();
-        const q = pt();
-        cur.segs.push([p, c1, c2, q]);
-        lastC = c2;
-        p = q;
-        break;
-      }
-      case "q": {
-        const c = pt();
-        const q = pt();
-        cur.segs.push([p, [p[0] + (2 / 3) * (c[0] - p[0]), p[1] + (2 / 3) * (c[1] - p[1])], [q[0] + (2 / 3) * (c[0] - q[0]), q[1] + (2 / 3) * (c[1] - q[1])], q]);
-        lastC = null;
-        p = q;
-        break;
-      }
-      case "z": {
-        if (Math.hypot(p[0] - start[0], p[1] - start[1]) > 1e-6) line(start);
-        cur.closed = true;
-        p = start;
-        lastC = null;
-        break;
-      }
-      default:
-        throw new Error("不认识的路径命令 " + cmd);
-    }
-  }
-  return subs;
-}
-function bez([p0, c1, c2, p3], t) {
-  const a = 1 - t;
-  return [0, 1].map((k) => a * a * a * p0[k] + 3 * a * a * t * c1[k] + 3 * a * t * t * c2[k] + t * t * t * p3[k]);
-}
-/** 段 → 折线（每段 n 个点，去掉重合的点） */
-function sample(segs, n = 10) {
-  const pts = [segs[0][0]];
-  for (const s of segs) for (let k = 1; k <= n; k++) pts.push(bez(s, k / n));
-  return pts.filter((q, i) => i === 0 || Math.hypot(q[0] - pts[i - 1][0], q[1] - pts[i - 1][1]) > 0.05);
-}
-/** 某个图层里的 path（按顺序）：{ segs, closed, tf } */
-function layerPaths(svg, id) {
-  const m = svg.match(new RegExp(`<g class="layer" id="${id}"[^>]*>([\\s\\S]*?)</g>`));
-  if (!m) throw new Error("没有图层 " + id);
-  return [...m[1].matchAll(/<path\b([^>]*)\/?>/g)].map(([, attrs]) => {
-    const d = attrs.match(/\sd="([^"]*)"/)[1];
-    const tf = parseTransform(attrs.match(/\stransform="([^"]*)"/)?.[1]);
-    const subs = parsePath(d).map((s) => ({ ...s, segs: s.segs.map((seg) => seg.map(tf)) }));
-    if (subs.length !== 1) throw new Error("一条 path 里有多段子路径");
-    return subs[0];
-  });
-}
-const bbox = (pts) => {
-  const xs = pts.map((p) => p[0]);
-  const ys = pts.map((p) => p[1]);
-  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)].map((v) => +v.toFixed(1));
 };
 
 // ——— 正面 ———
@@ -206,21 +93,6 @@ console.error("侧面 刘海", bbox(fringeS), "后面的头发", bbox(backS));
 
 // ——— 换到头的坐标 ———
 const toHead = (view) => (pts) => pts.map(([X, Y]) => [+((X - MAP[view].x0) / MAP[view].kx).toFixed(2), +((Y - Y0) / KY).toFixed(2)]);
-/** 按弧长重新取 n 个点（含两端） */
-function resample(pts, n) {
-  const d = [0];
-  for (let i = 1; i < pts.length; i++) d.push(d[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-  const L = d[d.length - 1];
-  const out = [];
-  let j = 0;
-  for (let k = 0; k < n; k++) {
-    const t = (L * k) / (n - 1);
-    while (j < d.length - 2 && d[j + 1] < t) j++;
-    const u = (t - d[j]) / (d[j + 1] - d[j] || 1);
-    out.push([pts[j][0] + (pts[j + 1][0] - pts[j][0]) * u, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * u]);
-  }
-  return out;
-}
 // 刘海正面和 3/4 逐点对应：下沿对下沿（左端 → 右端）、翻过头顶那段对那段，按弧长各取同样多的点
 // （按最高 / 最右 / 最低 / 最左对应时正面最低的是左鬓角、3/4 是中间的发尖，转到一半有一绺扫过眼睛）
 const ZIG = 120;

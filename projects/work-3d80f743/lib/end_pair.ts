@@ -795,7 +795,9 @@ function patAt(t: number): { wrist: V2; dir: V2 } {
   // 手指顺着头顶往后脑勺、稍微往下（贴着头形）
   const a = 0.42 + 0.06 * rub;
   const dir: V2 = [side[0] * Math.cos(a) - side[1] * Math.sin(a), side[0] * Math.sin(a) + side[1] * Math.cos(a)];
-  return { wrist: [k.root[0] + j.neck[0] + d[0] + up[0] * 52 + side[0] * s, k.root[1] + j.neck[1] + d[1] + up[1] * 52 + side[1] * s], dir };
+  // 头顶（头发底下）离头的中心 53 个头的单位，手腕再高 7
+  const r = 53 * k.spec.scale * hs + 6.9;
+  return { wrist: [k.root[0] + j.neck[0] + d[0] + up[0] * r + side[0] * s, k.root[1] + j.neck[1] + d[1] + up[1] * r + side[1] * s], dir };
 }
 /** 她围巾垂在胸前那一头（他攥着的地方）：按她没加 IK 的姿势算 */
 function scarfOf(t: number): V2 {

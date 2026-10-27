@@ -461,7 +461,10 @@ function hisHeadTop(t: number): V2 {
   const root = himRoot(t);
   const k = floorK(root[1]);
   const j = castJoints(STONE, himMove(t).pose);
-  return [root[0] + j.head[0] * k + 6, root[1] + j.head[1] * k - 64];
+  // j.head 是没放大的头的中心；画出来的头以脖子为中心放大 headScale 倍，头顶（头发底下）离头的中心 53 个头的单位，再往头发里按 5
+  const hs = STONE.headScale ?? 1;
+  const up = ((53 + 55) * hs - 55) * STONE.scale + 5;
+  return [root[0] + j.head[0] * k + 6, root[1] + j.head[1] * k - up * k];
 }
 /** 他这一刻：根、大小、两只手心；拽绳子、抱腿、捡刀按 IK */
 function himAt(t: number) {

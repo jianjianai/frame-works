@@ -657,8 +657,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const PAT_ON = T.pat + 0.12;
   const PAT_UP = T.pat + 0.44;
   const PAT_END = PAT_UP + 0.28;
-  /** 他的头顶（相对他的根）和头顶朝上的方向：头以脖子为中心放大 headScale 倍 */
-  const KID_HEAD_R = 44;
+  /** 他的头顶（相对他的根）和头顶朝上的方向：头以脖子为中心放大 headScale 倍；头顶（头发底下）离头的中心 53 个头的单位 */
+  const KID_HEAD_R = 53 * STONE.scale * (STONE.headScale ?? 1) - 1.1;
   const kidCrown = (pose: PoseIn): { top: V2; up: V2 } => {
     const j = castJoints(STONE, pose);
     const hs = STONE.headScale ?? 1;
