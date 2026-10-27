@@ -1,6 +1,6 @@
 # 剪纸角色
 
-二维骨架剪纸画风的角色（深色描边、平涂、右下一道阴影，部件绑在骨架上靠关节转动），用 Canvas 2D 代码画，按绝对时间渲染。所有角色共用一个「基础模型」（骨架、身体、脸和表情、正面 ↔ 3/4 转身），每个角色只在上面换配色、发型、衣服、鞋和人物特点。现在有《引力》的女主秤砣。
+二维骨架剪纸画风的角色（深色描边、平涂、右下一道阴影，部件绑在骨架上靠关节转动），用 Canvas 2D 代码画，按绝对时间渲染。所有角色共用一个「基础模型」（骨架、身体、脸和表情、正面 ↔ 3/4 转身），每个角色只在上面换配色、发型、衣服、鞋和人物特点。现在有《引力》的女主秤砣，和一套用配置生成的配角（十种发型、七种外衣版型、九种上衣、眉毛和皱纹、眼镜、鞋）。
 
 ## 资源
 
@@ -49,6 +49,16 @@ const g = playMove([
 - 人物特点：`face`（脸上另外的东西：雀斑、痣、眼镜，最后画）。
 - 物品默认值写在 `items`，然后像 `chengtuo-draw.ts` 那样包一个 `drawXxx(ctx, pose, opts) = drawFigure(ctx, pose, LOOK, opts)`。资源参数要写成字面量的 zod 对象（资源面板不运行代码读参数，`figureOptions.extend()` 读不出来）：把 `figureOptions` 的字段原样写一遍再加自己的物品，见 `chengtuo.ts`。
 
+## 配角（`code/cast.ts`）
+
+配角不一个个写 Look，写一份「人物配置」`CastSpec`，`castLook(spec)` / `lookOf(spec)` 生成外观，`drawCast(ctx, spec, pose)` 按身高画、`castJoints(spec, pose)` 给关节位置。《引力》的人在 `CAST`（周磊、老钟、小石头、千斤、阿满、老太太、年轻人……），`passerby(i)` 是轮着换衣服、发型、鞋的路人。
+
+- 发型 `hair`（`code/cast-hair.ts`）：`short` 侧分短发、`kid` 毛茸茸带呆毛、`curtain` 中分、`bob` 齐刘海齐耳、`sidebob` 侧分齐耳、`bun` 盘发（`hairTie` 给了插一根发簪）、`long` 中分长直发、`ponytail` 低马尾、`highpony` 高马尾（`hairTie` 是皮筋）、`receding` 秃顶两鬓白发。都是正面一套线稿，转到 3/4 时按脸的轮廓自动过渡（`turnHair`），后脑勺圆、不会外推出刺；发梢分缝处一道由粗到细的发丝线；长的几种随风、失重飘。
+- 外衣 `coat: Garment`（`code/cast-wear.ts`，都从秤砣外套的两片前襟改出来，跟着转身、呼吸）：`kind` 为 `coat` 秤砣那样的敞怀外套、`suit` 西装（腰上一粒扣成 V、缺角翻领、胸袋、带盖口袋、衬衫袖口）、`jacket` 工装夹克（拉链、翻领、两个带盖胸袋、罗纹下摆和袖口）、`cardigan` 开衫（门襟罗纹边、一排小扣子）、`workcoat` 工装外套（立领、大扣子、带盖的大口袋；`hem` 给了是下摆缝铅的格子）、`hoodie` 连帽外套、`trench` 双排扣系腰带的长外套。`size` 大一号、`long` 加长（负数收短）、`rolled` 袖子卷两道、`trim` 罗纹颜色、`button` 扣子颜色。
+- 上衣 `top: Top`：`crew` 圆领、`sweater` 毛衣（`under` 领口露出衬衫领）、`shirt` 衬衫、`vneck` V 领毛衣套衬衫、`tee` T 恤（`stripes` 横条纹）、`hoodie` 连帽衫（帽子、抽绳、袋鼠兜）、`duijin` 对襟盘扣、`peter` 小圆领、`polo` 运动校服（立领、拉链、袖子白杠）。裤子 `pants`：`crease` 裤线、`cuff` 卷裤脚、`patch` 膝盖补丁、`seam` 缝线。
+- 脸（`code/cast-face.ts`）：`brows` 眉毛（`thick` 男人的粗眉、`bushy` 老人的白浓眉、`kid` 小孩、`soft` 女人；给了就换掉基础模型的细眉，照样跟着表情动）、`wrinkles`（`"forehead"` 连额头）、`glasses` + `glassesShape`（圆框 / 方框，镜片反光）、`mustache`、`stubble` 胡茬、`hairclip` 发卡；`hat` 帽子、`tie` 领带、`bell` 脚踝上的铃铛、`shoes` 三种鞋或铁靴、光脚。
+- 画面上很小的时候（人不到约 260 像素高、头不到约 60 像素）发丝线、罗纹、针脚、扣眼这些细节自动不画，几十个人同场也不变慢。
+
 ## 文件
 
 - `code/rig.ts`：通用的二维骨架工具（关节坐标系、两节 IK、平滑路径、合并描边、右下阴影、受力的链、关键帧混合、呼吸和眨眼、两张线稿之间的轮廓变形 `matchOutlines` / `lerpPts`、受力弯曲 `bendAlong`、风的循环 `loopSin` / `gusty`）。
@@ -60,3 +70,7 @@ const g = playMove([
 - `code/figure-motion.ts`：动作引擎（关键帧、走 / 跑、脚不打滑、头发跟着速度甩）。
 - `code/chengtuo-moves.ts`：秤砣的动作和 `POSES`。
 - `code/chengtuo.ts`：秤砣的入口，导出上面全部（连同基础模型），加上参数和资源声明。
+- `code/cast.ts`：配角的入口：人物配置 `CastSpec` → Look、帽子、鞋、领带、铃铛、《引力》的 `CAST` 和路人 `passerby`。
+- `code/cast-hair.ts`：配角的十种发型（正面线稿 + 3/4 自动过渡、风、失重、马尾、髻）。
+- `code/cast-wear.ts`：配角的衣服：外衣七种版型、上衣九种、袖口、裤子细节。
+- `code/cast-face.ts`：配角脸上的人物特点：眉毛、皱纹、眼镜、胡子、胡茬、发卡。
