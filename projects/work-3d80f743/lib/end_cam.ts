@@ -335,16 +335,19 @@ function handRaw(t: number): Cam {
   const follow = aim(lerp(k[0], lag[0], 0.5), lerp(k[1], lag[1], 0.5) - 40, 660, 900, 1.7);
   const h = herAt(t);
   const p: V2 = [(h.head[0] + k[0]) / 2 + 10, (h.head[1] + k[1]) / 2 - 30];
-  const z = 1.55 * Math.pow(1.75 / 1.55, E.settle(ph(t, TE.hug, TE.hug + 1.4)));
+  // 2026-10-27 四件事各占一小节（end_t.ts）：
+  // ① 接住、亮：过渡到框住两个人，之后一路慢慢推近两张脸和那块亮着的砖（柔和起步、越推越慢：她认出自己写的字），推到 ② 松手那一拍正好停；
+  // ② 松开栏杆翻过来那半秒镜头不推、只跟着两个人（翻身看得清），抱住以后接着推到她脸上
+  const z = 1.55 * Math.pow(1.85 / 1.55, E.settle(ph(t, TE.hand + 0.25, TE.hug)));
   const pair = aim(p[0], p[1], 540, 900, z);
   const c = camLerp(follow, pair, E.io(ph(t, TE.hand - 0.3, TE.hand + 0.35)));
-  // 转正以后推到她的脸上停住（她睁开眼看着砖、一滴眼泪往下掉在砖上）：她的脸在画面上面一点，砖在画面中间偏下，他的脸挨在她下巴旁边；
-  // 停住以后只极慢地再凑一点，拉远（TE.dim0）从这里起
-  const face = aim(h.head[0] + 40, h.head[1] + 110, 540, 820, 3.9 * (1 + 0.03 * ph(t, TE.faceIn + 0.8, TE.dim0)));
-  return camLerp(c, face, E.io(ph(t, TE.faceIn, TE.faceIn + 0.8)));
+  // ③ 转正以后推到她的脸上停住（她睁开眼看着砖、一滴眼泪往下掉在砖上、闭上眼哭着笑）：她的脸在画面上面一点，砖在画面中间偏下，他的脸挨在她下巴旁边；
+  // 柔和起步、越推越慢（拥抱的推法，1.2 秒）；停住以后只极慢地再凑一点，④ 拉远（TE.dim0）从这里起
+  const face = aim(h.head[0] + 40, h.head[1] + 110, 540, 820, 3.9 * (1 + 0.035 * ph(t, TE.faceSet, TE.dim0)));
+  return camLerp(c, face, E.settle(ph(t, TE.faceIn, TE.faceSet)));
 }
 
-// ——————————————— 「在这反乌托邦里」后半句起：拉远、整个画面暗下去，光在正中照亮整个画面 → 人链散开、慢慢推向两个人 → 落地 → 外套 → 低到她的光脚，「嘭」 ———————————————
+// ——————————————— ④ 起：拉远、整个画面暗下去，光在正中照亮整个画面 → 人链散开、慢慢推向两个人 → 落地 → 放下他、退一步 → 低到她的光脚，「嘭」 ———————————————
 export function endCam(t: number): Cam {
   const h = t < TE.herLand ? herChest(t) : herAt(t).chest;
   // 后奏一（用户：「镜头拉远，让天上的白变暗，这个全部画面都变暗，让主角的光在屏幕中间……点亮全部屏幕」）：
@@ -352,22 +355,20 @@ export function endCam(t: number): Cam {
   // 「在这反乌托邦里」后半句（TE.dim0）就开始退，句子唱完退稳，光一炸开镜头被推得一顶
   const close = handCam(TE.dim0 - 1e-3);
   const b = herBrickAt(Math.min(t, TE.let0))!.c;
-  // 从她脸上（约 4 倍）退开：2 秒，光炸开的时候退到一半多，剩下的在白里退完（原来从两个人的 1.75 倍退，1.4 秒）
-  let c = camLerp(close, aim(b[0], b[1], 540, 960, 0.34), E.settle(ph(t, TE.dim0, TE.dim0 + 2.0)));
+  // 从她脸上（约 4 倍）退开：2.4 秒，光炸开的时候退到一大半，剩下的在白里退完（原来 2 秒）
+  let c = camLerp(close, aim(b[0], b[1], 540, 960, 0.34), E.settle(ph(t, TE.dim0, TE.dim0 + 2.4)));
   c = { ...c, z: c.z * (1 + 0.04 * kick(t, TE.descend, 0.16)) };
-  // 后奏二（用户：「人链散开，镜头慢慢向主角和小石头推」）：跟着她（抱着他）往下，慢慢推近
+  // 后奏二（用户：「人链散开，镜头慢慢向主角和小石头推」）：跟着她（抱着他）往下，慢慢推近（用户 2026-10-27：「之前落下的速度其实刚刚好」，和 2026-10-26 那版一样）
   const zf = 0.34 * Math.pow(0.62 / 0.34, E.io(ph(t, TE.let0 - 0.2, TE.herLand - 1.2)));
   const follow = aim(h[0] + 60, h[1] + 120, 540, 760 + 200 * E.io(ph(t, TE.let0, TE.herLand - 1)), zf);
   c = camLerp(c, follow, E.io(ph(t, TE.let0 - 0.4, TE.let0 + 0.8)));
   // 后奏三：推到两个人，落地
   const land = aim(X_LAND + 90, -330, 540, 1040, 1.3);
   c = camLerp(c, land, E.settle(ph(t, TE.herLand - 1.4, TE.herLand + 0.3)));
-  // 后奏四：去捡外套、回来给他披上（框住她、他和地上的外套），很慢地凑近
-  const coat = aim(X_LAND - 30, -300, 540, 1080, 1.36 * (1 + 0.06 * E.io(ph(t, TE.coatOn0, TE.stand))));
-  c = camLerp(c, coat, E.io(ph(t, TE.putDown, TE.coat0 + 0.4)));
-  // 结尾：低下来贴地拍她的光脚（和开场拍铁靴一样）；「嘭」一震，坑张开，再慢慢抬起来看两个人
+  // （去捡外套、回来给他披上那一段和它的镜头 2026-10-27 删了：用户「应该删减后面结尾无聊的内容」）
+  // 结尾：她放下他、往后退一步时低下来贴地拍她的光脚（和开场拍铁靴一样）；「嘭」一震，坑张开，再慢慢抬起来看两个人
   const feet = aim(X_LAND - 60, -120, 540, 1200, 2.1);
-  c = camLerp(c, feet, E.settle(ph(t, TE.back + 0.1, TE.stomp2 - 0.45)));
+  c = camLerp(c, feet, E.settle(ph(t, TE.back - 0.25, TE.stomp2 - 0.45)));
   const after = aim(X_LAND - 10, -330, 540, 1080, 1.05);
   c = camLerp(c, after, E.settle(ph(t, TE.stomp2 + 0.5, TE.fade0 + 0.4)));
   const kk = kick(t, TE.stomp2, 0.12);

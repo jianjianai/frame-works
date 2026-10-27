@@ -7,8 +7,9 @@
 //   他穿着铁靴往下坠，104.02「咚」落回 X_K；她光着脚一下子冲上去，越升越慢，被风往左带到楼顶的角上，112.0 停在白的边上。
 //   他跺地（109.02）、从靴子里出来（113.96 / 114.46）往上飘，老钟攥住他的脚踝（115.02）；人链（lib/end_rise.ts）一节节把他送上去，
 //   最后一个人站在街上不离地，整条人链绕着地上那一点随风摆，131.96 荡到她跟前。他朝她喊（第三声的回忆在 scenes/recall.ts），125.52 她已经倒挂着攥住楼顶的栏杆（翻身不拍），脚尖一点点化成光；
-//   他正好把砖递到她手里（不翻面），128.02 立即亮起来，130.03 松开栏杆抱住他；136.3 人链散开，她抱着他慢慢落下来，142.03 光着脚落在
-//   坑的左边（X_LAND）；放下他（砖给他抱着），去捡他妈妈的外套，回来跪下给他穿上；往后退一步，148.53 光着脚跺一下，地上一个坑。
+//   他正好把砖递到她手里（不翻面），132.01 立即亮起来；134.02 松开栏杆翻过来抱住他；看砖、眼泪掉在砖上（136.02）、闭上眼；
+//   138.02 超强光；140.3 她抱着他落下来、140.5 人链散开，146.03 光着脚落在
+//   坑的左边（X_LAND）；放下他（砖给他抱着），往后退一步，148.53 光着脚跺一下，地上一个坑（去捡外套给他穿上那段 2026-10-27 删了）。
 
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, figurePose, jointsOf } from "@materials/剪纸角色/code/chengtuo";
 import { CAST, type CastSpec, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
@@ -37,8 +38,6 @@ export const CRATER_X = X_K - 14;
 export const STOMP_SINK = 24;
 /** 穿着她的铁靴站在街上时他的根：铁靴的底（脚踝下面 63.6）踩在街面上，他的脚踝在根上方 39 */
 export const KID_BOOT_Y = 39 - 63.6;
-/** 落地以后她的几个动作的时刻：转身朝左、往左那一步落地、拎着外套转回来、往右那一步落地（根按钉住的脚算，见 PLANT） */
-const PL = { turnL0: 142.8, turnL1: 142.94, stepL: 143.2, turnR0: 143.75, turnR1: 143.95, stepR: 144.22 };
 
 // ——————————————— 他飞上去（被抱住以前） ———————————————
 const STONE_COAT = CAST.小石头穿妈妈的外套;
@@ -354,17 +353,14 @@ const KID_KEYS: MoveKey[] = [
   { t: TE.hand - 1.0, p: KID.高处仰 },
   { t: TE.hand - 0.45, ease: "inOut", p: KID.举砖 },
   { t: TE.hand, ease: "inOut", p: KID.递 },
-  { t: TE.hug + 0.45, ease: "inOut", p: KID.被抱2 },
+  // ① 交到她手里以后两只手还朝她伸着，哭着笑看着她；② 她翻过来抱住他，两只手搂住她
+  { t: TE.hand + 0.4, ease: "inOut", p: KID.伸 },
+  { t: TE.hug + 0.05, p: KID.伸 },
+  { t: TE.hug + 0.5, ease: "inOut", p: KID.被抱2 },
   // 落回街上，被放下来：站着，抱着砖，仰头看她
   { t: TE.putDown, p: KID.被抱2 },
   { t: TE.putDown + 0.4, ease: "inOut", p: KID.站看 },
-  // 她给他披上外套：低下头看看身上的外套，又抬头看她
-  { t: TE.coatOn0, p: KID.站看 },
-  { t: TE.coatOn0 + 0.3, ease: "inOut", p: { ...KID.站看, neck: 4, lookY: -0.1 } },
-  { t: TE.coatOn1, p: { ...KID.站看, neck: 4, lookY: -0.1 } },
-  { t: TE.coatOn1 + 0.3, ease: "inOut", p: { ...KID.站看, neck: -16, lookX: -0.1, lookY: 0.8 } },
-  { t: TE.stand, p: { ...KID.站看, neck: -16, lookX: -0.1, lookY: 0.8 } },
-  { t: TE.stand + 0.4, ease: "inOut", p: KID.站看 },
+  // （她给他披上外套那段 2026-10-27 删了）
   // 她光着脚跺下去：一惊，低头看坑，再抬头看她，哭着笑
   { t: TE.stomp2, p: KID.站看 },
   { t: TE.stomp2 + 0.08, ease: "out", squash: 0.04, p: { ...KID.站看, expression: "吓一跳", neck: -18, lookX: -0.4, lookY: 0.9 } },
@@ -430,11 +426,13 @@ const HER_KEYS: MoveKey[] = [
   { t: TE.hug, p: HER.哭笑 },
   { t: TE.hug + 0.001, ease: "hold", p: { ...HER.哭笑, rot: -180 } },
   { t: TE.upright, ease: "inOut", p: HER.抱他 },
-  // 转正以后睁开眼，低头看着手里的砖（自己写的「活下去」），哭着笑，一滴眼泪往下掉在砖上
+  // 转正以后睁开眼，低头看着手里的砖（自己写的「活下去」），哭着笑，一滴眼泪往下掉在砖上；砸下去以后闭上眼，哭着笑
   { t: TE.eyesOpen - 0.04, p: HER.抱他 },
   { t: TE.eyesOpen + 0.16, ease: "inOut", p: HER.抱他看 },
+  { t: TE.eyesShut, p: HER.抱他看 },
+  { t: TE.eyesShut + 0.5, ease: "inOut", p: HER.抱他闭眼 },
   // 抱着他慢慢落下来
-  { t: TE.pairDown + 0.2, p: HER.抱他看 },
+  { t: TE.pairDown + 0.2, p: HER.抱他闭眼 },
   { t: TE.pairDown + 0.9, ease: "inOut", p: HER.落 },
   { t: TE.herLand - 0.3, p: HER.落 },
   { t: TE.herLand, ease: "inOut", squash: 0.05, p: HER.站抱 },
@@ -442,26 +440,9 @@ const HER_KEYS: MoveKey[] = [
   // 放下他（砖给他抱着）
   { t: TE.putDown, ease: "inOut", p: HER.放下 },
   { t: TE.putDown + 0.25, p: HER.放下 },
-  // 松开他，手垂下来（转身过正面时往前伸着的手会变成往两边平举），转身朝左看着地上的外套，往左迈一步，屈膝弯腰捡起他妈妈的外套（根按钉住的脚算，见 PLANT）
-  { t: PL.turnL0, ease: "inOut", p: { ...HER.站空, neck: -14, lookX: -0.1, lookY: 0.6 } },
-  { t: PL.turnL1, ease: "inOut", p: HER.转左 },
-  { t: PL.stepL - 0.14, ease: "inOut", p: HER.迈左 },
-  { t: PL.stepL, ease: "inOut", squash: 0.02, p: HER.落左 },
-  { t: TE.coatPick, ease: "inOut", squash: 0, p: HER.捡 },
-  { t: TE.coatPick + 0.15, p: HER.捡 },
-  // 拎着外套直起身，转身朝右，迈一步回到他跟前，跪下，两只手举着领子给他披上
-  { t: PL.turnR0, ease: "inOut", p: HER.直起 },
-  { t: PL.turnR1, ease: "inOut", p: { ...HER.直起, face: 0.4, expression: "微笑", smile: 0.6, lookX: 0.4, lookY: 0.4 } },
-  { t: PL.stepR - 0.14, ease: "inOut", p: HER.迈右 },
-  { t: PL.stepR, ease: "inOut", squash: 0.02, p: HER.落右 },
-  { t: TE.coatOn0 + 0.25, ease: "inOut", squash: 0, p: HER.跪披 },
-  { t: TE.coatOn1 + 0.1, p: HER.跪披 },
-  { t: TE.coatOn1 + 0.45, ease: "inOut", p: { ...HER.跪, ...armL(30, 30, 0, "relax", 6), ...armR(36, 30, 0, "open", 6), expression: "哭着笑", lookX: 0.4, lookY: -0.1 } },
-  // 站起来：前脚踩实、身子往前一送 → 快站直 → 站好；往后退一步，看着他
-  { t: TE.stand - 0.1, p: { ...HER.跪, ...armL(30, 30, 0, "relax", 6), ...armR(36, 30, 0, "open", 6), expression: "哭着笑", lookX: 0.4, lookY: -0.1 } },
-  { t: TE.stand + 0.1, ease: "inOut", p: HER.起身 },
-  { t: TE.stand + 0.26, ease: "inOut", p: HER.起身直 },
-  { t: TE.stand + 0.44, ease: "inOut", p: HER.站弓 },
+  // 直起身看着他，往后退一步（2026-10-27 去捡他妈妈的外套、走回来跪下给他披上那段删了，用户：「应该删减后面结尾无聊的内容」；
+  // 原来的转身、迈步、捡、跪披、站起来的关键帧在版本 d52d6bd）
+  { t: TE.putDown + 0.55, ease: "inOut", p: HER.站弓 },
   { t: TE.back - 0.18, ease: "inOut", p: HER.退抬 },
   { t: TE.back, ease: "inOut", p: HER.退落 },
   { t: TE.back + 0.14, ease: "inOut", p: HER.收 },
@@ -519,12 +500,6 @@ function herRaw(t: number) {
  */
 const PLANT: [number, Side | null][] = [
   [TE.herLand, "R"],
-  [PL.turnL0, null],
-  [PL.turnL1 + 0.02, "L"],
-  [PL.stepL, "R"],
-  [PL.turnR0, null],
-  [PL.turnR1, "L"],
-  [PL.stepR, "R"],
   [TE.back, "L"],
 ];
 const LAND_DT = 1 / 120;
@@ -728,11 +703,16 @@ export function herBrickAt(t: number, kid?: { root: V2 }): BrickNow | null {
   const from = herHoldBrick(TE.putDown + 0.15);
   return { c: mix(from.c, chest, E.io(ph(t, TE.putDown + 0.15, TE.putDown + 0.45))), rot: from.rot * (1 - E.io(ph(t, TE.putDown + 0.15, TE.putDown + 0.45))), flipY: -1 };
 }
-/** 在她手里的砖（不翻面，「活下去」一直朝外）：接过来 → 立即抱住他，夹在两个人中间 → 落地放下他时交给他 */
+/** ① 接住以后她把砖收到怀里：相对交到她手里的那一点 */
+const CLUTCH: V2 = [-95, -90];
+/** 在她手里的砖（不翻面，「活下去」一直朝外）：接过来 → 收到怀里 → 翻过来抱住他，夹在两个人中间 → 落地放下他时交给他 */
 function herHoldBrick(t: number): BrickNow {
   const k = kidRoot(Math.min(t, TE.hand));
-  // 砖落进她手里，手一坠（和第一幕周磊接砖一样：别人用心送的东西拿在手里格外沉）；就是这一坠把她拽正
+  // 砖落进她手里，手一坠（和第一幕周磊接砖一样：别人用心送的东西拿在手里格外沉）
   let c: V2 = [k[0] - 2, k[1] - RAISE_Y + 30 * (1 - Math.exp(-Math.max(0, t - TE.hand) / 0.035))];
+  // ① 接住以后慢慢收到自己怀里（倒挂着，搂在胸口和脸之间），他空着的两只手还朝她伸着
+  // （2026-10-27 接住和翻身分在两小节以后，砖一直停在交到她手里的地方，看着像两个人一起拿着）
+  if (t > TE.hand + 0.25) c = mix(c, [c[0] + CLUTCH[0], c[1] + CLUTCH[1]], E.io(ph(t, TE.hand + 0.25, TE.hand + 1.15)));
   // 抱住他：夹在两个人中间（她胸口右边；靠右一点，她近处那只前臂不挡住「活」字）
   if (t > TE.hug) {
     const ch = t < TE.herLand ? herChest(t) : landedChest(t);

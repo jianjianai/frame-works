@@ -209,8 +209,9 @@ function landOf(k: number): number {
   let v = LAND_AT.get(k);
   if (v === undefined) {
     // 松手那一刻他离地多高：按人链里的位置估（老钟在顶上 ≈ 他的高度）
+    // （用户 2026-10-27：「之前落下的速度其实刚刚好」：和 2026-10-26 那版一样，都在她落地前 0.4 秒以前落地）
     const h = Math.max(300, 8600 - 520 * k);
-    v = Math.min(141.6, LET[k] + 1.4 + h / 2900);
+    v = Math.min(TE.herLand - 0.425, LET[k] + 1.4 + h / 2900);
     LAND_AT.set(k, v);
   }
   return v;

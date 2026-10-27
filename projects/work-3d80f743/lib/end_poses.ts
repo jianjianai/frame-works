@@ -143,6 +143,11 @@ export const HER = {
     ...armL(40, 70, 0, "grip", l),
     ...armR(50, 80, 0, "grip", l),
   })),
+  /** 眼泪砸在砖上以后：闭上眼，哭着笑，脸再低一点挨着他（情绪放出来的那一下） */
+  抱他闭眼: pose(10, { face: 0.4, ground: false, rot: 0, float: 0.3, chestL: "over", ...legL(-8, -20, -40), ...legR(10, -30, -40), neck: -20, expression: "哭着笑", tears: 1, blink: 0.85, lookX: 0.3, lookY: 0.8 }, (l) => ({
+    ...armL(40, 70, 0, "grip", l),
+    ...armR(50, 80, 0, "grip", l),
+  })),
   /** 抱着他慢慢落下来：有了分量，头发落下来，低头看着他 */
   落: pose(6, { face: 0.4, ground: false, rot: -2, float: 0.12, chestL: "over", ...legL(-6, -20, -30), ...legR(8, -28, -30), neck: -20, expression: "哭着笑", tears: 1, lookX: 0.3, lookY: 0.8 }, (l) => ({
     ...armL(40, 70, 0, "grip", l),
