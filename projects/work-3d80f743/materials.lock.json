@@ -1,8 +1,11 @@
 {
-  "剪纸角色/code/cast-face.ts": "946532a3829a68f538f6b5fcb48eddd3dc5e1c82",
-  "剪纸角色/code/cast-hair.ts": "41f84682a6a0cb38c9b71b3d05b4176e9765ab98",
-  "剪纸角色/code/cast-wear.ts": "a55b622736d7b1c6bf2f24a684c58401736d4a41",
-  "剪纸角色/code/cast.ts": "a993d566310c3774c5dbe0746018cd5f5f2b784c",
+  "剪纸角色/code/cast-face-art.ts": "f6ab470f3fba7f4f6fd29dbbcda0f2075cf8685d",
+  "剪纸角色/code/cast-face.ts": "7a95e3be661ab2c2894d5003e872f7cba2531fff",
+  "剪纸角色/code/cast-hair-art.ts": "19baaa6e2e22d08220ed38a975fa7d133f8b2520",
+  "剪纸角色/code/cast-hair.ts": "0abfb3a9bc6932d8a6d3feee81abfd39abe37b97",
+  "剪纸角色/code/cast-wear-art.ts": "a2f5cf7efcdd1bb3b512fd918912e7aafe91a188",
+  "剪纸角色/code/cast-wear.ts": "e4c195cbd5d0246b3d5ef739988cc11d20ffe8e9",
+  "剪纸角色/code/cast.ts": "a36ce3604d415229027aba15c5cc63207cc8ccfd",
   "剪纸角色/code/chengtuo-costume.ts": "a6381b52975a94515b418cb4b9f0b15c7b88ccf1",
   "剪纸角色/code/chengtuo-draw.ts": "db742ff21fb6cfd100f8778033637ed83d22842a",
   "剪纸角色/code/chengtuo-moves.ts": "aafe28b7f1fbd8dff231d64a890d214d12b06435",
@@ -10,6 +13,6 @@
   "剪纸角色/code/chengtuo.ts": "a5eae5180621a5d10c0cde9b73bba12eafae8b77",
   "剪纸角色/code/figure-motion.ts": "122e6a5e414555df88b5bb0c6e2a268d106b131e",
   "剪纸角色/code/figure-side.ts": "d8921054110d022ddd32c0ab5865eac20e770a78",
-  "剪纸角色/code/figure.ts": "b7fcc77e66c9692321ca58a08dfb9791b819d6c1",
+  "剪纸角色/code/figure.ts": "37d8ba1846c11a2c266c09f0add076337d11ce0c",
   "剪纸角色/code/rig.ts": "73c06206d1530abf357cb1164aa43b581a38d92f"
 }
