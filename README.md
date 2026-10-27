@@ -60,6 +60,39 @@ const g = playMove([
 - 比例（只改画法，关节不动）：`scale` 身高、`width` 体型宽窄、`headScale` 头以脖子为中心放大、`headWidth` 头再横着放宽（成年男人的脸比秤砣的瓜子脸宽）、`face0` / `face3` 正面 / 3/4 的脸用自己的线稿（`FaceView`：轮廓、眼珠、鼻子、嘴、耳朵、眉毛的中心，写法同 `figure-side.ts`；周磊的在 `code/cast-face-art.ts`，用户手画的）、`eyeScale` 眼睛连眉毛缩放（秤砣是大眼睛，成年男人 0.8 左右）、`hairVolume` 头发两侧和后脑勺蓬一点、`legWidth` / `legKnee` / `legHem` 裤腿在大腿根、膝盖、裤脚的粗细（直筒宽裤膝盖和裤脚要放得比大腿根多）、`armWidth` 胳膊粗细。周磊是照用户手画的线稿做的：脸、头发、西装用线稿，胳膊、脖子、腿和秤砣一样（只有 `scale`）。小石头同样做法：脸和头发照参考图描的线稿（`code/cast-kid-art.ts`，人物配置的 `hairArt` 是自己的线稿发型），骨架和头的大小和秤砣一样，只有 `scale 0.6`。
 - 画面上很小的时候（人不到约 260 像素高、头不到约 60 像素）发丝线、罗纹、针脚、扣眼这些细节自动不画，几十个人同场也不变慢。
 
+## 配角线稿工具（`tools/`）：照参考图做配角
+
+用户给了配角的参考图（和主角共用一套头顶、膝的横线）时：骨架、胳膊、腿、脖子、头的大小用秤砣的（人物配置只留 `scale`），脸、头发（衣服）从参考图拿轮廓——用户在底稿 SVG 里画，或者用工具按颜色描，再换算成 `code/cast-<名>-art.ts`。为什么这么做、每一步怎么定参数、踩过的坑见经验库「骨架剪纸动画」的 `配角线稿.md`。
+
+- **怎么跑**：`tools/*.mjs` 是 Node 脚本（不在作品里 import，所以不会复制进作品的 `.materials/`）。**在作品文件夹 `projects/<名称>/` 里运行**：服务器上直接 `node /data/libraries/<作品库>/剪纸角色/tools/<工具>.mjs …`（`ls -d /data/libraries/*/剪纸角色` 找到它）；找不到时用 `material_read` 把 `tools/` 下的 7 个文件原样复制到作品的 `production/线稿工具/`，`node production/线稿工具/<工具>.mjs …`（工具之间按相对路径引用，放在一起就行）。sharp 从作品往上找 `node_modules`。
+- **作品里要有 `production/线稿配置.mjs`**（每个角色一项）：
+
+```js
+const sum = (p) => p[0] + p[1] + p[2];
+export default {
+  小石头: {
+    ref: "public/ref/比例参考-小孩.png", // 参考图（作品里的路径）
+    lines: [162, 706.5], // 参考图里头顶、膝两条横线（像素）
+    // 底稿里参考图横着对齐：cx（参考图像素，用 描图.mjs 打出来的「脖子中心」）对到线稿的 x0（正面不写 = 229.5，3/4 写 218.05），crop 裁左右
+    views: { front: { cx: 141, crop: [0, 253] }, side: { cx: 383.5, x0: 218.05, crop: [253, 506] } },
+    // 描图.mjs 用：正面和 3/4 之间的竖线、头部那一条的上下、脸和脖子的盒子界限、量脖子的那一行（像素）、头发 / 皮肤 / 鼻嘴的颜色
+    trace: { split: 253, head: [140, 345], faceTop: 300, faceBottom: 340, neckTop: 300, neckRow: 336,
+      isHair: (p) => sum(p) >= 170 && sum(p) <= 300 && p[0] < 125,
+      isSkin: (p) => p[0] > 215 && p[1] > 160 && p[1] < 222 && p[2] > 140 && p[2] < 212 && p[0] - p[2] > 28,
+      isMark: (p) => sum(p) < 600 && p[0] - p[2] > 20 },
+    art: { file: "kid", prefix: "KID" }, // 线稿换算.mjs 用：写 cast-kid-art.ts，导出 KID_FACE0 / KID_FACE3 / KID_HAIR
+  },
+};
+```
+
+- **工具**（都在作品文件夹里运行）：
+  - `线稿生成.mjs <角色> <底图目录>`：生成底稿 `public/ref/<角色>-线稿.svg`、`<角色>-侧面线稿.svg`（和秤砣的线稿同一套坐标：参考图 → 对齐线 → 现在的样子（对照，默认隐藏）→ 头部 / 身体两层）。**文件已有时只换对照那张图**，画好的线不动。底图目录里放 front-white / front-black / side-white / side-black.png：作品里写个样片 `sheets/_<角色>底图.ts`（`export const sample = lineBaseSample; export const createScene = lineBaseScene(CAST.<角色>);`，从 `@materials/剪纸角色/code/linebase` 导入），`preview_frames` 画 0.5 / 1.5 / 2.5 / 3.5 秒（region [0,0,920,1640]、scale 1、png、sheet: false）。样片 4–5 秒是转身一排头部、5–6 关节坐标、6–8 不穿衣服的基础模型（量胳膊、脖子的轮廓）。
+  - `看颜色.mjs <参考图> x0 y0 x1 y1 [x,y …]`：一块地方最多的颜色和几个点的颜色（定 `isHair` / `isSkin`）。
+  - `描图.mjs <角色> [--debug]`：从平涂的参考图描头（脸、耳朵、眼珠、鼻子、嘴、头发后面那片、刘海），写进两张 SVG 的身体图层，每条线有 id（`face` `ear-l` `ear-r` `eye-l` `eye-r` `nose` `mouth` `hair-back` `fringe`），用户可以在编辑器里改。`--debug` 只出调试图。**会把身体图层整个换掉，用户改过线就别再跑。**
+  - `线稿叠图.mjs <角色> <ref|now> [输出目录]`：线（洋红）叠在参考图 / 现在的样子上出 PNG，核对用。
+  - `线稿换算.mjs <角色> <输出目录>`：按 id 读线，写 `cast-<file>-art.ts.txt`（`<prefix>_FACE0` / `_FACE3` / `_HAIR`），再 `material_write` put `work_file` 到 `code/cast-<file>-art.ts`，人物配置写 `face0`、`face3`、`hairArt`，删掉 headScale / width / legWidth / armWidth 这些。
+  - `描图工具.mjs`（分色、形态学、连通块、描轮廓、顺滑；sharp、作品文件夹、读配置）、`线稿换算工具.mjs`（读 SVG 路径、线稿 → 头的坐标 / 身体坐标）是底层，用户画的线没有 id 时自己写换算脚本也用它们（例：作品 3d80f743 的 `production/周磊线稿换算.mjs`）。
+
 ## 文件
 
 - `code/rig.ts`：通用的二维骨架工具（关节坐标系、两节 IK、平滑路径、合并描边、右下阴影、受力的链、关键帧混合、呼吸和眨眼、两张线稿之间的轮廓变形 `matchOutlines` / `lerpPts`、受力弯曲 `bendAlong`、风的循环 `loopSin` / `gusty`）。
@@ -75,3 +108,6 @@ const g = playMove([
 - `code/cast-hair.ts`：配角的十种发型（正面线稿 + 3/4 自动过渡、风、失重、马尾、髻）。
 - `code/cast-wear.ts`：配角的衣服：外衣七种版型、上衣九种、袖口、裤子细节。
 - `code/cast-face.ts`：配角脸上的人物特点：眉毛、皱纹、眼镜、胡子、胡茬、发卡。
+- `code/cast-face-art.ts`、`cast-hair-art.ts`、`cast-wear-art.ts`：周磊的脸、碎发、西装（用户手画的线稿换算的）；`code/cast-kid-art.ts`：小石头的脸和头发（`tools/描图.mjs` 照参考图描的）。都是生成的，别手改。
+- `code/linebase.ts`：配角线稿工具的底图样片（`lineBaseScene(spec)`）。
+- `tools/`：配角线稿工具（Node 脚本，见上面「配角线稿工具」）。
