@@ -64,6 +64,25 @@ interface HairArt {
   fringe: [V2[], V2[]];
   strands: V2[][];
 }
+/**
+ * 一个人自己的线稿发型（人物配置的 hairArt，换算脚本生成）：后面那片正面和 3/4 各一条（这里按四个标志点对应），
+ * 刘海两条已经逐点对应好（发际线对发际线），strands 正面的发丝（可以没有）
+ */
+export interface HairArtSrc {
+  back: { front: V2[]; side: V2[] };
+  fringe: { front: V2[]; side: V2[] };
+  strands?: V2[][];
+}
+const ART_DEFS = new WeakMap<HairArtSrc, HairDef>();
+/** 线稿发型 → 发型（算一次存起来） */
+function artDef(src: HairArtSrc): HairDef {
+  let d = ART_DEFS.get(src);
+  if (!d) {
+    d = { back: [], front: [], art: { back: artPair(src.back.front, src.back.side), fringe: [src.fringe.front, src.fringe.side], strands: src.strands ?? [] } };
+    ART_DEFS.set(src, d);
+  }
+  return d;
+}
 /** 两张线稿的同一块按头顶、最右、最低、最左四个标志点逐点对应（和脸的 FACE_TURN 一样） */
 function artPair(front: V2[], side: V2[]): [V2[], V2[]] {
   const marks = (p: V2[]) => {
@@ -481,7 +500,10 @@ export interface HairPaint {
   tie?: string;
   /** 蓬松：耳朵上面、头顶两侧横着往外鼓多少（1 不变；鬓角那一行不动，还贴着脸边）。转到 3/4 时后脑勺跟着鼓 */
   volume?: number;
+  /** 这个人自己的线稿发型：给了就用它，不用 style 的发型 */
+  art?: HairArtSrc;
 }
+const hairOf = (hp: HairPaint) => (hp.art ? artDef(hp.art) : HAIR[hp.style as Exclude<HairStyle, "none">]);
 
 /** 按 volume 把头发横着往外鼓：y ≤ −20 全鼓，往下到鬓角（y = 8）收回 0 */
 const swell = (pts: P[], v: number): P[] =>
@@ -491,8 +513,8 @@ const turned = (pts: P[], uh: number, occ: number, v = 1): P[] =>
 
 /** 后面的头发（Look.backHair） */
 export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, hp: HairPaint) {
-  if (hp.style === "none") return;
-  const hair = HAIR[hp.style];
+  if (hp.style === "none" && !hp.art) return;
+  const hair = hairOf(hp);
   const { head, thh, field, pose } = rig;
   const uh = clamp01(-thh / 0.62);
   if (hair.art) {
@@ -600,8 +622,8 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
 
 /** 刘海、鬓角（Look.frontHair），再画马尾的皮筋 */
 export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink, hp: HairPaint) {
-  if (hp.style === "none") return;
-  const hair = HAIR[hp.style];
+  if (hp.style === "none" && !hp.art) return;
+  const hair = hairOf(hp);
   const f = rotateV(h.rig.field, -h.rig.head.a);
   const up = hair.pivot === undefined ? 0 : upness(f);
   const uh = clamp01(h.uh);

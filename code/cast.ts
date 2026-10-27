@@ -19,7 +19,8 @@ import {
   polyPath,
 } from "./figure";
 import { bootSoles, drawBoot } from "./chengtuo-draw";
-import { type HairStyle, drawBackHair, drawFrontHair } from "./cast-hair";
+import { type HairArtSrc, type HairStyle, drawBackHair, drawFrontHair } from "./cast-hair";
+import { KID_FACE0, KID_FACE3, KID_HAIR } from "./cast-kid-art";
 import {
   type Garment,
   type Pants,
@@ -289,6 +290,8 @@ export interface CastSpec {
   /** 配色：皮肤、眼睛、上衣 top、下装 bottom…… */
   colors: Partial<Palette>;
   hair: HairStyle;
+  /** 自己的线稿发型（换算脚本生成的，给了就不用 hair 的发型） */
+  hairArt?: HairArtSrc;
   hairColor: string;
   hairShade?: string;
   /** 马尾的皮筋、发簪 */
@@ -344,7 +347,7 @@ export interface CastSpec {
 
 /** 配置 → 外观 */
 export function castLook(spec: CastSpec): Look {
-  const hp = { style: spec.hair, color: spec.hairColor, shade: spec.hairShade ?? spec.hairColor, tie: spec.hairTie, volume: spec.hairVolume };
+  const hp = { style: spec.hair, color: spec.hairColor, shade: spec.hairShade ?? spec.hairColor, tie: spec.hairTie, volume: spec.hairVolume, art: spec.hairArt };
   const coat = spec.coat;
   const shoes = spec.shoes;
   const top = spec.top;
@@ -372,7 +375,7 @@ export function castLook(spec: CastSpec): Look {
     shoulderOut: coat ? () => coat.shoulderOut ?? 4 * (coat.size ?? 1) : undefined,
     armsOver: coat ? () => true : undefined,
     bodyPieces: coat ? (rig) => garmentPanels(rig, coat) : undefined,
-    backHair: spec.hair === "none" ? undefined : (ctx, rig, ink) => drawBackHair(ctx, rig, ink, hp),
+    backHair: spec.hair === "none" && !spec.hairArt ? undefined : (ctx, rig, ink) => drawBackHair(ctx, rig, ink, hp),
     neckBack: hoodBack ? (ctx, rig, ink) => drawHood(ctx, rig, ink, hoodBack.color, hoodBack.shade) : undefined,
     overTorso: (ctx, rig, ink, sides) => {
       // 手画的外衣：衬衫领、领带、腰线也按线稿画
@@ -590,12 +593,13 @@ export const CAST = {
   小石头: {
     name: "小石头",
     scale: 0.6,
-    headScale: 1.42,
-    legWidth: 1.32,
-    legHem: 1.36,
-    armWidth: 1.28,
+    // 骨架、头的大小、胳膊腿和主角一样（参考图里的小孩和主角用同一套横线），只是整个人按 scale 缩小；
+    // 脸和头发是照参考图描的（作品 3d80f743 的 public/ref/小石头-线稿.svg、小石头-侧面线稿.svg，cast-kid-art.ts）
+    face0: KID_FACE0,
+    face3: KID_FACE3,
     colors: { ...SKIN, top: "#f5f1e6", topShade: "#e3decf", bottom: "#56627a", bottomShade: "#48536a", blush: "250,140,140" },
     hair: "kid",
+    hairArt: KID_HAIR,
     hairColor: "#2f2e33",
     top: { kind: "tee", stripes: "#dfe7ee" },
     coat: { kind: "hoodie", color: "#68a86f", shade: "#57925e", trim: "#5a9561" },
@@ -608,12 +612,11 @@ export const CAST = {
   小石头穿妈妈的外套: {
     name: "小石头",
     scale: 0.6,
-    headScale: 1.42,
-    legWidth: 1.32,
-    legHem: 1.36,
-    armWidth: 1.28,
+    face0: KID_FACE0,
+    face3: KID_FACE3,
     colors: { ...SKIN, top: "#f5f1e6", topShade: "#e3decf", bottom: "#56627a", bottomShade: "#48536a", blush: "250,140,140" },
     hair: "kid",
+    hairArt: KID_HAIR,
     hairColor: "#2f2e33",
     top: { kind: "tee", stripes: "#dfe7ee" },
     coat: { kind: "workcoat", color: "#f29a4a", shade: "#de8538", size: 1.32, long: 70, hem: "#8a6a5a", rolled: true },
