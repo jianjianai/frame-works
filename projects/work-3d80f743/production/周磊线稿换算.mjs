@@ -228,13 +228,33 @@ const FRONT_SHOULDER_EDGE = {
   // 右：和左边对称量的；袖子 x = 296 + 0.375·(y − 318)
   R: [...dense([[250.5, 280], [278, 292], [279.5, 293], [293, 303], [294, 304.5]]), ...quad([294, 304.5], [294, 312.7], [299, 326])],
 };
-const FRONT_SHOULDER = { L: insetEdge(FRONT_SHOULDER_EDGE.L, true, 4), R: insetEdge(FRONT_SHOULDER_EDGE.R, false, 4) };
+const FRONT_SHOULDER_OVER = { L: insetEdge(FRONT_SHOULDER_EDGE.L, true, 4), R: insetEdge(FRONT_SHOULDER_EDGE.R, false, 4) };
+/**
+ * 配角正面的上臂改成画在外衣后面（用户 2026-10-28，和没穿外衣的老钟一样）：西装的肩只到胳膊圆头的顶上（凸包那段的前三个点），
+ * 往下的外沿是胳膊自己的（画在西装后面、肩膀圈里接成一块）；原来一路盖到袖子上（FRONT_SHOULDER_OVER），接袖子时错开一个台阶
+ */
+const FRONT_SHOULDER = {
+  L: insetEdge(dense([[206, 280], [180.5, 292], [179, 293]]), true, 4),
+  R: insetEdge(dense([[250.5, 280], [278, 292], [279.5, 293]]), false, 4),
+};
 const P = sF.segs.map((s) => s[0]);
+/**
+ * 正面的袖窿：从肩线末端弯进腋下，到腋下时和往下的侧缝 next 同一个方向（三次曲线）。原来是直线，接侧缝时拐一个角——
+ * 配角正面的上臂改成画在外衣后面以后（用户 2026-10-28：「胳膊和身体的遮挡关系……老钟的就是对的」），这个角露在肩膀圈外面，腋下多一个小钩
+ */
+const armholeInto = (a, b, next) => {
+  // 侧缝起头的方向：取往下一小段的点（用户画的控制点可能和端点重合）
+  const q = sample([next], 20)[3];
+  const d = [q[0] - next[0][0], q[1] - next[0][1]];
+  const l = Math.hypot(d[0], d[1]) || 1;
+  const k = 0.6 * Math.hypot(b[0] - a[0], b[1] - a[1]);
+  return [a, [a[0] + (b[0] - a[0]) * 0.25, a[1] + (b[1] - a[1]) * 0.25], [b[0] - (d[0] / l) * k, b[1] - (d[1] / l) * k], b];
+};
 // 肩线：用户画的线从脖子走到 y 279，往下接 FRONT_SHOULDER（圆头、袖子的外沿），袖窿从它的末端连到腋下
 const userTo279 = (sg) => sample([sg], 60).filter((p) => p[1] < 279);
 const panelFL = panel({
   A: resample([...userTo279(rev(seg(sF, 0))), ...FRONT_SHOULDER.L], N.A),
-  B: edge([lineSeg(FRONT_SHOULDER.L[FRONT_SHOULDER.L.length - 1], P[13])], N.B),
+  B: edge([armholeInto(FRONT_SHOULDER.L[FRONT_SHOULDER.L.length - 1], P[13], rev(seg(sF, 12)))], N.B),
   C: edge([rev(seg(sF, 12))], N.C),
   D: edge([rev(seg(sF, 11))], N.D),
   E: edge([rev(seg(sF, 10))], N.E),
@@ -242,7 +262,7 @@ const panelFL = panel({
 });
 const panelFR = panel({
   A: resample([...userTo279(seg(sF, 1)), ...FRONT_SHOULDER.R], N.A),
-  B: edge([lineSeg(FRONT_SHOULDER.R[FRONT_SHOULDER.R.length - 1], P[5])], N.B),
+  B: edge([armholeInto(FRONT_SHOULDER.R[FRONT_SHOULDER.R.length - 1], P[5], seg(sF, 5))], N.B),
   C: edge([seg(sF, 5)], N.C),
   D: edge([seg(sF, 6)], N.D),
   E: edge([seg(sF, 7)], N.E),

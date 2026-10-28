@@ -44,8 +44,11 @@ export const KID_BOOT_Y = 39 - 63.6;
 const STONE_COAT = CAST.小石头穿妈妈的外套;
 export const STONE: CastSpec = { ...CAST.小石头, coat: undefined };
 const SC = STONE.scale;
-/** 他胸口相对根（飘着、被抱着的姿势） */
-const KID_CHEST: V2 = [4, -232];
+/**
+ * 他胸口相对根（飘着、被抱着的姿势）：原来按 scale 0.6 量的 [4, −232]，跟着他的 scale 放大（用户 2026-10-28 照大人和小孩的参考图把他改高、
+ * 头改大以后，还按 0.6 的胸口抱的话她搂在他肚子上，他的头整个挡住她的脸）
+ */
+export const KID_CHEST: V2 = [(4 * SC) / 0.6, (-232 * SC) / 0.6];
 /** 抱住时他的根离地多高（楼的一半）、被风往左带到哪 */
 const H_C = 4100;
 const X_C = X_K - 300;

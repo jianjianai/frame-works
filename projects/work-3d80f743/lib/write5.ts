@@ -321,10 +321,13 @@ const kidMoveB = live(
 );
 const KID_K = ROOM.s;
 /** 他坐的地方：胯落在她近处那条大腿上（靠膝盖那头），坐在大腿上面 */
+const SEAT_K = 0.84;
+const SEAT_UP = 28;
 function kidSeat(herMv: Mover): (t: number) => V2 {
   return (t) => {
-    const hip = mix(HER_HIP, herBase(t, herMv).knee, 0.72);
-    return [hip[0], hip[1] - 40];
+    // 小石头照参考图改成头大腿短（用户 2026-10-28）：上身连头高出约 36、头大了，原来的位置头挡住她半张脸——往她膝盖那头挪、坐低一点
+    const hip = mix(HER_HIP, herBase(t, herMv).knee, SEAT_K);
+    return [hip[0], hip[1] - SEAT_UP];
   };
 }
 /** 他：姿势按 IK 放好攥笔的手（手心 grip，笔尖 tip）和按着砖的手 */

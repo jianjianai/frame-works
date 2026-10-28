@@ -840,7 +840,9 @@ export function sceneAt(t: number): Scene2 {
   const cutHip: V2 = [cut.root[0] + castJoints(STONE_COAT, cut.pose).hip[0], cut.root[1] + castJoints(STONE_COAT, cut.pose).hip[1]];
   const fallHip: V2 = [cutHip[0], cutHip[1] + fall];
   const shrink = 0;
-  const hip = mix(fallHip, [chest[0] + 30 - 28 * shrink, chest[1] + 70 - 16 * shrink], E.io(ph(t, T.cut + 0.08, T.land + 0.1)));
+  // 小石头照参考图改高、头改大以后（用户 2026-10-28），上身连头比原来（scale 0.6）高出约 80，头顶到她脸上：在她怀里坐低一点
+  const sit = LAP_DROP;
+  const hip = mix(fallHip, [chest[0] + 30 - 28 * shrink, chest[1] + 70 + sit - 16 * shrink], E.io(ph(t, T.cut + 0.08, T.land + 0.1)));
   const sRoot: V2 = [hip[0] - sj.hip[0], hip[1] - sj.hip[1]];
   const sjNow = castJoints(STONE_COAT, sp);
   const ankle: V2 = [sRoot[0] + sjNow.ankleL[0], sRoot[1] + sjNow.ankleL[1]];
@@ -869,6 +871,9 @@ export function sceneAt(t: number): Scene2 {
   const knife = t < T.touch ? { x: palmL[0] - 6, y: palmL[1] + 4, rot: -0.3, glint: Math.exp(-Math.abs(t - T.cut) / 0.04), stuck: false } : kn.knife;
   return { mom, stone, chen, rope, coat: null, knife };
 }
+
+/** 他在她怀里比原来（scale 0.6 时）坐低多少：上身（胯到脖子 162.7）多出来的那截 */
+const LAP_DROP = 162.7 * (STONE.scale - 0.6);
 
 // ——— 小刀 ———
 /** 小刀砸在她前面那只铁靴跟前的街面上（落地的地方，相对她跪下来的根），弹一下靠在靴子上（和⑧十二年前那块木牌一样） */

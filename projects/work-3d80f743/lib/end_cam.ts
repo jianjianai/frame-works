@@ -4,11 +4,10 @@
 import { type Cam, E, aim, camLerp, kick, ph } from "./cam";
 import { TE, type V2, breath, lerp, mix } from "./end_t";
 import { CORNER, RAIL_TOP, X_K, ZW } from "./end_map";
-import { HB_REST, X_LAND, herAt, herBrickAt, herChest, kidAt, kidRoot } from "./end_pair";
+import { HB_REST, KID_CHEST, X_LAND, herAt, herBrickAt, herChest, kidAt, kidRoot } from "./end_pair";
 import { MEMBERS, X_JOIN, chainH } from "./end_rise";
 import { memberHead } from "./end_chain";
 
-const KID_CHEST: V2 = [4, -232];
 const kidChest = (t: number): V2 => {
   const r = kidRoot(t);
   return [r[0] + KID_CHEST[0], r[1] + KID_CHEST[1]];
