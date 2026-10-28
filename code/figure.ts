@@ -368,19 +368,22 @@ export function figureRig(pIn: PoseIn | Pose, look: Look = BASE_LOOK): Rig {
   const leg = (side: 1 | -1, lp: LegPose): Limb => {
     const root = pelvis.p(side * BODY.hipW * cth + hipShift, 0);
     const k = lp.thighK ?? 1;
-    const thigh = BODY.thigh * k;
+    // 角色的腿长（Look.legLength）：大腿、小腿一起缩
+    const ll = look.legLength ?? 1;
+    const thigh = BODY.thigh * k * ll;
+    const shin = BODY.shin * ll;
     let a1 = pelvis.a + lp.a;
     let a2 = a1 + lp.b;
     let fa = a2 + lp.f;
     const w = lp.to ? (lp.ik ?? 1) : 0;
     if (lp.to && w > 0) {
-      const r = ik2(root, add(lp.to, shiftV), thigh, BODY.shin, lp.bend ?? 1);
+      const r = ik2(root, add(lp.to, shiftV), thigh, shin, lp.bend ?? 1);
       a1 = mixAngle(a1, r.a1, w);
       a2 = mixAngle(a2, r.a2, w);
       fa = mixAngle(fa, lp.f, w);
     }
     const mid = add(root, mul(dirOf(a1), thigh));
-    const end = add(mid, mul(dirOf(a2), BODY.shin));
+    const end = add(mid, mul(dirOf(a2), shin));
     return { root, mid, end, a1, a2, k, tip: new Frame(end[0], end[1], fa) };
   };
   return {
@@ -537,6 +540,11 @@ export interface Look {
   soles?(rig: Rig, side: "L" | "R"): V2[];
   /** 人物特点：头相对身子放大多少（小孩头大，1.25 左右），以脖子为中心 */
   headScale?: number;
+  /**
+   * 人物特点：腿长（大腿、小腿的骨头和裤腿一起顺着骨头缩，宽窄和脚不变）。小孩腿短：只按 scale 缩小的话头身比和大人一样，像大人的缩小版
+   * （《引力》小石头 0.7，照大人和小孩站在一起的参考图量的）。站在地上时胯跟着往下落（groundHip 按骨头算）
+   */
+  legLength?: number;
   /** 人物特点：头再横着放宽多少（以脖子为中心）：基础模型是秤砣的瓜子脸，成年男人的脸宽一点（1.05–1.1） */
   headWidth?: number;
   /** 人物特点：脸用自己的线稿（轮廓、眼睛、鼻子、嘴、耳朵、眉毛的位置）：face0 正面、face3 3/4，转身时逐点过渡；不写用基础模型的（秤砣的） */
@@ -1248,7 +1256,9 @@ export function legPaths(rig: Rig, side: "L" | "R"): Path2D[] {
   const hem = rig.look.legHem ?? lw;
   const thighK = (y: number) => lw + (kn - lw) * Math.max(0, Math.min(1, y / BODY.thigh));
   const shinK = (y: number) => kn + (hem - kn) * Math.max(0, Math.min(1, y / BODY.shin));
-  return [polyPath(P.upper, (p) => fT.p(p[0] * thighK(p[1]), p[1] * k)), polyPath(P.lower, (p) => fS.p(p[0] * shinK(p[1]), p[1]))];
+  // 腿长（Look.legLength）：裤腿顺着骨头缩，宽窄不变
+  const ll = rig.look.legLength ?? 1;
+  return [polyPath(P.upper, (p) => fT.p(p[0] * thighK(p[1]), p[1] * k * ll)), polyPath(P.lower, (p) => fS.p(p[0] * shinK(p[1]), p[1] * ll))];
 }
 
 /**

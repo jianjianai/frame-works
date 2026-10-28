@@ -328,6 +328,8 @@ export interface CastSpec {
   /** 上衣的圆领 */
   collar?: boolean;
   headScale?: number;
+  /** 腿长（Look.legLength）：小孩腿短 */
+  legLength?: number;
   /** 头再横着放宽（Look.headWidth）、眼睛连眉毛缩放（Look.eyeScale）、头发蓬松（HairPaint.volume） */
   headWidth?: number;
   /** 脸用自己的线稿（Look.face0 正面、face3 3/4） */
@@ -364,6 +366,7 @@ export function castLook(spec: CastSpec): Look {
     colors: spec.brows ? { ...spec.colors, brow: "rgba(0,0,0,0)" } : spec.colors,
     collar: topHasOwnCollar(top) ? false : (spec.collar ?? true),
     headScale: spec.headScale,
+    legLength: spec.legLength,
     headWidth: spec.headWidth,
     face0: spec.face0,
     face3: spec.face3,
@@ -378,7 +381,9 @@ export function castLook(spec: CastSpec): Look {
     armWidth: spec.armWidth,
     sleeve: coat ? () => sleeve : undefined,
     shoulderOut: coat ? () => coat.shoulderOut ?? 4 * (coat.size ?? 1) : undefined,
-    armsOver: coat ? () => true : undefined,
+    // 正面时上臂画在身子和外衣后面（和没穿外衣的老钟一样）：原来照主角的外套压在外衣上，袖子里侧那条线从腋下斜着往下收、
+    // 外衣下摆又往外张，夹得胳膊上粗下细（用户 2026-10-28：周磊、千斤的妈妈、小石头「胳膊和身体的遮挡关系不对……老钟的就是对的」）
+    armsOver: undefined,
     bodyPieces: coat ? (rig) => garmentPanels(rig, coat) : undefined,
     backHair: spec.hair === "none" && !spec.hairArt ? undefined : (ctx, rig, ink) => drawBackHair(ctx, rig, ink, hp),
     neckBack: hoodBack ? (ctx, rig, ink) => drawHood(ctx, rig, ink, hoodBack.color, hoodBack.shade) : undefined,
@@ -601,7 +606,15 @@ export const CAST = {
   /** 小石头：7 岁，毛茸茸的头发、头顶一根呆毛；绿色连帽外套，里面一件米白条纹 T 恤；脚踝上红绳拴着一只铃铛 */
   小石头: {
     name: "小石头",
-    scale: 0.6,
+    // 身高、头身比照参考图里大人和小孩站在一起的那张（作品 3d80f743 的 public/ref/比例参考-大人和小孩.png）：
+    // 小孩是大人（周磊 1.06）的 0.716（头发顶到鞋底 629 / 878 像素）；头（头发顶→下巴）和上身（下巴→上衣下摆）一样长、
+    // 下身（下摆→鞋底）是上身的 1.36 倍。只按 scale 缩小时头太小、腿太长，像大人的缩小版（用户 2026-10-28）：
+    // 头以脖子为中心放大 1.335、腿缩到 0.70，全身从 634.5 变成 610.7，scale 跟着从 0.76 调到 0.79（身高比还是 0.716）
+    scale: 0.79,
+    headScale: 1.335,
+    legLength: 0.7,
+    // 裤腿横着收到 0.87：照大人和小孩的参考图量，一条裤腿大腿那里约 104、往下收到 90，我们的 108–116（用户 2026-10-28：「腿太粗了」）
+    legWidth: 0.87,
     // 骨架、头的大小、胳膊腿和主角一样（参考图里的小孩和主角用同一套横线），只是整个人按 scale 缩小；
     // 脸和头发是照参考图描的（作品 3d80f743 的 public/ref/小石头-线稿.svg、小石头-侧面线稿.svg，cast-kid-art.ts）
     // 裤腿也照参考图描：又宽又直的牛仔裤（用户 2026-10-28：「小石头的腿太细了，导致看起来像是大人的缩小版」）
@@ -622,7 +635,11 @@ export const CAST = {
   /** 小石头裹着妈妈的橘色外套（爸爸留下的工装外套，大一号、袖子卷了两道、下摆缝了一圈铅）：副歌一以后一直穿着 */
   小石头穿妈妈的外套: {
     name: "小石头",
-    scale: 0.6,
+    scale: 0.79,
+    headScale: 1.335,
+    legLength: 0.7,
+    // 裤腿横着收到 0.87：照大人和小孩的参考图量，一条裤腿大腿那里约 104、往下收到 90，我们的 108–116（用户 2026-10-28：「腿太粗了」）
+    legWidth: 0.87,
     face0: KID_FACE0,
     face3: KID_FACE3,
     legArt: KID_LEGS,
