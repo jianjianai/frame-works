@@ -22,8 +22,9 @@ export const COAT_X = STONE_X + 13;
 export function drawCoatHeap(g: CanvasRenderingContext2D, t: number, line = 1) {
   const cx = COAT_X;
   const floor = 6;
-  const w = 115;
-  const ht = 46;
+  // 她那件短款堆起来的一团（原来按长外套 115 × 46）
+  const w = 95;
+  const ht = 40;
   // 她的靴底差一点碰到它（100.263）：被她带起来的风掀一下
   const lift = 6 * Math.exp(-Math.max(0, t - (T8.stop - 0.1)) / 0.25) * (t > T8.stop - 0.1 ? Math.abs(Math.sin((t - T8.stop) * 18)) : 0);
   const heap = new Path2D();
@@ -35,7 +36,7 @@ export function drawCoatHeap(g: CanvasRenderingContext2D, t: number, line = 1) {
   part(g, heap, "#f29a4a", "#de8538", 3.2 * line, [5, 4]);
   g.save();
   g.clip(heap);
-  leadBand(g, cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht * 0.32, 11, line);
+  leadBand(g, cx - w * 1.2, floor - ht * 0.24, w * 2.4, ht * 0.24, 11, line);
   g.strokeStyle = "rgba(160,80,30,0.45)";
   g.lineWidth = 3;
   g.beginPath();

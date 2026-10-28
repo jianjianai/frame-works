@@ -976,25 +976,28 @@ function strokeRope(g: CanvasRenderingContext2D, pts: V2[], z: number) {
   g.restore();
 }
 
-/** 脱下来、裹过去的那件外套（橘色、下摆一圈铅）：领子两头在她两只手里，往下垂着、下摆张开一点 */
+/**
+ * 脱下来、裹过去的那件外套（橘色、下摆一圈铅）：领子两头在她两只手里，往下垂着、下摆张开一点。
+ * 她身上那件短款的长短（领口到下摆约 165；用户 2026-10-28：「外套换成她现在这件」，原来按长外套 230）
+ */
 function drawCoat(g: CanvasRenderingContext2D, a: V2, b: V2, t: number) {
-  const len = 230;
+  const len = 165;
   const sw = 8 * Math.sin(t * 5);
   const mid: V2 = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
   const lo = Math.max(a[1], b[1]) + len;
   const p = new Path2D();
   p.moveTo(a[0], a[1]);
   p.quadraticCurveTo(mid[0], mid[1] + 26, b[0], b[1]);
-  p.quadraticCurveTo(b[0] + 18, b[1] + len * 0.5, b[0] + 30 + sw, lo - 14);
-  p.quadraticCurveTo(b[0] + 30 + sw, lo + 6, b[0] + 8 + sw, lo + 4);
-  p.lineTo(a[0] - 8 + sw, lo + 4);
-  p.quadraticCurveTo(a[0] - 30 + sw, lo + 6, a[0] - 30 + sw, lo - 14);
-  p.quadraticCurveTo(a[0] - 18, a[1] + len * 0.5, a[0], a[1]);
+  p.quadraticCurveTo(b[0] + 12, b[1] + len * 0.5, b[0] + 20 + sw, lo - 12);
+  p.quadraticCurveTo(b[0] + 20 + sw, lo + 5, b[0] + 6 + sw, lo + 4);
+  p.lineTo(a[0] - 6 + sw, lo + 4);
+  p.quadraticCurveTo(a[0] - 20 + sw, lo + 5, a[0] - 20 + sw, lo - 12);
+  p.quadraticCurveTo(a[0] - 12, a[1] + len * 0.5, a[0], a[1]);
   p.closePath();
   part(g, p, "#f29a4a", "#de8538", 3, [6, 5]);
   g.save();
   g.clip(p);
-  leadBand(g, Math.min(a[0], b[0]) - 80, lo - 22, Math.abs(b[0] - a[0]) + 160, 26, 11);
+  leadBand(g, Math.min(a[0], b[0]) - 80, lo - 8, Math.abs(b[0] - a[0]) + 160, 12, 11);
   standCollar(g, a, [mid[0], mid[1] + 26], b, 9);
   g.strokeStyle = "rgba(160,80,30,0.45)";
   g.lineWidth = 3;

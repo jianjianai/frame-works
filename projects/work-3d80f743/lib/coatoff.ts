@@ -718,7 +718,7 @@ function drawLooseCoat(g: CanvasRenderingContext2D, t: number) {
     part(g, path, orange, shade, lw, [5, 4]);
     g.save();
     g.clip(path);
-    leadBand(g, cx - 200, lo - 24, 400, 24, 11);
+    leadBand(g, cx - 200, lo - 12, 400, 12, 11);
     standCollar(g, A, [cx, yTop + 24 * k], B, 8);
     g.strokeStyle = "rgba(160,80,30,0.45)";
     g.lineWidth = 3;
@@ -734,8 +734,9 @@ function drawLooseCoat(g: CanvasRenderingContext2D, t: number) {
   // 堆在地上的一团（落地一弹；五① 他跺下去那一下被震得蹦起来、掀一下）
   const ds = t - STOMP_T.stomp;
   const settle = Math.exp(-(t - T.thud) / 0.06) * Math.sin((t - T.thud) * 40) * 8 + (ds > 0 ? Math.exp(-ds / 0.12) * Math.abs(Math.sin(ds * 26)) * 30 : 0);
-  const w = 115;
-  const ht = 46;
+  // 她那件短款堆起来的一团（原来按长外套 115 × 46）
+  const w = 95;
+  const ht = 40;
   const heap = new Path2D();
   heap.moveTo(cx - w, floor);
   heap.quadraticCurveTo(cx - w * 0.95, floor - ht * 0.9 - settle, cx - w * 0.2, floor - ht - settle);
@@ -745,7 +746,7 @@ function drawLooseCoat(g: CanvasRenderingContext2D, t: number) {
   part(g, heap, orange, shade, lw, [5, 4]);
   g.save();
   g.clip(heap);
-  leadBand(g, cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht * 0.32, 11);
+  leadBand(g, cx - w * 1.2, floor - ht * 0.24, w * 2.4, ht * 0.24, 11);
   g.strokeStyle = "rgba(160,80,30,0.45)";
   g.lineWidth = 3;
   g.beginPath();

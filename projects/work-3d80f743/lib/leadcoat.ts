@@ -1,17 +1,18 @@
 // 小石头妈妈那件橘色工装外套单独画的时候（从肩上脱下来、挂在手里、掉下来、堆在地上）：和穿在人身上那件
-// （素材库「剪纸角色」cast-wear 的 workcoat）一样的细节——下摆缝铅的那一圈一格一格的针脚、每格鼓着一块铅，领口一圈立领。
+// （素材库「剪纸角色」cast-wear 按她的线稿画的 workcoat：短款到胯下面一点、立领、五颗深色大扣子、下摆一圈深棕的边）一样。
+// 穿在小石头身上是同一件按两个人的身高比放大（大一号、到他大腿中间）。
 
 import type { V2 } from "@materials/剪纸角色/code/rig";
 import { INK } from "./world";
 
 export const LEAD = "#8a6a5a";
-const STITCH = "rgba(250,235,215,0.55)";
 
 /**
- * 下摆缝铅的那一圈（画在已经裁好的外套里）：(x, y) 左上角、w 宽、h 露出来的高（往下多填一截，裁掉）。
- * step 一格多宽，lw 描边倍数（跟着镜头调细的那个）
+ * 下摆那一圈深棕的边（缝着铅；画在已经裁好的外套里）：和她身上那件（素材库 cast-wear 按线稿画的工装外套）一样，
+ * 一道平平的深棕边、上沿一道线（用户 2026-10-28：「外套换成她现在这件」；原来是旧外套那种一格一格的针脚、每格鼓一块铅）。
+ * (x, y) 左上角、w 宽、h 露出来的高（往下多填一截，裁掉）；step 不用了（留着参数，调用的地方不用改）；lw 描边倍数（跟着镜头调细的那个）
  */
-export function leadBand(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, step = 11, lw = 1) {
+export function leadBand(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, _step = 11, lw = 1) {
   g.fillStyle = LEAD;
   g.fillRect(x, y, w, h + 40);
   g.strokeStyle = INK;
@@ -21,26 +22,6 @@ export function leadBand(g: CanvasRenderingContext2D, x: number, y: number, w: n
   g.moveTo(x, y);
   g.lineTo(x + w, y);
   g.stroke();
-  const lumps = new Path2D();
-  const stitch = new Path2D();
-  const x0 = Math.ceil(x / step) * step;
-  for (let xx = x0; xx <= x + w; xx += step) {
-    const c: V2 = [xx + step / 2, y + h * 0.55];
-    const rx = step * 0.32;
-    lumps.moveTo(c[0] + rx, c[1]);
-    lumps.ellipse(c[0], c[1], rx, Math.min(h * 0.3, step * 0.4), 0, 0, Math.PI * 2);
-    stitch.moveTo(xx, y + 2.5);
-    stitch.lineTo(xx, y + h + 40);
-  }
-  stitch.moveTo(x, y + 2.6);
-  stitch.lineTo(x + w, y + 2.6);
-  g.fillStyle = "rgba(255,240,225,0.16)";
-  g.fill(lumps);
-  g.strokeStyle = STITCH;
-  g.lineWidth = 1 * lw;
-  g.setLineDash([1.6 * step * 0.14 + 1, 1.6 * step * 0.14 + 1]);
-  g.stroke(stitch);
-  g.setLineDash([]);
 }
 
 /** 立领：沿着领口那道弧（a → 控制点 c → b）往下一道窄边，颜色深一点 */

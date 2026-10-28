@@ -10,6 +10,9 @@ export default {
     // 底稿里参考图横着对齐的位置：cx（参考图像素）对到线稿的 x0（不写是中线 229.5）；crop 裁这个人的左右。
     // 周磊的 cx 是人的中心（用户画线时的底图，别再改；3/4 衣服在 周磊线稿换算.mjs 里按脖子挪过）
     views: { front: { cx: 138, crop: [0, 268] }, side: { cx: 372, crop: [268, 495] } },
+    // 头发分层（我照参考图画的，2026-10-28 用户：「另外4个人你来画」）：脸、西装还是用户画的（production/周磊线稿换算.mjs），
+    // 头发用 线稿换算.mjs --hair-only 换算成素材库 code/cast-zhoulei-hair.ts 的 ZHOULEI_HAIR
+    art: { file: "zhoulei", prefix: "ZHOULEI" },
   },
   小石头: {
     ref: "public/ref/比例参考-小孩.png",
@@ -36,7 +39,19 @@ export default {
       pants: { isPants: (p) => p[2] > p[0] + 18 && p[2] > 85 && sum(p) > 190 && sum(p) < 460, rows: [550, 800] },
     },
     // 线稿换算.mjs：素材库里的文件名 code/cast-<file>-art.ts、导出常量的前缀
-    art: { file: "kid", prefix: "KID" },
+    // 头发、耳朵是用户分层画的（2026-10-28：「小石头的线条让我亲手画一下，因为是比较重要的角色」）：后脑勺一整片打底，上面叠头顶两缕、
+    // 两撮呆毛、两边翘出来的几撮、耳朵后面垂到下巴的，一排六缕刘海，右边一缕鬓角。用户随手画的，两张起笔的地方、节点数不一样：
+    // hairAlign "shape" 每块都按节点在这一块里的相对位置配。
+    // hairOnly：正面能看到、转到 3/4 被头挡住的两块（左耳上面那缕、左耳后面垂到下巴的），3/4 时缩到远处那边的脸里面（3/4 线稿坐标）
+    art: {
+      file: "kid",
+      prefix: "KID",
+      hairAlign: "shape",
+      hairOnly: {
+        "lock-l-low": { to: [176, 220] },
+        "nape-l": { to: [182, 252] },
+      },
+    },
   },
   老钟: {
     ref: "public/ref/比例参考-老人.png",
@@ -68,7 +83,8 @@ export default {
       earRound: true,
       pieceSmooth: 4,
     },
-    art: { file: "oldzhong", prefix: "OLDZHONG" },
+    // 头发是分层画的（我照参考图画的两鬓白发，2026-10-28 用户：「另外4个人你来画」）：两块压在脸上、在耳朵后面（3/4 时近处那块从耳朵后面包到后颈）
+    art: { file: "oldzhong", prefix: "OLDZHONG", hairUnderEars: true },
   },
   千斤的妈妈: {
     // 这张参考图比别的画得大约 1.2 倍、横线也不一样：按头顶到脚底的高度对到主角（主角 711 像素、她 857），换成等效的头顶、膝两条线
@@ -153,6 +169,8 @@ export default {
       prefix: "SHITOUMOM",
       legHem: 24,
       hairMarks: {
+        // 后面那片：最左、最上、最右、最低四个点（两张节点数不一样；换算工具后来默认按节点位置自动配，这里写明保持原来的对应）
+        "hair-back": "box",
         // 翘出来的碎发：左边的尖、右边的尖
         "hair-wisp": [[2, 0], [5, 3]],
         // 太阳穴那缕：下面的尖、左边、上面的尖、右边两个

@@ -74,7 +74,7 @@ function drawCoatHeap(g: CanvasRenderingContext2D) {
   part(g, p, "#f29a4a", "#de8538", 5, [10, 8]);
   g.save();
   g.clip(p);
-  leadBand(g, -60, 790, 420, 50, 20, 1.6);
+  leadBand(g, -60, 806, 420, 30, 20, 1.6);
   g.restore();
 }
 /** 脚上她的那双铁靴（从上往下看：靴口箍着他的大腿，在画面最底下；靴筒往前斜下去，靴尖在前面）。

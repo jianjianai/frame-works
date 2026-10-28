@@ -1179,7 +1179,7 @@ export function drawGroundBrick(g: CanvasRenderingContext2D, t: number, z: numbe
 let COAT_FROM: { a: V2; b: V2 } | null = null;
 const ORANGE = "#f29a4a";
 const ORANGE_SH = "#de8538";
-function heapPath(cx: number, floor: number, lift: number, w = 115, ht = 46) {
+function heapPath(cx: number, floor: number, lift: number, w = 95, ht = 40) {
   const heap = new Path2D();
   heap.moveTo(cx - w, floor);
   heap.quadraticCurveTo(cx - w * 0.95, floor - ht * 0.9 - lift, cx - w * 0.2, floor - ht - lift);
@@ -1189,8 +1189,9 @@ function heapPath(cx: number, floor: number, lift: number, w = 115, ht = 46) {
   return heap;
 }
 function drawHeap(g: CanvasRenderingContext2D, cx: number, floor: number, lift: number, lw: number, rot = 0) {
-  const w = 115;
-  const ht = 46;
+  // 她那件短款堆起来的一团（原来按长外套 115 × 46）
+  const w = 95;
+  const ht = 40;
   g.save();
   g.translate(cx, floor);
   g.rotate(rot);
@@ -1199,7 +1200,7 @@ function drawHeap(g: CanvasRenderingContext2D, cx: number, floor: number, lift: 
   part(g, heap, ORANGE, ORANGE_SH, 3.2 * lw, [5, 4]);
   g.save();
   g.clip(heap);
-  leadBand(g, cx - w * 1.2, floor - ht * 0.32, w * 2.4, ht * 0.32, 11, lw);
+  leadBand(g, cx - w * 1.2, floor - ht * 0.24, w * 2.4, ht * 0.24, 11, lw);
   g.strokeStyle = "rgba(160,80,30,0.45)";
   g.lineWidth = 3;
   g.beginPath();
@@ -1245,7 +1246,7 @@ export function drawCoat(g: CanvasRenderingContext2D, t: number, z: number) {
     part(g, path, ORANGE, ORANGE_SH, 3.2 * lw, [5, 4]);
     g.save();
     g.clip(path);
-    leadBand(g, cx - 200, lo - 24, 400, 24, 11, lw);
+    leadBand(g, cx - 200, lo - 12, 400, 12, 11, lw);
     standCollar(g, A, [cx, yTop + 24], B, 8, lw);
     g.restore();
     return;
