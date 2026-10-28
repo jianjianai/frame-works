@@ -1,16 +1,32 @@
 // 分层画的头发（用户照参考图一块一块画的）：正面、3/4 两张线稿里同一块头发逐点对应起来。线稿换算.mjs 用它。
-// 图层（3/4 那张前面加 side-）：hair-back 后面那片（头顶、后脑勺、翘出来的碎发）、hair-bangs 刘海、hair-lock-l / hair-lock-r 鬓发
+// 图层（3/4 那张前面加 side-）：hair-bun 发髻（一直在后面那片后面，交界处有一道线）、hair-back 后面那片（头顶、后脑勺、翘出来的碎发）、hair-bangs 刘海、hair-lock-l / hair-lock-r 鬓发
 // （画面左那边的 hair-lock-l 转到 3/4 时在远处，藏到脸后面）、hair-tail 马尾、hair-tie 发圈；每块一条闭合的路径，正面和 3/4 的同一块 id 一样。
 // 对应：两张各自按画的节点取点（节点原样保留：尖的地方还是尖的），在「标志点」处对齐，两个标志点之间按弧长比例逐点对应——
 // 两张的点都留着、另一张在同样的比例处插一个点。标志点是两张图里同一个位置的节点（缕的尖、顶、两头），
-// 在线稿配置的 art.hairMarks 里写 { <id>: [[正面节点, 3/4 节点], …] }（节点从 0 数，按路径里的顺序；和起点重合的最后一个节点不算）；
-// 不写时：两张节点一样多就按顺序一个对一个（同样的画法、同样的起点），不然按最左、最上、最右、最低四个点。
+// 在线稿配置的 art.hairMarks 里写 { <id>: [[正面节点, 3/4 节点], …] }（节点从 0 数，按路径里的顺序；和起点重合的最后一个节点不算），
+// 写 "box" 是按最左、最上、最右、最低四个点；
+// 不写时：两张节点一样多就按顺序一个对一个（同样的画法、同样的起点）；不一样多就按节点在这一块的包围盒里的相对位置自动配
+// （顺时针排好，找最好的错位，再按顺序动态对齐，只留一对一的那些）。用户随手画、起笔的地方不一样时，线稿配置写 art.hairAlign: "shape"，
+// 一样多的也按位置配。
+// 只在一张里有的一块（正面能看到、转到 3/4 被头挡住的，或者反过来）：art.hairOnly 写 { <id>: { to: [X, Y] } }（另一张的线稿坐标，
+// 选在被挡住的地方，比如 3/4 时远处那边的脸里面），另一张里它缩成那一点的一小块，转身时缩过去、藏起来。
 import { bez, layerPathsById } from "./线稿换算工具.mjs";
 
-export const HAIR_LAYERS = { "hair-back": "back", "hair-bangs": "front", "hair-lock-l": "far", "hair-lock-r": "front", "hair-tail": "tail", "hair-tie": "tie" };
+export const HAIR_LAYERS = { "hair-bun": "bun", "hair-back": "back", "hair-bangs": "front", "hair-lock-l": "far", "hair-lock-r": "front", "hair-tail": "tail", "hair-tie": "tie" };
 
-/** 两张线稿里的分层头发：{ back: [{ id, f, s }], front: […], far, tail, tie }（f、s 是路径），没有分层头发时返回 null */
-export function hairLayersOf(svgF, svgS) {
+/** 只在一张里有的一块：另一张里放一个缩到 0.03 倍、挪到 to 的同样形状（节点一样多、顺序一样，按顺序对应） */
+function shrunk(p, to) {
+  const ends = p.segs.map((s) => s[0]);
+  const c = [ends.reduce((a, q) => a + q[0], 0) / ends.length, ends.reduce((a, q) => a + q[1], 0) / ends.length];
+  const k = 0.03;
+  return { ...p, segs: p.segs.map((seg) => seg.map(([x, y]) => [to[0] + (x - c[0]) * k, to[1] + (y - c[1]) * k])) };
+}
+
+/**
+ * 两张线稿里的分层头发：{ back: [{ id, f, s }], front: […], far, tail, tie }（f、s 是路径），没有分层头发时返回 null。
+ * only：只在一张里有的块（线稿配置的 art.hairOnly）
+ */
+export function hairLayersOf(svgF, svgS, only = {}) {
   const out = {};
   let any = false;
   for (const [layer, kind] of Object.entries(HAIR_LAYERS)) {
@@ -21,10 +37,16 @@ export function hairLayersOf(svgF, svgS) {
     } catch {
       continue;
     }
+    if (!Object.keys(F).length && !Object.keys(S).length) continue;
+    for (const id of Object.keys(F)) if (!S[id]) {
+      if (!only[id]) throw new Error(`头发 ${id}：3/4 那张里没有（同一块两张的 id 要一样；只在正面能看到的写进 art.hairOnly）`);
+      S[id] = shrunk(F[id], only[id].to);
+    }
+    for (const id of Object.keys(S)) if (!F[id]) {
+      if (!only[id]) throw new Error(`头发 ${id}：正面那张里没有（只在 3/4 能看到的写进 art.hairOnly）`);
+      F[id] = shrunk(S[id], only[id].to);
+    }
     const ids = Object.keys(F);
-    if (!ids.length && !Object.keys(S).length) continue;
-    for (const id of ids) if (!S[id]) throw new Error(`头发 ${id}：3/4 那张里没有（同一块两张的 id 要一样）`);
-    for (const id of Object.keys(S)) if (!F[id]) throw new Error(`头发 ${id}：正面那张里没有`);
     (out[kind] ??= []).push(...ids.map((id) => ({ id, f: F[id], s: S[id] })));
     any = true;
   }
@@ -89,29 +111,105 @@ const r2 = (p) => [+p[0].toFixed(2), +p[1].toFixed(2)];
 
 /**
  * 一块头发正面 ↔ 3/4 逐点对应：返回 { front, side, marks }（点数一样，头的坐标）。
- * marks：[[正面节点, 3/4 节点], …]，不写按上面说的默认
+ * marks：[[正面节点, 3/4 节点], …] 或 "box"，不写按上面说的默认；align "shape"：一样多的也按位置配
  */
-export function matchPiece(id, f, s, mapF, mapS, marks) {
+export function matchPiece(id, f, s, mapF, mapS, marks, align) {
   const A = nodePoly(f, mapF);
   const B = nodePoly(s, mapS);
   // 节点去重（零长段并到下一个节点后会重复）
   const uniq = (v) => [...new Set(v.nodes)];
   let pairs;
   let how;
-  if (marks) {
-    pairs = marks.map(([i, j]) => [A.nodes[i], B.nodes[j]]);
-    how = "配置的标志点";
-  } else if (uniq(A).length === uniq(B).length) {
-    // 两张从同一个节点起、绕向一样时按顺序一个对一个：按原始顺序配，再统一绕向
-    const ua = f.segs.map((_, i) => A.nodes[i]).filter((v, i, a) => a.indexOf(v) === i);
-    const ub = s.segs.map((_, i) => B.nodes[i]).filter((v, i, a) => a.indexOf(v) === i);
-    pairs = ua.map((v, k) => [v, ub[k]]);
-    how = "节点按顺序";
-  } else {
+  if (marks === "box") {
     pairs = boxPairs(A.pts, B.pts);
     how = "最左、最上、最右、最低";
+  } else if (marks) {
+    pairs = marks.map(([i, j]) => [A.nodes[i], B.nodes[j]]);
+    how = "配置的标志点";
+  } else {
+    let order = null;
+    if (align !== "shape" && uniq(A).length === uniq(B).length) {
+      // 两张从同一个节点起、绕向一样时按顺序一个对一个：按原始顺序配，再统一绕向
+      const ua = f.segs.map((_, i) => A.nodes[i]).filter((v, i, a) => a.indexOf(v) === i);
+      const ub = s.segs.map((_, i) => B.nodes[i]).filter((v, i, a) => a.indexOf(v) === i);
+      order = ua.map((v, k) => [v, ub[k]]);
+      if (!consistent(B, order)) order = null;
+    }
+    if (order) {
+      pairs = order;
+      how = "节点按顺序";
+    } else {
+      pairs = alignByShape(A, B).pairs;
+      how = "节点按位置";
+      if (pairs.length < 2) {
+        pairs = boxPairs(A.pts, B.pts);
+        how = "最左、最上、最右、最低";
+      }
+    }
   }
   return { ...correspond(id, A.pts, B.pts, pairs, how), how, pairs: pairs.length };
+}
+
+/** 节点（去重、按顺时针排好）和它们在这一块的包围盒里的相对位置 */
+function nodesOf(P) {
+  const idx = [...new Set(P.nodes)].sort((a, b) => a - b);
+  const xs = P.pts.map((p) => p[0]);
+  const ys = P.pts.map((p) => p[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const rel = (i) => [(P.pts[i][0] - x0) / (x1 - x0 || 1), (P.pts[i][1] - y0) / (y1 - y0 || 1)];
+  return { idx, rel: idx.map(rel) };
+}
+const d2 = (p, q) => (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2;
+
+/** 这几对在 3/4 那张里也是顺时针的顺序（按正面排好以后） */
+function consistent(B, pairs) {
+  const sorted = [...pairs].sort((p, q) => p[0] - q[0]);
+  const nB = B.pts.length;
+  const rel = sorted.map((p) => (p[1] - sorted[0][1] + nB) % nB);
+  for (let k = 1; k < rel.length; k++) if (rel[k] <= rel[k - 1]) return false;
+  return true;
+}
+
+/**
+ * 两块的节点按在各自包围盒里的相对位置配对：都是顺时针，3/4 那张每一种错位都试，按顺序动态对齐（DTW：正面第一个对 3/4 第一个，
+ * 一路单调走到最后一个对最后一个），取总差最小的；只留一对一的那几对（一个节点对上好几个的不当标志点）
+ */
+function alignByShape(A, B) {
+  const a = nodesOf(A);
+  const b = nodesOf(B);
+  const m = a.idx.length;
+  const n = b.idx.length;
+  let best = null;
+  for (let k = 0; k < n; k++) {
+    const rb = [...b.rel.slice(k), ...b.rel.slice(0, k)];
+    const ib = [...b.idx.slice(k), ...b.idx.slice(0, k)];
+    const D = Array.from({ length: m }, () => new Array(n).fill(Infinity));
+    const from = Array.from({ length: m }, () => new Array(n).fill(null));
+    D[0][0] = d2(a.rel[0], rb[0]);
+    for (let i = 0; i < m; i++)
+      for (let j = 0; j < n; j++) {
+        if (!i && !j) continue;
+        const c = d2(a.rel[i], rb[j]);
+        for (const [p, q] of [[i - 1, j - 1], [i - 1, j], [i, j - 1]])
+          if (p >= 0 && q >= 0 && D[p][q] + c < D[i][j]) {
+            D[i][j] = D[p][q] + c;
+            from[i][j] = [p, q];
+          }
+      }
+    const steps = [];
+    for (let cur = [m - 1, n - 1]; cur; cur = from[cur[0]][cur[1]]) steps.push(cur);
+    steps.reverse();
+    const cost = D[m - 1][n - 1] / steps.length;
+    if (!best || cost < best.cost) best = { cost, steps, ib };
+  }
+  const ca = new Map();
+  const cb = new Map();
+  for (const [i, j] of best.steps) {
+    ca.set(i, (ca.get(i) ?? 0) + 1);
+    cb.set(j, (cb.get(j) ?? 0) + 1);
+  }
+  const pairs = best.steps.filter(([i, j]) => ca.get(i) === 1 && cb.get(j) === 1).map(([i, j]) => [a.idx[i], best.ib[j]]);
+  return { pairs, cost: best.cost };
 }
 
 /** 最左、最上、最右、最低四个点（重合的去掉）：[[A 的下标, B 的下标], …] */

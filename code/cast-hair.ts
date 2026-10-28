@@ -100,11 +100,16 @@ export interface HairLayerPiece {
  * tail 马尾（几块合起来描外轮廓）、tie 发圈：领子前面、头后面（低马尾搭在肩上）
  */
 export interface HairLayers {
-  back: HairLayerPiece[];
-  front: HairLayerPiece[];
+  /** 发髻（千斤的妈妈头顶的圆髻）：一直画在后面那片后面，和头发交界的地方有后面那片的轮廓线 */
+  bun?: HairLayerPiece[];
+  /** 秃顶的没有 */
+  back?: HairLayerPiece[];
+  front?: HairLayerPiece[];
   far?: HairLayerPiece[];
   tail?: HairLayerPiece[];
   tie?: HairLayerPiece[];
+  /** 压在脸上的几块在耳朵后面（耳朵压住它们）：老钟两鬓的白发，3/4 时近处那块从耳朵后面一直包到后颈 */
+  underEars?: boolean;
 }
 const ART_DEFS = new WeakMap<HairArtSrc, HairDef>();
 /** 线稿发型 → 发型（算一次存起来） */
@@ -565,8 +570,9 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
     const map = (p: V2) => head.p(p[0], p[1]);
     // 正面时马尾垂在肩膀后面：在后面那片下面、身子后面，只露出肩上一截；发圈压在后面那片上（参考图正面从下颌后面露出来）
     const behind = rig.u < TAIL_OVER_U;
+    if (layers.bun) mergedHair(ctx, layerPaths(layers.bun, uh, map), hp, ink);
     if (behind && layers.tail) mergedHair(ctx, layerPaths(layers.tail, uh, map), hp, ink);
-    mergedHair(ctx, layerPaths(layers.back, uh, map), hp, ink);
+    mergedHair(ctx, layerPaths(layers.back ?? [], uh, map), hp, ink);
     if (behind) for (const p of layerPaths(layers.tie ?? [], uh, map)) drawPart(ctx, p, hp.tie ?? hp.shade, null, ink, ink.lw * 0.7);
     return;
   }
@@ -730,7 +736,7 @@ export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: I
         map,
       );
     const far = (layers.far ?? []).map(tucked);
-    const near = layerPaths(layers.front, uh, map);
+    const near = layerPaths(layers.front ?? [], uh, map);
     const facePath = h.skins[h.skins.length - 1];
     if (tuck <= 0 && far.length) {
       // 脸后面：只填脸外面的部分，再把这一截脸的轮廓线补回来（填色盖住了脸的描边外侧那一半）
@@ -752,7 +758,16 @@ export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: I
       ctx.restore();
     }
     const front = tuck > 0 ? [...far, ...near] : near;
-    const under = [...layerPaths(layers.back, uh, map), ...layerPaths(layers.tail ?? [], uh, map)];
+    const under = [...layerPaths(layers.back ?? [], uh, map), ...layerPaths(layers.tail ?? [], uh, map)];
+    // 在耳朵后面：耳朵那块整个扣掉（h.skins 是耳朵们、最后是脸）
+    const ears = layers.underEars ? h.skins.slice(0, -1) : [];
+    if (ears.length) {
+      ctx.save();
+      const out = new Path2D();
+      out.rect(-1e4, -1e4, 2e4, 2e4);
+      for (const e of ears) out.addPath(e);
+      ctx.clip(out, "evenodd");
+    }
     for (const p of front) fillShaded(ctx, p, hp.color, null, ink);
     const lw = ink.lw * 0.8;
     const all = [...far, ...near];
@@ -775,6 +790,19 @@ export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: I
       ctx.stroke(p);
       ctx.restore();
     });
+    if (ears.length) {
+      ctx.restore();
+      // 耳朵的轮廓补回来：头发的填色盖住了耳朵描边的外侧那一半
+      ctx.save();
+      const clip = new Path2D();
+      for (const p of all) clip.addPath(p);
+      ctx.clip(clip);
+      ctx.strokeStyle = ink.line;
+      ctx.lineWidth = ink.lw * 0.6;
+      ctx.lineJoin = "round";
+      for (const e of ears) ctx.stroke(e);
+      ctx.restore();
+    }
     return;
   }
   const hair = hairOf(hp);

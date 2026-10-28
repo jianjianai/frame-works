@@ -25,6 +25,7 @@ import { KID_FACE0, KID_FACE3, KID_HAIR, KID_LEGS } from "./cast-kid-art";
 import { OLDZHONG_FACE0, OLDZHONG_FACE3, OLDZHONG_HAIR } from "./cast-oldzhong-art";
 import { QINMOM_COAT, QINMOM_FACE0, QINMOM_FACE3, QINMOM_HAIR } from "./cast-qinmom-art";
 import { SHITOUMOM_COAT, SHITOUMOM_FACE0, SHITOUMOM_FACE3, SHITOUMOM_HAIR, SHITOUMOM_LEGS } from "./cast-shitoumom-art";
+import { ZHOULEI_HAIR } from "./cast-zhoulei-hair";
 import {
   type Garment,
   type Pants,
@@ -373,7 +374,7 @@ export function castLook(spec: CastSpec): Look {
     face0: spec.face0,
     face3: spec.face3,
     shoulderSide: spec.shoulderSide,
-    torsoClip: coat?.art ? (rig) => garmentShirtClip(rig, coat.art!) : undefined,
+    torsoClip: coat?.art ? (rig) => garmentShirtClip(rig, coat.art!, coat) : undefined,
     eyeScale: spec.eyeScale,
     width: spec.width,
     legWidth: spec.legWidth,
@@ -562,6 +563,8 @@ export const CAST = {
     face3: ZHOULEI_FACE3,
     colors: { ...SKIN, top: "#f4f2ec", topShade: "#e2ded4", bottom: "#4f5d76", bottomShade: "#424e64" },
     hair: "tousled",
+    // 头发分层画的（后面那片、刘海那一缕、两边鬓角；2026-10-28 照参考图重画，用户：「另外4个人你来画」）：原来是用户画的一整圈碎发，转身中间会滑
+    hairArt: ZHOULEI_HAIR,
     hairColor: "#2f2e33",
     top: { kind: "shirt", button: "none" },
     // 西装是用户画的（敞怀）；正面肩关节往外挪 6，和秤砣的外套一样
@@ -652,7 +655,9 @@ export const CAST = {
     hairArt: KID_HAIR,
     hairColor: "#2f2e33",
     top: { kind: "tee", stripes: "#dfe7ee" },
-    coat: { kind: "workcoat", color: "#f29a4a", shade: "#de8538", size: 1.32, long: 70, hem: "#8a6a5a", rolled: true },
+    // 就是妈妈身上那件（按她的线稿画，SHITOUMOM_COAT）：按两个人的身高比（0.98 / 0.79）放大，套在他身上大一号、到大腿中间，袖子卷两道
+    // （用户 2026-10-28：「外套换成她现在这件」；原来是秤砣外套版型加长的长外套，到脚踝）
+    coat: { kind: "workcoat", color: "#f29a4a", shade: "#de8538", size: 0.98 / 0.79, hem: "#8a6a5a", rolled: true, art: SHITOUMOM_COAT },
     pants: { cuff: "#6a7690" },
     brows: { kind: "kid", color: "#2f2e33" },
     bell: true,

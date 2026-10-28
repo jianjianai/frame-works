@@ -1607,6 +1607,8 @@ interface HeadGeom {
   /** 耳朵里的线（正面，三次贝塞尔点列）；近处那只正面 → 3/4 逐点对应好的 */
   earLines0?: { L?: V2[]; R?: V2[] };
   earLine3?: [V2[], V2[]];
+  /** 耳朵里的线只在 3/4 画了（正面看不到）：转过去时淡出来 */
+  earLine3Only?: boolean;
   /** 正面的脸在 y 处的左（s < 0）、右边：耳朵贴着它 */
   edge: (s: number, y: number) => number;
 }
@@ -1642,7 +1644,14 @@ function headOf(look: Look): HeadGeom {
       ears0,
       ear3: f3?.ears?.R ? turnPairOf(bezierPolyline(ears0.R), bezierPolyline(f3.ears.R), 12) : undefined,
       earLines0: f0?.earLines,
-      earLine3: f0?.earLines?.R && f3?.earLines?.R ? linePairOf(f0.earLines.R, f3.earLines.R) : undefined,
+      earLine3: f3?.earLines?.R
+        ? f0?.earLines?.R
+          ? linePairOf(f0.earLines.R, f3.earLines.R)
+          : f3.ears?.R
+            ? lineIntoFront(f3.earLines.R, bezierPolyline(f3.ears.R), bezierPolyline(ears0.R))
+            : undefined
+        : undefined,
+      earLine3Only: !!f3?.earLines?.R && !f0?.earLines?.R && !!f3.ears?.R,
       edge: f0
         ? (s, y) => {
             const sp = rowSpan(front, y);
@@ -1662,6 +1671,25 @@ function linePairOf(a: V2[], b: V2[]): [V2[], V2[]] {
   const d = (p: V2, q: V2) => Math.hypot(p[0] - q[0], p[1] - q[1]);
   if (d(pa[0], pb[0]) + d(pa[15], pb[15]) > d(pa[0], pb[15]) + d(pa[15], pb[0])) pb = [...pb].reverse();
   return [pa, pb];
+}
+
+/**
+ * 耳朵里的线只在 3/4 画了：正面那头按两只耳朵的包围盒放到正面的耳朵里（同样的相对位置），和 3/4 那条逐点对应；
+ * 画的时候按转身的程度淡出来（小石头：用户只在 3/4 画了，正面的耳朵里看不到那道线）
+ */
+function lineIntoFront(line3: V2[], ear3: V2[], ear0: V2[]): [V2[], V2[]] {
+  const box = (p: V2[]) => {
+    const xs = p.map((q) => q[0]);
+    const ys = p.map((q) => q[1]);
+    return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  };
+  const [a, b] = [box(ear3), box(ear0)];
+  const side = resampleOpen(bezierPolyline(line3, 16, false), 16);
+  const front = side.map(([x, y]): V2 => [
+    b[0] + ((x - a[0]) / (a[2] - a[0] || 1)) * (b[2] - b[0]),
+    b[1] + ((y - a[1]) / (a[3] - a[1] || 1)) * (b[3] - b[1]),
+  ]);
+  return [front, side];
 }
 
 /** 3/4 的脸的前后位置：眼睛那一行（y 9）、嘴那一行（y 30）的前沿和下巴的 x 的平均（头的坐标） */
@@ -1733,11 +1761,13 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     const earPath = s > 0 && hg.ear3 && uh > 0 ? polylinePath(lerpPts(...hg.ear3, clamp01(uh)), (p) => H(p[0], p[1])) : cubicPath(ear, map);
     drawPart(ctx, earPath, K.skin, null, ink, thin);
     skins.push(earPath);
-    // 耳朵里的一道线
+    // 耳朵里的一道线（只在 3/4 画了的：近处那只转过去时淡出来）
     const line = s > 0 ? hg.earLines0?.R : hg.earLines0?.L;
-    if (line) {
-      const pts = s > 0 && hg.earLine3 && uh > 0 ? lerpPts(...hg.earLine3, clamp01(uh)).map((p) => H(p[0], p[1])) : bezierPolyline(line, 16, false).map(map);
+    const fade = s > 0 && hg.earLine3Only ? smooth01(0.3, 0.8, uh) : 1;
+    if ((line || (s > 0 && hg.earLine3Only)) && fade > 0) {
+      const pts = s > 0 && hg.earLine3 && uh > 0 ? lerpPts(...hg.earLine3, clamp01(uh)).map((p) => H(p[0], p[1])) : bezierPolyline(line!, 16, false).map(map);
       ctx.save();
+      ctx.globalAlpha *= fade;
       ctx.clip(earPath);
       ctx.strokeStyle = ink.line;
       ctx.lineWidth = thin;

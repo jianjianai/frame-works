@@ -688,12 +688,17 @@ function scarfMaps(rig: Rig) {
   const endX = onBody(56, 34);
   // 绕脖子那圈是圆的（用户 2026-10-18）：转身时不压窄，整圈跟着脖子平移
   const wrapShift = rig.u * WRAP_SIDE_SHIFT;
+  // 垂下来那头在她左边（正面时在画面右边）：朝右时整个人是镜像着画的，这头（连绕脖子那圈）也镜像过来、受力按镜像的算，
+  // 翻过去还在她左边——不然一过正面就跳到另一边（用户 2026-10-28：「主角围巾改」；衣服只在一边的东西都这样，见 cast-wear.ts 的 own）。
+  // 朝右 3/4 时这头在远处那侧
+  const sx = rig.mir ? -1 : 1;
 
   // 垂下来的一头：从围脖下面出来，一段一段转向受力方向（走路、跳、弯腰、风，bendAlong）；
   // 受力朝上（失重、往下坠）时先往外侧（画面右边）偏，从外侧翻上去，不盖住脸（转角限制在 -2.8..1.4）；
   // 失重时只翻到斜着往外、往上（约 -2.3），不竖直贴着脸、被脸挡掉一块像一面小旗（用户 2026-10-18：「失重时围巾再修一下」）；
   // 风里按 4 秒的循环抖，失重时慢慢漾，沿着围巾还有一道游动的波浪，像丝带在水里
-  const f = gusty(rotateV(field, -chest.a), pose.t);
+  const f0 = gusty(rotateV(field, -chest.a), pose.t);
+  const f: V2 = [sx * f0[0], f0[1]];
   const gust = clamp01(Math.abs(f[0]) / 1.2);
   const up = clamp01(0.3 - f[1]);
   const STEPS = 20;
@@ -703,23 +708,24 @@ function scarfMaps(rig: Rig) {
     (i) => (3.2 / STEPS) * Math.min(len(f), 1.5) * (1 + 0.5 * gust) * smooth01(0, 0.3, (i - 0.5) / STEPS),
     (i) => -0.9 * up * smooth01(0, 0.3, i / STEPS),
   ).map((a) => Math.max(lerp(-2.8, -2.3, up), Math.min(1.4, a)));
-  const PIV: V2 = [endX(21), -146.5];
+  const PIV: V2 = [endX(sx * 21), -146.5];
   const LEN = 102;
   const endMap = ([x, y]: V2): V2 => {
-    const lx = endX(x);
+    const lx = endX(sx * x);
     const t = clamp01((y - PIV[1]) / LEN);
     const i = Math.min(STEPS - 1, Math.floor(t * STEPS));
     const a =
-      lerp(bend[i], bend[i + 1], t * STEPS - i) +
-      gust * (0.22 * loopSin(pose.t, 5, -t * 4) + 0.08 * loopSin(pose.t, 9, 1.7 - t * 6)) * t +
-      pose.float * (0.25 * loopSin(pose.t, 1, t * 3) + 0.3 * loopSin(pose.t, 2, 1 - t * 5)) * t;
+      sx *
+      (lerp(bend[i], bend[i + 1], t * STEPS - i) +
+        gust * (0.22 * loopSin(pose.t, 5, -t * 4) + 0.08 * loopSin(pose.t, 9, 1.7 - t * 6)) * t +
+        pose.float * (0.25 * loopSin(pose.t, 1, t * 3) + 0.3 * loopSin(pose.t, 2, 1 - t * 5)) * t);
     const c = Math.cos(a);
     const s = Math.sin(a);
     const dx = lx - PIV[0];
     const dy = y - PIV[1];
     return chest.p(PIV[0] + dx * c - dy * s, PIV[1] + dx * s + dy * c - br);
   };
-  const wrapMap = ([x, y]: V2): V2 => chest.p(x + wrapShift, y - br);
+  const wrapMap = ([x, y]: V2): V2 => chest.p(sx * x + wrapShift, y - br);
   return { endMap, wrapMap };
 }
 

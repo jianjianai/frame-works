@@ -21,6 +21,8 @@ import { hairLayersOf, matchPiece } from "./头发分层.mjs";
 
 const who = process.argv[2];
 const outDir = process.argv[3];
+// --hair-only：只换算分层头发，写 cast-<file>-hair.ts.txt（<prefix>_HAIR）。脸、衣服是用户画的、别的脚本换算的人用（作品 3d80f743 的周磊）
+const HAIR_ONLY = process.argv.includes("--hair-only");
 const all = (await import(pathToFileURL(path.join(process.cwd(), "production/线稿配置.mjs")).href)).default;
 const C = all[who]?.art;
 if (!C || !outDir) throw new Error("用法（在作品文件夹里）：node <工具目录>/线稿换算.mjs <角色> <输出目录>；production/线稿配置.mjs 里这个角色要有 art: { file, prefix }。有的角色：" + Object.keys(all).join("、"));
@@ -29,9 +31,9 @@ const svgF = fs.readFileSync(path.join(root, `public/ref/${who}-线稿.svg`), "u
 const svgS = fs.readFileSync(path.join(root, `public/ref/${who}-侧面线稿.svg`), "utf8");
 const F = layerPathsById(svgF, "body");
 const S = layerPathsById(svgS, "side-body");
-const LAYERS = hairLayersOf(svgF, svgS);
+const LAYERS = hairLayersOf(svgF, svgS, C?.hairOnly);
 // 必须有的；hair-back / fringe（秃顶的没有）、brow-l / brow-r（眉毛）、hair-1、hair-2…（单独的几块头发）可以没有，但正面和 3/4 要一致
-for (const [n, v] of [["正面", F], ["3/4", S]]) for (const id of ["face", "eye-l", "eye-r", "nose", "mouth", "ear-r"]) if (!v[id]) throw new Error(`${n}少了 ${id}`);
+if (!HAIR_ONLY) for (const [n, v] of [["正面", F], ["3/4", S]]) for (const id of ["face", "eye-l", "eye-r", "nose", "mouth", "ear-r"]) if (!v[id]) throw new Error(`${n}少了 ${id}`);
 for (const id of ["hair-back", "fringe", "hair-tail", "hair-tie"]) if (!F[id] !== !S[id]) throw new Error(`${id} 正面和 3/4 要么都有、要么都没有`);
 const piecesOf = (v) => Object.keys(v).filter((k) => /^hair-\d+$/.test(k)).sort((a, b) => +a.slice(5) - +b.slice(5));
 if (piecesOf(F).length !== piecesOf(S).length) throw new Error(`单独的几块头发正面 ${piecesOf(F).length} 块、3/4 ${piecesOf(S).length} 块，要一样多（按从左到右对应）`);
@@ -105,19 +107,126 @@ const backOf = (v) => sample(v["hair-back"].segs, 8).slice(0, -1);
 /** 马尾、发圈：闭合的一圈（转身时按头顶 / 最右 / 最低 / 最左对应，和后面那片一样） */
 const loopOf = (p) => sample(p.segs, 8).slice(0, -1);
 
+/**
+ * 压在脸上的一块，朝外的边（法线背着脸的中心）贴着脸的圆顶、从里面走的点有几个（眼睛往上才算）：那段边外面只剩一线脸，
+ * 脸的轮廓线露出半截、这块的边又被当成压在皮肤上描，额头上多一道弧（2026-10-28 小石头、千斤的妈妈）。pts 是顺时针的
+ */
+function domeHugs(pts, face) {
+  const inside = (p) => {
+    let c = false;
+    for (let i = 0, j = face.length - 1; i < face.length; j = i++) {
+      const [xi, yi] = face[i], [xj, yj] = face[j];
+      if (yi > p[1] !== yj > p[1] && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) c = !c;
+    }
+    return c;
+  };
+  const dist = (p) => Math.min(...face.map((q) => Math.hypot(q[0] - p[0], q[1] - p[1])));
+  const cx = face.reduce((a, q) => a + q[0], 0) / face.length;
+  const cy = face.reduce((a, q) => a + q[1], 0) / face.length;
+  const n = pts.length;
+  const hug = pts.map((p, i) => {
+    if (p[1] > -12 || !inside(p) || dist(p) >= 3) return false;
+    const a = pts[(i - 1 + n) % n], b = pts[(i + 1) % n];
+    const [nx, ny] = [b[1] - a[1], -(b[0] - a[0])];
+    return nx * (p[0] - cx) + ny * (p[1] - cy) > 0;
+  });
+  // 连着贴着走的一段有多长（角上零星几个点不算：两缕刘海在分缝、鬓角和脸边交界的地方本来就挨着）
+  let best = 0;
+  let run = 0;
+  for (let k = 0; k < 2 * n; k++) {
+    const i = k % n;
+    if (hug[i]) {
+      const q = pts[(i - 1 + n) % n];
+      run += hug[(i - 1 + n) % n] ? Math.hypot(pts[i][0] - q[0], pts[i][1] - q[1]) : 0;
+      best = Math.max(best, run);
+    } else run = 0;
+  }
+  return best >= 6 ? Math.round(best) : 0;
+}
+
+/**
+ * 压在脸上的一块藏在头发里的上沿抬到脸的圆顶外面：描的脸是一整圈，发际线以上那截圆顶藏在头发底下，靠刘海盖住。
+ * 刘海的上沿（朝上的边）在圆顶里面时，上面会露出一线皮肤、这段边又被当成压在皮肤上描（额头顶上几个小尖、一道弧）。
+ * 这段边本来就在头发里看不见：边朝上、在脸里面、在眼睛上面的点，抬到这一列圆顶的上沿再往外 margin（只动 y，两张各自抬，对应不变）。
+ * 用户画的线不动，只改换算出来的
+ */
+function liftTops(pts, face, eyeTop, margin = 2.5) {
+  const inside = (p, poly) => {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if (yi > p[1] !== yj > p[1] && p[0] < ((xj - xi) * (p[1] - yi)) / (yj - yi) + xi) c = !c;
+    }
+    return c;
+  };
+  // 这一列脸的上沿
+  const domeY = (x) => {
+    let top = Infinity;
+    for (let i = 0; i < face.length; i++) {
+      const [x0, y0] = face[i], [x1, y1] = face[(i + 1) % face.length];
+      if ((x0 - x) * (x1 - x) <= 0 && x0 !== x1) top = Math.min(top, y0 + ((x - x0) / (x1 - x0)) * (y1 - y0));
+    }
+    return top;
+  };
+  const n = pts.length;
+  let moved = 0;
+  const out = pts.map((p, i) => {
+    if (p[1] > eyeTop - 10) return p;
+    const top = domeY(p[0]);
+    if (!(p[1] > top - margin)) return p;
+    const a = pts[(i - 1 + n) % n], b = pts[(i + 1) % n];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    let nrm = [(b[1] - a[1]) / len, -(b[0] - a[0]) / len];
+    // 朝外的那一侧
+    if (inside([p[0] + nrm[0] * 0.3, p[1] + nrm[1] * 0.3], pts)) nrm = [-nrm[0], -nrm[1]];
+    if (nrm[1] > -0.5) return p;
+    moved++;
+    return [p[0], +(top - margin).toFixed(2)];
+  });
+  return { pts: out, moved };
+}
+
 /** 分层头发：每块正面 ↔ 3/4 逐点对应好 */
 const layersSrc = () => {
-  const kinds = ["back", "front", "far", "tail", "tie"].filter((k) => LAYERS[k]);
+  const kinds = ["bun", "back", "front", "far", "tail", "tie"].filter((k) => LAYERS[k]);
   const body = kinds.map((k) => `\n    ${k}: [${LAYERS[k].map(({ id, f, s }) => {
-    const m = matchPiece(id, f, s, hF, hS, C.hairMarks?.[id]);
+    const m = matchPiece(id, f, s, hF, hS, C.hairMarks?.[id], C.hairAlign);
     console.error(`头发 ${id}（${k}）：${m.how}，${m.pairs} 个标志点，${m.front.length} 个点`);
+    if ((k === "front" || k === "far") && F.face && S.face) {
+      const eyeTop = (v, map) => Math.min(...["eye-l", "eye-r"].filter((e) => v[e]).map((e) => bbox(map(sample(v[e].segs)))[1]));
+      for (const [v, key, face, top] of [["正面", "front", hF(sample(F.face.segs, 12)), eyeTop(F, hF)], ["3/4", "side", hS(sample(S.face.segs, 12)), eyeTop(S, hS)]]) {
+        if (C.hairLiftTops !== false) {
+          const r = liftTops(m[key], face, top);
+          m[key] = r.pts;
+          if (r.moved) console.error(`  ${id} ${v}：上沿 ${r.moved} 个点在脸的圆顶里面，抬到圆顶外面`);
+        }
+        const n = domeHugs(m[key], face);
+        if (n) console.error(`  ！${id} ${v}有一段（长 ${n}）贴着脸的圆顶从里面走（离脸边不到 3）：脸的轮廓露出半截、这段边又被当成压在皮肤上描，额头上多一道弧。往脸外面挪`);
+      }
+    }
     return `\n      // ${id}\n      { front: ${fmt(m.front)} as V2[], side: ${fmt(m.side)} as V2[] },`;
   }).join("")}\n    ],`).join("");
-  return `\n  layers: {${body}\n  },`;
+  return `\n  layers: {${body}${C.hairUnderEars ? "\n    underEars: true," : ""}\n  },`;
 };
 
+if (HAIR_ONLY) {
+  if (!LAYERS) throw new Error("--hair-only：线稿里没有分层头发的图层（hair-back、hair-bangs……）");
+  const hairSrc = `// ${who}的头发（分层画的，正面、3/4 朝画面左）：作品的 \`public/ref/${who}-线稿.svg\`、\`${who}-侧面线稿.svg\` 里 hair-* 那几个图层。
+// 由 tools/线稿换算.mjs --hair-only 生成，别手改：改线稿再重新生成。头的坐标。
+
+import type { V2 } from "./rig";
+
+/** 头发：分层画的（后面那片、压在脸上的几缕……，每块正面和 3/4 已经逐点对应好） */
+export const ${C.prefix}_HAIR = {${layersSrc()}
+};
+`;
+  fs.writeFileSync(path.join(outDir, `cast-${C.file}-hair.ts.txt`), hairSrc);
+  console.error(`写好 cast-${C.file}-hair.ts.txt`, hairSrc.length, "字");
+  process.exit(0);
+}
+
 const src = `// ${who}的脸和头发（正面、3/4 朝画面左）：作品的 \`public/ref/${who}-线稿.svg\`、\`${who}-侧面线稿.svg\` 里的线
-// （照参考图描的，tools/描图.mjs；${LAYERS ? "头发、耳朵是用户分层画的" : ""}）。由 tools/线稿换算.mjs 生成，
+// （照参考图描的，tools/描图.mjs；${LAYERS ? "头发是分层画的：线稿里 hair-* 那几个图层" : ""}）。由 tools/线稿换算.mjs 生成，
 // 别手改：改线稿再重新生成。头的坐标（头不缩放：骨架、头的大小和主角一样，身高另外按 scale 缩）。
 
 import type { FaceView } from "./figure";

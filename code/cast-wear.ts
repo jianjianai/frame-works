@@ -81,9 +81,20 @@ export interface GarmentArt {
   edgeR?: [V2[], V2[]];
 }
 /** 手画外衣的一块放到现在的姿势上（呼吸时胸口以上起伏，和身子一样） */
-function artOn(rig: Rig): (p: V2) => V2 {
+/**
+ * 手画外衣的点（身体坐标）→ 画面。g 给了 size / long 时和版型的外衣一样以领口为中心放大、下摆往下加长
+ * （小石头裹着妈妈那件：她的外套按两个人的身高比放大，大一号）
+ */
+function artOn(rig: Rig, g?: Garment): (p: V2) => V2 {
   const br = rig.pose.breath * 1.6;
-  return ([x, y]) => rig.chest.p(x, y - br * clamp01(-y / 140));
+  const size = g?.size ?? 1;
+  const long = g?.long ?? 0;
+  const NECK_Y = -156;
+  return ([x0, y0]) => {
+    const x = x0 * size;
+    const y = NECK_Y + (y0 - NECK_Y) * size + long * clamp01((y0 + 60) / 100);
+    return rig.chest.p(x, y - br * clamp01(-y / 140));
+  };
 }
 const artAt = (rig: Rig, art: GarmentArt, k: keyof GarmentArt) => lerpPts(...artFor(rig, art)[k]!, rig.u);
 
@@ -111,9 +122,9 @@ function flipArt(a: GarmentArt): GarmentArt {
   const mo = [...mx(a.opening[0])].reverse();
   return { ...a, l: l!, r: r!, edgeL, edgeR, lapelL, lapelR, collarL, collarR, opening: near(mo, a.opening[0]) ? [mo, a.opening[1]] : a.opening };
 }
-/** 手画外衣里面衬衫露出来的地方（Look.torsoClip）：衣襟中间敞开的那块（西装底下不画） */
-export function garmentShirtClip(rig: Rig, art: GarmentArt): Path2D[] {
-  return [polylinePath(artAt(rig, art, "opening"), artOn(rig))];
+/** 手画外衣里面衬衫露出来的地方（Look.torsoClip）：衣襟中间敞开的那块（西装底下不画）；g 给了跟着外衣放大 */
+export function garmentShirtClip(rig: Rig, art: GarmentArt, g?: Garment): Path2D[] {
+  return [polylinePath(artAt(rig, art, "opening"), artOn(rig, g))];
 }
 /** 衣襟里从腰线往下涂裤子的颜色涂到哪：衬衫（通用的身子）下摆在 y ≈ −5，涂过它和它的描边，下面接上通用的裆和裤腿 */
 const WAIST_BAND_BOTTOM = 4;
@@ -194,7 +205,7 @@ export function garmentShape(rig: Rig, g: Garment): Shape {
   const br = pose.breath * 1.6;
   if (g.art) {
     const art = artFor(rig, g.art);
-    return { l: lerpPts(...art.l, u), r: lerpPts(...art.r, u), on: artOn(rig), u, deco: (_side, p) => p };
+    return { l: lerpPts(...art.l, u), r: lerpPts(...art.r, u), on: artOn(rig, g), u, deco: (_side, p) => p };
   }
   const NECK_Y = -156;
   const on = ([x0, y0]: V2): V2 => {
@@ -540,7 +551,7 @@ function workcoatDetails(ctx: CanvasRenderingContext2D, ink: Ink, g: Garment, s:
   ctx.restore();
   for (let i = 0; i < 5; i++) {
     const y = lerp(at(0.155), hem - 0.12 * H, i / 4);
-    if (buttons) dot(ctx, s.on([xAt(e, y) + inward * 10.5, y]), 4.4, g.button ?? "#5a4a40", ink);
+    if (buttons) dot(ctx, s.on([xAt(e, y) + inward * 10.5, y]), 4.4 * (g.size ?? 1), g.button ?? "#5a4a40", ink);
     else line(ctx, [s.on([xAt(e, y) + inward * 3.5, y]), s.on([xAt(e, y) + inward * 11.5, y])], ink.line, lw * 0.6);
   }
 }
