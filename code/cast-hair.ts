@@ -21,7 +21,7 @@ import {
   rowSpan,
   smoothPath,
 } from "./rig";
-import { FACE_TURN, type HeadView, type Rig, rotateV } from "./figure";
+import { FACE_TURN, type HeadView, type Rig, faceOf, rotateV } from "./figure";
 import { TOUSLED } from "./cast-hair-art";
 
 export type HairStyle = "short" | "kid" | "curtain" | "bob" | "sidebob" | "bun" | "long" | "ponytail" | "highpony" | "receding" | "tousled" | "none";
@@ -66,6 +66,8 @@ interface HairArt {
   back?: [V2[], V2[]];
   fringe?: [V2[], V2[]];
   pieces?: [V2[], V2[]][];
+  tail?: [V2[], V2[]];
+  tie?: [V2[], V2[]];
   strands: V2[][];
 }
 /**
@@ -77,7 +79,32 @@ export interface HairArtSrc {
   fringe?: { front: V2[]; side: V2[] };
   /** 单独的几块（正面和 3/4 按同样的顺序，这里按四个标志点对应）：压在脸和耳朵上，四周描边 */
   pieces?: { front: V2[]; side: V2[] }[];
+  /** 马尾（画在最后面）、发圈（压在马尾顶上，人物配置的 hairTie 色）：发圈把马尾和头发隔开时单独描的（小石头的妈妈） */
+  tail?: { front: V2[]; side: V2[] };
+  tie?: { front: V2[]; side: V2[] };
   strands?: V2[][];
+  /** 分层画的头发（给了就只用它，上面几项不用）：见 HairLayers。头朝右时和整个头一起左右翻过去（用户 2026-10-28：头部用对称的画法） */
+  layers?: HairLayers;
+}
+/** 分层头发的一块：正面和 3/4 两条点数相同、已经逐点对应好的轮廓（换算脚本按两张图里同一个位置的节点对应） */
+export interface HairLayerPiece {
+  front: V2[];
+  side: V2[];
+}
+/**
+ * 分层画的头发（用户照参考图一块一块画的，小石头的妈妈；照主角的做法，经验库「骨架剪纸动画」头发.md）：
+ * back 后面那片（头顶、后脑勺、翘出来的碎发：画在身子后面，几块合起来描外轮廓）；
+ * front 压在脸上的（刘海一缕一缕、鬓发：先都填色，只描压在皮肤上和伸到头发外面的边，头发压头发的边不描）；
+ * far 画面左边的鬓发（转到 3/4 时在远处）：正面和 front 一样压在脸上，转身时压在脸上的部分往脸的左边收，转过一半藏到脸后面
+ * （只露出脸外面的部分，照主角远处那缕；用户 2026-10-28：小石头的妈妈 3/4「左侧头发遮挡关系不对」）；
+ * tail 马尾（几块合起来描外轮廓）、tie 发圈：领子前面、头后面（低马尾搭在肩上）
+ */
+export interface HairLayers {
+  back: HairLayerPiece[];
+  front: HairLayerPiece[];
+  far?: HairLayerPiece[];
+  tail?: HairLayerPiece[];
+  tie?: HairLayerPiece[];
 }
 const ART_DEFS = new WeakMap<HairArtSrc, HairDef>();
 /** 线稿发型 → 发型（算一次存起来） */
@@ -91,6 +118,8 @@ function artDef(src: HairArtSrc): HairDef {
         back: src.back ? artPair(src.back.front, src.back.side) : undefined,
         fringe: src.fringe ? [src.fringe.front, src.fringe.side] : undefined,
         pieces: src.pieces?.map((p) => artPair(p.front, p.side)),
+        tail: src.tail ? artPair(src.tail.front, src.tail.side) : undefined,
+        tie: src.tie ? artPair(src.tie.front, src.tie.side) : undefined,
         strands: src.strands ?? [],
       },
     };
@@ -529,11 +558,25 @@ const turned = (pts: P[], uh: number, occ: number, v = 1): P[] =>
 /** 后面的头发（Look.backHair） */
 export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, hp: HairPaint) {
   if (hp.style === "none" && !hp.art) return;
-  const hair = hairOf(hp);
   const { head, thh, field, pose } = rig;
   const uh = clamp01(-thh / 0.62);
+  const layers = hp.art?.layers;
+  if (layers) {
+    const map = (p: V2) => head.p(p[0], p[1]);
+    // 正面时马尾垂在肩膀后面：在后面那片下面、身子后面，只露出肩上一截；发圈压在后面那片上（参考图正面从下颌后面露出来）
+    const behind = rig.u < TAIL_OVER_U;
+    if (behind && layers.tail) mergedHair(ctx, layerPaths(layers.tail, uh, map), hp, ink);
+    mergedHair(ctx, layerPaths(layers.back, uh, map), hp, ink);
+    if (behind) for (const p of layerPaths(layers.tie ?? [], uh, map)) drawPart(ctx, p, hp.tie ?? hp.shade, null, ink, ink.lw * 0.7);
+    return;
+  }
+  const hair = hairOf(hp);
   if (hair.art) {
-    if (hair.art.back) drawPart(ctx, polylinePath(lerpPts(...hair.art.back, uh), (p) => head.p(p[0], p[1])), hp.color, hp.shade, ink, ink.lw * 0.9);
+    const onHead = (p: V2) => head.p(p[0], p[1]);
+    // 马尾在最后面、发圈压在马尾和头发的接头上
+    if (hair.art.tail) drawPart(ctx, polylinePath(lerpPts(...hair.art.tail, uh), onHead), hp.color, hp.shade, ink, ink.lw * 0.9);
+    if (hair.art.back) drawPart(ctx, polylinePath(lerpPts(...hair.art.back, uh), onHead), hp.color, hp.shade, ink, ink.lw * 0.9);
+    if (hair.art.tie) drawPart(ctx, polylinePath(lerpPts(...hair.art.tie, uh), onHead), hp.tie ?? hp.shade, null, ink, ink.lw * 0.7);
     return;
   }
   const f = rotateV(field, -head.a);
@@ -634,9 +677,106 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
   }
 }
 
+/** 分层头发的几块：转身的程度 uh 混合正面和 3/4，画成路径 */
+const layerPaths = (pcs: HairLayerPiece[], uh: number, map: (p: V2) => V2) => pcs.map((pc) => polylinePath(lerpPts(pc.front, pc.side, uh), map));
+
+/** 几块头发合成一片：外面一圈描边，里面的接缝不描；整片一起加阴影（几块的绕向都是顺时针，合起来填的是并集） */
+function mergedHair(ctx: CanvasRenderingContext2D, paths: Path2D[], hp: HairPaint, ink: Ink, lw = ink.lw * 0.9) {
+  if (!paths.length) return;
+  ctx.strokeStyle = ink.line;
+  ctx.lineWidth = lw * 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  for (const p of paths) ctx.stroke(p);
+  const all = new Path2D();
+  for (const p of paths) all.addPath(p);
+  fillShaded(ctx, all, hp.color, hp.shade, ink);
+}
+
+/**
+ * 身子转到这么多（rig.u）以后马尾搭在背上、压在外衣上（参考图 3/4），之前在身子后面（参考图正面只露出肩上一截）。
+ * 和正面上臂换层的界限一样：同一刻一起换
+ */
+const TAIL_OVER_U = 0.55;
+
+/** 领子前面、头后面（Look.underHead）：分层头发的马尾、发圈（身子转到 3/4 以后） */
+export function drawHairUnder(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, hp: HairPaint) {
+  const layers = hp.art?.layers;
+  if (!layers || rig.u < TAIL_OVER_U) return;
+  const uh = clamp01(-rig.thh / 0.62);
+  const map = (p: V2) => rig.head.p(p[0], p[1]);
+  if (layers.tail) mergedHair(ctx, layerPaths(layers.tail, uh, map), hp, ink);
+  for (const p of layerPaths(layers.tie ?? [], uh, map)) drawPart(ctx, p, hp.tie ?? hp.shade, null, ink, ink.lw * 0.7);
+}
+
 /** 刘海、鬓角（Look.frontHair），再画马尾的皮筋 */
 export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: Ink, hp: HairPaint) {
   if (hp.style === "none" && !hp.art) return;
+  const layers = hp.art?.layers;
+  if (layers) {
+    // 分层头发压在脸上的几块：先都填色，再描边——压在皮肤（脸、耳朵）上的边、伸到头发外面的边描，
+    // 压在别的头发（后面那片、马尾、别的几缕）上的边不描
+    const uh = clamp01(h.uh);
+    const map = (p: V2) => h.H(p[0], p[1]);
+    // 远处那边的：压在脸上的部分往脸的左边收（tuck 1 不收 → 0 收到边上），转过一半以后整缕在脸后面
+    const tuck = clamp01(1 - uh / 0.5);
+    const face = faceOf(h.rig);
+    const tucked = (pc: HairLayerPiece) =>
+      polylinePath(
+        lerpPts(pc.front, pc.side, uh).map(([x, y]): V2 => {
+          const edge = rowSpan(face, y)?.[0];
+          return edge !== undefined && x > edge ? [edge + (x - edge) * tuck, y] : [x, y];
+        }),
+        map,
+      );
+    const far = (layers.far ?? []).map(tucked);
+    const near = layerPaths(layers.front, uh, map);
+    const facePath = h.skins[h.skins.length - 1];
+    if (tuck <= 0 && far.length) {
+      // 脸后面：只填脸外面的部分，再把这一截脸的轮廓线补回来（填色盖住了脸的描边外侧那一半）
+      ctx.save();
+      const out = new Path2D();
+      out.rect(-1e4, -1e4, 2e4, 2e4);
+      out.addPath(facePath);
+      ctx.clip(out, "evenodd");
+      for (const p of far) fillShaded(ctx, p, hp.color, null, ink);
+      ctx.restore();
+      ctx.save();
+      const clip = new Path2D();
+      for (const p of far) clip.addPath(p);
+      ctx.clip(clip);
+      ctx.strokeStyle = ink.line;
+      ctx.lineWidth = ink.lw * 0.6;
+      ctx.lineJoin = "round";
+      ctx.stroke(facePath);
+      ctx.restore();
+    }
+    const front = tuck > 0 ? [...far, ...near] : near;
+    const under = [...layerPaths(layers.back, uh, map), ...layerPaths(layers.tail ?? [], uh, map)];
+    for (const p of front) fillShaded(ctx, p, hp.color, null, ink);
+    const lw = ink.lw * 0.8;
+    const all = [...far, ...near];
+    // 在脸后面的那几缕：自己只描伸到脸外面的边（下面扣掉皮肤的那一遍），也不挡别的几缕在脸上的边
+    const hidden = (q: Path2D) => tuck <= 0 && far.includes(q);
+    all.forEach((p, i) => {
+      const others = all.filter((_, j) => j !== i);
+      if (!hidden(p)) h.strokeOnSkin(p, others.filter((q) => !hidden(q)), lw);
+      ctx.save();
+      for (const q of [...under, ...others, ...h.skins]) {
+        const out = new Path2D();
+        out.rect(-1e4, -1e4, 2e4, 2e4);
+        out.addPath(q);
+        ctx.clip(out, "evenodd");
+      }
+      ctx.strokeStyle = ink.line;
+      ctx.lineWidth = lw;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.stroke(p);
+      ctx.restore();
+    });
+    return;
+  }
   const hair = hairOf(hp);
   const f = rotateV(h.rig.field, -h.rig.head.a);
   const up = hair.pivot === undefined ? 0 : upness(f);

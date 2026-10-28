@@ -15,14 +15,16 @@ import {
   BASE_COLORS,
   drawFigure,
   figureJoints,
+  figurePose,
   legPaths,
   polyPath,
 } from "./figure";
 import { bootSoles, drawBoot } from "./chengtuo-draw";
-import { type HairArtSrc, type HairStyle, drawBackHair, drawFrontHair } from "./cast-hair";
+import { type HairArtSrc, type HairStyle, drawBackHair, drawFrontHair, drawHairUnder } from "./cast-hair";
 import { KID_FACE0, KID_FACE3, KID_HAIR, KID_LEGS } from "./cast-kid-art";
 import { OLDZHONG_FACE0, OLDZHONG_FACE3, OLDZHONG_HAIR } from "./cast-oldzhong-art";
 import { QINMOM_COAT, QINMOM_FACE0, QINMOM_FACE3, QINMOM_HAIR } from "./cast-qinmom-art";
+import { SHITOUMOM_COAT, SHITOUMOM_FACE0, SHITOUMOM_FACE3, SHITOUMOM_HAIR, SHITOUMOM_LEGS } from "./cast-shitoumom-art";
 import {
   type Garment,
   type Pants,
@@ -387,6 +389,8 @@ export function castLook(spec: CastSpec): Look {
     bodyPieces: coat ? (rig) => garmentPanels(rig, coat) : undefined,
     backHair: spec.hair === "none" && !spec.hairArt ? undefined : (ctx, rig, ink) => drawBackHair(ctx, rig, ink, hp),
     neckBack: hoodBack ? (ctx, rig, ink) => drawHood(ctx, rig, ink, hoodBack.color, hoodBack.shade) : undefined,
+    // 分层头发的马尾、发圈：搭在肩上，压在外衣、领子上
+    underHead: spec.hairArt?.layers?.tail || spec.hairArt?.layers?.tie ? (ctx, rig, ink) => drawHairUnder(ctx, rig, ink, hp) : undefined,
     overTorso: (ctx, rig, ink, sides) => {
       // 按线稿画的外衣带衬衫（周磊的西装）：衬衫领、领带、腰线也按线稿画；只有两片前襟（开衫）时里面的上衣照通用的画
       if (coat?.art?.collarL) drawArtShirt(ctx, rig, ink, coat.art, [col.top, col.topShade], spec.tie, [col.skin, col.skinShade], col.bottom);
@@ -658,17 +662,25 @@ export const CAST = {
   小石头的妈妈: {
     name: "小石头的妈妈",
     scale: 0.98,
-    // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图描的（成年女人：参考图「女人」，千斤的妈妈的脸）
-    face0: QINMOM_FACE0,
-    face3: QINMOM_FACE3,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸、低马尾、工装外套（门襟、下摆）、直筒裤腿照用户 2026-10-28 生成的参考图描的
+    // （作品 3d80f743 的 public/ref/小石头的妈妈-线稿.svg、侧面线稿.svg，cast-shitoumom-art.ts）。原来借千斤的妈妈的脸、通用的低马尾、
+    // 主角外套版型的工装外套（下摆外张、大口袋），用户：「小石头妈妈的建模问题很大」。颜色照旧
+    face0: SHITOUMOM_FACE0,
+    face3: SHITOUMOM_FACE3,
+    legArt: SHITOUMOM_LEGS,
+    // 参考图里两只脚在胯底下、裤腿竖直；我们的骨架两脚分开、裤腿跟着往外撇，照描的宽窄显得像喇叭裤：收窄一点
+    legWidth: 0.88,
     colors: { ...SKIN, top: "#f7ead8", topShade: "#e9d8c0", bottom: "#6a5a66", bottomShade: "#5a4b56" },
     hair: "ponytail",
-    hairColor: "#5b3f33",
-    hairShade: "#4c342a",
-    hairTie: "#c0604a",
-    top: { kind: "sweater", trim: "#eadcc6" },
-    coat: { kind: "workcoat", color: "#f29a4a", shade: "#de8538", long: 30, hem: "#8a6a5a" },
-    brows: { kind: "soft", color: "#4c342a" },
+    hairArt: SHITOUMOM_HAIR,
+    // 头发、发圈照参考图的颜色（接近黑的深棕、橙红的发圈；用户 2026-10-28：「头发也没做好」）
+    hairColor: "#463636",
+    hairShade: "#3a2c2c",
+    hairTie: "#cd6548",
+    // 米白高领毛衣：领子包住脖子到下巴底下（用户 2026-10-28：「脖子这里没画对」）
+    top: { kind: "sweater", trim: "#eadcc6", turtle: true },
+    coat: { kind: "workcoat", color: "#f29a4a", shade: "#de8538", hem: "#8a6a5a", art: SHITOUMOM_COAT },
+    brows: { kind: "soft", color: "#3a2c2c" },
     shoes: { color: "#7a5a4a", shade: "#674b3d", style: "leather" },
   } as CastSpec,
   /** 千斤：16 岁，红毛衣（粗罗纹领，领口露出白衬衫领）、侧分的齐耳短发，黄色一字夹别住刘海 */
@@ -770,9 +782,15 @@ export const CAST = {
   /** 七岁的秤砣：穿着妈妈那双大铁靴；鹅黄毛衣配白色小圆领，齐耳短发 */
   小时候的秤砣: {
     name: "小时候的秤砣",
-    scale: 0.58,
-    // 骨架、头的大小和主角一样，只按 scale 缩放；脸是主角的（年轻的女孩）
-    bootScale: 1.55,
+    // 脸是主角的；头身比照小石头（大人和小孩站在一起的参考图量的）：头以脖子为中心放大 1.335、腿缩到 0.7、小孩的直筒裤腿。
+    // 原来是十九岁的她只按 scale 0.58 缩小：头小、腿长、腿细，像大人的缩小版，个子也只有三四岁（用户 2026-10-28：「先改沉沉」）。
+    // 现在和小石头一样高（十九岁的她的 0.75）。铁靴是妈妈那双：世界里的大小不变（0.58 × 1.55）
+    scale: 0.79,
+    headScale: 1.335,
+    legLength: 0.7,
+    legArt: KID_LEGS,
+    legWidth: 0.87,
+    bootScale: (0.58 * 1.55) / 0.79,
     colors: { ...SKIN, top: "#f4c95d", topShade: "#e2b54a", bottom: "#5d6177", bottomShade: "#4f5266", blush: "250,140,140" },
     hair: "bob",
     hairColor: "#2c2a30",
@@ -790,6 +808,83 @@ export const CAST = {
     shoes: "bare",
   } as CastSpec,
 };
+
+// ——— 《引力》间奏里被她拽下来的两个人（作品 3d80f743 原来写在 lib/saved.ts）：高潮的人链里会回来，穿出场时的衣服 ———
+/** 扎马尾的女学生：高马尾、碎刘海，浅蓝的运动校服（白色立领、拉链、袖子上两道白杠）；学校门口被十六岁的她拽下来 */
+export const SCHOOLGIRL: CastSpec = {
+  name: "扎马尾的女学生",
+  scale: 0.9,
+  // 骨架、头的大小和主角一样，只按 scale 缩放；脸是主角的（年轻的女孩）
+  colors: { ...CAST.年轻人.colors, top: "#bcd5ec", topShade: "#a6c2dd", bottom: "#3f4a6b", bottomShade: "#353e5a" },
+  hair: "highpony",
+  hairColor: "#2f2e33",
+  hairTie: "#e06c7a",
+  top: { kind: "polo", trim: "#f7f5f0" },
+  brows: { kind: "soft", color: "#2f2e33" },
+  shoes: { color: "#f2efe8", shade: "#ddd8ce", sole: "#e8e2d6", style: "sneaker", sock: "#f2efe8" },
+};
+/** 戴眼镜的大叔：方框眼镜，棕色夹克（翻领、拉链、胸袋）里面一件衬衫，西裤；公交站被十岁的她拽下来 */
+export const GLASSES_UNCLE: CastSpec = {
+  name: "戴眼镜的大叔",
+  scale: 1.04,
+  // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图「男人」描的（周磊的脸）
+  face0: ZHOULEI_FACE0,
+  face3: ZHOULEI_FACE3,
+  colors: { ...CAST.周磊.colors, top: "#d9d3c6", topShade: "#c9c2b3", bottom: "#4b4340", bottomShade: "#3f3835" },
+  hair: "short",
+  hairColor: "#3a3539",
+  glasses: "#3a3539",
+  glassesShape: "square",
+  top: { kind: "shirt" },
+  coat: { kind: "jacket", color: "#8b6b4f", shade: "#76593f", size: 1.02, trim: "#6e533b" },
+  brows: { kind: "thick", color: "#3a3539" },
+  pants: { crease: true },
+  shoes: { color: "#3e3a3f", shade: "#322f33", style: "leather", sock: "#3a3741" },
+};
+
+// ——— 七到十二岁的秤砣（作品 3d80f743 原来写在 lib/grow.ts） ———
+/** 七到十二岁的身高（相对七岁的比例：七岁就是 CAST.小时候的秤砣，和小石头一样高） */
+const YOUNG_HEIGHT = [0.75, 0.78, 0.81, 0.835, 0.85, 0.865];
+/** 站直时头顶（头发底下，头按 headScale 放大以后）离地多高（角色单位，不乘 scale） */
+function crownOf(spec: CastSpec): number {
+  const look = lookOf(spec);
+  const j = figureJoints(figurePose({ face: 0 }, 0, look), look);
+  const hs = spec.headScale ?? 1;
+  return -(j.neck[1] + (j.head[1] - j.neck[1]) * hs) + 53 * hs;
+}
+const YOUNG = new Map<number, CastSpec>();
+/**
+ * 七到十二岁的秤砣：七岁是小孩的头身比（头大、腿短、直筒裤腿，和小石头一样），头、腿长、裤腿宽一年年往十三岁（现在的她，
+ * 大人的头身比）过渡，身高按 YOUNG_HEIGHT；铁靴还是妈妈那双（世界里一样大），相对身子越来越合脚；十岁穿上藏青外套。
+ * 十三岁起是现在的她（秤砣）按身高缩小
+ */
+export function youngChengtuo(age: number): CastSpec {
+  const a = Math.max(7, Math.min(12, Math.round(age)));
+  let spec = YOUNG.get(a);
+  if (spec) return spec;
+  const KID = CAST.小时候的秤砣;
+  const i = a - 7;
+  if (i === 0) spec = KID;
+  else {
+    const k = i / 6;
+    const grown: CastSpec = {
+      ...KID,
+      headScale: (KID.headScale ?? 1) + (1 - (KID.headScale ?? 1)) * k,
+      legLength: (KID.legLength ?? 1) + (1 - (KID.legLength ?? 1)) * k,
+      legWidth: (KID.legWidth ?? 1) + (0.66 - (KID.legWidth ?? 1)) * k,
+    };
+    const scale = (KID.scale * (YOUNG_HEIGHT[i] / YOUNG_HEIGHT[0]) * crownOf(KID)) / crownOf(grown);
+    spec = { ...grown, scale };
+  }
+  spec = {
+    ...spec,
+    name: `${a}岁的秤砣`,
+    bootScale: (KID.scale * (KID.bootScale ?? 1)) / spec.scale,
+    coat: i >= 3 ? { color: "#353f55", shade: "#2b3346" } : undefined,
+  };
+  YOUNG.set(a, spec);
+  return spec;
+}
 
 /** 路人的鞋：黑皮鞋、白帆布鞋、棕皮鞋、藏蓝帆布鞋轮着穿 */
 const PASSERBY_SHOES: ShoeSpec[] = [

@@ -21,7 +21,7 @@ import {
   rowSpan,
   smoothPath,
 } from "./rig";
-import { type Rig, fillBodyPart, legPaths, polyPath, strokeBodyPart, torsoPaths } from "./figure";
+import { type Rig, faceOf, fillBodyPart, legPaths, neckOutline, polyPath, strokeBodyPart, torsoPaths } from "./figure";
 import { COAT_FRONT, COAT_SIDE } from "./chengtuo-costume";
 
 // ——— 外衣 ———
@@ -85,7 +85,32 @@ function artOn(rig: Rig): (p: V2) => V2 {
   const br = rig.pose.breath * 1.6;
   return ([x, y]) => rig.chest.p(x, y - br * clamp01(-y / 140));
 }
-const artAt = (rig: Rig, art: GarmentArt, k: keyof GarmentArt) => lerpPts(...art[k]!, rig.u);
+const artAt = (rig: Rig, art: GarmentArt, k: keyof GarmentArt) => lerpPts(...artFor(rig, art)[k]!, rig.u);
+
+/**
+ * 身子镜像（朝右）时用的手画外衣：左右两片的正面对调（照参考图描的两片不完全对称，直接翻过去一过正面就错开一点），
+ * 3/4 的形状还是各片自己的（远的那片还是远的）。两片的点要一一对应（右片第 i 个点镜像过来就是左片第 i 个点附近）才对调，
+ * 不然照旧整个翻过去。敞开的那块：正面镜像、倒过来排（第 i 个点对上对面那个点）
+ */
+const ART_FLIP = new WeakMap<GarmentArt, GarmentArt>();
+function artFor(rig: Rig, art: GarmentArt): GarmentArt {
+  if (!rig.mir) return art;
+  let f = ART_FLIP.get(art);
+  if (!f) ART_FLIP.set(art, (f = flipArt(art)));
+  return f;
+}
+function flipArt(a: GarmentArt): GarmentArt {
+  const mx = (P: V2[]) => P.map(([x, y]): V2 => [-x, y]);
+  const near = (P: V2[], Q: V2[]) => P.length === Q.length && P.reduce((s, p, i) => s + Math.hypot(p[0] - Q[i][0], p[1] - Q[i][1]), 0) / P.length < 4;
+  const swap = (x?: [V2[], V2[]], y?: [V2[], V2[]]): [[V2[], V2[]] | undefined, [V2[], V2[]] | undefined] =>
+    x && y && near(mx(y[0]), x[0]) ? [[mx(y[0]), x[1]], [mx(x[0]), y[1]]] : [x, y];
+  const [l, r] = swap(a.l, a.r);
+  const [edgeL, edgeR] = swap(a.edgeL, a.edgeR);
+  const [lapelL, lapelR] = swap(a.lapelL, a.lapelR);
+  const [collarL, collarR] = swap(a.collarL, a.collarR);
+  const mo = [...mx(a.opening[0])].reverse();
+  return { ...a, l: l!, r: r!, edgeL, edgeR, lapelL, lapelR, collarL, collarR, opening: near(mo, a.opening[0]) ? [mo, a.opening[1]] : a.opening };
+}
 /** 手画外衣里面衬衫露出来的地方（Look.torsoClip）：衣襟中间敞开的那块（西装底下不画） */
 export function garmentShirtClip(rig: Rig, art: GarmentArt): Path2D[] {
   return [polylinePath(artAt(rig, art, "opening"), artOn(rig))];
@@ -154,13 +179,23 @@ function frontEdge(top: V2, b: V2, hemY: number, cut: number, side: 1 | -1, curv
   return out;
 }
 
+/**
+ * 只在一边的细节（一排扣子、扣眼、胸袋、绣花）画在哪一片上：身子镜像（朝右）时整个人是按朝左画好再翻过去的，
+ * 这些细节要换到另一片上画，翻过去才还在她身上原来那一侧（不然一过正面就跳到另一边、朝右时也反了；用户 2026-10-28：
+ * 「头发和衣服不能左右简单镜像，不然左右旋转时会跳动」）。side 是画的时候的那片（l 画面左），返回它在她身上算哪一片
+ */
+const own = (rig: Rig, side: "l" | "r"): "l" | "r" => (rig.mir ? (side === "l" ? "r" : "l") : side);
+
 /** 外衣两片前襟放到现在的姿势上（按版型改过形状） */
 export function garmentShape(rig: Rig, g: Garment): Shape {
   const { chest, u, pose } = rig;
   const size = g.size ?? 1;
   const long = g.long ?? 0;
   const br = pose.breath * 1.6;
-  if (g.art) return { l: lerpPts(...g.art.l, u), r: lerpPts(...g.art.r, u), on: artOn(rig), u, deco: (_side, p) => p };
+  if (g.art) {
+    const art = artFor(rig, g.art);
+    return { l: lerpPts(...art.l, u), r: lerpPts(...art.r, u), on: artOn(rig), u, deco: (_side, p) => p };
+  }
   const NECK_Y = -156;
   const on = ([x0, y0]: V2): V2 => {
     const x = x0 * size;
@@ -267,7 +302,8 @@ function ribBand(ctx: CanvasRenderingContext2D, clip: Path2D, on: (p: V2) => V2,
     ctx.strokeStyle = "rgba(30,25,35,0.22)";
     ctx.lineWidth = ink.lw * 0.3;
     ctx.beginPath();
-    for (let x = x0; x <= x1; x += 4.2) {
+    // 竖纹从中线往两边排（左右对称：镜像过来还在原来的位置）
+    for (let x = Math.ceil(x0 / 4.2) * 4.2; x <= x1; x += 4.2) {
       const a = on([x, y0 + 2]);
       const b = on([x, y1]);
       ctx.moveTo(a[0], a[1]);
@@ -331,10 +367,11 @@ export function drawGarment(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, s
       drawPart(ctx, polylinePath(lerpPts(...(side === "l" ? TURN.lapelL : TURN.lapelR), u), on), g.color, g.shade, ink, lw);
     } else if (kind === "suit") {
       flap(pocketBox(0.02, 0.0, 1.0, 0.24), false);
-      if (side === "r") {
-        // 胸袋：左胸一道斜的开口
-        const a = deco("r", [25, -112]);
-        const b = deco("r", [42, -115]);
+      if (own(rig, side) === "r") {
+        // 胸袋：左胸一道斜的开口（镜像时画在另一片上、左右反过来）
+        const k = side === "r" ? 1 : -1;
+        const a = deco(side, [k * 25, -112]);
+        const b = deco(side, [k * 42, -115]);
         const p = polyPath([a, b, [b[0], b[1] + 4.2], [a[0], a[1] + 4.2]], on);
         drawPart(ctx, p, g.color, g.shade, ink, lw * 0.7);
       }
@@ -348,9 +385,10 @@ export function drawGarment(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, s
     } else if (kind === "workcoat") {
       drawPart(ctx, polylinePath(pk, on), g.color, g.shade, ink, lw);
       flap(pocketBox(-0.04, -0.06, 1.04, 0.24), true);
-      if (side === "r") {
-        const a = deco("r", [24, -118]);
-        const b = deco("r", [42, -118]);
+      if (own(rig, side) === "r") {
+        const k = side === "r" ? 1 : -1;
+        const a = deco(side, [k * 24, -118]);
+        const b = deco(side, [k * 42, -118]);
         const box: V2[] = [a, b, [b[0], b[1] + 19], [a[0], a[1] + 19]];
         drawPart(ctx, polyPath(box, on), g.color, g.shade, ink, lw * 0.8);
         flap([a, b, [b[0], b[1] + 7], [a[0], a[1] + 7]], true);
@@ -404,7 +442,8 @@ export function drawGarment(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, s
         // 扣子：一粒扣在 V 的底，下面一粒没扣
         dot(ctx, on([V.x, V.y + 1]), 3, button, ink, true);
         const k = 26;
-        dot(ctx, on([V.r[0] + 9 * (k / 64) ** 1.6 + 3.5, V.y + k]), 3, button, ink, true);
+        const d = 9 * (k / 64) ** 1.6 + 3.5;
+        dot(ctx, on([rig.mir ? V.l[0] - d : V.r[0] + d, V.y + k]), 3, button, ink, true);
       } else {
         // 双排扣（腰带上面两对），腰带系着、带扣在正中，垂下来一截
         for (const y of [-92, -74]) for (const dx of [-9, 9]) dot(ctx, on([V.x + dx, y]), 2.6, button, ink, true);
@@ -445,18 +484,20 @@ export function drawGarment(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, s
       ctx.clip(panels[side]);
       drawPart(ctx, bp, trim, null, ink, lw * 0.6);
       ctx.restore();
-      if (side === "r") for (const y of [-128, -100, -72, -44]) {
+      if (own(rig, side) === "r") for (const y of [-128, -100, -72, -44]) {
         const e = edge.reduce((a, p) => (Math.abs(p[1] - y) < Math.abs(a[1] - y) ? p : a), edge[0]);
-        dot(ctx, on([e[0] + 3.3, y]), 2.2, g.button ?? "#f4efe6", ink);
+        dot(ctx, on([e[0] + out * 3.3, y]), 2.2, g.button ?? "#f4efe6", ink);
       }
     }
   } else if (kind === "workcoat") {
     // 立领：贴着脖子立起来一圈（两头在领口前面，绕到脖子后面），领口一道明线
     standCollar(ctx, rig, ink, g.color, g.shade, lw);
-    const edgeL = s.l.slice(12, 25);
+    // 扣子在她的左片（l）门襟上；镜像时画在 r 那片上
+    const onL = own(rig, "l") === "l";
+    const edge = onL ? s.l.slice(12, 25) : s.r.slice(36).concat([s.r[0]]);
     for (const y of [-130, -96, -62, -28]) {
-      const e = edgeL.reduce((a, p) => (Math.abs(p[1] - y) < Math.abs(a[1] - y) ? p : a), edgeL[0]);
-      dot(ctx, on([e[0] - 5, y]), 3.4, g.button ?? "#5a4a40", ink, true);
+      const e = edge.reduce((a, p) => (Math.abs(p[1] - y) < Math.abs(a[1] - y) ? p : a), edge[0]);
+      dot(ctx, on([e[0] + (onL ? -5 : 5), y]), 3.4, g.button ?? "#5a4a40", ink, true);
     }
   } else if (kind === "hoodie") {
     // 拉链齿：两片门襟各一道
@@ -475,6 +516,35 @@ function xAt(pts: V2[], y: number): number {
   }
   return pts.reduce((a, p) => (Math.abs(p[1] - y) < Math.abs(a[1] - y) ? p : a), pts[0])[0];
 }
+/**
+ * 按线稿画的工装外套（kind workcoat，小石头的妈妈：用户 2026-10-28 生成的参考图）：右片门襟边上一排五颗深色大扣子，左片对应五道扣眼短线，
+ * 两片各一个斜插袋（袋口靠门襟那头高、外侧低），下摆一圈深色的边（hem：缝着铅）。位置按门襟的长度（领口 → 下摆）比例摆，离门襟的距离往前襟里面量
+ */
+function workcoatDetails(ctx: CanvasRenderingContext2D, ink: Ink, g: Garment, s: Shape, panel: Path2D, buttons: boolean, e: V2[], inward: number) {
+  const ys = e.map((p) => p[1]);
+  const top = Math.min(...ys);
+  const hem = Math.max(...ys);
+  const H = hem - top;
+  const at = (k: number) => top + H * k;
+  const lw = ink.lw * 0.8;
+  ctx.save();
+  ctx.clip(panel);
+  if (g.hem) ribBand(ctx, panel, s.on, hem - 10, hem + 30, g.hem, ink, false);
+  // 斜插袋：袋口一道斜线，外面一道细线（袋片）
+  const y0 = hem - 0.3 * H;
+  const y1 = hem - 0.185 * H;
+  const p0: V2 = [xAt(e, y0) + inward * 32, y0];
+  const p1: V2 = [xAt(e, y1) + inward * 45, y1];
+  line(ctx, [s.on(p0), s.on(p1)], ink.line, lw * 0.75);
+  line(ctx, [s.on([p0[0], p0[1] + 2.5]), s.on([p1[0] - inward * 3, p1[1] + 4])], ink.line, lw * 0.35);
+  ctx.restore();
+  for (let i = 0; i < 5; i++) {
+    const y = lerp(at(0.155), hem - 0.12 * H, i / 4);
+    if (buttons) dot(ctx, s.on([xAt(e, y) + inward * 10.5, y]), 4.4, g.button ?? "#5a4a40", ink);
+    else line(ctx, [s.on([xAt(e, y) + inward * 3.5, y]), s.on([xAt(e, y) + inward * 11.5, y])], ink.line, lw * 0.6);
+  }
+}
+
 /** 绣的一朵小花：五片花瓣、花心，右下一片叶子（开衫的胸口） */
 function embroideredFlower(ctx: CanvasRenderingContext2D, [x, y]: V2, r: number, petal: string, ink: Ink) {
   ctx.strokeStyle = ink.line;
@@ -532,9 +602,10 @@ function drawArtGarment(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides
       ctx.restore();
     }
     line(ctx, e.map(s.on), ink.line, ink.lw);
-    if (cardigan && side === "r" && g.button)
+    if (g.kind === "workcoat") workcoatDetails(ctx, ink, g, s, panel, own(rig, side) === "r", e, inward);
+    if (cardigan && own(rig, side) === "r" && g.button)
       for (const y of [-124, -90, -56, -22, 12]) dot(ctx, s.on([xAt(e, y) + (inward * ART_BAND) / 2, y]), 2.2, g.button, ink);
-    if (cardigan && side === "l" && g.flower) {
+    if (cardigan && own(rig, side) === "l" && g.flower) {
       const y = -88;
       ctx.save();
       ctx.clip(panel);
@@ -542,6 +613,8 @@ function drawArtGarment(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides
       ctx.restore();
     }
   }
+  // 工装外套的立领：贴着脖子立起来一圈（线稿只描到肩线，立领和版型的工装外套一样画）
+  if (g.kind === "workcoat") standCollar(ctx, rig, ink, g.color, g.shade, lw);
 }
 
 /**
@@ -759,10 +832,64 @@ export interface Top {
   stripes?: string;
   /** 扣子 */
   button?: string;
+  /** 毛衣是高领：领子是一个筒，从领口包住脖子到下巴底下（小石头的妈妈） */
+  turtle?: boolean;
 }
 
 /** 基础模型画不画圆领（这几种上衣自己画领子） */
-export const topHasOwnCollar = (t?: Top) => !!t && t.kind !== "crew" && t.kind !== "tee" && t.kind !== "sweater";
+export const topHasOwnCollar = (t?: Top) => !!t && t.kind !== "crew" && t.kind !== "tee" && (t.kind !== "sweater" || !!t.turtle);
+
+/**
+ * 高领毛衣的领子（用户 2026-10-28：小石头的妈妈「脖子这里没画对」——参考图里米白的高领把脖子整个包住、到下巴底下，原来是圆领，露着脖子）：
+ * 脖子的轮廓每一行往两边放宽一圈，从领口往上一直到脖子顶上（藏在头后面，头压住上沿）；底边不描，和毛衣接成一片；
+ * 下巴底下一道翻折线。画在外衣前面那层之前，外衣的立领压在它两边
+ */
+function turtleneck(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, colors: { top: string; topShade: string }, lw: number) {
+  const { pts, on } = neckOutline(rig);
+  const PAD = 3.5;
+  // 填到脖子轮廓的底（约 −147）下面，盖住脖子下沿那道描边；两边的线描到领口（再往下被外衣盖住）
+  const FILL_BOTTOM = -140;
+  const LINE_BOTTOM = -150;
+  const top = Math.min(...pts.map((p) => p[1])) + 1;
+  const rows = (y0: number, y1: number) => {
+    const left: V2[] = [];
+    const right: V2[] = [];
+    const n = Math.max(2, Math.ceil((y1 - y0) / 1.5));
+    for (let i = 0; i <= n; i++) {
+      const y = lerp(y0, y1, i / n);
+      const sp = rowSpan(pts, Math.min(y, -150));
+      if (!sp) continue;
+      left.push([sp[0] - PAD, y]);
+      right.push([sp[1] + PAD, y]);
+    }
+    return [...left.reverse(), ...right];
+  };
+  const fill = rows(top, FILL_BOTTOM);
+  if (fill.length < 4) return;
+  const tube = polyPath(fill, on);
+  // 不加右下那道阴影：筒的底边和毛衣接着，阴影会在领口横出一道带子
+  fillShaded(ctx, tube, colors.top, null, ink);
+  // 两边和上沿描边（底边和毛衣接着，不描）
+  line(ctx, rows(top, LINE_BOTTOM).map(on), ink.line, lw * 0.8);
+  // 翻折线：下巴往下三分之一（下巴按这个人的脸算：配角描的脸下巴高低不一样；低头抬头时跟着走），两头稍往上弯
+  const face = faceOf(rig);
+  const chin = rig.head.p(0, Math.max(...face.map((p) => p[1])));
+  const [dx, dy] = [chin[0] - rig.chest.x, chin[1] - rig.chest.y];
+  const chinY = -dx * Math.sin(rig.chest.a) + dy * Math.cos(rig.chest.a);
+  const fy = Math.min(-152, chinY + (LINE_BOTTOM - chinY) / 3);
+  const sp = rowSpan(pts, fy);
+  if (sp) {
+    const [a, b] = [sp[0] - PAD + 1, sp[1] + PAD - 1];
+    const fold: V2[] = Array.from({ length: 9 }, (_, i) => {
+      const t = i / 8;
+      return [lerp(a, b, t), fy + 2 * Math.sin(Math.PI * t)];
+    });
+    ctx.save();
+    ctx.clip(tube);
+    line(ctx, fold.map(on), ink.line, lw * 0.55);
+    ctx.restore();
+  }
+}
 
 /** 上衣的细节（Look.overTorso 里先画，外衣盖在上面） */
 export function drawTop(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, top: Top, colors: { top: string; topShade: string }) {
@@ -786,7 +913,8 @@ export function drawTop(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, top: 
     for (let y = -150; y < 0; y += 15) ctx.fill(polyPath([[-120, y], [120, y], [120, y + 6], [-120, y + 6]], raw));
     ctx.restore();
   }
-  if (top.kind === "sweater") {
+  if (top.kind === "sweater" && top.turtle) turtleneck(ctx, rig, ink, colors, lw);
+  else if (top.kind === "sweater") {
     // 粗罗纹领：领口一圈带竖纹
     const ring = smoothPath(([[-14, -165, 1], [0, -158], [14, -165, 1], [19, -160], [0, -149], [-19, -160]] as P[]).map(([x, y, c]) => [...nk([x, y]), ...(c ? [c] : [])] as P));
     drawPart(ctx, ring, trim, null, ink, lw * 0.7);

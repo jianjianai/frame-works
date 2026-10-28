@@ -4,7 +4,11 @@
 //   放进素材库 code/，人物配置里 face0 / face3 / hairArt 用导出的 <prefix>_FACE0 / <prefix>_FACE3 / <prefix>_HAIR）。
 //   file、prefix 在作品的 production/线稿配置.mjs 里这个角色的 art。
 // id：face 脸的整圈（盖在头发下面的那截是圆顶）、ear-l / ear-r 耳朵（3/4 只有 ear-r，近处那只）、eye-l / eye-r 眼珠（画面左 / 右）、
-// nose、mouth、hair-back 头发后面那片（画在身子后面）、fringe 刘海（头发盖在脸上的那块：发际线 + 脸的圆顶）。
+// ear-line-l / ear-line-r 耳朵里的一道线（不闭合，可以没有；3/4 只有 ear-line-r）、
+// nose、mouth、hair-back 头发后面那片（画在身子后面）、fringe 刘海（头发盖在脸上的那块：发际线 + 脸的圆顶）、
+// hair-tail 马尾（画在最后面）、hair-tie 发圈（压在马尾顶上，人物配置的 hairTie 色）。
+// 分层画的头发（用户一块一块画的，见 头发分层.mjs：图层 hair-back、hair-bangs、hair-lock-l、hair-lock-r、hair-tail、hair-tie）：
+// 有的话头发只用它（输出 layers），身体图层里描的 hair-back / fringe / hair-tail / hair-tie 不用；对应的标志点在 art.hairMarks。
 // leg-l / leg-r（可以没有，只在正面那张）：两条裤腿的轮廓（画面左那条是 l），换算成 <prefix>_LEGS（人物配置的 legArt）。
 // coat-l / coat-r（可以没有）：敞怀外衣两片前襟的门襟和下摆（门襟上端 → 下摆外角，画面左那片是 l），换算成 <prefix>_COAT（cast-wear.ts 的 GarmentArt）。
 // 配角的骨架、头的大小和主角一样（用户 2026-10-27：「胳膊和腿的和脖子，身体主框架，头的框架代码是可以共用的」），线原样落在主角的骨架上。
@@ -13,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { COAT_SHOULDER, K, LEG_REST, NECK_SIDE, bbox, fmt, layerPathsById, resample, sample, toBody, toHead } from "./线稿换算工具.mjs";
+import { hairLayersOf, matchPiece } from "./头发分层.mjs";
 
 const who = process.argv[2];
 const outDir = process.argv[3];
@@ -20,11 +25,14 @@ const all = (await import(pathToFileURL(path.join(process.cwd(), "production/线
 const C = all[who]?.art;
 if (!C || !outDir) throw new Error("用法（在作品文件夹里）：node <工具目录>/线稿换算.mjs <角色> <输出目录>；production/线稿配置.mjs 里这个角色要有 art: { file, prefix }。有的角色：" + Object.keys(all).join("、"));
 const root = process.cwd();
-const F = layerPathsById(fs.readFileSync(path.join(root, `public/ref/${who}-线稿.svg`), "utf8"), "body");
-const S = layerPathsById(fs.readFileSync(path.join(root, `public/ref/${who}-侧面线稿.svg`), "utf8"), "side-body");
+const svgF = fs.readFileSync(path.join(root, `public/ref/${who}-线稿.svg`), "utf8");
+const svgS = fs.readFileSync(path.join(root, `public/ref/${who}-侧面线稿.svg`), "utf8");
+const F = layerPathsById(svgF, "body");
+const S = layerPathsById(svgS, "side-body");
+const LAYERS = hairLayersOf(svgF, svgS);
 // 必须有的；hair-back / fringe（秃顶的没有）、brow-l / brow-r（眉毛）、hair-1、hair-2…（单独的几块头发）可以没有，但正面和 3/4 要一致
 for (const [n, v] of [["正面", F], ["3/4", S]]) for (const id of ["face", "eye-l", "eye-r", "nose", "mouth", "ear-r"]) if (!v[id]) throw new Error(`${n}少了 ${id}`);
-for (const id of ["hair-back", "fringe"]) if (!F[id] !== !S[id]) throw new Error(`${id} 正面和 3/4 要么都有、要么都没有`);
+for (const id of ["hair-back", "fringe", "hair-tail", "hair-tie"]) if (!F[id] !== !S[id]) throw new Error(`${id} 正面和 3/4 要么都有、要么都没有`);
 const piecesOf = (v) => Object.keys(v).filter((k) => /^hair-\d+$/.test(k)).sort((a, b) => +a.slice(5) - +b.slice(5));
 if (piecesOf(F).length !== piecesOf(S).length) throw new Error(`单独的几块头发正面 ${piecesOf(F).length} 块、3/4 ${piecesOf(S).length} 块，要一样多（按从左到右对应）`);
 
@@ -52,6 +60,10 @@ const view = (v, map, ears) => `{
     nose: [${noseOf(v.nose, map).map(r2).join(", ")}] as V2[],
     mouth: [${ends(v.mouth, map).map(r2).join(", ")}] as V2[],
     ears: { ${ears.map(([k, id]) => `${k}: ${bezOut(v[id], map)} as V2[]`).join(", ")} },${
+      ears.some(([, id]) => v[id.replace("ear", "ear-line")])
+        ? `\n    earLines: { ${ears.filter(([, id]) => v[id.replace("ear", "ear-line")]).map(([k, id]) => `${k}: ${bezOut(v[id.replace("ear", "ear-line")], map)} as V2[]`).join(", ")} },`
+        : ""
+    }${
       v["brow-l"] && v["brow-r"] ? `\n    brows: { R: ${r2(center(v["brow-l"], map))} as V2, L: ${r2(center(v["brow-r"], map))} as V2 },` : ""
     }
   }`;
@@ -90,9 +102,22 @@ function fringeOf(v) {
   return [...resample([bottom[0], ...bottom, ...top.slice(0, 1)].slice(0, -1), BOTTOM), ...resample(top, TOP)];
 }
 const backOf = (v) => sample(v["hair-back"].segs, 8).slice(0, -1);
+/** 马尾、发圈：闭合的一圈（转身时按头顶 / 最右 / 最低 / 最左对应，和后面那片一样） */
+const loopOf = (p) => sample(p.segs, 8).slice(0, -1);
+
+/** 分层头发：每块正面 ↔ 3/4 逐点对应好 */
+const layersSrc = () => {
+  const kinds = ["back", "front", "far", "tail", "tie"].filter((k) => LAYERS[k]);
+  const body = kinds.map((k) => `\n    ${k}: [${LAYERS[k].map(({ id, f, s }) => {
+    const m = matchPiece(id, f, s, hF, hS, C.hairMarks?.[id]);
+    console.error(`头发 ${id}（${k}）：${m.how}，${m.pairs} 个标志点，${m.front.length} 个点`);
+    return `\n      // ${id}\n      { front: ${fmt(m.front)} as V2[], side: ${fmt(m.side)} as V2[] },`;
+  }).join("")}\n    ],`).join("");
+  return `\n  layers: {${body}\n  },`;
+};
 
 const src = `// ${who}的脸和头发（正面、3/4 朝画面左）：作品的 \`public/ref/${who}-线稿.svg\`、\`${who}-侧面线稿.svg\` 里的线
-// （照参考图描的，tools/描图.mjs）。由 tools/线稿换算.mjs 生成，
+// （照参考图描的，tools/描图.mjs；${LAYERS ? "头发、耳朵是用户分层画的" : ""}）。由 tools/线稿换算.mjs 生成，
 // 别手改：改线稿再重新生成。头的坐标（头不缩放：骨架、头的大小和主角一样，身高另外按 scale 缩）。
 
 import type { FaceView } from "./figure";
@@ -102,11 +127,13 @@ import type { V2 } from "./rig";
 export const ${C.prefix}_FACE0: FaceView = ${view(F, hF, [["L", "ear-l"], ["R", "ear-r"]])};
 /** 3/4（朝画面左）的脸：眼珠 R 远处（画面左）、L 近处；耳朵只有近处那只（画面右） */
 export const ${C.prefix}_FACE3: FaceView = ${view(S, hS, [["R", "ear-r"]])};
-/** 头发：后面那片（转身时按头顶 / 最右 / 最低 / 最左对应）、刘海（已经逐点对应好：发际线对发际线、圆顶对圆顶）、单独的几块（秃顶两鬓） */
-export const ${C.prefix}_HAIR = {${
-  F["hair-back"] ? `\n  back: { front: ${fmt(hF(backOf(F)))} as V2[], side: ${fmt(hS(backOf(S)))} as V2[] },` : ""
-}${F.fringe ? `\n  fringe: { front: ${fmt(hF(fringeOf(F)))} as V2[], side: ${fmt(hS(fringeOf(S)))} as V2[] },` : ""}${
-  piecesOf(F).length
+/** 头发：${LAYERS ? "分层画的（后面那片、压在脸上的几缕、马尾、发圈，每块正面和 3/4 已经逐点对应好）" : "后面那片（转身时按头顶 / 最右 / 最低 / 最左对应）、刘海（已经逐点对应好：发际线对发际线、圆顶对圆顶）、单独的几块（秃顶两鬓）"} */
+export const ${C.prefix}_HAIR = {${LAYERS ? layersSrc() : ""}${
+  LAYERS ? "" : F["hair-back"] ? `\n  back: { front: ${fmt(hF(backOf(F)))} as V2[], side: ${fmt(hS(backOf(S)))} as V2[] },` : ""
+}${!LAYERS && F.fringe ? `\n  fringe: { front: ${fmt(hF(fringeOf(F)))} as V2[], side: ${fmt(hS(fringeOf(S)))} as V2[] },` : ""}${
+  !LAYERS && F["hair-tail"] ? `\n  tail: { front: ${fmt(hF(loopOf(F["hair-tail"])))} as V2[], side: ${fmt(hS(loopOf(S["hair-tail"])))} as V2[] },` : ""
+}${!LAYERS && F["hair-tie"] ? `\n  tie: { front: ${fmt(hF(loopOf(F["hair-tie"])))} as V2[], side: ${fmt(hS(loopOf(S["hair-tie"])))} as V2[] },` : ""}${
+  !LAYERS && piecesOf(F).length
     ? `\n  pieces: [${piecesOf(F).map((id) => `\n    { front: ${fmt(hF(sample(F[id].segs, 8).slice(0, -1)))} as V2[], side: ${fmt(hS(sample(S[id].segs, 8).slice(0, -1)))} as V2[] },`).join("")}\n  ],`
     : ""
 }
@@ -121,6 +148,9 @@ const join = (...parts) => parts.flatMap((p, i) => (i ? p.slice(1) : p));
 const line = (a, b) => [a, b];
 function coatPanel(v, view, side) {
   const p = sample(v[`coat-${side}`].segs, 16);
+  // 门襟从肩线那一行开始：描到的立领（比脖子边还高的那一截）不要，立领另外画（cast-wear.ts 的 standCollar），
+  // 不然领口立起两个尖角
+  while (p.length > 3 && p[0][1] < NECK_SIDE[view][side][1]) p.shift();
   // 门襟下端的角：l 在右下（x + y 最大），r 在左下（y − x 最大）
   const ci = p.reduce((bi, q, i) => ((side === "l" ? q[0] + q[1] : q[1] - q[0]) > (side === "l" ? p[bi][0] + p[bi][1] : p[bi][1] - p[bi][0]) ? i : bi), 0);
   const top = p[0];
@@ -164,7 +194,7 @@ export const ${C.prefix}_COAT: GarmentArt = {
 // ——— 裤腿（leg-l / leg-r）：只取宽窄，绕着主角的胯、膝、脚踝重新摆 ———
 // 参考图里的人站得直（两脚在胯底下），主角的腿往外撇：照原样放上去裤腿就和骨头对不上。一行一行量裤腿的外沿、里沿离这条腿中线
 // （裆以下每行外沿、里沿的中点拟合的一条直线）多远，放到主角这条腿的骨头上（胯 → 膝 → 脚踝）同样的高度：大腿一样长，
-// 小腿按参考图的膝盖到裤脚拉到主角的膝盖到脚踝下面 5。裆以上里沿是正中，裆往下 30 慢慢过渡到骨头旁边。上沿接到 y −11（藏在上衣里）
+// 小腿按参考图的膝盖到裤脚拉到主角的膝盖到脚踝下面 legHem（默认 5）。裆以上里沿是正中，裆往下 30 慢慢过渡到骨头旁边。上沿接到 y −11（藏在上衣里）
 const KNEE_Y = 123.28;
 const smooth01 = (a, b, x) => {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
@@ -194,8 +224,19 @@ function legOf(path, side) {
   const mx = fit.reduce((t, r) => t + (r.outer + r.inner) / 2, 0) / fit.length;
   const b = fit.reduce((t, r) => t + (r.y - my) * ((r.outer + r.inner) / 2 - mx), 0) / fit.reduce((t, r) => t + (r.y - my) ** 2, 0);
   const mid = (y) => mx + b * (y - my);
+  // 裤腰那几行被上衣下摆挡住、只描到下摆中间露出来的那一截：往上看外沿离中线一下子收进去 3 以上，就当是被挡住了，
+  // 那几行用下面第一行完整的外沿（不然裤腿上沿留一个台阶）
+  for (let i = rows.length - 2; i >= 0; i--) {
+    const o = (r) => out * (r.outer - mid(r.y));
+    if (rows[i].y < KNEE_Y && o(rows[i]) < o(rows[i + 1]) - 3) {
+      const keep = rows[i + 1].outer - mid(rows[i + 1].y);
+      for (let k = i; k >= 0; k--) rows[k] = { ...rows[k], outer: mid(rows[k].y) + keep };
+      break;
+    }
+  }
   const { hip, knee, ankle } = LEG_REST[side];
-  const hem = ankle[1] + 5;
+  // 裤脚落在脚踝下面多少（配置的 art.legHem，默认 5：小孩的卷边裤脚在脚踝上；长裤盖到鞋面给 20 多）
+  const hem = ankle[1] + (C.legHem ?? 5);
   const mapY = (y) => (y <= KNEE_Y ? y : KNEE_Y + ((y - KNEE_Y) * (hem - KNEE_Y)) / (y1 - KNEE_Y));
   const bone = (Y) => (Y <= knee[1] ? hip[0] + ((knee[0] - hip[0]) * (Y - hip[1])) / (knee[1] - hip[1]) : knee[0] + ((ankle[0] - knee[0]) * (Y - knee[1])) / (ankle[1] - knee[1]));
   const outerPts = rows.map((r) => [bone(mapY(r.y)) + r.outer - mid(r.y), mapY(r.y)]);

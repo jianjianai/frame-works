@@ -60,13 +60,15 @@ import {
   smooth01,
   strokeBodyPart,
   toLocal,
+  SHOULDER_MERGE_R,
+  upperArmPts,
   EAR_SIDE_IN,
   faceHW,
   faceOf,
 } from "./figure";
 import { SIDE_IRIS } from "./figure-side";
 import { SIDE_BANGS } from "./chengtuo-side";
-import { BAND, BOOT, COAT_FRONT, COAT_SIDE, CUFF, SHOULDER_RIVET } from "./chengtuo-costume";
+import { BAND, BOOT, COAT_FRONT, COAT_SIDE, CUFF } from "./chengtuo-costume";
 
 export const COLORS = {
   // 配色取自用户给的参考图（2026-10-17）：炭黑头发、灰调藏青外套、哑光芥末黄围巾、砖红袖标
@@ -125,7 +127,7 @@ export interface ChengtuoItems {
   scarf: boolean;
   /** 手套（摘了是光着的手） */
   gloves: boolean;
-  /** 外套：两片前襟、口袋、翻领，袖子卷到小臂中间（下面露出手臂），肩头一颗铆钉 */
+  /** 外套：两片前襟、口袋、翻领，袖子卷到小臂中间（下面露出手臂） */
   coat: boolean;
   /** 红袖标（她的左上臂） */
   band: boolean;
@@ -805,11 +807,127 @@ export function coatOf(rig: Rig, size = 1, long = 0) {
     return chest.p(x, y - br * clamp01(-y / 140));
   };
   const get = (k: keyof typeof COAT_TURN) => polylinePath(lerpPts(...COAT_TURN[k], u), on);
-  return { l: get("l"), r: get("r"), lapelL: get("lapelL"), lapelR: get("lapelR"), pocketL: get("pocketL"), pocketR: get("pocketR") };
+  // 两片前襟的正面：肩线换成跨过胳膊圆头的一条顺滑曲线（frontShoulder）
+  const sl = frontShoulder(rig, lerpPts(...COAT_TURN.l, u).map(on), "l");
+  const sr = frontShoulder(rig, lerpPts(...COAT_TURN.r, u).map(on), "r");
+  const same = (p: V2) => p;
+  return {
+    l: polylinePath(sl.pts, same),
+    r: polylinePath(sr.pts, same),
+    lapelL: get("lapelL"),
+    lapelR: get("lapelR"),
+    pocketL: get("pocketL"),
+    pocketR: get("pocketR"),
+    shoulders: [sl.stroke, sr.stroke],
+  };
 }
 
-/** 穿外套时正面两个肩关节各往外挪多少（袖子接在外套的肩线上，照拆件图） */
-const COAT_SHOULDER_OUT = 6;
+/** 凸包（Andrew 单调链），首尾不重复 */
+function convexHull(pts: V2[]): V2[] {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: V2, a: V2, b: V2) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const half = (q: V2[]) => {
+    const h: V2[] = [];
+    for (const v of q) {
+      while (h.length >= 2 && cross(h[h.length - 2], h[h.length - 1], v) <= 0) h.pop();
+      h.push(v);
+    }
+    return h.slice(0, -1);
+  };
+  return [...half(p), ...half([...p].reverse())];
+}
+/** 一圈顶点上从 i 走到 j（step ±1）经过的点 */
+function walk(h: V2[], i: number, j: number, step: 1 | -1): V2[] {
+  const out: V2[] = [h[i]];
+  for (let k = i; k !== j; ) {
+    k = (k + step + h.length) % h.length;
+    out.push(h[k]);
+  }
+  return out;
+}
+const nearestI = (h: V2[], p: V2) => h.reduce((bi, q, i) => (len(sub(q, p)) < len(sub(h[bi], p)) ? i : bi), 0);
+/** 折线按大约 1 个单位一个点加密、高斯顺一顺（两端不动） */
+function smoothOpen(pts: V2[], sigma: number): V2[] {
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) total += len(sub(pts[i], pts[i - 1]));
+  const q = resampleOpen(pts, Math.max(8, Math.round(total)));
+  const r = Math.ceil(sigma * 2.5);
+  return q.map((p, i) => {
+    if (i === 0 || i === q.length - 1) return p;
+    // 两头附近窗口收窄，端点接得上
+    const rr = Math.min(r, i, q.length - 1 - i);
+    let sx = 0;
+    let sy = 0;
+    let sw = 0;
+    for (let k = -rr; k <= rr; k++) {
+      const w = Math.exp(-(k * k) / (2 * sigma * sigma));
+      sx += q[i + k][0] * w;
+      sy += q[i + k][1] * w;
+      sw += w;
+    }
+    return [sx / sw, sy / sw] as V2;
+  });
+}
+const SHOULDER_N = { arm: 4, line: 40 };
+/**
+ * 正面外套的肩（用户 2026-10-28：「把正面的肩膀平滑曲线」）：上臂画在外套后面、肩往外挪以后，外套的肩线比胳膊圆头低，
+ * 圆头冒出来、中间凹一个台阶，圆头外侧还有一个折角。取外套肩线和肩膀圈里那段上臂轮廓的凸包，从上臂外沿离开肩膀圈的地方
+ * 沿上面走到领口那头，顺一顺，前襟的肩换成它（从那里直着回到腋下，那一截在肩膀圈里、上臂上面，不描线）。
+ * 这段肩线压在上臂的边上，前襟描边在肩膀圈里裁掉一半：另外整条补描（stroke）。按现在胳膊的位置算；
+ * 转到 3/4、胳膊抬起来（离竖直往下 40° 以上）时慢慢变回原来的肩线。
+ * 前襟的点：l 是 0 肩角 … 12 领口、47 腋下；r 是 0 领口 … 12 肩角、13 腋下
+ */
+function frontShoulder(rig: Rig, pts: V2[], panel: "l" | "r"): { pts: V2[]; stroke: V2[] | null } {
+  const front = 1 - smooth01(0.2, 0.55, rig.u);
+  if (front <= 0) return { pts, stroke: null };
+  const idx = panel === "l" ? [47, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
+  // 腋下 → 肩角 → 领口
+  const seg = idx.map((i) => pts[i]);
+  const corner = seg[1];
+  const neck = seg[seg.length - 1];
+  const side = len(sub(rig.arms.L.root, corner)) < len(sub(rig.arms.R.root, corner)) ? "L" : "R";
+  const limb = rig.arms[side];
+  const root = limb.root;
+  const d = sub(limb.mid, root);
+  const hang = 1 - smooth01(0.7, 1.2, Math.acos(Math.max(-1, Math.min(1, d[1] / (len(d) || 1)))));
+  const w = front * hang;
+  if (w <= 0.001) return { pts, stroke: null };
+  const out = Math.sign(root[0] - neck[0]) || 1;
+  // 肩膀圈里那段上臂轮廓（往外扩一点，把上臂的描边也包进来）
+  const ring = upperArmPts(rig, side).filter((p) => len(sub(p, root)) < SHOULDER_MERGE_R);
+  const near = ring.map((p): V2 => {
+    const v = sub(p, root);
+    const l = len(v) || 1;
+    return [p[0] + (v[0] / l) * 1.2, p[1] + (v[1] / l) * 1.2];
+  });
+  const outer = ring.filter((p) => out * (p[0] - root[0]) > 0);
+  if (outer.length < 2) return { pts, stroke: null };
+  // 上臂外沿离开肩膀圈的地方：外侧最低的那一点（取上臂自己的轮廓，不往外扩：接得上往下那段上臂的描边）
+  const E = outer.reduce((a, p) => (p[1] > a[1] ? p : a), outer[0]);
+  const H = convexHull([...seg.slice(1), ...near]);
+  const iN = nearestI(H, neck);
+  const iE = nearestI(H, E);
+  const a = walk(H, iE, iN, 1);
+  const b = walk(H, iE, iN, -1);
+  const meanY = (q: V2[]) => q.reduce((s, p) => s + p[1], 0) / q.length;
+  const chain = (meanY(a) < meanY(b) ? a : b).slice(1, -1);
+  const line = smoothOpen([E, ...chain, neck], 2.5);
+  const mixed = [
+    ...lerpPts(resampleOpen([seg[0], corner], SHOULDER_N.arm), resampleOpen([seg[0], E], SHOULDER_N.arm), w),
+    ...lerpPts(resampleOpen(seg.slice(1), SHOULDER_N.line), resampleOpen(line, SHOULDER_N.line), w).slice(1),
+  ];
+  const stroke = mixed.slice(SHOULDER_N.arm - 1);
+  const res = panel === "l" ? [...mixed, ...pts.slice(13, 47)] : [...[...mixed].reverse(), ...pts.slice(14)];
+  return { pts: res, stroke };
+}
+
+/**
+ * 穿外套时正面两个肩关节各往外挪多少（转到 3/4 挪回来）。上臂画在外套后面，整条袖子挂在外套侧边外面、从肩头到袖口都露着，
+ * 袖标整个露出来（用户 2026-10-28 给的参考图 public/ref/比例参考-沉沉-胳膊.png，作品 3d80f743：「主角的正面其实也不对，胳膊的遮挡关系需要
+ * 参考这张图修改」）。原来 6 时肩窄、胳膊斜着往外撇，上臂压在前襟上时上粗下细，画在后面时肩下那一截和袖标被前襟盖住；
+ * 照参考图量，胳膊要往外约 10
+ */
+const COAT_SHOULDER_OUT = 16;
 
 /** 外套的两片前襟：压在身子上的手臂按它们裁描边（Look.bodyPieces） */
 function coatPieces(rig: Rig): Path2D[] {
@@ -849,6 +967,17 @@ export function drawCoat(
     ctx.restore();
     strokeBodyPart(ctx, rig, panel, ink, sides);
   }
+  // 正面的肩线（跨过胳膊圆头那段，前襟描边在肩膀圈里裁掉了一半）整条补描
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const s of c.shoulders) {
+    if (!s) continue;
+    ctx.beginPath();
+    s.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
+  }
 }
 
 /** 袖子的颜色：穿外套时是外套的 */
@@ -860,9 +989,8 @@ const UPPER_A = angleOf(sub(REST.elbow, REST.shoulder));
 /** 袖口翻边在前臂的局部坐标里（肘原点，+y 指向手腕）；它中间往下露出手臂 */
 const CUFF_L = toLocal(CUFF, REST.elbow, HAND_A);
 const CUFF_Y = (Math.min(...CUFF_L.map((p) => p[1])) + Math.max(...CUFF_L.map((p) => p[1]))) / 2;
-/** 袖标、肩头铆钉在上臂的局部坐标里 */
+/** 袖标在上臂的局部坐标里（肩头那颗铆钉去掉了：用户 2026-10-28「主角肩膀上的白点是生图的错误，把它移除」） */
 const BAND_L = toLocal(BAND, REST.shoulder, UPPER_A);
-const RIVET_L = toLocal([SHOULDER_RIVET.c], REST.shoulder, UPPER_A)[0];
 
 /** 前臂填色：穿外套时袖口往下是光着的手臂（照拆件图，外套袖子卷到小臂中间） */
 function forearmFill(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", lower: Path2D, ink: Ink) {
@@ -908,13 +1036,6 @@ function drawDot(ctx: CanvasRenderingContext2D, [x, y]: V2, r: number, ink: Ink)
   ctx.stroke();
 }
 
-function drawShoulderRivet(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink) {
-  if (!items(rig).coat) return;
-  const limb = rig.arms[side];
-  const sx = side === "L" ? 1 : -1;
-  const f = new Frame(limb.root[0], limb.root[1], limb.a1);
-  drawDot(ctx, f.p(RIVET_L[0] * sx, RIVET_L[1]), SHOULDER_RIVET.r, ink);
-}
 
 /** 铁靴着地：鞋底和靴筒一圈（跪着时靴筒前面贴着地） */
 export function bootSoles(rig: Rig, side: "L" | "R"): V2[] {
@@ -1019,8 +1140,9 @@ export const CHENGTUO: Look = {
   sleeve: sleeveColors,
   hands: (rig) => (items(rig).gloves ? [K.glove, K.gloveShade] : null),
   shoulderOut: (pose) => (pose.items.coat ? COAT_SHOULDER_OUT : 0),
-  // 穿外套的正面：上臂压在前襟上（照拆件图：袖子盖着前襟的边，袖标整个露出来）
-  armsOver: (rig) => !!items(rig).coat,
+  // 穿外套的正面：上臂画在外套后面，外套侧边从腋下直着到下摆（和配角一样；用户 2026-10-28 给的参考图，见 COAT_SHOULDER_OUT）。
+  // 原来照拆件图上臂压在前襟上，肩那一块和前襟连成一片往下收，胳膊上粗下细
+  armsOver: undefined,
   bodyPieces: coatPieces,
   backHair: drawBackHair,
   // 围脖：绕到脖子后面的半圈在脖子后面，前面的半圈压在脖子前面
@@ -1040,7 +1162,6 @@ export const CHENGTUO: Look = {
   forearm: forearmFill,
   onUpperArm: (ctx, rig, side, upper, ink) => {
     drawBand(ctx, rig, side, upper, ink);
-    drawShoulderRivet(ctx, rig, side, ink);
   },
   onForearm: drawCuff,
   shoe: (rig) => !!items(rig).boots,

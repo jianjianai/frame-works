@@ -5,9 +5,9 @@
 //   角色的配置在作品的 production/线稿配置.mjs：ref、lines、trace（split 正面和 3/4 之间的竖线、head 头部那一条的上下、
 //   faceTop / faceBottom 脸那块皮肤的盒子顶和底不超过多少、neckTop 脖子那块的盒子顶不低于多少、neckRow 量脖子中心的那一行、
 //   isHair / isSkin / isMark 头发、皮肤、鼻嘴的颜色；可选：isEye 眼珠的颜色（不写同头发：眼珠和头发一样深时）、
-//   brows: true 描眉毛（写 brow-l / brow-r）、pieceSmooth 单独的几块头发顺多狠（默认 1.5）、earRound: true 耳朵取凸包、faceRound: true 脸取凸包（圆脸，去掉像素描出来的小起伏）、earBox 框里的皮肤就是耳朵（耳垂和脸颊连成一块、耳朵里面偏深时；{ front: [[左耳框], [右耳框]], side: [框] }）、eyeBox / noseBox / mouthBox 只在框里找眼睛、鼻子、嘴（{ front: [x0, y0, x1, y1], side: […] }）、
-//   backClose 后面那片闭运算的半径（头发和脸之间留了细缝时）、hairMin 面积够这么大的几块头发都算头发（盘发的髻有自己的描边）、neckX: [正面, 3/4] 直接给脖子中心（脖子被领子挡住量不准时）、bald: true 秃顶（头的皮肤整个就是脸，不描刘海和后面那片，
-//   头发是单独的几块 hair-1、hair-2…，压在脸和耳朵上））、coat: { isCoat, rows } 敞怀外衣（开衫）的颜色和它在参考图里的上下几行：描两片前襟的门襟和下摆
+//   brows: true 描眉毛（写 brow-l / brow-r；眉毛是比头发还深的细线、挨着刘海时给 browBox 框住两条眉毛：{ front: [[x0, y0, x1, y1], [...]], side: [...] }）、pieceSmooth 单独的几块头发顺多狠（默认 1.5）、earRound: true 耳朵取凸包、faceRound: true 脸取凸包（圆脸，去掉像素描出来的小起伏）、earBox 框里的皮肤就是耳朵（耳垂和脸颊连成一块、耳朵里面偏深时；{ front: [[左耳框], [右耳框]], side: [框] }）、eyeBox / noseBox / mouthBox 只在框里找眼睛、鼻子、嘴（{ front: [x0, y0, x1, y1], side: […] }）、
+//   backClose 后面那片闭运算的半径（头发和脸之间留了细缝时）、hairMin 面积够这么大的几块头发都算头发（盘发的髻有自己的描边）、fringePad 刘海往脸外面多扩几像素（默认 2，按参考图大小放大；额头上透出一道细弧线时加大）、tieBox 发圈的框（{ front: [x0, y0, x1, y1], side: […] }：挨着它的几块头发是马尾，写 hair-tail；框里不是皮肤、头发、底色的是发圈，写 hair-tie）、neckX: [正面, 3/4] 直接给脖子中心（脖子被领子挡住量不准时）、bald: true 秃顶（头的皮肤整个就是脸，不描刘海和后面那片，
+//   头发是单独的几块 hair-1、hair-2…，压在脸和耳朵上））、coat: { isCoat(颜色, x, y), rows } 敞怀外衣（开衫）的颜色（可以按位置分：下摆缝的一条边和头发同色时只在那几行算）和它在参考图里的上下几行：描两片前襟的门襟和下摆
 //   （写 coat-l / coat-r：门襟上端 → 下摆外角，线稿换算.mjs 接上主角外套的肩、侧缝）。pants: { isPants, rows } 裤子的颜色和它的上下几行：描正面两条裤腿（写 leg-l / leg-r，
 //   线稿换算.mjs 只取宽窄、绕着主角的胯膝脚踝重新摆）。颜色用 看颜色.mjs 看；跑 --debug 看分得对不对再写。
 // 参考图和主角的线稿用同一套横线：按头顶、膝两条线对到线稿；横着按脖子对齐：正面脖子中心对中线 229.5，
@@ -45,8 +45,14 @@ function trace(view) {
   const hairComp = components(hairM);
   // 头发：最大的那块；配置给了 hairMin 就把面积够大的几块都并进来（盘发的髻有自己的描边，是单独的一块）
   // （只要上沿在脸以上的：衣服颜色和头发一样深时别把衣领并进来）
-  const hairBig = C.hairMin ? hairComp.filter((c, i) => i === 0 || (c.area >= C.hairMin && c.box[1] < C.faceTop)) : [hairComp[0]];
+  // tieBox：发圈把马尾和头发隔成两块：挨着发圈框的那几块头发是马尾（单独写 hair-tail，画在最后面），
+  // 框里不是皮肤、不是底色、不是头发的是发圈（hair-tie，压在马尾顶上）；后面那片不连马尾（连上的话 3/4 时从后脑一路连到肩后，像披肩）
+  const tieB = C.tieBox?.[view];
+  const nearTie = (c) => tieB && c.box[0] <= tieB[2] + 10 && c.box[2] >= tieB[0] - 10 && c.box[1] <= tieB[3] + 10 && c.box[3] >= tieB[1] - 10;
+  const tailComps = tieB ? hairComp.slice(1).filter((c) => c.area >= (C.hairMin ?? 300) && nearTie(c)) : [];
+  const hairBig = (C.hairMin ? hairComp.filter((c, i) => i === 0 || (c.area >= C.hairMin && c.box[1] < C.faceTop)) : [hairComp[0]]).filter((c) => !tailComps.includes(c));
   const hair = close(hairBig.reduce((a, c) => or(a, c.mask), hairComp[0].mask), 2);
+  const tieM = tieB ? mask(W, H, (x, y) => x >= tieB[0] && x <= tieB[2] && y >= tieB[1] && y <= tieB[3] && !isSkin(px(x, y)) && !isHair(px(x, y)) && sum(px(x, y)) > 250 && sum(px(x, y)) < 600) : null;
   const skinComp = components(skinM).filter((c) => c.area > 25);
   // 脸：面积最大、在头发下面的那块；脖子在下巴下面
   let face = skinComp.find((c) => c.box[1] < C.faceTop && c.box[3] < C.faceBottom);
@@ -69,7 +75,8 @@ function trace(view) {
     let all = null;
     for (const earB of earList) {
       const boxM = mask(W, H, (x, y) => x >= earB[0] && x <= earB[2] && y >= earB[1] && y <= earB[3]);
-      const earM = and(fillHoles(close(and(skinM, boxM), 5)), boxM);
+      // 框里只留最大的一块（框角上碰到的一点脸颊、刘海缝里的皮肤会被当成耳朵：描轮廓只走第一块）
+      const earM = components(and(fillHoles(close(and(skinM, boxM), 5)), boxM))[0].mask;
       ears.push({ mask: earM, area: 0, box: earB });
       all = all ? or(all, earM) : earM;
     }
@@ -152,6 +159,14 @@ function trace(view) {
       const ex = (e.box[0] + e.box[2]) / 2;
       return cand.reduce((a, c) => (!a || Math.abs((c.box[0] + c.box[2]) / 2 - ex) < Math.abs((a.box[0] + a.box[2]) / 2 - ex) ? c : a), null);
     });
+    // 配置给了 browBox（{ front: [左眉框, 右眉框], side: […] }）：眉毛是比头发还深的细线、挨着刘海尖时，在框里找细长的深色块（最大的那块）
+    const bb = C.browBox?.[view];
+    if (bb)
+      brows = bb.map((b) => {
+        const m = mask(W, H, (x, y) => x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3] && sum(px(x, y)) < 260);
+        const long = components(m).filter((c) => c.box[2] - c.box[0] > 1.8 * (c.box[3] - c.box[1]));
+        return long.sort((p, q) => q.area - p.area)[0] ?? null;
+      });
     if (brows.some((b) => !b) || brows[0] === brows[1]) {
       // 眉毛和刘海连在一起时找不出来：这一面不写眉毛（眉毛跟着眼睛放），不算错
       console.error(`${view} 眉毛没找全（可能和刘海连在一起），这一面不写 brow-l / brow-r`);
@@ -206,7 +221,9 @@ function trace(view) {
   const backM = fillHoles(C.backClose ? close(backM0, C.backClose) : backM0);
   const back = smoothLoop(outline(components(backM)[0].mask), 1.5);
   // 刘海：头发 ∩ 脸的整圈（往外扩一点盖住脸的描边）
-  const fringeM = and(dilate(hair, 1), dilate(faceFullM, 2));
+  // 往脸外面多扩一点（2 像素按常见参考图的大小算：大图按比例多扩），刘海的上沿不压在脸上，不然描边在额头上留一道弧线
+  // fringePad 给了就按它（参考图像素）：脸的描边在刘海边上透出一道细线时再多扩一点
+  const fringeM = and(dilate(hair, 1), dilate(faceFullM, C.fringePad ?? Math.max(2, Math.round(1.4 / K))));
   const fringe = smoothLoop(outline(components(fringeM)[0].mask), 1.5);
 
   const earLines = ears.map((c) => earLine(c));
@@ -217,7 +234,11 @@ function trace(view) {
       [faceFullM, [250, 220, 200]],
       [fringeM, [120, 80, 60]],
     ]);
-  return { face: faceFull, ears: earLines, eyes: eyes.map(eyeBox), brows: brows.map(blob), nose: ends(nose), mouth: ends(mouth), back, fringe, pieces: [], neckC, fb };
+  // 马尾、发圈（有 tieBox 时）
+  const tail = tailComps.length ? smoothLoop(outline(dilate(close(tailComps.reduce((a, c) => or(a, c.mask), tailComps[0].mask), 2), 2)), 2) : null;
+  const tieC = tieM ? components(close(tieM, 2))[0] : null;
+  const tie = tieC ? smoothLoop(outline(dilate(tieC.mask, 2)), 2) : null;
+  return { face: faceFull, ears: earLines, eyes: eyes.map(eyeBox), brows: brows.map(blob), nose: ends(nose), mouth: ends(mouth), back, fringe, pieces: [], neckC, fb, tail, tie };
 }
 /** 脖子中心：对齐用（参考图 neckRow 那一行，下巴描边下面；主角的脖子在线稿 y 278–288 是直的）。
  *  脖子一边有阴影（不算皮肤色），量皮肤会偏：从脖子盒子的中间往两边找描边（最深的那几格） */
@@ -286,7 +307,7 @@ function traceBald({ view, hairComp, skinComp, face, fb, ears, eyes, brows, nose
 function traceCoat(view) {
   const [xa, xb] = view === "front" ? [0, C.split] : [C.split, W];
   const [y0, y1] = C.coat.rows;
-  const m = close(mask(W, H, (x, y) => x >= xa && x < xb && y >= y0 && y <= y1 && C.coat.isCoat(px(x, y))), 1);
+  const m = close(mask(W, H, (x, y) => x >= xa && x < xb && y >= y0 && y <= y1 && C.coat.isCoat(px(x, y), x, y)), 1);
   const parts = components(m).slice(0, 2).sort((a, b) => a.box[0] - b.box[0]);
   if (parts.length < 2) throw new Error(`${view} 外衣只找到 ${parts.length} 块（要两片前襟）：调 coat.isCoat / coat.rows`);
   return parts.map((c, k) => {
@@ -425,6 +446,8 @@ function pathsFor(view) {
   const out = [];
   if (t.back) out.push(P("hair-back", t.back, true, 4));
   if (t.fringe) out.push(P("fringe", t.fringe, true, 3));
+  if (t.tail) out.push(P("hair-tail", t.tail, true, 4));
+  if (t.tie) out.push(P("hair-tie", t.tie, true, 3));
   out.push(P("face", t.face, true, 5));
   // 单独的几块头发（秃顶两鬓）：按从左到右 hair-1、hair-2…
   t.pieces.forEach((pc, i) => out.push(P(`hair-${i + 1}`, pc, true, 3)));

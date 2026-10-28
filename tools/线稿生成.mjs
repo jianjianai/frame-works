@@ -82,7 +82,7 @@ async function build(view) {
       图层：参考图（背景）→ 对齐线 → 现在的${who}（对照，默认隐藏）→ ${front ? `${who}·头部 → ${who}·身体` : "侧面·头部 → 侧面·身体"}（在这里画）。
       由素材库「剪纸角色」tools/线稿生成.mjs 生成。 -->
  <g class="layer" id="ref">
-  <title>参考图（背景：比例参考-男人的${front ? "正面" : " 3/4"}）</title>
+  <title>参考图（背景：${path.basename(cfg.ref)} 的${front ? "正面" : " 3/4"}）</title>
   <image id="ref-image" x="${ref.x}" y="${ref.y}" width="${ref.w}" height="${ref.h}" opacity="0.45" preserveAspectRatio="none" xlink:href="data:image/jpeg;base64,${ref.data}"/>
  </g>
  <g class="layer" id="guides">

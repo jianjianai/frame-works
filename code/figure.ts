@@ -37,6 +37,7 @@ import {
   nearestIndex,
   norm,
   polylinePath,
+  resampleOpen,
   ribbonPts,
   rowSpan,
   smoothPath,
@@ -520,6 +521,8 @@ export interface Look {
   overTorso?(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L" | "R")[]): void;
   /** 脖子前面、头后面：围脖的前半圈、领子 */
   neckFront?(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink): void;
+  /** 领子前面、头后面：搭在肩上的低马尾、发圈（跟着头镜像、跟着 headScale 放大） */
+  underHead?(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink): void;
   /** 脸上面、眉毛下面：刘海、鬓发（头往反方向转时跟着头镜像） */
   frontHair?(ctx: CanvasRenderingContext2D, head: HeadView, ink: Ink): void;
   /** 人物特点：脸上另外的东西（雀斑、痣、眼镜），最后画 */
@@ -668,7 +671,10 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     // 外衣上面的正面上臂：袖子盖着外衣的边
     if (over) for (const side of behind) drawUpperArmOver(ctx, rig, side, ink);
     look.neckFront?.(ctx, rig, ink);
-    headView((r, k) => drawHead(ctx, r, k));
+    headView((r, k) => {
+      look.underHead?.(ctx, r, k);
+      drawHead(ctx, r, k);
+    });
   });
   // 前面的手臂和挂在胸前的东西（围巾垂下来那头）：垂在身边、举起来的手臂在它后面（风把它吹过手臂时压在手臂上），
   // 横在胸前的前臂（抱臂、递东西、抱人）压在它上面
@@ -943,15 +949,22 @@ const LEG_PIECES = {
   L: limbPieces(LEG_L_SHAPE, REST.hipL, REST.kneeL, REST.ankleL),
   R: limbPieces(LEG_R_SHAPE, REST.hipR, REST.kneeR, REST.ankleR),
 };
-/** 这个人的裤腿（Look.legShape，按轮廓缓存）；没有就是基础模型的 */
+/**
+ * 这个人的裤腿（Look.legShape，按轮廓缓存）；没有就是基础模型的。
+ * 身子镜像（朝右）时两条对调、各自镜像（照参考图描的两条不一样宽，直接翻过去一过正面就对调了）
+ */
 const LEG_PIECES_OF = new WeakMap<object, typeof LEG_PIECES>();
-function legPiecesOf(look: Look): typeof LEG_PIECES {
+const LEG_PIECES_FLIP = new WeakMap<object, typeof LEG_PIECES>();
+function legPiecesOf(look: Look, mir = false): typeof LEG_PIECES {
   const s = look.legShape;
   if (!s) return LEG_PIECES;
-  let p = LEG_PIECES_OF.get(s);
+  const cache = mir ? LEG_PIECES_FLIP : LEG_PIECES_OF;
+  let p = cache.get(s);
   if (!p) {
-    p = { L: limbPieces(s.L, REST.hipL, REST.kneeL, REST.ankleL, false), R: limbPieces(s.R, REST.hipR, REST.kneeR, REST.ankleR, false) };
-    LEG_PIECES_OF.set(s, p);
+    const mx = (P: V2[]) => P.map(([x, y]): V2 => [-x, y]);
+    const [L, R] = mir ? [mx(s.R), mx(s.L)] : [s.L, s.R];
+    p = { L: limbPieces(L, REST.hipL, REST.kneeL, REST.ankleL, false), R: limbPieces(R, REST.hipR, REST.kneeR, REST.ankleR, false) };
+    cache.set(s, p);
   }
   return p;
 }
@@ -1034,7 +1047,7 @@ function fillForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", l
  * 肩膀那一圈：袖子和身子在这里是一块（参考图 `public/ref/秤砣-抱臂遮挡参考.png`），这里面它们互相重叠的地方不描线；
  * 胳膊和身子之间那条线从腋下（上臂大约三分之一处）才开始。
  */
-const SHOULDER_MERGE_R = 32;
+export const SHOULDER_MERGE_R = 32;
 export function shoulderZone(rig: Rig, side: "L" | "R"): Path2D {
   const [x, y] = rig.arms[side].root;
   const p = new Path2D();
@@ -1058,6 +1071,14 @@ export function armPaths(rig: Rig, side: "L" | "R") {
   const aw = rig.look.armWidth ?? 1;
   const on = (f: Frame) => ([x, y]: V2) => f.p(x * sx * aw, y);
   return { limb, sx, upper: polyPath(ARM_PIECES.upper, on(fU)), lower: polyPath(ARM_PIECES.lower, on(fF)) };
+}
+/** 上臂的轮廓点（和 armPaths 的 upper 同一圈，画面坐标）：外衣的肩线按它接到胳膊上 */
+export function upperArmPts(rig: Rig, side: "L" | "R"): V2[] {
+  const limb = rig.arms[side];
+  const sx = side === "L" ? 1 : -1;
+  const f = new Frame(limb.root[0], limb.root[1], limb.a1);
+  const aw = rig.look.armWidth ?? 1;
+  return ARM_PIECES.upper.map(([x, y]) => f.p(x * sx * aw, y));
 }
 
 function drawArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, opts: DrawOptions) {
@@ -1245,7 +1266,7 @@ function drawFoot(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink:
 /** 一条腿的两节（大腿、小腿）放到现在的姿势上 */
 export function legPaths(rig: Rig, side: "L" | "R"): Path2D[] {
   const limb = rig.legs[side];
-  const P = legPiecesOf(rig.look)[side];
+  const P = legPiecesOf(rig.look, rig.mir)[side];
   const fT = new Frame(limb.root[0], limb.root[1], limb.a1);
   const fS = new Frame(limb.mid[0], limb.mid[1], limb.a2);
   // 大腿朝镜头时顺着骨头压短（膝盖那个半圆也跟着压扁，膝盖的圆由小腿那头的半圆撑着）
@@ -1317,6 +1338,12 @@ function drawLegs(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
 // ——— 身子、脖子 ———
 /** 身子、脖子放到现在的姿势上（转身时从正面线稿过渡到侧面线稿；呼吸时胸口以上起伏） */
 export function torsoPaths(rig: Rig): { neck: Path2D; torso: Path2D } {
+  const { pts, on } = neckOutline(rig);
+  return { neck: polylinePath(pts, on), torso: polylinePath(lerpPts(...TORSO_TURN, rig.u), on) };
+}
+
+/** 脖子的轮廓（身子的坐标，on 放到画面上）：高领毛衣照它放宽一圈 */
+export function neckOutline(rig: Rig): { pts: V2[]; on: (p: V2) => V2 } {
   const { chest, u, pose, thh, headMir } = rig;
   const br = pose.breath * 1.6;
   const on = ([x, y]: V2): V2 => chest.p(x, y - br * clamp01(-y / 140));
@@ -1331,7 +1358,7 @@ export function torsoPaths(rig: Rig): { neck: Path2D; torso: Path2D } {
     const ny = lerp(y, hy, w);
     return [lerp(x, hx + nx, w), ny > -164 ? ny + 12 : ny];
   });
-  return { neck: polylinePath(neck, on), torso: polylinePath(lerpPts(...TORSO_TURN, u), on) };
+  return { pts: neck, on };
 }
 
 /** sides：正面时画在身子后面的上臂。身子的边在这些上臂的肩膀圈里不描（袖子和身子在肩膀是一块），腋下往下照常描 */
@@ -1530,6 +1557,8 @@ export interface FaceView {
   mouth: V2[];
   /** 耳朵（三次贝塞尔点列）：L 画面左、R 画面右；3/4 只用 R（近处那只）。不写用基础模型的耳朵贴着脸边挪 */
   ears?: { L?: V2[]; R?: V2[] };
+  /** 耳朵里的一道线（三次贝塞尔点列，不闭合）：L 画面左、R 画面右；3/4 只用 R */
+  earLines?: { L?: V2[]; R?: V2[] };
   /** 两条眉毛的中心（cast-face 的粗眉等按它放）；不写跟着眼珠 */
   brows?: { R: V2; L: V2 };
   /**
@@ -1575,6 +1604,9 @@ interface HeadGeom {
   ears0: { L: V2[]; R: V2[] };
   /** 近处的耳朵：正面 → 3/4，逐点对应好（角色画了 3/4 的耳朵时） */
   ear3?: [V2[], V2[]];
+  /** 耳朵里的线（正面，三次贝塞尔点列）；近处那只正面 → 3/4 逐点对应好的 */
+  earLines0?: { L?: V2[]; R?: V2[] };
+  earLine3?: [V2[], V2[]];
   /** 正面的脸在 y 处的左（s < 0）、右边：耳朵贴着它 */
   edge: (s: number, y: number) => number;
 }
@@ -1609,6 +1641,8 @@ function headOf(look: Look): HeadGeom {
       mouth3: f3 ? mouthOf(f3.mouth[0], f3.mouth[f3.mouth.length - 1]) : MOUTH_SIDE,
       ears0,
       ear3: f3?.ears?.R ? turnPairOf(bezierPolyline(ears0.R), bezierPolyline(f3.ears.R), 12) : undefined,
+      earLines0: f0?.earLines,
+      earLine3: f0?.earLines?.R && f3?.earLines?.R ? linePairOf(f0.earLines.R, f3.earLines.R) : undefined,
       edge: f0
         ? (s, y) => {
             const sp = rowSpan(front, y);
@@ -1619,6 +1653,15 @@ function headOf(look: Look): HeadGeom {
     HEAD_GEOM.set(look, g);
   }
   return g;
+}
+
+/** 两条不闭合的线（三次贝塞尔点列）逐点对应：按弧长各取 16 个点，3/4 那条反着画的倒过来（两头对两头） */
+function linePairOf(a: V2[], b: V2[]): [V2[], V2[]] {
+  const pa = resampleOpen(bezierPolyline(a, 16, false), 16);
+  let pb = resampleOpen(bezierPolyline(b, 16, false), 16);
+  const d = (p: V2, q: V2) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+  if (d(pa[0], pb[0]) + d(pa[15], pb[15]) > d(pa[0], pb[15]) + d(pa[15], pb[0])) pb = [...pb].reverse();
+  return [pa, pb];
 }
 
 /** 3/4 的脸的前后位置：眼睛那一行（y 9）、嘴那一行（y 30）的前沿和下巴的 x 的平均（头的坐标） */
@@ -1690,6 +1733,21 @@ function drawHead(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink) {
     const earPath = s > 0 && hg.ear3 && uh > 0 ? polylinePath(lerpPts(...hg.ear3, clamp01(uh)), (p) => H(p[0], p[1])) : cubicPath(ear, map);
     drawPart(ctx, earPath, K.skin, null, ink, thin);
     skins.push(earPath);
+    // 耳朵里的一道线
+    const line = s > 0 ? hg.earLines0?.R : hg.earLines0?.L;
+    if (line) {
+      const pts = s > 0 && hg.earLine3 && uh > 0 ? lerpPts(...hg.earLine3, clamp01(uh)).map((p) => H(p[0], p[1])) : bezierPolyline(line, 16, false).map(map);
+      ctx.save();
+      ctx.clip(earPath);
+      ctx.strokeStyle = ink.line;
+      ctx.lineWidth = thin;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   // 细线、不加阴影：下巴那道月牙阴影连着描边像一条粗线
