@@ -15,6 +15,9 @@ interface Pair {
   cx: [number, number];
   top: number;
   ground: number;
+  /** 参考图文件（不写是 比例参考-<ref>.png）、画多大（不写是原大小；大图缩到和别的一样宽） */
+  file?: string;
+  k?: number;
 }
 const PAIRS: Pair[] = [
   { ref: "沉沉", name: "沉沉", look: CHENGTUO, cx: [140, 373], top: 158, ground: 886 },
@@ -22,6 +25,8 @@ const PAIRS: Pair[] = [
   { ref: "小孩", name: "小石头", look: lookOf(CAST.小石头), spec: CAST.小石头, cx: [140, 380], top: 161, ground: 896 },
   { ref: "老人", name: "老钟", look: lookOf(CAST.老钟), spec: CAST.老钟, cx: [140, 380], top: 161, ground: 900 },
   { ref: "女人", name: "千斤的妈妈", look: lookOf(CAST.千斤的妈妈), spec: CAST.千斤的妈妈, cx: [140, 385], top: 96, ground: 965 },
+  // 用户 2026-10-28 生成的参考图（1493×2000），缩到和别的一样宽
+  { ref: "小石头的妈妈", name: "小石头的妈妈", look: lookOf(CAST.小石头的妈妈), spec: CAST.小石头的妈妈, cx: [425, 1112], top: 124, ground: 1952, file: "比例参考-小石头的妈妈.jpg", k: 506 / 1493 },
 ];
 const ITEMS = { scarf: true, gloves: true, coat: true, band: true, boots: true, bricks: 2 };
 const VIEWS: Angles[] = [{ face: 0 }, { face: -1 }];
@@ -60,7 +65,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const imgs = await Promise.all(
     PAIRS.map(async (p) => {
       const im = new Image();
-      im.src = assetUrl(`films/work-3d80f743/ref/比例参考-${p.ref}.png`);
+      im.src = assetUrl(`films/work-3d80f743/ref/${p.file ?? `比例参考-${p.ref}.png`}`);
       await im.decode();
       return im;
     }),
@@ -87,15 +92,16 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
           g.restore();
         });
       };
-      // 上：参考图 | 我们的
-      g.drawImage(im, 20, 30, im.width, im.height);
-      ours(560, 30, 1);
+      // 上：参考图 | 我们的（参考图按 ik 缩放：取景的数都是参考图像素）
+      const ik = p.k ?? 1;
+      g.drawImage(im, 20, 30, im.width * ik, im.height * ik);
+      ours(560, 30, ik);
       g.fillStyle = "#2b2630";
       g.font = "26px sans-serif";
       g.fillText(`参考：${p.ref}`, 30, 30);
       g.fillText(`我们的：${p.name}`, 570, 30);
       // 下：叠在一起（参考图上半透明画我们的）
-      const s = 0.82;
+      const s = 0.82 * ik;
       g.drawImage(im, 20, 1080, im.width * s, im.height * s);
       ours(20, 1080, s, 0.55);
       g.drawImage(im, 560, 1080, im.width * s, im.height * s);

@@ -78,7 +78,10 @@ export function thenAt(t: number) {
   const mp: PoseIn = { ...mamaMove(t).pose };
   const mRoot = mamaRoot(t);
   const kj = castJoints(KID, kp);
-  return { kid: { pose: kp, root: [KID_X, 0] as V2, head: [KID_X + kj.head[0], kj.head[1]] as V2 }, mama: { pose: mp, root: mRoot } };
+  // 头以脖子为中心放大 headScale 倍（小孩头大）：关节给的是没放大的头的中心
+  const hs = KID.headScale ?? 1;
+  const head: V2 = [KID_X + kj.neck[0] + (kj.head[0] - kj.neck[0]) * hs, kj.neck[1] + (kj.head[1] - kj.neck[1]) * hs];
+  return { kid: { pose: kp, root: [KID_X, 0] as V2, head }, mama: { pose: mp, root: mRoot } };
 }
 
 /** 画十二年前的两个人（人这一层，世界坐标） */
@@ -129,7 +132,7 @@ export function nowCam(t: number, base: (t: number) => Cam): Cam {
   return camLerp(base(t), aim(face[0], face[1], 540, 860, 3.2), E.io(ph(t, MEM_T.start, MEM_T.push1 + 0.2)));
 }
 /**
- * 十二年前：溶进来的那一刻，小时候的脸在画面上的位置、大小和现在那张脸一样（头的大小：0.58 × 1.42 ≈ 现在的 0.82）；
+ * 十二年前：溶进来的那一刻，小时候的脸在画面上的位置、大小和现在那张脸一样（头的大小：scale × headScale，小孩的头和大人差不多大）；
  * 再从她脸上拉开（E.settle，拉远时位置晚动：先看见大铁靴，「反乌」妈妈从脚开始露出来），落在「下面穿着大铁靴仰着头的她、
  * 上面天上的妈妈」上（她的脚底在画面下边、妈妈的头在画面上边），跟着妈妈慢慢往上一点
  */

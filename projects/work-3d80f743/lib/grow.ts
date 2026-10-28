@@ -14,7 +14,7 @@
 // 溶的 0.42 秒里回忆这边的她直接用现在那边的同一个姿势（按胯对齐、一样大），只有四周和怀里的人在换。
 // 被救的人：落地以前画在背景那一层（她跳起来攥住的手在他前面），落地以后坐在她前面（和前奏周磊一样）。
 
-import { type CastSpec, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
+import { type CastSpec, castJoints, lookOf, youngChengtuo } from "@materials/剪纸角色/code/cast";
 import { type Angles, type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
 import { beatAt } from "@frame/engine/tempo";
 import { type Cam, E, aim, camLerp, kick, ph, toScreen } from "./cam";
@@ -23,7 +23,6 @@ import { CHEN, ZHOU, armL, armR, legL, legR } from "./poses";
 import { drawPerson } from "./people";
 import { brickHold } from "./props";
 import { pose } from "./dawn";
-import { KID } from "./memory";
 import { SIGN_T, kidAt8 } from "./sign";
 import { knifeAt } from "./mother";
 import { STUDENT, UNCLE } from "./saved";
@@ -105,17 +104,17 @@ export function growDissolve(t: number): { from: Layer; to: Layer; w: number } |
 }
 
 // ——— 七到十九岁的她 ———
-/** 身高（相对十九岁的她） */
-const SCALE = [0.58, 0.62, 0.66, 0.7, 0.74, 0.78, 0.82, 0.86, 0.9, 0.93, 0.96, 0.98, 1];
-const NAVY = { color: "#353f55", shade: "#2b3346" };
-/** 七到十二岁：素材库「小时候的秤砣」照着年纪长高（骨架、头身比和十九岁的她一样，只按 scale 缩放：2026-10-27 配角按参考图改的）；靴子还是妈妈那双（世界里一样大），相对身子越来越合脚；十岁穿上藏青外套 */
-const KIDS: CastSpec[] = [0, 1, 2, 3, 4, 5].map((i) => ({
-  ...KID,
-  name: `${7 + i}岁的秤砣`,
-  scale: SCALE[i],
-  bootScale: (KID.scale * (KID.bootScale ?? 1)) / SCALE[i],
-  coat: i >= 3 ? { ...NAVY } : undefined,
-}));
+/**
+ * 十三岁起是现在的她（大人的头身比）照着年纪缩小（SCALE[age − 7]；七到十二岁的身高在素材库 youngChengtuo 里）。
+ * 原来七岁只有 0.58（三四岁的个子）、十岁 0.7，头身比和十九岁的她一样（用户 2026-10-28：「先改沉沉」——小时候的她像大人的缩小版）。
+ * 十六岁 0.93 没变（学校门口溶回现在的镜头按它算）
+ */
+const SCALE = [0.75, 0.78, 0.81, 0.835, 0.85, 0.865, 0.88, 0.9, 0.915, 0.93, 0.96, 0.98, 1];
+/**
+ * 七到十二岁：素材库的 youngChengtuo（七岁是小孩的头身比，头、腿长、裤腿宽一年年往十三岁过渡，身高按年纪；
+ * 靴子还是妈妈那双，十岁穿上藏青外套）。原来写在这里，2026-10-28 搬进素材库（资源面板里「小时候的秤砣」能调年纪看）
+ */
+const KIDS: CastSpec[] = [7, 8, 9, 10, 11, 12].map(youngChengtuo);
 /** 十三岁起是现在的她（素材库的秤砣：齐刘海长直发、藏青外套），照着年纪缩小；围巾、手套、袖标一年年添上 */
 const teenItems = (age: number, bricks = 2) => ({ coat: true, scarf: age >= 15, gloves: age >= 16, band: age >= 17, boots: true, bricks });
 
@@ -152,6 +151,8 @@ function girlJoints(pose: PoseIn, age: number) {
   return out;
 }
 const scaleOf = (age: number) => (age <= 12 ? KIDS[age - 7].scale : SCALE[age - 7]);
+/** 这个年纪站直时胯离地多高（世界单位）：小孩腿短（legLength） */
+const standHip = (age: number) => (age <= 12 ? (65.1 + 215.4 * (KIDS[age - 7].legLength ?? 1)) * KIDS[age - 7].scale : 280 * SCALE[age - 7]);
 
 // ——— 她的动作 ———
 /** 前奏那套姿势是朝左写的：朝右时翻 face，眼睛看的左右也翻过来 */
@@ -490,7 +491,7 @@ export function drawGrowFront(g: CanvasRenderingContext2D, t: number, z: number,
   const k = girlAt(t, ageOverride);
   // 脚下一小块影子（跳起来时变淡、变小）
   const hip = -k.j.hip[1];
-  const up = Math.max(0, hip - 280 * scaleOf(k.age)) / 300;
+  const up = Math.max(0, hip - standHip(k.age)) / 300;
   g.save();
   g.fillStyle = `rgba(96,62,70,${0.22 * Math.max(0.3, 1 - up)})`;
   g.beginPath();
