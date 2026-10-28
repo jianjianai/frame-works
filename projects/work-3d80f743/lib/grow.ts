@@ -108,12 +108,11 @@ export function growDissolve(t: number): { from: Layer; to: Layer; w: number } |
 /** 身高（相对十九岁的她） */
 const SCALE = [0.58, 0.62, 0.66, 0.7, 0.74, 0.78, 0.82, 0.86, 0.9, 0.93, 0.96, 0.98, 1];
 const NAVY = { color: "#353f55", shade: "#2b3346" };
-/** 七到十二岁：素材库「小时候的秤砣」照着年纪长高——头的比例一年年变小；靴子还是妈妈那双（世界里一样大），相对身子越来越合脚；十岁穿上藏青外套 */
+/** 七到十二岁：素材库「小时候的秤砣」照着年纪长高（骨架、头身比和十九岁的她一样，只按 scale 缩放：2026-10-27 配角按参考图改的）；靴子还是妈妈那双（世界里一样大），相对身子越来越合脚；十岁穿上藏青外套 */
 const KIDS: CastSpec[] = [0, 1, 2, 3, 4, 5].map((i) => ({
   ...KID,
   name: `${7 + i}岁的秤砣`,
   scale: SCALE[i],
-  headScale: 1.42 - 0.04 * i,
   bootScale: (KID.scale * (KID.bootScale ?? 1)) / SCALE[i],
   coat: i >= 3 ? { ...NAVY } : undefined,
 }));

@@ -1,13 +1,13 @@
 // 间奏里被她拽下来的两个人（lib/grow.ts）：高潮的人链里会回来（lib/link.ts），穿出场时的衣服。单独放一个文件，五③不用把间奏那一整套加载进来。
 
 import { CAST, type CastSpec } from "@materials/剪纸角色/code/cast";
+import { ZHOULEI_FACE0, ZHOULEI_FACE3 } from "@materials/剪纸角色/code/cast-face-art";
 
 /** 扎马尾的女学生：高马尾、碎刘海，浅蓝的运动校服（白色立领、拉链、袖子上两道白杠） */
 export const STUDENT: CastSpec = {
   name: "扎马尾的女学生",
   scale: 0.9,
-  headScale: 1.05,
-  legWidth: 1.08,
+  // 骨架、头的大小和主角一样，只按 scale 缩放；脸是主角的（年轻的女孩）
   colors: { ...CAST.年轻人.colors, top: "#bcd5ec", topShade: "#a6c2dd", bottom: "#3f4a6b", bottomShade: "#353e5a" },
   hair: "highpony",
   hairColor: "#2f2e33",
@@ -20,11 +20,9 @@ export const STUDENT: CastSpec = {
 export const UNCLE: CastSpec = {
   name: "戴眼镜的大叔",
   scale: 1.04,
-  width: 1.08,
-  headScale: 1.12,
-  legWidth: 1.22,
-  legHem: 1.3,
-  armWidth: 1.1,
+  // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图「男人」描的（周磊的脸）
+  face0: ZHOULEI_FACE0,
+  face3: ZHOULEI_FACE3,
   colors: { ...CAST.周磊.colors, top: "#d9d3c6", topShade: "#c9c2b3", bottom: "#4b4340", bottomShade: "#3f3835" },
   hair: "short",
   hairColor: "#3a3539",
