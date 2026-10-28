@@ -8,10 +8,11 @@
 //   brows: true 描眉毛（写 brow-l / brow-r）、pieceSmooth 单独的几块头发顺多狠（默认 1.5）、earRound: true 耳朵取凸包、faceRound: true 脸取凸包（圆脸，去掉像素描出来的小起伏）、earBox 框里的皮肤就是耳朵（耳垂和脸颊连成一块、耳朵里面偏深时；{ front: [[左耳框], [右耳框]], side: [框] }）、eyeBox / noseBox / mouthBox 只在框里找眼睛、鼻子、嘴（{ front: [x0, y0, x1, y1], side: […] }）、
 //   backClose 后面那片闭运算的半径（头发和脸之间留了细缝时）、hairMin 面积够这么大的几块头发都算头发（盘发的髻有自己的描边）、neckX: [正面, 3/4] 直接给脖子中心（脖子被领子挡住量不准时）、bald: true 秃顶（头的皮肤整个就是脸，不描刘海和后面那片，
 //   头发是单独的几块 hair-1、hair-2…，压在脸和耳朵上））、coat: { isCoat, rows } 敞怀外衣（开衫）的颜色和它在参考图里的上下几行：描两片前襟的门襟和下摆
-//   （写 coat-l / coat-r：门襟上端 → 下摆外角，线稿换算.mjs 接上主角外套的肩、侧缝）。颜色用 看颜色.mjs 看；跑 --debug 看分得对不对再写。
+//   （写 coat-l / coat-r：门襟上端 → 下摆外角，线稿换算.mjs 接上主角外套的肩、侧缝）。pants: { isPants, rows } 裤子的颜色和它的上下几行：描正面两条裤腿（写 leg-l / leg-r，
+//   线稿换算.mjs 只取宽窄、绕着主角的胯膝脚踝重新摆）。颜色用 看颜色.mjs 看；跑 --debug 看分得对不对再写。
 // 参考图和主角的线稿用同一套横线：按头顶、膝两条线对到线稿；横着按脖子对齐：正面脖子中心对中线 229.5，
 // 3/4 对主角 3/4 脖子的中心 218.05（线稿 y 278–288 是直的）——打出来的「脖子中心」填进配置的 views.cx。
-// 只描头（给了 coat 再描外衣的两片前襟）：别的衣服、鞋用素材库的通用版型（或用户另画）。
+// 只描头（给了 coat 再描外衣的两片前襟，给了 pants 再描裤腿）：别的衣服、鞋用素材库的通用版型（或用户另画）。
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -310,6 +311,54 @@ function traceCoat(view) {
     return smoothLoop(path, 2, false);
   });
 }
+/**
+ * 裤子（配置给了 pants，只描正面）：裤子颜色的那一大块往外扩 2 像素到描边中间，一行一行找两条裤腿的外沿和里沿
+ * （裆以上两条腿连成一段：里沿是正中 cx），连成两圈闭合的轮廓：画面左那条腿外沿从上往下、裤脚、里沿从下往上到裆、正中往上。
+ * 换算时只用宽窄（每一行离这条腿中线多远），绕着主角的胯、膝、脚踝重新摆（线稿换算.mjs）
+ */
+function traceLegs(cx) {
+  const [y0, y1] = C.pants.rows;
+  const m0 = close(mask(W, H, (x, y) => x < C.split && y >= y0 && y <= y1 && C.pants.isPants(px(x, y))), 2);
+  const m = dilate(components(m0)[0].mask, 2);
+  const rows = [];
+  for (let y = y0 - 2; y <= y1 + 2; y++) {
+    const runs = [];
+    let st = -1;
+    for (let x = 0; x <= C.split; x++) {
+      const v = x < C.split && m.m[y * W + x] === 1;
+      if (v && st < 0) st = x;
+      if (!v && st >= 0) {
+        if (x - st > 3) runs.push([st, x]);
+        st = -1;
+      }
+    }
+    if (!runs.length) continue;
+    // 裆以下正中 cx 不在裤子里；两条腿的里沿是离正中最近的那两头（裤兜、缝线会把一条腿再切成几段）
+    const split = !runs.some(([a, b]) => a <= cx && b > cx);
+    const lIn = Math.max(...runs.filter(([, b]) => b <= cx).map(([, b]) => b));
+    const rIn = Math.min(...runs.filter(([a]) => a >= cx).map(([a]) => a));
+    rows.push({ y, l: [runs[0][0], lIn], r: [rIn, runs[runs.length - 1][1]], split });
+  }
+  // 裤腰：从上往下第一行盖住正中的（再往上是上衣下摆边上零碎的几块）；裆：最后一行盖住正中的下面那一行
+  const first = rows.findIndex((r) => !r.split);
+  const last = rows.findLastIndex((r) => !r.split);
+  if (first < 0 || last === rows.length - 1) throw new Error("裤子没分成两条腿：调 pants.isPants / pants.rows");
+  rows.splice(0, first);
+  const ci = last - first + 1;
+  const top = rows[0].y;
+  const crotch = rows[ci].y;
+  const bottom = rows[rows.length - 1].y + 1;
+  const legs = [];
+  for (const k of [0, 1]) {
+    const outer = rows.map((r) => [k ? r.r[1] : r.l[0], r.y + 0.5]);
+    const inner = rows.slice(ci).map((r) => [k ? r.r[0] : r.l[1], r.y + 0.5]);
+    const ring = [[outer[0][0], top], ...outer, [outer[outer.length - 1][0], bottom], [inner[inner.length - 1][0], bottom], ...inner.reverse(), [cx, crotch], [cx, top]];
+    // 先按 1 像素一个点加密（几个角上点很稀，直接顺会把角切掉一大块）
+    const per = ring.reduce((a, p, i) => a + Math.hypot(p[0] - ring[(i + 1) % ring.length][0], p[1] - ring[(i + 1) % ring.length][1]), 0);
+    legs.push(smoothLoop(resampleLoop(k ? ring.reverse() : ring, Math.round(per)), 1.5));
+  }
+  return legs;
+}
 /** 耳朵的轮廓（往外扩到描边中间）；earRound 时取凸包再顺一顺 */
 const earLine = (c) => (C.earRound ? smoothLoop(resampleLoop(convexHull(outline(dilate(c.mask, 3))), 60), 2) : smoothLoop(outline(dilate(c.mask, 3)), 1.5));
 /** 凸包（Andrew 单调链），顺时针（y 朝下） */
@@ -390,6 +439,8 @@ function pathsFor(view) {
   if (t.brows.length) out.push(P("brow-l", t.brows[0], true, 2), P("brow-r", t.brows[1], true, 2));
   // 外衣的两片前襟：门襟上端 → 下摆外角（画面左那片 coat-l，3/4 时是远的那片），和头一样按脖子对齐
   if (C.coat) traceCoat(view).forEach((pts, k) => out.push(P(k ? "coat-r" : "coat-l", pts, false, 6)));
+  // 裤子的两条腿（只描正面：3/4 的裤腿和正面是同一块，跟着骨头摆）：画面左那条 leg-l
+  if (C.pants && view === "front") traceLegs(t.neckC).forEach((pts, k) => out.push(P(k ? "leg-r" : "leg-l", pts, true, 6)));
   console.error(view, "脖子中心（参考图）", t.neckC, "眼睛", t.eyes.length, "耳朵", t.ears.length, "眉毛", t.brows.length, "单独的头发", t.pieces.length, "外衣", C.coat ? 2 : 0);
   return out.join("\n");
 }

@@ -5,13 +5,14 @@
 //   file、prefix 在作品的 production/线稿配置.mjs 里这个角色的 art。
 // id：face 脸的整圈（盖在头发下面的那截是圆顶）、ear-l / ear-r 耳朵（3/4 只有 ear-r，近处那只）、eye-l / eye-r 眼珠（画面左 / 右）、
 // nose、mouth、hair-back 头发后面那片（画在身子后面）、fringe 刘海（头发盖在脸上的那块：发际线 + 脸的圆顶）。
+// leg-l / leg-r（可以没有，只在正面那张）：两条裤腿的轮廓（画面左那条是 l），换算成 <prefix>_LEGS（人物配置的 legArt）。
 // coat-l / coat-r（可以没有）：敞怀外衣两片前襟的门襟和下摆（门襟上端 → 下摆外角，画面左那片是 l），换算成 <prefix>_COAT（cast-wear.ts 的 GarmentArt）。
 // 配角的骨架、头的大小和主角一样（用户 2026-10-27：「胳膊和腿的和脖子，身体主框架，头的框架代码是可以共用的」），线原样落在主角的骨架上。
 // 用户自己画、线没有 id 时按位置给线加上 id 再换算（作品 3d80f743 的 周磊线稿换算.mjs 是按画的顺序认的例子）。
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { COAT_SHOULDER, NECK_SIDE, bbox, fmt, layerPathsById, resample, sample, toBody, toHead } from "./线稿换算工具.mjs";
+import { COAT_SHOULDER, K, LEG_REST, NECK_SIDE, bbox, fmt, layerPathsById, resample, sample, toBody, toHead } from "./线稿换算工具.mjs";
 
 const who = process.argv[2];
 const outDir = process.argv[3];
@@ -160,6 +161,60 @@ export const ${C.prefix}_COAT: GarmentArt = {
 };
 `;
 }
-const out = coatSrc ? src.replace('import type { FaceView } from "./figure";', 'import type { GarmentArt } from "./cast-wear";\nimport type { FaceView } from "./figure";') + coatSrc : src;
+// ——— 裤腿（leg-l / leg-r）：只取宽窄，绕着主角的胯、膝、脚踝重新摆 ———
+// 参考图里的人站得直（两脚在胯底下），主角的腿往外撇：照原样放上去裤腿就和骨头对不上。一行一行量裤腿的外沿、里沿离这条腿中线
+// （裆以下每行外沿、里沿的中点拟合的一条直线）多远，放到主角这条腿的骨头上（胯 → 膝 → 脚踝）同样的高度：大腿一样长，
+// 小腿按参考图的膝盖到裤脚拉到主角的膝盖到脚踝下面 5。裆以上里沿是正中，裆往下 30 慢慢过渡到骨头旁边。上沿接到 y −11（藏在上衣里）
+const KNEE_Y = 123.28;
+const smooth01 = (a, b, x) => {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+function legOf(path, side) {
+  const ring = sample(path.segs, 12).map(([X, Y]) => [(X - 229.5) * K, (Y - 463.8) * K]);
+  const ys = ring.map((p) => p[1]);
+  const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
+  const out = side === "R" ? -1 : 1;
+  const rows = [];
+  for (let y = y0 + 0.5; y < y1 - 0.4; y += 1.5) {
+    const xs = [];
+    for (let i = 0; i < ring.length; i++) {
+      const [a, b] = [ring[i], ring[(i + 1) % ring.length]];
+      if ((a[1] - y) * (b[1] - y) < 0) xs.push(a[0] + ((y - a[1]) / (b[1] - a[1])) * (b[0] - a[0]));
+    }
+    if (xs.length < 2) continue;
+    rows.push({ y, outer: out < 0 ? Math.min(...xs) : Math.max(...xs), inner: out < 0 ? Math.max(...xs) : Math.min(...xs) });
+  }
+  // 裆：里沿还在正中（两条腿连着）的最低那一行（上沿的两个圆角也离开正中，不能从上往下找第一行）
+  const crotch = Math.max(...rows.filter((r) => r.y < KNEE_Y && Math.abs(r.inner) <= 1.5).map((r) => r.y));
+  // 参考图这条腿的中线：最小二乘拟合 x = a + b·y
+  console.error(side, "裆", crotch.toFixed(1), "裤脚", y1.toFixed(1));
+  const fit = rows.filter((r) => r.y > crotch + 15 && r.y < y1 - 8);
+  const my = fit.reduce((t, r) => t + r.y, 0) / fit.length;
+  const mx = fit.reduce((t, r) => t + (r.outer + r.inner) / 2, 0) / fit.length;
+  const b = fit.reduce((t, r) => t + (r.y - my) * ((r.outer + r.inner) / 2 - mx), 0) / fit.reduce((t, r) => t + (r.y - my) ** 2, 0);
+  const mid = (y) => mx + b * (y - my);
+  const { hip, knee, ankle } = LEG_REST[side];
+  const hem = ankle[1] + 5;
+  const mapY = (y) => (y <= KNEE_Y ? y : KNEE_Y + ((y - KNEE_Y) * (hem - KNEE_Y)) / (y1 - KNEE_Y));
+  const bone = (Y) => (Y <= knee[1] ? hip[0] + ((knee[0] - hip[0]) * (Y - hip[1])) / (knee[1] - hip[1]) : knee[0] + ((ankle[0] - knee[0]) * (Y - knee[1])) / (ankle[1] - knee[1]));
+  const outerPts = rows.map((r) => [bone(mapY(r.y)) + r.outer - mid(r.y), mapY(r.y)]);
+  const innerPts = rows.map((r) => [(bone(mapY(r.y)) + r.inner - mid(r.y)) * smooth01(crotch, crotch + 30, r.y), mapY(r.y)]);
+  const last = rows.length - 1;
+  return [[outerPts[0][0], -11.3], ...outerPts, [outerPts[last][0], hem], [innerPts[last][0], hem], ...innerPts.reverse(), [0, -8]];
+}
+let legSrc = "";
+if (F["leg-l"] || F["leg-r"]) {
+  for (const id of ["leg-l", "leg-r"]) if (!F[id]) throw new Error(`正面少了 ${id}`);
+  const r2 = (pts) => fmt(pts.map(([x, y]) => [+x.toFixed(2), +y.toFixed(2)]));
+  legSrc = `
+/** 裤腿（人物配置的 legArt）：正面站直时的轮廓，身体坐标，L 画面右、R 画面左。宽窄照参考图描的，绕着主角的胯、膝、脚踝摆（关节和主角一样） */
+export const ${C.prefix}_LEGS = {
+  L: ${r2(legOf(F["leg-r"], "L"))} as V2[],
+  R: ${r2(legOf(F["leg-l"], "R"))} as V2[],
+};
+`;
+}
+const out = coatSrc ? src.replace('import type { FaceView } from "./figure";', 'import type { GarmentArt } from "./cast-wear";\nimport type { FaceView } from "./figure";') + coatSrc + legSrc : src + legSrc;
 fs.writeFileSync(path.join(outDir, `cast-${C.file}-art.ts.txt`), out);
-console.error(`写好 cast-${C.file}-art.ts.txt`, out.length, "字", coatSrc ? "（有外衣）" : "");
+console.error(`写好 cast-${C.file}-art.ts.txt`, out.length, "字", coatSrc ? "（有外衣）" : "", legSrc ? "（有裤腿）" : "");

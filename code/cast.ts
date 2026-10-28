@@ -20,7 +20,7 @@ import {
 } from "./figure";
 import { bootSoles, drawBoot } from "./chengtuo-draw";
 import { type HairArtSrc, type HairStyle, drawBackHair, drawFrontHair } from "./cast-hair";
-import { KID_FACE0, KID_FACE3, KID_HAIR } from "./cast-kid-art";
+import { KID_FACE0, KID_FACE3, KID_HAIR, KID_LEGS } from "./cast-kid-art";
 import { OLDZHONG_FACE0, OLDZHONG_FACE3, OLDZHONG_HAIR } from "./cast-oldzhong-art";
 import { QINMOM_COAT, QINMOM_FACE0, QINMOM_FACE3, QINMOM_HAIR } from "./cast-qinmom-art";
 import {
@@ -344,6 +344,8 @@ export interface CastSpec {
   legHem?: number;
   /** 膝盖那里的裤腿粗细（Look.legKnee）：直筒宽裤 */
   legKnee?: number;
+  /** 照参考图描的裤腿（Look.legShape，cast-<名>-art.ts 的 <前缀>_LEGS） */
+  legArt?: { L: V2[]; R: V2[] };
   armWidth?: number;
 }
 
@@ -372,6 +374,7 @@ export function castLook(spec: CastSpec): Look {
     legWidth: spec.legWidth,
     legHem: spec.legHem,
     legKnee: spec.legKnee,
+    legShape: spec.legArt,
     armWidth: spec.armWidth,
     sleeve: coat ? () => sleeve : undefined,
     shoulderOut: coat ? () => coat.shoulderOut ?? 4 * (coat.size ?? 1) : undefined,
@@ -601,8 +604,10 @@ export const CAST = {
     scale: 0.6,
     // 骨架、头的大小、胳膊腿和主角一样（参考图里的小孩和主角用同一套横线），只是整个人按 scale 缩小；
     // 脸和头发是照参考图描的（作品 3d80f743 的 public/ref/小石头-线稿.svg、小石头-侧面线稿.svg，cast-kid-art.ts）
+    // 裤腿也照参考图描：又宽又直的牛仔裤（用户 2026-10-28：「小石头的腿太细了，导致看起来像是大人的缩小版」）
     face0: KID_FACE0,
     face3: KID_FACE3,
+    legArt: KID_LEGS,
     colors: { ...SKIN, top: "#f5f1e6", topShade: "#e3decf", bottom: "#56627a", bottomShade: "#48536a", blush: "250,140,140" },
     hair: "kid",
     hairArt: KID_HAIR,
@@ -620,6 +625,7 @@ export const CAST = {
     scale: 0.6,
     face0: KID_FACE0,
     face3: KID_FACE3,
+    legArt: KID_LEGS,
     colors: { ...SKIN, top: "#f5f1e6", topShade: "#e3decf", bottom: "#56627a", bottomShade: "#48536a", blush: "250,140,140" },
     hair: "kid",
     hairArt: KID_HAIR,

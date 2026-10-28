@@ -552,6 +552,11 @@ export interface Look {
   legHem?: number;
   /** 膝盖那里的粗细（不写同 legWidth）：大腿从 legWidth 过渡到它、小腿从它过渡到 legHem。基础模型的腿往下收细，直筒宽裤要把膝盖、裤脚放得比大腿根多 */
   legKnee?: number;
+  /**
+   * 人物特点：自己的裤腿（照参考图描的宽窄，tools/线稿换算.mjs 生成）：正面站直时身体坐标里左右各一圈轮廓（L 画面右、R 画面左），
+   * 绕着基础模型的胯、膝、脚踝（REST），和基础模型的腿一样在膝盖切成大腿、小腿两节跟着骨头动。不写用基础模型的
+   */
+  legShape?: { L: V2[]; R: V2[] };
   /** 人物特点：胳膊（袖子）粗细，横着放大，关节和手不动 */
   armWidth?: number;
 }
@@ -917,11 +922,11 @@ function clockwise(pts: V2[]): V2[] {
 }
 
 /** 手臂、腿切成上下两节，分别放进各自骨头的局部坐标 */
-function limbPieces(shape: V2[], root: V2, mid: V2, end: V2) {
+function limbPieces(shape: V2[], root: V2, mid: V2, end: V2, bezier = true) {
   const aU = angleOf(sub(mid, root));
   const aL = angleOf(sub(end, mid));
   const axis = norm(add(dirOf(aU), dirOf(aL)));
-  const [up, lo] = splitAtJoint(samplePts(shape, 12), mid, axis);
+  const [up, lo] = splitAtJoint(bezier ? samplePts(shape, 12) : shape, mid, axis);
   return { upper: clockwise(toLocal(up, root, aU)), lower: clockwise(toLocal(lo, mid, aL)) };
 }
 
@@ -930,6 +935,18 @@ const LEG_PIECES = {
   L: limbPieces(LEG_L_SHAPE, REST.hipL, REST.kneeL, REST.ankleL),
   R: limbPieces(LEG_R_SHAPE, REST.hipR, REST.kneeR, REST.ankleR),
 };
+/** 这个人的裤腿（Look.legShape，按轮廓缓存）；没有就是基础模型的 */
+const LEG_PIECES_OF = new WeakMap<object, typeof LEG_PIECES>();
+function legPiecesOf(look: Look): typeof LEG_PIECES {
+  const s = look.legShape;
+  if (!s) return LEG_PIECES;
+  let p = LEG_PIECES_OF.get(s);
+  if (!p) {
+    p = { L: limbPieces(s.L, REST.hipL, REST.kneeL, REST.ankleL, false), R: limbPieces(s.R, REST.hipR, REST.kneeR, REST.ankleR, false) };
+    LEG_PIECES_OF.set(s, p);
+  }
+  return p;
+}
 /** 手套在手腕的局部坐标里（手腕原点，+y 指向指尖） */
 export const HAND_A = angleOf(sub(REST.wrist, REST.elbow));
 const HAND = {
@@ -1220,7 +1237,7 @@ function drawFoot(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink:
 /** 一条腿的两节（大腿、小腿）放到现在的姿势上 */
 export function legPaths(rig: Rig, side: "L" | "R"): Path2D[] {
   const limb = rig.legs[side];
-  const P = LEG_PIECES[side];
+  const P = legPiecesOf(rig.look)[side];
   const fT = new Frame(limb.root[0], limb.root[1], limb.a1);
   const fS = new Frame(limb.mid[0], limb.mid[1], limb.a2);
   // 大腿朝镜头时顺着骨头压短（膝盖那个半圆也跟着压扁，膝盖的圆由小腿那头的半圆撑着）
