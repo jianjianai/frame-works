@@ -88,9 +88,9 @@ export default {
 - **工具**（都在作品文件夹里运行）：
   - `线稿生成.mjs <角色> <底图目录>`：生成底稿 `public/ref/<角色>-线稿.svg`、`<角色>-侧面线稿.svg`（和秤砣的线稿同一套坐标：参考图 → 对齐线 → 现在的样子（对照，默认隐藏）→ 头部 / 身体两层）。**文件已有时只换对照那张图**，画好的线不动。底图目录里放 front-white / front-black / side-white / side-black.png：作品里写个样片 `sheets/_<角色>底图.ts`（`export const sample = lineBaseSample; export const createScene = lineBaseScene(CAST.<角色>);`，从 `@materials/剪纸角色/code/linebase` 导入），`preview_frames` 画 0.5 / 1.5 / 2.5 / 3.5 秒（region [0,0,920,1640]、scale 1、png、sheet: false）。样片 4–5 秒是转身一排头部、5–6 关节坐标、6–8 不穿衣服的基础模型（量胳膊、脖子的轮廓）。
   - `看颜色.mjs <参考图> x0 y0 x1 y1 [x,y …]`：一块地方最多的颜色和几个点的颜色（定 `isHair` / `isSkin`）。
-  - `描图.mjs <角色> [--debug]`：从平涂的参考图描头（脸、耳朵、眼珠、鼻子、嘴、头发后面那片、刘海），写进两张 SVG 的身体图层，每条线有 id（`face` `ear-l` `ear-r` `eye-l` `eye-r` `nose` `mouth` `hair-back` `fringe`，可选 `brow-l` `brow-r`、秃顶两鬓的 `hair-1` `hair-2`…），用户可以在编辑器里改。`--debug` 只出调试图。**会把身体图层整个换掉，用户改过线就别再跑。** `trace` 里可选的：`isEye` 眼珠的颜色（不写同头发；戴眼镜的在脸的盒子里找圆的两块）、`brows: true` 描眉毛（和刘海连着的那一面自动不写）、`bald: true` 秃顶（头的皮肤整个就是脸、取凸包再扣掉耳朵，不描刘海和后面那片，两鬓的头发是单独的几块）、`pieceSmooth` 单独的几块头发顺多狠（默认 1.5）、`earRound: true` 耳朵取凸包、`faceRound: true` 脸取凸包再顺一顺（圆脸：去掉像素描出来的小起伏）、`earBox` 框里的皮肤就是这只耳朵（耳垂和脸颊连成一块时）、`eyeBox` / `noseBox` / `mouthBox` 只在框里找（`{ front: [x0, y0, x1, y1], side: […] }`，眼镜框、法令纹、眉毛会被当成眼睛鼻子嘴）、`neckX: [正面, 3/4]` 直接给脖子中心、`hairMin` 面积够这么大的几块头发都算（盘发的髻有自己的描边）、`backClose` 后面那片闭运算的半径（头发和脸之间留了细缝）。
+  - `描图.mjs <角色> [--debug]`：从平涂的参考图描头（脸、耳朵、眼珠、鼻子、嘴、头发后面那片、刘海），写进两张 SVG 的身体图层，每条线有 id（`face` `ear-l` `ear-r` `eye-l` `eye-r` `nose` `mouth` `hair-back` `fringe`，可选 `brow-l` `brow-r`、秃顶两鬓的 `hair-1` `hair-2`…），用户可以在编辑器里改。`--debug` 只出调试图。**会把身体图层整个换掉，用户改过线就别再跑。** `trace` 里可选的：`isEye` 眼珠的颜色（不写同头发；戴眼镜的在脸的盒子里找圆的两块）、`brows: true` 描眉毛（和刘海连着的那一面自动不写）、`bald: true` 秃顶（头的皮肤整个就是脸、取凸包再扣掉耳朵，不描刘海和后面那片，两鬓的头发是单独的几块）、`pieceSmooth` 单独的几块头发顺多狠（默认 1.5）、`earRound: true` 耳朵取凸包、`faceRound: true` 脸取凸包再顺一顺（圆脸：去掉像素描出来的小起伏）、`earBox` 框里的皮肤就是这只耳朵（耳垂和脸颊连成一块、耳朵里面偏深时；`{ front: [[左耳框], [右耳框]], side: [框] }`）、`eyeBox` / `noseBox` / `mouthBox` 只在框里找（`{ front: [x0, y0, x1, y1], side: […] }`，眼镜框、法令纹、眉毛会被当成眼睛鼻子嘴）、`neckX: [正面, 3/4]` 直接给脖子中心、`hairMin` 面积够这么大的几块头发都算（盘发的髻有自己的描边）、`backClose` 后面那片闭运算的半径（头发和脸之间留了细缝）、`coat: { isCoat, rows }` 敞怀外衣（开衫）的颜色和它在参考图里的上下几行：再描两片前襟的门襟和下摆（`coat-l` / `coat-r`，门襟上端 → 下摆外角，画面左那片是 l）。
   - `线稿叠图.mjs <角色> <ref|now> [输出目录]`：线（洋红）叠在参考图 / 现在的样子上出 PNG，核对用。
-  - `线稿换算.mjs <角色> <输出目录>`：按 id 读线，写 `cast-<file>-art.ts.txt`（`<prefix>_FACE0` / `_FACE3` / `_HAIR`），再 `material_write` put `work_file` 到 `code/cast-<file>-art.ts`，人物配置写 `face0`、`face3`、`hairArt`，删掉 headScale / width / legWidth / armWidth 这些。
+  - `线稿换算.mjs <角色> <输出目录>`：按 id 读线，写 `cast-<file>-art.ts.txt`（`<prefix>_FACE0` / `_FACE3` / `_HAIR`），再 `material_write` put `work_file` 到 `code/cast-<file>-art.ts`，人物配置写 `face0`、`face3`、`hairArt`，删掉 headScale / width / legWidth / armWidth 这些。有 `coat-l` / `coat-r` 时还写 `<prefix>_COAT`（`GarmentArt`：两片前襟、敞开的那块、两道门襟），人物配置的 `coat` 写 `art: <prefix>_COAT`（`long`、口袋、门襟边这些版型就不用了，kind 只定袖口）：门襟、下摆用描的，肩、腰下接主角外套的（`线稿换算工具.mjs` 的 `COAT_SHOULDER`、`NECK_SIDE`），侧缝从腰下直着接到下摆外角，下摆被手挡住时照原来的高度往外接到腰下正下方。里面的上衣照通用的画（只画在敞开的那块里）。
   - `描图工具.mjs`（分色、形态学、连通块、描轮廓、顺滑；sharp、作品文件夹、读配置）、`线稿换算工具.mjs`（读 SVG 路径、线稿 → 头的坐标 / 身体坐标）是底层，用户画的线没有 id 时自己写换算脚本也用它们（例：作品 3d80f743 的 `production/周磊线稿换算.mjs`）。
 
 ## 文件
@@ -106,7 +106,7 @@ export default {
 - `code/chengtuo.ts`：秤砣的入口，导出上面全部（连同基础模型），加上参数和资源声明。
 - `code/cast.ts`：配角的入口：人物配置 `CastSpec` → Look、帽子、鞋、领带、铃铛、《引力》的 `CAST` 和路人 `passerby`。
 - `code/cast-hair.ts`：配角的十种发型（正面线稿 + 3/4 自动过渡、风、失重、马尾、髻）。
-- `code/cast-wear.ts`：配角的衣服：外衣七种版型、上衣九种、袖口、裤子细节。
+- `code/cast-wear.ts`：配角的衣服：外衣七种版型、按线稿画的外衣 `GarmentArt`（周磊的西装、千斤的妈妈的开衫）、上衣九种、袖口、裤子细节。
 - `code/cast-face.ts`：配角脸上的人物特点：眉毛、皱纹、眼镜、胡子、胡茬、发卡。
 - `code/cast-face-art.ts`、`cast-hair-art.ts`、`cast-wear-art.ts`：周磊的脸、碎发、西装（用户手画的线稿换算的）；`code/cast-kid-art.ts`、`cast-oldzhong-art.ts`、`cast-qinmom-art.ts`：小石头、老钟、千斤的妈妈的脸和头发（`tools/描图.mjs` 照参考图描的）。都是生成的，别手改。
 - `code/linebase.ts`：配角线稿工具的底图样片（`lineBaseScene(spec)`）。

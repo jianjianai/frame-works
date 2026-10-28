@@ -46,11 +46,13 @@ export interface Garment {
   trim?: string;
   /** 扣子的颜色 */
   button?: string;
+  /** 胸口绣一朵小花：花瓣的颜色（按线稿画的开衫，画在左片） */
+  flower?: string;
   /** 袖子太长卷了几道（小孩穿大人的外套） */
   rolled?: boolean;
   /** 正面时两个肩关节各往外挪多少（不写是 4 × size；秤砣的外套是 6） */
   shoulderOut?: number;
-  /** 用户手画的外衣（周磊的西装，cast-wear-art.ts）：两片前襟、翻领、衬衫领、领带、腰线都按线稿画，不走版型；kind 只用来定袖口 */
+  /** 按线稿画的外衣（周磊的西装 cast-wear-art.ts、千斤的妈妈的开衫 cast-qinmom-art.ts）：两片前襟（西装还有翻领、衬衫领、领带、腰线）按线稿画，不走版型；kind 只用来定袖口 */
   art?: GarmentArt;
 }
 
@@ -58,27 +60,32 @@ export interface Garment {
  * 手画的外衣：每一块是 [正面, 3/4] 两组逐点对应好的点（身体坐标），转身时按比例混合。
  * l / r 两片前襟（画面左 / 右，3/4 时 l 是远的那片），opening 衣襟中间敞开的那块（身子只画在它里面），
  * lapelL / lapelR 翻领，collarL / collarR 衬衫领，knot 领结，tie 领带，waist 腰线（衣襟中间露出来的衬衫下沿，往下是通用的裆和裤腿），
- * neck 领口的 V（两片衬衫领里侧之间、领结上面，露出后面的脖子）
+ * neck 领口的 V（两片衬衫领里侧之间、领结上面，露出后面的脖子）。
+ * 翻领往下都可以没有：开衫只有两片前襟和敞开的那块，里面的上衣照通用的画（cast.ts：有衬衫领才按线稿画衬衫）。
+ * edgeL / edgeR 两道门襟（下摆 → 脖子边）：总是描边。3/4 时远处那道门襟穿过远处那只胳膊的肩膀圈，前襟的描边在那里不描（肩膀和袖子连成一块），
+ * 没有翻领盖着（开衫）就断掉一截
  */
 export interface GarmentArt {
   l: [V2[], V2[]];
   r: [V2[], V2[]];
   opening: [V2[], V2[]];
-  lapelL: [V2[], V2[]];
-  lapelR: [V2[], V2[]];
-  collarL: [V2[], V2[]];
-  collarR: [V2[], V2[]];
-  knot: [V2[], V2[]];
-  tie: [V2[], V2[]];
-  waist: [V2[], V2[]];
-  neck: [V2[], V2[]];
+  lapelL?: [V2[], V2[]];
+  lapelR?: [V2[], V2[]];
+  collarL?: [V2[], V2[]];
+  collarR?: [V2[], V2[]];
+  knot?: [V2[], V2[]];
+  tie?: [V2[], V2[]];
+  waist?: [V2[], V2[]];
+  neck?: [V2[], V2[]];
+  edgeL?: [V2[], V2[]];
+  edgeR?: [V2[], V2[]];
 }
 /** 手画外衣的一块放到现在的姿势上（呼吸时胸口以上起伏，和身子一样） */
 function artOn(rig: Rig): (p: V2) => V2 {
   const br = rig.pose.breath * 1.6;
   return ([x, y]) => rig.chest.p(x, y - br * clamp01(-y / 140));
 }
-const artAt = (rig: Rig, art: GarmentArt, k: keyof GarmentArt) => lerpPts(...art[k], rig.u);
+const artAt = (rig: Rig, art: GarmentArt, k: keyof GarmentArt) => lerpPts(...art[k]!, rig.u);
 /** 手画外衣里面衬衫露出来的地方（Look.torsoClip）：衣襟中间敞开的那块（西装底下不画） */
 export function garmentShirtClip(rig: Rig, art: GarmentArt): Path2D[] {
   return [polylinePath(artAt(rig, art, "opening"), artOn(rig))];
@@ -457,20 +464,83 @@ export function drawGarment(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, s
   }
 }
 
-/** 手画的外衣：两片前襟（远的先画），翻领裁在前襟里面 */
+/** 按线稿画的开衫门襟那条罗纹边有多宽（身体坐标） */
+const ART_BAND = 6;
+/** 折线在 y 那一行的 x（没有交点时取最近的点） */
+function xAt(pts: V2[], y: number): number {
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const [x0, y0] = pts[i];
+    const [x1, y1] = pts[i + 1];
+    if (y0 !== y1 && (y0 - y) * (y1 - y) <= 0) return x0 + ((y - y0) / (y1 - y0)) * (x1 - x0);
+  }
+  return pts.reduce((a, p) => (Math.abs(p[1] - y) < Math.abs(a[1] - y) ? p : a), pts[0])[0];
+}
+/** 绣的一朵小花：五片花瓣、花心，右下一片叶子（开衫的胸口） */
+function embroideredFlower(ctx: CanvasRenderingContext2D, [x, y]: V2, r: number, petal: string, ink: Ink) {
+  ctx.strokeStyle = ink.line;
+  ctx.lineWidth = ink.lw * 0.3;
+  ctx.fillStyle = "#86a96f";
+  ctx.beginPath();
+  ctx.ellipse(x + r * 0.95, y + r * 0.95, r * 0.85, r * 0.4, 0.7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = petal;
+  for (let k = 0; k < 5; k++) {
+    const a = -Math.PI / 2 + (k * Math.PI * 2) / 5;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6, r * 0.48, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#f0c75e";
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.32, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
+
+/**
+ * 手画的外衣：两片前襟（远的先画），翻领裁在前襟里面。
+ * 开衫（kind cardigan）：门襟一条罗纹边（trim），给了 button 右片的边上一排小扣子，给了 flower 左片胸口绣一朵小花
+ * （用户 2026-10-28：「千金妈妈衣服加一点装饰，好看点」；竖着的边和扣子显瘦，不加横的罗纹下摆和口袋）
+ */
 function drawArtGarment(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, sides: ("L" | "R")[], g: Garment, art: GarmentArt, s: Shape) {
   const lw = ink.lw * 0.8;
-  for (const [side, lapel] of [
-    ["l", "lapelL"],
-    ["r", "lapelR"],
+  for (const [side, lapel, edge] of [
+    ["l", "lapelL", "edgeL"],
+    ["r", "lapelR", "edgeR"],
   ] as const) {
     const panel = polylinePath(s[side], s.on);
     fillBodyPart(ctx, rig, panel, g.color, g.shade, ink, sides);
-    ctx.save();
-    ctx.clip(panel);
-    drawPart(ctx, polylinePath(artAt(rig, art, lapel), s.on), g.color, g.shade, ink, lw * 0.8);
-    ctx.restore();
+    if (art[lapel]) {
+      ctx.save();
+      ctx.clip(panel);
+      drawPart(ctx, polylinePath(artAt(rig, art, lapel), s.on), g.color, g.shade, ink, lw * 0.8);
+      ctx.restore();
+    }
     strokeBodyPart(ctx, rig, panel, ink, sides);
+    if (!art[edge]) continue;
+    const e = artAt(rig, art, edge);
+    // 往前襟里面（离开敞开的那块）
+    const inward = side === "l" ? -1 : 1;
+    const cardigan = g.kind === "cardigan";
+    if (cardigan) {
+      const band: V2[] = [...e, ...e.map(([x, y]) => [x + inward * ART_BAND, y] as V2).reverse()];
+      ctx.save();
+      ctx.clip(panel);
+      drawPart(ctx, polyPath(band, s.on), g.trim ?? g.shade, null, ink, lw * 0.6);
+      ctx.restore();
+    }
+    line(ctx, e.map(s.on), ink.line, ink.lw);
+    if (cardigan && side === "r" && g.button)
+      for (const y of [-124, -90, -56, -22, 12]) dot(ctx, s.on([xAt(e, y) + (inward * ART_BAND) / 2, y]), 2.2, g.button, ink);
+    if (cardigan && side === "l" && g.flower) {
+      const y = -88;
+      ctx.save();
+      ctx.clip(panel);
+      embroideredFlower(ctx, s.on([xAt(e, y) + inward * (ART_BAND + lerp(7, 6, s.u)), y]), 4, g.flower, ink);
+      ctx.restore();
+    }
   }
 }
 
@@ -491,22 +561,26 @@ export function drawArtShirt(
   const on = artOn(rig);
   const lw = ink.lw * 0.8;
   // 领口的 V 里露出后面的脖子：通用的脖子在这块里再画一遍（盖住身子领口那道线；和通用圆领挖掉领口、露出后面的脖子一样）
-  ctx.save();
-  ctx.clip(polylinePath(artAt(rig, art, "neck"), on));
-  drawPart(ctx, torsoPaths(rig).neck, skin[0], skin[1], ink, ink.lw * 0.6);
-  ctx.restore();
+  if (art.neck) {
+    ctx.save();
+    ctx.clip(polylinePath(artAt(rig, art, "neck"), on));
+    drawPart(ctx, torsoPaths(rig).neck, skin[0], skin[1], ink, ink.lw * 0.6);
+    ctx.restore();
+  }
   // 腰线：衬衫掩在裤子里的下沿。衬衫和秤砣的毛衣一样画到胯（裆和大腿的上沿藏在它下面），衣襟里从腰线往下涂裤子的颜色，
   // 涂过衬衫下摆和它的描边，下面接上通用的裆和裤腿（只涂不描，和裤子同色）
-  const w = artAt(rig, art, "waist");
-  const [w0, w1] = [w[0], w[w.length - 1]];
-  const band: V2[] = [[w0[0] - 60, w0[1]], ...w, [w1[0] + 60, w1[1]], [w1[0] + 60, WAIST_BAND_BOTTOM], [w0[0] - 60, WAIST_BAND_BOTTOM]];
-  ctx.save();
-  ctx.clip(polylinePath(artAt(rig, art, "opening"), on));
-  ctx.fillStyle = pants;
-  ctx.fill(polylinePath(band, on));
-  ctx.restore();
-  line(ctx, w.map(on), ink.line, lw * 0.7);
-  if (tie) {
+  if (art.waist) {
+    const w = artAt(rig, art, "waist");
+    const [w0, w1] = [w[0], w[w.length - 1]];
+    const band: V2[] = [[w0[0] - 60, w0[1]], ...w, [w1[0] + 60, w1[1]], [w1[0] + 60, WAIST_BAND_BOTTOM], [w0[0] - 60, WAIST_BAND_BOTTOM]];
+    ctx.save();
+    ctx.clip(polylinePath(artAt(rig, art, "opening"), on));
+    ctx.fillStyle = pants;
+    ctx.fill(polylinePath(band, on));
+    ctx.restore();
+    line(ctx, w.map(on), ink.line, lw * 0.7);
+  }
+  if (tie && art.tie) {
     const pts = artAt(rig, art, "tie");
     const blade = polylinePath(pts, on);
     drawPart(ctx, blade, tie, null, ink, lw * 0.75);
@@ -531,9 +605,9 @@ export function drawArtShirt(
       ctx.restore();
     }
   }
-  for (const k of ["collarL", "collarR"] as const) drawPart(ctx, polylinePath(artAt(rig, art, k), on), shirt[0], shirt[1], ink, lw * 0.75);
+  for (const k of ["collarL", "collarR"] as const) if (art[k]) drawPart(ctx, polylinePath(artAt(rig, art, k), on), shirt[0], shirt[1], ink, lw * 0.75);
   // 领结压在衬衫领上：3/4 时左边的领尖正好压着领结左上角，领子后画就缺一个角（用户 2026-10-27）
-  if (tie) drawPart(ctx, polylinePath(artAt(rig, art, "knot"), on), tie, null, ink, lw * 0.75);
+  if (tie && art.knot) drawPart(ctx, polylinePath(artAt(rig, art, "knot"), on), tie, null, ink, lw * 0.75);
 }
 
 /** 下摆缝了一圈铅：深色的一圈，针脚分成一格一格，每格里鼓着一块 */

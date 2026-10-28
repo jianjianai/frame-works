@@ -5,12 +5,13 @@
 //   file、prefix 在作品的 production/线稿配置.mjs 里这个角色的 art。
 // id：face 脸的整圈（盖在头发下面的那截是圆顶）、ear-l / ear-r 耳朵（3/4 只有 ear-r，近处那只）、eye-l / eye-r 眼珠（画面左 / 右）、
 // nose、mouth、hair-back 头发后面那片（画在身子后面）、fringe 刘海（头发盖在脸上的那块：发际线 + 脸的圆顶）。
+// coat-l / coat-r（可以没有）：敞怀外衣两片前襟的门襟和下摆（门襟上端 → 下摆外角，画面左那片是 l），换算成 <prefix>_COAT（cast-wear.ts 的 GarmentArt）。
 // 配角的骨架、头的大小和主角一样（用户 2026-10-27：「胳膊和腿的和脖子，身体主框架，头的框架代码是可以共用的」），线原样落在主角的骨架上。
 // 用户自己画、线没有 id 时按位置给线加上 id 再换算（作品 3d80f743 的 周磊线稿换算.mjs 是按画的顺序认的例子）。
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { bbox, fmt, layerPathsById, resample, sample, toHead } from "./线稿换算工具.mjs";
+import { COAT_SHOULDER, NECK_SIDE, bbox, fmt, layerPathsById, resample, sample, toBody, toHead } from "./线稿换算工具.mjs";
 
 const who = process.argv[2];
 const outDir = process.argv[3];
@@ -110,5 +111,55 @@ export const ${C.prefix}_HAIR = {${
 }
 };
 `;
-fs.writeFileSync(path.join(outDir, `cast-${C.file}-art.ts.txt`), src);
-console.error(`写好 cast-${C.file}-art.ts.txt`, src.length, "字");
+// ——— 敞怀外衣（coat-l / coat-r）：两片前襟，正面和 3/4 逐点对应 ———
+// 每片按同样的几段：肩线（脖子边 → 肩头，主角外套的）、侧缝（肩头 → 腋下 → 拐角 → 下摆外角）、下摆（外角 → 门襟下端的角）、
+// 门襟（下端 → 上端）、领口（门襟上端 → 脖子边）。肩、腋下是主角外套的（胳膊和主角一样，袖子盖在上面）；侧缝从腋下直着下来接到描的下摆外角。
+// 下摆被手挡住、描到的外角在腋下里面时（3/4 近处那片），下摆照原来的高度往外接到腋下正下方再拐上去
+const N = { A: 13, C1: 6, C2: 16, C3: 6, D: 14, E: 30, F: 6 };
+const join = (...parts) => parts.flatMap((p, i) => (i ? p.slice(1) : p));
+const line = (a, b) => [a, b];
+function coatPanel(v, view, side) {
+  const p = sample(v[`coat-${side}`].segs, 16);
+  // 门襟下端的角：l 在右下（x + y 最大），r 在左下（y − x 最大）
+  const ci = p.reduce((bi, q, i) => ((side === "l" ? q[0] + q[1] : q[1] - q[0]) > (side === "l" ? p[bi][0] + p[bi][1] : p[bi][1] - p[bi][0]) ? i : bi), 0);
+  const top = p[0];
+  const neck = NECK_SIDE[view][side];
+  const sh = COAT_SHOULDER[view][side];
+  const under = sh[sh.length - 1];
+  const outside = side === "l" ? p[p.length - 1][0] <= under[0] : p[p.length - 1][0] >= under[0];
+  // 下摆被手挡住：描到的最后几个点是沿着手往上拐的，去掉（不然往外接的那截比下摆高一块）
+  if (!outside) {
+    const yb = Math.max(...p.slice(ci).map((q) => q[1]));
+    while (p.length > ci + 2 && p[p.length - 1][1] < yb - 1) p.pop();
+  }
+  const end = p[p.length - 1];
+  const corner = outside ? end : [under[0], end[1]];
+  const A = resample([neck, ...sh.slice(1, 13)], N.A);
+  const C = join(resample(sh.slice(12), N.C1), resample(line(under, corner), N.C2), resample(line(corner, end), N.C3));
+  const D = resample(p.slice(ci).reverse(), N.D);
+  const E = resample(p.slice(0, ci + 1).reverse(), N.E);
+  const F = resample(line(top, neck), N.F);
+  return { E, F, neck, edge: join(E, F), all: join(A, C, D, E, F).slice(0, -1) };
+}
+// 衣襟中间敞开的那块（里面的上衣只画在这里面）：左片门襟（下 → 上）、领口，往上包住脖子，再右片领口、门襟（上 → 下）
+const opening = (l, r) => [...l.E, ...l.F.slice(1), [l.neck[0], 262], [r.neck[0], 262], ...[...r.F].reverse(), ...[...r.E].reverse().slice(1)];
+let coatSrc = "";
+if (F["coat-l"] || S["coat-l"]) {
+  for (const [n, v] of [["正面", F], ["3/4", S]]) for (const id of ["coat-l", "coat-r"]) if (!v[id]) throw new Error(`${n}少了 ${id}`);
+  const P = { front: { l: coatPanel(F, "front", "l"), r: coatPanel(F, "front", "r") }, side: { l: coatPanel(S, "side", "l"), r: coatPanel(S, "side", "r") } };
+  const B = (pts) => fmt(pts.map(toBody));
+  const pairOut = (a, b) => `[${B(a)}, ${B(b)}] as [V2[], V2[]]`;
+  coatSrc = `
+/** 敞怀外衣（开衫）：两片前襟、中间敞开的那块、两道门襟（下摆 → 脖子边，总是描边），身体坐标，[正面, 3/4] 逐点对应（cast-wear.ts 的 GarmentArt）。门襟、下摆照参考图描的，肩、腋下是主角外套的 */
+export const ${C.prefix}_COAT: GarmentArt = {
+  l: ${pairOut(P.front.l.all, P.side.l.all)},
+  r: ${pairOut(P.front.r.all, P.side.r.all)},
+  opening: ${pairOut(opening(P.front.l, P.front.r), opening(P.side.l, P.side.r))},
+  edgeL: ${pairOut(P.front.l.edge, P.side.l.edge)},
+  edgeR: ${pairOut(P.front.r.edge, P.side.r.edge)},
+};
+`;
+}
+const out = coatSrc ? src.replace('import type { FaceView } from "./figure";', 'import type { GarmentArt } from "./cast-wear";\nimport type { FaceView } from "./figure";') + coatSrc : src;
+fs.writeFileSync(path.join(outDir, `cast-${C.file}-art.ts.txt`), out);
+console.error(`写好 cast-${C.file}-art.ts.txt`, out.length, "字", coatSrc ? "（有外衣）" : "");

@@ -5,12 +5,13 @@
 //   角色的配置在作品的 production/线稿配置.mjs：ref、lines、trace（split 正面和 3/4 之间的竖线、head 头部那一条的上下、
 //   faceTop / faceBottom 脸那块皮肤的盒子顶和底不超过多少、neckTop 脖子那块的盒子顶不低于多少、neckRow 量脖子中心的那一行、
 //   isHair / isSkin / isMark 头发、皮肤、鼻嘴的颜色；可选：isEye 眼珠的颜色（不写同头发：眼珠和头发一样深时）、
-//   brows: true 描眉毛（写 brow-l / brow-r）、pieceSmooth 单独的几块头发顺多狠（默认 1.5）、earRound: true 耳朵取凸包、faceRound: true 脸取凸包（圆脸，去掉像素描出来的小起伏）、earBox 框里的皮肤就是耳朵（耳垂和脸颊连成一块时）、eyeBox / noseBox / mouthBox 只在框里找眼睛、鼻子、嘴（{ front: [x0, y0, x1, y1], side: […] }）、
+//   brows: true 描眉毛（写 brow-l / brow-r）、pieceSmooth 单独的几块头发顺多狠（默认 1.5）、earRound: true 耳朵取凸包、faceRound: true 脸取凸包（圆脸，去掉像素描出来的小起伏）、earBox 框里的皮肤就是耳朵（耳垂和脸颊连成一块、耳朵里面偏深时；{ front: [[左耳框], [右耳框]], side: [框] }）、eyeBox / noseBox / mouthBox 只在框里找眼睛、鼻子、嘴（{ front: [x0, y0, x1, y1], side: […] }）、
 //   backClose 后面那片闭运算的半径（头发和脸之间留了细缝时）、hairMin 面积够这么大的几块头发都算头发（盘发的髻有自己的描边）、neckX: [正面, 3/4] 直接给脖子中心（脖子被领子挡住量不准时）、bald: true 秃顶（头的皮肤整个就是脸，不描刘海和后面那片，
-//   头发是单独的几块 hair-1、hair-2…，压在脸和耳朵上））。颜色用 看颜色.mjs 看；跑 --debug 看分得对不对再写。
+//   头发是单独的几块 hair-1、hair-2…，压在脸和耳朵上））、coat: { isCoat, rows } 敞怀外衣（开衫）的颜色和它在参考图里的上下几行：描两片前襟的门襟和下摆
+//   （写 coat-l / coat-r：门襟上端 → 下摆外角，线稿换算.mjs 接上主角外套的肩、侧缝）。颜色用 看颜色.mjs 看；跑 --debug 看分得对不对再写。
 // 参考图和主角的线稿用同一套横线：按头顶、膝两条线对到线稿；横着按脖子对齐：正面脖子中心对中线 229.5，
 // 3/4 对主角 3/4 脖子的中心 218.05（线稿 y 278–288 是直的）——打出来的「脖子中心」填进配置的 views.cx。
-// 只描头：衣服、鞋用素材库的通用版型（或用户另画）。
+// 只描头（给了 coat 再描外衣的两片前襟）：别的衣服、鞋用素材库的通用版型（或用户另画）。
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -59,13 +60,19 @@ function trace(view) {
   const ears = skinComp.filter((c) => c !== face && c.box[1] > fb[1] && c.box[3] < fb[3] + 4 && (c.box[2] < fb[0] + 6 || c.box[0] > fb[2] - 6));
   // 配置给了 earBox（{ side: [x0, y0, x1, y1] }，参考图像素）：框里的皮肤就是这只耳朵（耳垂和脸颊连成一块、开运算断不开时），
   // 闭运算补上耳朵里的阴影和耳廓那道线，脸扣掉它
-  const earB = C.earBox?.[view];
-  if (earB) {
-    const boxM = mask(W, H, (x, y) => x >= earB[0] && x <= earB[2] && y >= earB[1] && y <= earB[3]);
-    const earM = and(fillHoles(close(and(skinM, boxM), 5)), boxM);
+  // 可以是一个框或几个框（正面两只耳朵）；耳朵里面那块偏深的粉不在皮肤颜色里，闭运算 + 填洞把它补上（不然只剩一圈细边）
+  const earBs = C.earBox?.[view];
+  const earList = earBs ? (Array.isArray(earBs[0]) ? earBs : [earBs]) : [];
+  if (earList.length) {
     ears.length = 0;
-    ears.push({ mask: earM, area: 0, box: earB });
-    const rest = components(and(face.mask, not(dilate(earM, 1))));
+    let all = null;
+    for (const earB of earList) {
+      const boxM = mask(W, H, (x, y) => x >= earB[0] && x <= earB[2] && y >= earB[1] && y <= earB[3]);
+      const earM = and(fillHoles(close(and(skinM, boxM), 5)), boxM);
+      ears.push({ mask: earM, area: 0, box: earB });
+      all = all ? or(all, earM) : earM;
+    }
+    const rest = components(and(face.mask, not(dilate(all, 1))));
     // 秃顶的脸是眼镜切开的上下几块合起来的：几块大的都留着
     const keep = C.bald ? rest.filter((c) => c.area > 400) : [rest[0]];
     const box = [0, 1, 2, 3].map((k) => (k < 2 ? Math.min : Math.max)(...keep.map((c) => c.box[k])));
@@ -201,7 +208,7 @@ function trace(view) {
   const fringeM = and(dilate(hair, 1), dilate(faceFullM, 2));
   const fringe = smoothLoop(outline(components(fringeM)[0].mask), 1.5);
 
-  const earLines = ears.map((c) => smoothLoop(outline(dilate(c.mask, 3)), 1.5));
+  const earLines = ears.map((c) => earLine(c));
   const neckC = neckCenter(neck, xa, xb, view);
   if (DEBUG)
     debugPNG(path.join(DEBUG_DIR, `${who}-${view}.png`), W, H, [
@@ -259,7 +266,7 @@ function traceBald({ view, hairComp, skinComp, face, fb, ears, eyes, brows, nose
     const m = C.pieceSmooth ? close(c.mask, Math.round(C.pieceSmooth)) : close(c.mask, 2);
     return smoothLoop(outline(dilate(m, 1)), C.pieceSmooth ?? 1.5);
   });
-  const earLines = ears.map((c) => (C.earRound ? smoothLoop(resampleLoop(convexHull(outline(dilate(c.mask, 3))), 60), 2) : smoothLoop(outline(dilate(c.mask, 3)), 1.5)));
+  const earLines = ears.map((c) => earLine(c));
   if (DEBUG)
     debugPNG(path.join(DEBUG_DIR, `${who}-${view}.png`), W, H, [
       [faceVis, [250, 220, 200]],
@@ -270,6 +277,41 @@ function traceBald({ view, hairComp, skinComp, face, fb, ears, eyes, brows, nose
     ]);
   return { face: faceFull, ears: earLines, eyes: eyes.map(eyeBox), brows: brows.map(blob), nose: ends(nose), mouth: ends(mouth), back: null, fringe: null, pieces: pieceLines, neckC: neckCenter(neck, xa, xb, view), fb };
 }
+/**
+ * 敞怀外衣的两片前襟（配置给了 coat）：外衣颜色的两大块（每块连着它外侧的袖子），往外扩 2 像素到描边中间，
+ * 从门襟上端（最上面那一行靠里的那头）沿门襟往下、沿下摆往外走，走到下摆外角开始往上拐（或者被手挡住）为止。
+ * 只描门襟和下摆：肩、袖窿、侧缝在胳膊底下，换算时接主角外套的（线稿换算.mjs）
+ */
+function traceCoat(view) {
+  const [xa, xb] = view === "front" ? [0, C.split] : [C.split, W];
+  const [y0, y1] = C.coat.rows;
+  const m = close(mask(W, H, (x, y) => x >= xa && x < xb && y >= y0 && y <= y1 && C.coat.isCoat(px(x, y))), 1);
+  const parts = components(m).slice(0, 2).sort((a, b) => a.box[0] - b.box[0]);
+  if (parts.length < 2) throw new Error(`${view} 外衣只找到 ${parts.length} 块（要两片前襟）：调 coat.isCoat / coat.rows`);
+  return parts.map((c, k) => {
+    // 轮廓是顺时针的：左边那片顺着走、右边那片倒着走，从门襟上端出发都是先沿门襟往下
+    let loop = outline(dilate(c.mask, 2));
+    if (k === 1) loop = loop.reverse();
+    const top = Math.min(...loop.map((p) => p[1]));
+    const inner = (a, b) => (k === 0 ? b[0] > a[0] : b[0] < a[0]);
+    let i0 = -1;
+    loop.forEach((p, i) => {
+      if (p[1] <= top + 1 && (i0 < 0 || inner(loop[i0], p))) i0 = i;
+    });
+    const yMax = c.box[3] + 2;
+    const path = [];
+    let hem = false;
+    for (let n = 0; n < loop.length; n++) {
+      const p = loop[(i0 + n) % loop.length];
+      if (p[1] >= yMax - 3) hem = true;
+      if (hem && p[1] < yMax - 8) break;
+      path.push(p);
+    }
+    return smoothLoop(path, 2, false);
+  });
+}
+/** 耳朵的轮廓（往外扩到描边中间）；earRound 时取凸包再顺一顺 */
+const earLine = (c) => (C.earRound ? smoothLoop(resampleLoop(convexHull(outline(dilate(c.mask, 3))), 60), 2) : smoothLoop(outline(dilate(c.mask, 3)), 1.5));
 /** 凸包（Andrew 单调链），顺时针（y 朝下） */
 function convexHull(pts) {
   const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
@@ -346,7 +388,9 @@ function pathsFor(view) {
   out.push(`  <path id="eye-l" d="${ellipseD(t.eyes[0], map)}" ${STYLE}/>`, `  <path id="eye-r" d="${ellipseD(t.eyes[t.eyes.length - 1], map)}" ${STYLE}/>`);
   out.push(P("nose", t.nose, false, 1), P("mouth", t.mouth, false, 2));
   if (t.brows.length) out.push(P("brow-l", t.brows[0], true, 2), P("brow-r", t.brows[1], true, 2));
-  console.error(view, "脖子中心（参考图）", t.neckC, "眼睛", t.eyes.length, "耳朵", t.ears.length, "眉毛", t.brows.length, "单独的头发", t.pieces.length);
+  // 外衣的两片前襟：门襟上端 → 下摆外角（画面左那片 coat-l，3/4 时是远的那片），和头一样按脖子对齐
+  if (C.coat) traceCoat(view).forEach((pts, k) => out.push(P(k ? "coat-r" : "coat-l", pts, false, 6)));
+  console.error(view, "脖子中心（参考图）", t.neckC, "眼睛", t.eyes.length, "耳朵", t.ears.length, "眉毛", t.brows.length, "单独的头发", t.pieces.length, "外衣", C.coat ? 2 : 0);
   return out.join("\n");
 }
 

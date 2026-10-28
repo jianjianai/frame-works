@@ -22,7 +22,7 @@ import { bootSoles, drawBoot } from "./chengtuo-draw";
 import { type HairArtSrc, type HairStyle, drawBackHair, drawFrontHair } from "./cast-hair";
 import { KID_FACE0, KID_FACE3, KID_HAIR } from "./cast-kid-art";
 import { OLDZHONG_FACE0, OLDZHONG_FACE3, OLDZHONG_HAIR } from "./cast-oldzhong-art";
-import { QINMOM_FACE0, QINMOM_FACE3, QINMOM_HAIR } from "./cast-qinmom-art";
+import { QINMOM_COAT, QINMOM_FACE0, QINMOM_FACE3, QINMOM_HAIR } from "./cast-qinmom-art";
 import {
   type Garment,
   type Pants,
@@ -380,8 +380,8 @@ export function castLook(spec: CastSpec): Look {
     backHair: spec.hair === "none" && !spec.hairArt ? undefined : (ctx, rig, ink) => drawBackHair(ctx, rig, ink, hp),
     neckBack: hoodBack ? (ctx, rig, ink) => drawHood(ctx, rig, ink, hoodBack.color, hoodBack.shade) : undefined,
     overTorso: (ctx, rig, ink, sides) => {
-      // 手画的外衣：衬衫领、领带、腰线也按线稿画
-      if (coat?.art) drawArtShirt(ctx, rig, ink, coat.art, [col.top, col.topShade], spec.tie, [col.skin, col.skinShade], col.bottom);
+      // 按线稿画的外衣带衬衫（周磊的西装）：衬衫领、领带、腰线也按线稿画；只有两片前襟（开衫）时里面的上衣照通用的画
+      if (coat?.art?.collarL) drawArtShirt(ctx, rig, ink, coat.art, [col.top, col.topShade], spec.tie, [col.skin, col.skinShade], col.bottom);
       else {
         if (top) drawTop(ctx, rig, ink, top, col);
         if (spec.tie) drawTie(ctx, rig, ink, spec.tie);
@@ -665,7 +665,8 @@ export const CAST = {
   千斤的妈妈: {
     name: "千斤的妈妈",
     scale: 1.0,
-    // 骨架和主角一样；脸和盘发照参考图描的（作品 3d80f743 的 public/ref/千斤的妈妈-线稿.svg、侧面线稿.svg，cast-qinmom-art.ts）
+    // 骨架和主角一样；脸、盘发和开衫照参考图描的（作品 3d80f743 的 public/ref/千斤的妈妈-线稿.svg、侧面线稿.svg，cast-qinmom-art.ts）。
+    // 开衫原来是秤砣外套的版型加长、下摆张开、两个贴袋，显得很胖（用户 2026-10-28）：两片前襟改成描的，门襟直、下摆在胯下面一点
     face0: QINMOM_FACE0,
     face3: QINMOM_FACE3,
     colors: { ...SKIN_WARM, top: "#b9a3d6", topShade: "#a48ec2", bottom: "#4f465e", bottomShade: "#433b50" },
@@ -673,7 +674,8 @@ export const CAST = {
     hairArt: QINMOM_HAIR,
     hairColor: "#3a3036",
     top: { kind: "crew" },
-    coat: { kind: "cardigan", color: "#8e6bbf", shade: "#7a59a8", long: 40, trim: "#7d5cad", button: "#efe6f6" },
+    // 门襟罗纹边、右片一排小扣子、左胸绣一朵小花（用户 2026-10-28：「加一点装饰，好看点」）
+    coat: { kind: "cardigan", color: "#8e6bbf", shade: "#7a59a8", trim: "#7d5cad", button: "#efe6f6", flower: "#f6dbe6", art: QINMOM_COAT },
     brows: { kind: "soft", color: "#3a3036" },
     shoes: { color: "#4a3f52", shade: "#3d3445", style: "leather" },
   } as CastSpec,

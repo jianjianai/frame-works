@@ -335,7 +335,8 @@ export function figureRig(pIn: PoseIn | Pose, look: Look = BASE_LOOK): Rig {
   const neck = chest.p(fx(0, 0, 10), BODY.neckY - br);
   const headBase = new Frame(neck[0], neck[1], chest.a + pose.neck);
   // 3/4 的头线稿脸往前伸：整个头往后（朝左时画面右）挪一点，脸的中线不跑到身子前面去（用户 2026-10-18）
-  const hc = headBase.p(HEAD_SIDE_BACK * uh, -BODY.headUp);
+  // 角色自己的 3/4 的脸（Look.face3）：头再前后挪到和主角一样的位置（不然照参考图描的脸伸在前面像驼背、缩在后面像后仰）
+  const hc = headBase.p((HEAD_SIDE_BACK + headDx3(look)) * uh, -BODY.headUp);
   const head = new Frame(hc[0], hc[1], headBase.a);
   const cth = Math.cos(th);
 
@@ -1504,6 +1505,12 @@ export interface FaceView {
   ears?: { L?: V2[]; R?: V2[] };
   /** 两条眉毛的中心（cast-face 的粗眉等按它放）；不写跟着眼珠 */
   brows?: { R: V2; L: V2 };
+  /**
+   * 只用在 face3：3/4 时头往后（画面右）挪多少。不写按脸的前沿（眼睛、嘴那一行的前沿和下巴）自动对到主角：
+   * 照参考图描的 3/4 脸经常伸在脖子前面（用户 2026-10-28：「小石头和千金妈妈和老钟，侧面，头的位置太左了，看起来弯腰驼背。
+   * 周磊侧面头的位置右了，看起来向后仰」）
+   */
+  headDx?: number;
 }
 type Iris = { c: V2; rx: number; ry: number };
 const FRONT_IRIS: FaceView["iris"] = { R: { c: [-EYE_X, EYE_Y], rx: IRIS_RX, ry: IRIS_RY }, L: { c: [EYE_X, EYE_Y], rx: IRIS_RX, ry: IRIS_RY } };
@@ -1585,6 +1592,28 @@ function headOf(look: Look): HeadGeom {
     HEAD_GEOM.set(look, g);
   }
   return g;
+}
+
+/** 3/4 的脸的前后位置：眼睛那一行（y 9）、嘴那一行（y 30）的前沿和下巴的 x 的平均（头的坐标） */
+function profileX(face: V2[]): number {
+  const p = bezierPolyline(face);
+  const yb = Math.max(...p.map((q) => q[1]));
+  const chin = p.filter((q) => q[1] > yb - 1.5);
+  const cx = chin.reduce((a, q) => a + q[0], 0) / chin.length;
+  const e = rowSpan(p, 9)?.[0] ?? cx;
+  const m = rowSpan(p, 30)?.[0] ?? cx;
+  return (e + m + cx) / 3;
+}
+const BASE_PROFILE = profileX(SIDE_FACE);
+const HEAD_DX = new WeakMap<FaceView, number>();
+/** 3/4 时头往后挪多少（FaceView.headDx，不写按脸的前沿对到主角） */
+function headDx3(look: Look): number {
+  const f = look.face3;
+  if (!f) return 0;
+  if (f.headDx !== undefined) return f.headDx;
+  let d = HEAD_DX.get(f);
+  if (d === undefined) HEAD_DX.set(f, (d = BASE_PROFILE - profileX(f.face)));
+  return d;
 }
 
 /** 脸现在的轮廓（转身时从正面线稿过渡到侧面线稿） */
