@@ -58,10 +58,14 @@ interface HairDef {
   art?: HairArt;
 }
 
-/** 手画发型：后面那片、刘海那片各是 [正面, 3/4] 两条点数相同的轮廓；strands 只在正面画的发丝 */
+/**
+ * 手画发型：后面那片、刘海那片各是 [正面, 3/4] 两条点数相同的轮廓（秃顶的可以没有）；pieces 单独的几块（秃顶两鬓的白发），
+ * 压在脸和耳朵上、四周描边；strands 只在正面画的发丝
+ */
 interface HairArt {
-  back: [V2[], V2[]];
-  fringe: [V2[], V2[]];
+  back?: [V2[], V2[]];
+  fringe?: [V2[], V2[]];
+  pieces?: [V2[], V2[]][];
   strands: V2[][];
 }
 /**
@@ -69,8 +73,10 @@ interface HairArt {
  * 刘海两条已经逐点对应好（发际线对发际线），strands 正面的发丝（可以没有）
  */
 export interface HairArtSrc {
-  back: { front: V2[]; side: V2[] };
-  fringe: { front: V2[]; side: V2[] };
+  back?: { front: V2[]; side: V2[] };
+  fringe?: { front: V2[]; side: V2[] };
+  /** 单独的几块（正面和 3/4 按同样的顺序，这里按四个标志点对应）：压在脸和耳朵上，四周描边 */
+  pieces?: { front: V2[]; side: V2[] }[];
   strands?: V2[][];
 }
 const ART_DEFS = new WeakMap<HairArtSrc, HairDef>();
@@ -78,7 +84,16 @@ const ART_DEFS = new WeakMap<HairArtSrc, HairDef>();
 function artDef(src: HairArtSrc): HairDef {
   let d = ART_DEFS.get(src);
   if (!d) {
-    d = { back: [], front: [], art: { back: artPair(src.back.front, src.back.side), fringe: [src.fringe.front, src.fringe.side], strands: src.strands ?? [] } };
+    d = {
+      back: [],
+      front: [],
+      art: {
+        back: src.back ? artPair(src.back.front, src.back.side) : undefined,
+        fringe: src.fringe ? [src.fringe.front, src.fringe.side] : undefined,
+        pieces: src.pieces?.map((p) => artPair(p.front, p.side)),
+        strands: src.strands ?? [],
+      },
+    };
     ART_DEFS.set(src, d);
   }
   return d;
@@ -518,8 +533,7 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
   const { head, thh, field, pose } = rig;
   const uh = clamp01(-thh / 0.62);
   if (hair.art) {
-    const path = polylinePath(lerpPts(...hair.art.back, uh), (p) => head.p(p[0], p[1]));
-    drawPart(ctx, path, hp.color, hp.shade, ink, ink.lw * 0.9);
+    if (hair.art.back) drawPart(ctx, polylinePath(lerpPts(...hair.art.back, uh), (p) => head.p(p[0], p[1])), hp.color, hp.shade, ink, ink.lw * 0.9);
     return;
   }
   const f = rotateV(field, -head.a);
@@ -632,6 +646,21 @@ export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: I
   const map = (p: V2) => h.H(p[0], p[1]);
   const fine = pxPerUnit(ctx) * 130 > 60;
   if (hair.art) {
+    // 单独的几块（秃顶两鬓的白发）：压在脸上、四周描边，但不盖住耳朵（参考图 3/4 时近处的耳朵在白发前面）。
+    // h.skins 是耳朵们、最后是脸
+    const ears = h.skins.slice(0, -1);
+    for (const pc of hair.art.pieces ?? []) {
+      ctx.save();
+      if (ears.length) {
+        const out = new Path2D();
+        out.rect(-1e4, -1e4, 2e4, 2e4);
+        for (const e of ears) out.addPath(e);
+        ctx.clip(out, "evenodd");
+      }
+      drawPart(ctx, polylinePath(lerpPts(...pc, uh), map), hp.color, hp.shade, ink, ink.lw * 0.8);
+      ctx.restore();
+    }
+    if (!hair.art.fringe) return;
     const path = polylinePath(lerpPts(...hair.art.fringe, uh), map);
     fillShaded(ctx, path, hp.color, null, ink);
     h.strokeOnSkin(path, []);

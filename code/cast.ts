@@ -21,6 +21,8 @@ import {
 import { bootSoles, drawBoot } from "./chengtuo-draw";
 import { type HairArtSrc, type HairStyle, drawBackHair, drawFrontHair } from "./cast-hair";
 import { KID_FACE0, KID_FACE3, KID_HAIR } from "./cast-kid-art";
+import { OLDZHONG_FACE0, OLDZHONG_FACE3, OLDZHONG_HAIR } from "./cast-oldzhong-art";
+import { QINMOM_FACE0, QINMOM_FACE3, QINMOM_HAIR } from "./cast-qinmom-art";
 import {
   type Garment,
   type Pants,
@@ -443,7 +445,13 @@ function drawHood(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, color: stri
   const { chest, u, pose } = rig;
   const br = pose.breath * 1.6;
   const on = ([x, y]: V2): V2 => chest.p(x + u * 12, y - br * clamp01(-y / 140));
-  const hood = smoothPath(([[-34, -146, 1], [-37, -166], [-28, -184], [0, -190], [28, -184], [37, -166], [34, -146, 1]] as P[]).map(([x, y, c]) => [...on([x, y]), ...(c ? [c] : [])] as P));
+  // 正面两头藏在肩膀后面；3/4 时靠后那一侧顺着后背弯下去、末端收进身子里面（原来是一条横的下沿加一个尖角，
+  // 从后肩外面伸出来像一块方挡板，用户 2026-10-28：「小石头帽子」）
+  const k = clamp01(u);
+  const backMid: V2 = [37 + 3 * k, -166 + 6 * k];
+  const backEnd: V2 = [34 - 12 * k, -146 + 12 * k];
+  const pts: P[] = [[-34, -146, 1], [-37, -166], [-28, -184], [0, -190], [28, -184], [...backMid], k > 0.5 ? [...backEnd] : [...backEnd, 1]];
+  const hood = smoothPath(pts.map(([x, y, c]) => [...on([x, y]), ...(c ? [c] : [])] as P));
   drawPart(ctx, hood, color, shade, ink, ink.lw * 0.85);
   // 帽口往里那一道
   ctx.save();
@@ -555,10 +563,9 @@ export const CAST = {
   称重员: {
     name: "称重员",
     scale: 1.1,
-    width: 1.2,
-    headScale: 1.1,
-    legWidth: 1.3,
-    armWidth: 1.2,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图描的（成年男人：参考图「男人」，周磊的脸）
+    face0: ZHOULEI_FACE0,
+    face3: ZHOULEI_FACE3,
     colors: { ...SKIN_WARM, top: "#3d4a6b", topShade: "#333e5a", bottom: "#323b55", bottomShade: "#2a3249" },
     collar: false,
     hair: "short",
@@ -573,13 +580,12 @@ export const CAST = {
   老钟: {
     name: "老钟",
     scale: 0.96,
-    width: 1.06,
-    headScale: 1.18,
-    legWidth: 1.2,
-    legHem: 1.28,
-    armWidth: 1.08,
+    // 骨架和主角一样；秃顶的头、脸和两鬓的白发照参考图描的（作品 3d80f743 的 public/ref/老钟-线稿.svg、侧面线稿.svg，cast-oldzhong-art.ts）
+    face0: OLDZHONG_FACE0,
+    face3: OLDZHONG_FACE3,
     colors: { ...SKIN_OLD, top: "#9a6a4a", topShade: "#85593d", bottom: "#5e5248", bottomShade: "#4f443b" },
     hair: "receding",
+    hairArt: OLDZHONG_HAIR,
     hairColor: "#ecebe6",
     hairShade: "#d6d4cc",
     top: { kind: "vneck", trim: "#86593c", under: "#efe9dc" },
@@ -629,9 +635,9 @@ export const CAST = {
   小石头的妈妈: {
     name: "小石头的妈妈",
     scale: 0.98,
-    headScale: 1.08,
-    legWidth: 1.1,
-    armWidth: 1.05,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图描的（成年女人：参考图「女人」，千斤的妈妈的脸）
+    face0: QINMOM_FACE0,
+    face3: QINMOM_FACE3,
     colors: { ...SKIN, top: "#f7ead8", topShade: "#e9d8c0", bottom: "#6a5a66", bottomShade: "#5a4b56" },
     hair: "ponytail",
     hairColor: "#5b3f33",
@@ -646,8 +652,7 @@ export const CAST = {
   千斤: {
     name: "千斤",
     scale: 0.94,
-    headScale: 1.04,
-    legWidth: 1.08,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸是主角的（年轻的女孩）
     colors: { ...SKIN, top: "#e2574c", topShade: "#c9473d", bottom: "#3d3f52", bottomShade: "#333545" },
     hair: "sidebob",
     hairColor: "#2c2a30",
@@ -660,11 +665,12 @@ export const CAST = {
   千斤的妈妈: {
     name: "千斤的妈妈",
     scale: 1.0,
-    headScale: 1.08,
-    legWidth: 1.12,
-    armWidth: 1.06,
+    // 骨架和主角一样；脸和盘发照参考图描的（作品 3d80f743 的 public/ref/千斤的妈妈-线稿.svg、侧面线稿.svg，cast-qinmom-art.ts）
+    face0: QINMOM_FACE0,
+    face3: QINMOM_FACE3,
     colors: { ...SKIN_WARM, top: "#b9a3d6", topShade: "#a48ec2", bottom: "#4f465e", bottomShade: "#433b50" },
     hair: "bun",
+    hairArt: QINMOM_HAIR,
     hairColor: "#3a3036",
     top: { kind: "crew" },
     coat: { kind: "cardigan", color: "#8e6bbf", shade: "#7a59a8", long: 40, trim: "#7d5cad", button: "#efe6f6" },
@@ -675,11 +681,9 @@ export const CAST = {
   阿满: {
     name: "阿满",
     scale: 1.04,
-    width: 1.16,
-    headScale: 1.1,
-    legWidth: 1.3,
-    legHem: 1.36,
-    armWidth: 1.18,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图描的（成年男人：参考图「男人」，周磊的脸）
+    face0: ZHOULEI_FACE0,
+    face3: ZHOULEI_FACE3,
     colors: { ...SKIN_WARM, top: "#d8cfb8", topShade: "#c6bca4", bottom: "#4f5361", bottomShade: "#434653" },
     hair: "short",
     hairColor: "#3a3539",
@@ -694,10 +698,10 @@ export const CAST = {
   老太太: {
     name: "老太太",
     scale: 0.88,
-    headScale: 1.12,
-    legWidth: 1.18,
-    legHem: 1.26,
-    armWidth: 1.06,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图「老人」描的（老钟的脸：带头顶的整个头，盘发盖在上面）——
+    // 千斤的妈妈的脸窄、额头低，盘发的发际线是按基础模型的脸画的，盖在她脸上一直压到眉毛
+    face0: OLDZHONG_FACE0,
+    face3: OLDZHONG_FACE3,
     colors: { ...SKIN_OLD, top: "#bfaee0", topShade: "#a998cc", bottom: "#6a6273", bottomShade: "#5a5362" },
     hair: "bun",
     hairColor: "#dcdad4",
@@ -712,10 +716,9 @@ export const CAST = {
   年轻人: {
     name: "年轻人",
     scale: 1.02,
-    headScale: 1.1,
-    legWidth: 1.16,
-    legHem: 1.2,
-    armWidth: 1.08,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图描的（成年男人：参考图「男人」，周磊的脸）
+    face0: ZHOULEI_FACE0,
+    face3: ZHOULEI_FACE3,
     colors: { ...SKIN, top: "#4fa8a3", topShade: "#3f938e", bottom: "#3f4757", bottomShade: "#353c4a" },
     hair: "curtain",
     hairColor: "#3b3035",
@@ -728,8 +731,9 @@ export const CAST = {
   秤砣的妈妈: {
     name: "秤砣的妈妈",
     scale: 1.0,
-    headScale: 1.02,
-    legWidth: 1.04,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图描的（成年女人：参考图「女人」，千斤的妈妈的脸）
+    face0: QINMOM_FACE0,
+    face3: QINMOM_FACE3,
     colors: { ...SKIN, top: "#f3e2d6", topShade: "#e4cfc0", bottom: "#5c4a4c", bottomShade: "#4d3d3f" },
     hair: "long",
     hairColor: "#2c2a30",
@@ -742,9 +746,7 @@ export const CAST = {
   小时候的秤砣: {
     name: "小时候的秤砣",
     scale: 0.58,
-    headScale: 1.42,
-    legWidth: 1.24,
-    armWidth: 1.24,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸是主角的（年轻的女孩）
     bootScale: 1.55,
     colors: { ...SKIN, top: "#f4c95d", topShade: "#e2b54a", bottom: "#5d6177", bottomShade: "#4f5266", blush: "250,140,140" },
     hair: "bob",
@@ -756,6 +758,7 @@ export const CAST = {
   光里的女人: {
     name: "光里的女人",
     scale: 0.98,
+    // 骨架、头的大小和主角一样；脸是主角的（年轻的女人，和《引力》里 lib/woman.ts 的她一样）
     colors: { ...SKIN, top: "#f6c7cf", topShade: "#e8b2bc", bottom: "#c7b3d8", bottomShade: "#b39fc6" },
     hair: "long",
     hairColor: "#3a3036",
@@ -796,11 +799,9 @@ export function passerby(i: number): CastSpec {
   return {
     name: `路人${i}`,
     scale: 0.92 + ((i * 37) % 13) / 100,
-    width: 1 + ((i * 17) % 9) / 60,
-    headScale: man ? 1.1 : 1.06,
-    legWidth: man ? 1.2 : 1.1,
-    legHem: man ? 1.28 : 1.12,
-    armWidth: man ? 1.1 : 1.04,
+    // 骨架、头的大小和主角一样；脸按男女老少用参考图描的（男人：周磊的脸，秃顶的老人：老钟的脸，女人：千斤的妈妈的脸）
+    face0: hair === "receding" ? OLDZHONG_FACE0 : man ? ZHOULEI_FACE0 : QINMOM_FACE0,
+    face3: hair === "receding" ? OLDZHONG_FACE3 : man ? ZHOULEI_FACE3 : QINMOM_FACE3,
     colors: { ...(i % 3 ? SKIN : SKIN_WARM), top: tops[k], topShade: darker(tops[k], 0.92), bottom: "#4e5266", bottomShade: "#434657" },
     hair,
     hairColor: hc[j],

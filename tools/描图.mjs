@@ -4,7 +4,10 @@
 //   SVG 先用 线稿生成.mjs 生成；这里会把身体图层里的线整个换掉——用户改过线就别再跑。
 //   角色的配置在作品的 production/线稿配置.mjs：ref、lines、trace（split 正面和 3/4 之间的竖线、head 头部那一条的上下、
 //   faceTop / faceBottom 脸那块皮肤的盒子顶和底不超过多少、neckTop 脖子那块的盒子顶不低于多少、neckRow 量脖子中心的那一行、
-//   isHair / isSkin / isMark 头发、皮肤、鼻嘴的颜色）。颜色用 看颜色.mjs 看；跑 --debug 看分得对不对再写。
+//   isHair / isSkin / isMark 头发、皮肤、鼻嘴的颜色；可选：isEye 眼珠的颜色（不写同头发：眼珠和头发一样深时）、
+//   brows: true 描眉毛（写 brow-l / brow-r）、pieceSmooth 单独的几块头发顺多狠（默认 1.5）、earRound: true 耳朵取凸包、faceRound: true 脸取凸包（圆脸，去掉像素描出来的小起伏）、earBox 框里的皮肤就是耳朵（耳垂和脸颊连成一块时）、eyeBox / noseBox / mouthBox 只在框里找眼睛、鼻子、嘴（{ front: [x0, y0, x1, y1], side: […] }）、
+//   backClose 后面那片闭运算的半径（头发和脸之间留了细缝时）、hairMin 面积够这么大的几块头发都算头发（盘发的髻有自己的描边）、neckX: [正面, 3/4] 直接给脖子中心（脖子被领子挡住量不准时）、bald: true 秃顶（头的皮肤整个就是脸，不描刘海和后面那片，
+//   头发是单独的几块 hair-1、hair-2…，压在脸和耳朵上））。颜色用 看颜色.mjs 看；跑 --debug 看分得对不对再写。
 // 参考图和主角的线稿用同一套横线：按头顶、膝两条线对到线稿；横着按脖子对齐：正面脖子中心对中线 229.5，
 // 3/4 对主角 3/4 脖子的中心 218.05（线稿 y 278–288 是直的）——打出来的「脖子中心」填进配置的 views.cx。
 // 只描头：衣服、鞋用素材库的通用版型（或用户另画）。
@@ -38,12 +41,37 @@ function trace(view) {
   const hairM = mask(W, H, (x, y) => inView(x, y) && isHair(px(x, y)));
   const skinM = mask(W, H, (x, y) => inView(x, y) && isSkin(px(x, y)));
   const hairComp = components(hairM);
-  const hair = close(hairComp[0].mask, 2);
+  // 头发：最大的那块；配置给了 hairMin 就把面积够大的几块都并进来（盘发的髻有自己的描边，是单独的一块）
+  // （只要上沿在脸以上的：衣服颜色和头发一样深时别把衣领并进来）
+  const hairBig = C.hairMin ? hairComp.filter((c, i) => i === 0 || (c.area >= C.hairMin && c.box[1] < C.faceTop)) : [hairComp[0]];
+  const hair = close(hairBig.reduce((a, c) => or(a, c.mask), hairComp[0].mask), 2);
   const skinComp = components(skinM).filter((c) => c.area > 25);
   // 脸：面积最大、在头发下面的那块；脖子在下巴下面
   let face = skinComp.find((c) => c.box[1] < C.faceTop && c.box[3] < C.faceBottom);
+  if (C.bald) {
+    // 秃顶：眼镜的框和横梁把脸的皮肤切成上下几块，头部那几块大的（不是耳朵、脖子）合起来算脸
+    const parts = skinComp.filter((c) => c.area > 400 && c.box[1] < C.faceTop && c.box[3] < C.faceBottom);
+    const m = parts.reduce((a, c) => or(a, c.mask), face.mask);
+    const box = [0, 1, 2, 3].map((k) => (k < 2 ? Math.min : Math.max)(...parts.map((c) => c.box[k])));
+    face = { mask: m, area: parts.reduce((a, c) => a + c.area, 0), box };
+  }
   let fb = face.box;
   const ears = skinComp.filter((c) => c !== face && c.box[1] > fb[1] && c.box[3] < fb[3] + 4 && (c.box[2] < fb[0] + 6 || c.box[0] > fb[2] - 6));
+  // 配置给了 earBox（{ side: [x0, y0, x1, y1] }，参考图像素）：框里的皮肤就是这只耳朵（耳垂和脸颊连成一块、开运算断不开时），
+  // 闭运算补上耳朵里的阴影和耳廓那道线，脸扣掉它
+  const earB = C.earBox?.[view];
+  if (earB) {
+    const boxM = mask(W, H, (x, y) => x >= earB[0] && x <= earB[2] && y >= earB[1] && y <= earB[3]);
+    const earM = and(fillHoles(close(and(skinM, boxM), 5)), boxM);
+    ears.length = 0;
+    ears.push({ mask: earM, area: 0, box: earB });
+    const rest = components(and(face.mask, not(dilate(earM, 1))));
+    // 秃顶的脸是眼镜切开的上下几块合起来的：几块大的都留着
+    const keep = C.bald ? rest.filter((c) => c.area > 400) : [rest[0]];
+    const box = [0, 1, 2, 3].map((k) => (k < 2 ? Math.min : Math.max)(...keep.map((c) => c.box[k])));
+    face = { mask: keep.reduce((a, c) => or(a, c.mask), keep[0].mask), area: keep.reduce((a, c) => a + c.area, 0), box };
+    fb = face.box;
+  }
   if (!ears.length) {
     // 3/4：耳朵前面那道弧线没封口，耳朵和脸连成一块皮肤。开运算把细的连接断开，右边脸外面那块是耳朵
     const parts = components(open(face.mask, 2)).filter((c) => c.area > 20);
@@ -52,20 +80,77 @@ function trace(view) {
       const earM = and(face.mask, dilate(ear.mask, 2));
       const faceM = and(face.mask, not(earM));
       ears.push({ mask: earM, area: 0, box: ear.box });
-      face = { ...components(faceM)[0] };
+      // 秃顶的脸本来就是上下几块合起来的：耳朵扣掉以后几块都留着，不只留最大的
+      if (C.bald) {
+        const ps = components(faceM).filter((c) => c.area > 400);
+        const box = [0, 1, 2, 3].map((k) => (k < 2 ? Math.min : Math.max)(...ps.map((c) => c.box[k])));
+        face = { mask: ps.reduce((a, c) => or(a, c.mask), ps[0].mask), area: ps.reduce((a, c) => a + c.area, 0), box };
+      } else face = { ...components(faceM)[0] };
       fb = face.box;
     }
   }
   const neck = skinComp.find((c) => c.box[1] >= C.neckTop && c !== face);
-  // 眼睛：头发颜色、在脸里面的两块
-  const eyes = hairComp.slice(1).filter((c) => c.area > 40 && c.area < 900 && c.box[0] > fb[0] && c.box[2] < fb[2] && c.box[1] > fb[1] + 10 && c.box[3] < fb[3]);
+  // 眼睛：在脸里面的两块。默认是头发颜色的（小孩的眼珠和头发一样深）；给了 isEye 按它找，开运算去掉细的描边（眼镜框、眼线）
+  const inFace = (c) => c.area > 40 && c.area < 900 && c.box[0] > fb[0] && c.box[2] < fb[2] && c.box[1] > fb[1] + 10 && c.box[3] < fb[3];
+  // isEye 只在脸的皮肤围起来的洞里找（刘海、镜框外面的不算）；先闭运算把脸边上的小缺口（眼镜腿、碎发尖）封上
+  const holes = C.isEye ? and(fillHoles(close(face.mask, 6)), not(face.mask)) : null;
+  let eyeCand = C.isEye ? components(open(and(mask(W, H, (x, y) => inView(x, y) && C.isEye(px(x, y))), holes), 2)) : hairComp.slice(1).filter((c) => !hairBig.includes(c));
+  // 戴眼镜的：镜片伸出脸边，眼睛不在洞里——改在脸的盒子里找，开运算去掉镜框，留下圆的那几块
+  if (C.isEye && eyeCand.filter(inFace).length < 2) {
+    const round = (c) => {
+      const w = c.box[2] - c.box[0] + 1;
+      const h = c.box[3] - c.box[1] + 1;
+      return w / h > 0.45 && w / h < 1.8;
+    };
+    eyeCand = components(open(mask(W, H, (x, y) => inView(x, y) && x > fb[0] && x < fb[2] && y > fb[1] && y < fb[3] && C.isEye(px(x, y))), 2)).filter(round);
+  }
+  // 配置给了 eyeBox（{ front: [x0, y0, x1, y1], side: […] }）就在框里找（3/4 远处那只眼睛贴着脸边、不在洞里）
+  const eb = C.eyeBox?.[view];
+  if (eb) eyeCand = components(open(mask(W, H, (x, y) => x >= eb[0] && x <= eb[2] && y >= eb[1] && y <= eb[3] && (C.isEye ?? isHair)(px(x, y))), 2));
+  // 多出来的（眉毛、皱纹）：留最大的两块
+  let eyes = eb ? eyeCand : eyeCand.filter(inFace);
+  if ((C.isEye || eb) && eyes.length > 2) eyes = [...eyes].sort((p, q) => q.area - p.area).slice(0, 2);
   eyes.sort((p, q) => p.box[0] - q.box[0]);
+  if (eyes.length !== 2)
+    throw new Error(`${view} 找到 ${eyes.length} 只眼睛（要 2 只）：调 isEye / faceTop 再试。脸的盒子 ${fb}，候选（面积@盒子）：${eyeCand.slice(0, 8).map((c) => c.area + "@" + c.box).join("  ")}`);
   // 嘴那一笔中间颜色浅，断成几截：先横着连上（闭运算）再分块
-  const markM = mask(W, H, (x, y) => inView(x, y) && x > fb[0] + 4 && x < fb[2] - 4 && y > eyes[0].box[3] + 2 && y < fb[3] - 3 && isMark(px(x, y)));
+  const markTop = C.noseBox ? fb[1] : eyes[0].box[3] + 2;
+  const markM = mask(W, H, (x, y) => inView(x, y) && x > fb[0] + 4 && x < fb[2] - 4 && y > markTop && y < fb[3] - 3 && isMark(px(x, y)));
   const marks = components(and(close(markM, 3), dilate(markM, 3))).filter((c) => c.area >= 3);
   marks.sort((p, q) => p.box[1] - q.box[1]);
-  const nose = marks[0];
-  const mouth = marks.reduce((a, c) => (c.box[2] - c.box[0] > a.box[2] - a.box[0] ? c : a), marks[0]);
+  // 配置给了 noseBox / mouthBox（{ front: [x0, y0, x1, y1], side: […] }，参考图像素）就只在框里找：眼镜框、法令纹会被当成鼻子嘴
+  const inBox = (c, b) => {
+    const cx = (c.box[0] + c.box[2]) / 2;
+    const cy = (c.box[1] + c.box[3]) / 2;
+    return cx >= b[0] && cx <= b[2] && cy >= b[1] && cy <= b[3];
+  };
+  const nb = C.noseBox?.[view];
+  const mb = C.mouthBox?.[view];
+  // 框里单独分块（整张脸一起分块时，眼镜框、皱纹会把鼻子嘴连成一大块）
+  const markJ = and(close(markM, 3), dilate(markM, 3));
+  const boxed = (b) => components(and(markJ, mask(W, H, (x, y) => x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3]))).filter((c) => c.area >= 2);
+  const noseCand = nb ? boxed(nb).sort((p, q) => q.area - p.area) : marks;
+  const mouthCand = mb ? boxed(mb) : marks;
+  if (!noseCand.length || !mouthCand.length) throw new Error(`${view} 没找到鼻子或嘴：调 isMark / noseBox / mouthBox。候选：${marks.map((c) => c.area + "@" + c.box).join("  ")}`);
+  const nose = noseCand[0];
+  const mouth = mouthCand.reduce((a, c) => (c.box[2] - c.box[0] > a.box[2] - a.box[0] ? c : a), mouthCand[0]);
+
+  // 眉毛（brows: true）：眼睛上面、头发颜色的细长一块，每只眼睛取最近的那块
+  const eyeTop0 = Math.min(...eyes.map((c) => c.box[1]));
+  let brows = [];
+  if (C.brows) {
+    const cand = hairComp.filter((c) => c.area >= 12 && c.area < 500 && c.box[3] <= eyeTop0 + 2 && c.box[1] > eyeTop0 - 45 && c.box[2] - c.box[0] > 1.6 * (c.box[3] - c.box[1]) && c.box[0] > fb[0] - 4 && c.box[2] < fb[2] + 4);
+    brows = eyes.map((e) => {
+      const ex = (e.box[0] + e.box[2]) / 2;
+      return cand.reduce((a, c) => (!a || Math.abs((c.box[0] + c.box[2]) / 2 - ex) < Math.abs((a.box[0] + a.box[2]) / 2 - ex) ? c : a), null);
+    });
+    if (brows.some((b) => !b) || brows[0] === brows[1]) {
+      // 眉毛和刘海连在一起时找不出来：这一面不写眉毛（眉毛跟着眼睛放），不算错
+      console.error(`${view} 眉毛没找全（可能和刘海连在一起），这一面不写 brow-l / brow-r`);
+      brows = [];
+    }
+  }
+  if (C.bald) return traceBald({ view, hairComp, skinComp, face, fb, ears, eyes, brows, nose, mouth, neck, xa, xb });
 
   // 脸的整圈：看得见的皮肤（往外扩到描边中间）里，挨着头发的那段（发际线）换成一个圆顶（藏在头发底下）
   // 眼睛也算脸（3/4 远处那只眼睛贴着脸边，不算进来脸就缺一块）
@@ -102,32 +187,35 @@ function trace(view) {
   const from = jaw[jaw.length - 1];
   const to = jaw[0];
   const dome = Array.from({ length: domeN - 1 }, (_, i) => bez(from, [from[0], from[1] - h], [to[0], to[1] - h], to, (i + 1) / domeN));
-  const faceFull = smoothLoop([...jaw, ...dome], 1.5);
+  // faceRound：脸取凸包再顺一顺（小孩圆圆的脸：像素描出来的脸颊线有小起伏，贴着耳朵还有一个缺口；用户 2026-10-28：「脸右边坑坑洼洼的，改圆一点」）
+  const faceFull = C.faceRound ? smoothLoop(resampleLoop(convexHull([...jaw, ...dome]), 160), 3) : smoothLoop([...jaw, ...dome], 1.5);
   const faceFullM = mask(W, H, (x, y) => inside(faceFull, x, y));
 
   // 头发后面那片：头发 ∪ 脸在嘴上面的那块，填洞，外轮廓
   const yCut = (eyes[0].box[3] + mouth.box[1]) / 2;
-  const backM = fillHoles(or(dilate(hair, 1), and(faceFullM, mask(W, H, (x, y) => y < yCut))));
+  // backClose：头发和脸之间隔着参考图的描边，留下一道通到外面的细缝（填洞填不上）时，闭运算把它封上
+  const backM0 = or(dilate(hair, 1), and(faceFullM, mask(W, H, (x, y) => y < yCut)));
+  const backM = fillHoles(C.backClose ? close(backM0, C.backClose) : backM0);
   const back = smoothLoop(outline(components(backM)[0].mask), 1.5);
   // 刘海：头发 ∩ 脸的整圈（往外扩一点盖住脸的描边）
   const fringeM = and(dilate(hair, 1), dilate(faceFullM, 2));
   const fringe = smoothLoop(outline(components(fringeM)[0].mask), 1.5);
 
   const earLines = ears.map((c) => smoothLoop(outline(dilate(c.mask, 3)), 1.5));
-  const eyeBox = (c) => {
-    const [x0, y0, x1, y1] = c.box;
-    return { cx: (x0 + x1 + 1) / 2, cy: (y0 + y1 + 1) / 2, rx: (x1 - x0 + 1) / 2 + 0.5, ry: (y1 - y0 + 1) / 2 + 0.5 };
-  };
-  const ends = (c) => {
-    const pts = [];
-    for (let i = 0; i < W * H; i++) if (c.mask.m[i]) pts.push([i % W, (i / W) | 0]);
-    const l = pts.reduce((a, p) => (p[0] < a[0] ? p : a));
-    const r = pts.reduce((a, p) => (p[0] > a[0] ? p : a));
-    const mid = pts.filter((p) => Math.abs(p[0] - (l[0] + r[0]) / 2) < 1.5).reduce((a, p) => (p[1] > a[1] ? p : a), [0, -1]);
-    return [l, mid[1] >= 0 ? mid : [(l[0] + r[0]) / 2, (l[1] + r[1]) / 2], r].map(([x, y]) => [x + 0.5, y + 0.5]);
-  };
-  // 脖子中心：对齐用（参考图 neckRow 那一行，下巴描边下面；主角的脖子在线稿 y 278–288 是直的）
-  // 脖子一边有阴影（不算皮肤色），量皮肤会偏：从脖子盒子的中间往两边找描边（最深的那几格）
+  const neckC = neckCenter(neck, xa, xb, view);
+  if (DEBUG)
+    debugPNG(path.join(DEBUG_DIR, `${who}-${view}.png`), W, H, [
+      [backM, [200, 190, 230]],
+      [faceFullM, [250, 220, 200]],
+      [fringeM, [120, 80, 60]],
+    ]);
+  return { face: faceFull, ears: earLines, eyes: eyes.map(eyeBox), brows: brows.map(blob), nose: ends(nose), mouth: ends(mouth), back, fringe, pieces: [], neckC, fb };
+}
+/** 脖子中心：对齐用（参考图 neckRow 那一行，下巴描边下面；主角的脖子在线稿 y 278–288 是直的）。
+ *  脖子一边有阴影（不算皮肤色），量皮肤会偏：从脖子盒子的中间往两边找描边（最深的那几格） */
+function neckCenter(neck, xa, xb, view) {
+  // 脖子被领子、下巴的阴影挡住量不准时，配置里直接给 neckX: [正面, 3/4]（参考图像素）
+  if (C.neckX) return C.neckX[view === "front" ? 0 : 1];
   const row = C.neckRow;
   const mid = Math.round((neck.box[0] + neck.box[2]) / 2);
   const isInk = (x) => sum(px(x, row)) < 300;
@@ -135,14 +223,68 @@ function trace(view) {
   while (l > xa && !isInk(l)) l--;
   let r = mid;
   while (r < xb - 1 && !isInk(r)) r++;
-  const neckC = (l + r + 1) / 2;
+  return (l + r + 1) / 2;
+}
+const eyeBox = (c) => {
+  const [x0, y0, x1, y1] = c.box;
+  return { cx: (x0 + x1 + 1) / 2, cy: (y0 + y1 + 1) / 2, rx: (x1 - x0 + 1) / 2 + 0.5, ry: (y1 - y0 + 1) / 2 + 0.5 };
+};
+/** 一小块（眉毛）的轮廓：往外扩到描边中间 */
+const blob = (c) => smoothLoop(outline(dilate(c.mask, 1)), 1);
+function ends(c) {
+  const pts = [];
+  for (let i = 0; i < W * H; i++) if (c.mask.m[i]) pts.push([i % W, (i / W) | 0]);
+  const l = pts.reduce((a, p) => (p[0] < a[0] ? p : a));
+  const r = pts.reduce((a, p) => (p[0] > a[0] ? p : a));
+  const mid = pts.filter((p) => Math.abs(p[0] - (l[0] + r[0]) / 2) < 1.5).reduce((a, p) => (p[1] > a[1] ? p : a), [0, -1]);
+  return [l, mid[1] >= 0 ? mid : [(l[0] + r[0]) / 2, (l[1] + r[1]) / 2], r].map(([x, y]) => [x + 0.5, y + 0.5]);
+}
+/**
+ * 秃顶（bald: true）：头的皮肤（连头顶）整个就是脸——闭运算把头发压在脸边的缺口、镜片里的皮肤补上；
+ * 不描刘海和后面那片；挨着脸边、比眉毛大的几块头发是单独的几块（两鬓的白发），压在脸和耳朵上
+ */
+function traceBald({ view, hairComp, skinComp, face, fb, ears, eyes, brows, nose, mouth, neck, xa, xb }) {
+  const faceVis = fillHoles(close(dilate(eyes.reduce((m, c) => or(m, c.mask), face.mask), 2), 6));
+  // 秃顶的头基本是凸的：参考图里两鬓的头发压着头的边，皮肤的轮廓在那里往里缺一块——转身到一半头发和缺口错开就露出来。取凸包
+  // 凸包会把耳朵根那块也包进来（耳朵画在脸后面，就被盖住了）：凸包再扣掉耳朵
+  const hull = convexHull(outline(faceVis));
+  const hullM = mask(W, H, (x, y) => inside(hull, x + 0.5, y + 0.5));
+  const faceM2 = ears.reduce((m, c) => and(m, not(dilate(c.mask, 1))), hullM);
+  const faceFull = smoothLoop(resampleLoop(outline(components(faceM2)[0].mask), 160), 2);
+  // 挨着脸边、竖着长的几块（眉毛是扁的）；3/4 远处那一撮只露出细细一条
+  const pieces = hairComp.filter((c) => c.area > 80 && c.box[3] - c.box[1] > 15 && (c.box[0] < fb[0] + 10 || c.box[2] > fb[2] - 10) && c.box[3] < fb[3]).sort((p, q) => p.box[0] - q.box[0]);
+  // pieceSmooth：单独的几块头发描出来的边按像素一抖一抖的（眼镜腿、耳朵把下沿切得坑坑洼洼），顺得更狠一点
+  //（用户 2026-10-28：老钟 3/4「这里坑坑洼洼的，优化一下」）；耳朵扣掉以后再顺，顺完往外扩回描边中间
+  const pieceLines = pieces.map((c) => {
+    const m = C.pieceSmooth ? close(c.mask, Math.round(C.pieceSmooth)) : close(c.mask, 2);
+    return smoothLoop(outline(dilate(m, 1)), C.pieceSmooth ?? 1.5);
+  });
+  const earLines = ears.map((c) => (C.earRound ? smoothLoop(resampleLoop(convexHull(outline(dilate(c.mask, 3))), 60), 2) : smoothLoop(outline(dilate(c.mask, 3)), 1.5)));
   if (DEBUG)
     debugPNG(path.join(DEBUG_DIR, `${who}-${view}.png`), W, H, [
-      [backM, [200, 190, 230]],
-      [faceFullM, [250, 220, 200]],
-      [fringeM, [120, 80, 60]],
+      [faceVis, [250, 220, 200]],
+      ...pieces.map((c) => [c.mask, [150, 150, 150]]),
+      ...ears.map((c) => [c.mask, [240, 170, 150]]),
+      ...eyes.map((c) => [c.mask, [40, 40, 40]]),
+      ...brows.map((c) => [c.mask, [90, 90, 90]]),
     ]);
-  return { face: faceFull, ears: earLines, eyes: eyes.map(eyeBox), nose: ends(nose), mouth: ends(mouth), back, fringe, neckC, fb };
+  return { face: faceFull, ears: earLines, eyes: eyes.map(eyeBox), brows: brows.map(blob), nose: ends(nose), mouth: ends(mouth), back: null, fringe: null, pieces: pieceLines, neckC: neckCenter(neck, xa, xb, view), fb };
+}
+/** 凸包（Andrew 单调链），顺时针（y 朝下） */
+function convexHull(pts) {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [];
+  for (const q of p) {
+    while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop();
+    lo.push(q);
+  }
+  const up = [];
+  for (const q of [...p].reverse()) {
+    while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], q) <= 0) up.pop();
+    up.push(q);
+  }
+  return [...lo.slice(0, -1), ...up.slice(0, -1)].reverse();
 }
 function inside(poly, x, y) {
   let c = false;
@@ -189,7 +331,12 @@ function pathsFor(view) {
   const t = trace(view);
   const map = toSvg(view, t.neckC);
   const P = (id, pts, closed, step) => `  <path id="${id}" d="${pathD(pts.map(map), closed, step)}" ${STYLE}/>`;
-  const out = [P("hair-back", t.back, true, 4), P("fringe", t.fringe, true, 3), P("face", t.face, true, 5)];
+  const out = [];
+  if (t.back) out.push(P("hair-back", t.back, true, 4));
+  if (t.fringe) out.push(P("fringe", t.fringe, true, 3));
+  out.push(P("face", t.face, true, 5));
+  // 单独的几块头发（秃顶两鬓）：按从左到右 hair-1、hair-2…
+  t.pieces.forEach((pc, i) => out.push(P(`hair-${i + 1}`, pc, true, 3)));
   // 耳朵：正面按左右，3/4 只有近处那只（画面右）
   t.ears.sort((a, b) => a[0][0] - b[0][0]);
   if (view === "front") {
@@ -198,7 +345,8 @@ function pathsFor(view) {
   // 眼睛：画面左那只是 eye-l
   out.push(`  <path id="eye-l" d="${ellipseD(t.eyes[0], map)}" ${STYLE}/>`, `  <path id="eye-r" d="${ellipseD(t.eyes[t.eyes.length - 1], map)}" ${STYLE}/>`);
   out.push(P("nose", t.nose, false, 1), P("mouth", t.mouth, false, 2));
-  console.error(view, "脖子中心（参考图）", t.neckC, "眼睛", t.eyes.length, "耳朵", t.ears.length);
+  if (t.brows.length) out.push(P("brow-l", t.brows[0], true, 2), P("brow-r", t.brows[1], true, 2));
+  console.error(view, "脖子中心（参考图）", t.neckC, "眼睛", t.eyes.length, "耳朵", t.ears.length, "眉毛", t.brows.length, "单独的头发", t.pieces.length);
   return out.join("\n");
 }
 

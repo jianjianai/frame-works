@@ -20,7 +20,11 @@ if (!C || !outDir) throw new Error("用法（在作品文件夹里）：node <�
 const root = process.cwd();
 const F = layerPathsById(fs.readFileSync(path.join(root, `public/ref/${who}-线稿.svg`), "utf8"), "body");
 const S = layerPathsById(fs.readFileSync(path.join(root, `public/ref/${who}-侧面线稿.svg`), "utf8"), "side-body");
-for (const [n, v] of [["正面", F], ["3/4", S]]) for (const id of ["face", "hair-back", "fringe", "eye-l", "eye-r", "nose", "mouth", "ear-r"]) if (!v[id]) throw new Error(`${n}少了 ${id}`);
+// 必须有的；hair-back / fringe（秃顶的没有）、brow-l / brow-r（眉毛）、hair-1、hair-2…（单独的几块头发）可以没有，但正面和 3/4 要一致
+for (const [n, v] of [["正面", F], ["3/4", S]]) for (const id of ["face", "eye-l", "eye-r", "nose", "mouth", "ear-r"]) if (!v[id]) throw new Error(`${n}少了 ${id}`);
+for (const id of ["hair-back", "fringe"]) if (!F[id] !== !S[id]) throw new Error(`${id} 正面和 3/4 要么都有、要么都没有`);
+const piecesOf = (v) => Object.keys(v).filter((k) => /^hair-\d+$/.test(k)).sort((a, b) => +a.slice(5) - +b.slice(5));
+if (piecesOf(F).length !== piecesOf(S).length) throw new Error(`单独的几块头发正面 ${piecesOf(F).length} 块、3/4 ${piecesOf(S).length} 块，要一样多（按从左到右对应）`);
 
 const hF = toHead("front");
 const hS = toHead("side");
@@ -45,8 +49,15 @@ const view = (v, map, ears) => `{
     iris: { R: ${iris(v["eye-l"], map)}, L: ${iris(v["eye-r"], map)} },
     nose: [${noseOf(v.nose, map).map(r2).join(", ")}] as V2[],
     mouth: [${ends(v.mouth, map).map(r2).join(", ")}] as V2[],
-    ears: { ${ears.map(([k, id]) => `${k}: ${bezOut(v[id], map)} as V2[]`).join(", ")} },
+    ears: { ${ears.map(([k, id]) => `${k}: ${bezOut(v[id], map)} as V2[]`).join(", ")} },${
+      v["brow-l"] && v["brow-r"] ? `\n    brows: { R: ${r2(center(v["brow-l"], map))} as V2, L: ${r2(center(v["brow-r"], map))} as V2 },` : ""
+    }
   }`;
+/** 一小块（眉毛）的中心 */
+const center = (p, map) => {
+  const b = bbox(map(sample(p.segs)));
+  return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+};
 
 // ——— 刘海：正面和 3/4 逐点对应 ———
 // 刘海 = 头发 ∩ 脸的整圈（描图时往外扩了一点，盖住脸的描边）：轮廓上贴着脸的圆顶那段是「顶」，其余是发际线（下沿）。
@@ -89,10 +100,14 @@ import type { V2 } from "./rig";
 export const ${C.prefix}_FACE0: FaceView = ${view(F, hF, [["L", "ear-l"], ["R", "ear-r"]])};
 /** 3/4（朝画面左）的脸：眼珠 R 远处（画面左）、L 近处；耳朵只有近处那只（画面右） */
 export const ${C.prefix}_FACE3: FaceView = ${view(S, hS, [["R", "ear-r"]])};
-/** 头发：后面那片（转身时按头顶 / 最右 / 最低 / 最左对应）、刘海（已经逐点对应好：发际线对发际线、圆顶对圆顶） */
-export const ${C.prefix}_HAIR = {
-  back: { front: ${fmt(hF(backOf(F)))} as V2[], side: ${fmt(hS(backOf(S)))} as V2[] },
-  fringe: { front: ${fmt(hF(fringeOf(F)))} as V2[], side: ${fmt(hS(fringeOf(S)))} as V2[] },
+/** 头发：后面那片（转身时按头顶 / 最右 / 最低 / 最左对应）、刘海（已经逐点对应好：发际线对发际线、圆顶对圆顶）、单独的几块（秃顶两鬓） */
+export const ${C.prefix}_HAIR = {${
+  F["hair-back"] ? `\n  back: { front: ${fmt(hF(backOf(F)))} as V2[], side: ${fmt(hS(backOf(S)))} as V2[] },` : ""
+}${F.fringe ? `\n  fringe: { front: ${fmt(hF(fringeOf(F)))} as V2[], side: ${fmt(hS(fringeOf(S)))} as V2[] },` : ""}${
+  piecesOf(F).length
+    ? `\n  pieces: [${piecesOf(F).map((id) => `\n    { front: ${fmt(hF(sample(F[id].segs, 8).slice(0, -1)))} as V2[], side: ${fmt(hS(sample(S[id].segs, 8).slice(0, -1)))} as V2[] },`).join("")}\n  ],`
+    : ""
+}
 };
 `;
 fs.writeFileSync(path.join(outDir, `cast-${C.file}-art.ts.txt`), src);
