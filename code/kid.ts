@@ -6,6 +6,7 @@
  */
 import { z } from "zod";
 import { defineResources, resource } from "@frame/engine/resources";
+import { editable, editing } from "@frame/engine/editable";
 import { C, Ctx, Pt, addBlob, beginFrame, blob, curve, hash, ik2, inkLine, lerp2, oval, paint, poly, shaded, tubePts } from "./draw";
 
 const point = z.tuple([z.number(), z.number()]);
@@ -825,13 +826,14 @@ function sub(pts: Pt[]): Pt[] {
   return out;
 }
 
-interface ArmSpec {
+export interface ArmSpec {
   wrist: Pt;
   bend: number;
   shape: HandShape;
   elbow?: Pt;
 }
-function armSpecs(p: KidPose): [ArmSpec, ArmSpec] {
+/** 两只手臂：手臂预设，再按 handL / handR、shapeL…、elbowL… 改（kid-editor.ts 也用它摆手柄） */
+export function armSpecs(p: KidPose): [ArmSpec, ArmSpec] {
   const a = p.arms ?? "down";
   let L: ArmSpec = { wrist: [-120, 432], bend: -1, shape: "relax" },
     R: ArmSpec = { wrist: [120, 432], bend: 1, shape: "relax" };
@@ -1481,6 +1483,17 @@ export function drawHand(ctx: Ctx, x: number, y: number, s: number, ang: number,
 
 
 export function drawKid(ctx: Ctx, x: number, y: number, s: number, p: KidPose = {}) {
+  // 「调整画面」和资源预览里：用户拖手腕、手肘、头以后的姿势（别处 editing() 是 false，原样画）
+  if (editing())
+    p = editable(p.who === "girl" ? "女主" : "男主", p, {
+      transform: ctx.getTransform().translate(x, y).scale(s, s),
+      params: kidPose,
+      editor: () => import("./kid-editor"),
+      bounds: (v) => {
+        const body = v.body ?? "bust";
+        return [-210, -240, 420, body === "head" ? 390 : body === "bust" ? 720 : 1180];
+      },
+    });
   const seed = p.seed ?? 11;
   const body = p.body ?? "bust";
   const back = p.view === "back";
