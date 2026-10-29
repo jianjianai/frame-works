@@ -8,10 +8,11 @@ import { C, Ctx, H, W, backOut, blob, camera, castShadow, designScene, easeInOut
 import { SH, SW } from "@materials/s0rrow/code/phone";
 import { drawKid } from "@materials/s0rrow/code/kid";
 import { SHOT, WORD, at } from "./timeline";
-import { ACC_A, ACC_B, BLOCK_AT, HISTORY_END, INBOX_AT, MENU_AT, ROW_B, couplePhoto, guideBox, say, snowPhoto, type Guide, vidBanner, vidBlock, vidComments, vidFollowing, vidPost, vidProfile, slide } from "./ui";
+import { ACC_A, ACC_B, BLOCK_AT, followsAt, HISTORY_END, INBOX_AT, MENU_AT, ROW_B, couplePhoto, guideBox, say, snowPhoto, type Guide, vidBanner, vidBlock, vidComments, vidFollowing, vidPost, vidProfile, slide } from "./ui";
 import { LAMP_AT, SIT, SIT_CAM, SIT_HANDS, bedFromAbove, herFace, herFaceBg, herInBed, herPhoneBack, herRoomSnow, lapDuvet, roomBokeh } from "./world";
 import { aim, aimLerp, drawPhone, halo, tap, whip, type PhoneSpec, type Touch } from "./shots";
 import { journey } from "./journey";
+import { accent } from "./platform";
 
 const TIME = "02:47";
 /** the phone in the opening shots: under the hook, with the post's comment area above the lyrics */
@@ -69,7 +70,7 @@ function newBanner(p: Ctx, abs: number) {
   p.save();
   p.translate(540, -88 + 208 * (1 - Math.pow(1 - clamp(shown), 3)));
   p.scale(bump, bump);
-  p.fillStyle = "#fe2c55";
+  p.fillStyle = accent();
   p.beginPath();
   p.arc(0, 0, 26, 0, Math.PI * 2);
   p.fill();
@@ -315,8 +316,8 @@ function shot3(c: Ctx, abs: number, t0: number, end: number) {
  *  then on the beat it recoils (a jolt out past the phone, shaking, a heartbeat in audio.json) and settles where shot 5
  *  takes over, for the block. */
 const HELD: PhoneSpec = { cx: 540, cy: 930, s: 1 };
-/** 「1 关注」 big, the 0 获赞 / 0 粉丝 either side of it */
-const ON_FOLLOWS = () => aim(294, 452, 540, 780, 2.4);
+/** 「1 关注」 big (抖音版: 0 获赞 / 0 粉丝 either side of it; 小红书版: it leads the row, 粉丝 / 获赞与收藏 to its right) */
+const ON_FOLLOWS = () => aim(followsAt().aim[0], followsAt().aim[1], 540, 780, 2.4);
 /** her row in his following list, 「TA 的关注（1）」 above it and 「已显示全部关注」 under it */
 const ON_HER = (s: number) => aim(300, 262, 540, 760, s);
 function shot4(c: Ctx, abs: number, t0: number) {
@@ -350,7 +351,7 @@ function shot4(c: Ctx, abs: number, t0: number) {
         if (u < 0.8) profile(p);
         else slide(p, (u - 0.8) / 0.2, profile, following);
       }, {
-        buzz: newBuzz(abs), touches: [tap(abs, t0 + 0.78, 294, 452)] });
+        buzz: newBuzz(abs), touches: [tap(abs, t0 + 0.78, followsAt().at[0], followsAt().at[1])] });
       k.restore();
     },
     abs < t0 + 0.22 ? sm : 0,

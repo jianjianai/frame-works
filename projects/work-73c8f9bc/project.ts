@@ -13,6 +13,6 @@ const project: Project = {
   load: () => import("./scene"),
   materials: ["s0rrow"],
   experiences: ["剧情音乐短片","s0rrow","情绪运镜"],
-  timelines: ["main"],
+  timelines: ["main","xhs"],
 };
 export default project;

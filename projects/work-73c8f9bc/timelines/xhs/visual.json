@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "background": "#0b0e1f",
+  "clips": [
+    {
+      "id": "act1",
+      "name": "第一幕 · 陌生号",
+      "source": {
+        "kind": "scene",
+        "module": "act1",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 15.41955,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act2",
+      "name": "第二幕 · 另一部手机",
+      "source": {
+        "kind": "scene",
+        "module": "act2",
+        "engine": "canvas"
+      },
+      "start": 15.41955,
+      "duration": 16.85528,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "act3",
+      "name": "第三幕 · 多穿点",
+      "source": {
+        "kind": "scene",
+        "module": "act3",
+        "engine": "canvas"
+      },
+      "start": 32.27483,
+      "duration": 14.32517,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "lyrics",
+      "name": "中英歌词",
+      "source": {
+        "kind": "scene",
+        "module": "lyrics",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 46.6,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "fit": "contain",
+      "blend": "source-over"
+    },
+    {
+      "id": "grain",
+      "name": "胶片颗粒",
+      "source": {
+        "kind": "scene",
+        "module": "grain",
+        "engine": "canvas"
+      },
+      "start": 0,
+      "duration": 46.6,
+      "offset": 0,
+      "phase": 0,
+      "rate": 1,
+      "transform": {
+        "opacity": 0.5
+      },
+      "fit": "contain",
+      "blend": "overlay"
+    }
+  ]
+}

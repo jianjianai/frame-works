@@ -10,6 +10,8 @@ import { drawPerson } from "@materials/s0rrow/code/people";
 import { drawDad } from "@materials/s0rrow/code/blocked/dad";
 import { socialButton, socialHomeBar, socialIcon } from "@materials/s0rrow/code/social";
 import { cafeCouplePhoto } from "@materials/s0rrow/code/couple-photo";
+import { accent, accentRgb, profileStats, words, xhs } from "./platform";
+import { xhsBanner, xhsBlock, xhsComments, xhsFollowing, xhsPost, xhsProfile } from "./redbook";
 
 export { SH, SW };
 
@@ -22,7 +24,7 @@ export const SHE_CALLS_DAD = "爸爸";
  *  The new account after she blocks him gets a new random name of the same kind; the grey avatar and the 🌹 say it is him. */
 export const ACC_A = "沉默的保温杯";
 export const ACC_B = "孤独的收音机";
-/** the blocked account's 抖音号 on its profile page */
+/** the blocked account's ID on its profile page (抖音号 / 小红书号, acts/platform.ts) */
 export const ACC_ID = "8274615";
 
 // ---------------------------------------------------------------- small pieces
@@ -268,7 +270,7 @@ export function keyboard(c: Ctx, y: number, dark: boolean, big = false) {
 }
 
 // ---------------------------------------------------------------- photos (drawn into a rect)
-type Photo = (c: Ctx, x: number, y: number, w: number, h: number) => void;
+export type Photo = (c: Ctx, x: number, y: number, w: number, h: number) => void;
 
 function clipRect(c: Ctx, x: number, y: number, w: number, h: number, draw: () => void) {
   c.save();
@@ -975,7 +977,9 @@ export const firstCommentAt = (big = false): [number, number] => [104, 620 + 180
 export const INBOX_AT: [number, number] = [480, 748];
 
 /** The full first-act controls are opt-in, so later scenes keep their matching compositions. */
-export function vidPost(c: Ctx, o: { time: string; photo: Photo; caption: string; ago: string; author?: string; big?: boolean; likes?: number; count?: number; showComments?: boolean; mark?: Guide; photoH?: number; details?: boolean; comments?: { name: string; text: string; rose?: boolean; ago?: string; pop?: number; gray?: boolean }[]; photoZoom?: { k: number; fx: number; fy: number } }) {
+export type PostOpts = { time: string; photo: Photo; caption: string; ago: string; author?: string; big?: boolean; likes?: number; count?: number; showComments?: boolean; mark?: Guide; photoH?: number; details?: boolean; comments?: { name: string; text: string; rose?: boolean; ago?: string; pop?: number; gray?: boolean }[]; photoZoom?: { k: number; fx: number; fy: number } };
+export function vidPost(c: Ctx, o: PostOpts) {
+  if (xhs()) return xhsPost(c, o);
   const big = o.big ? 1.3 : 1;
   const compact = o.showComments || !!o.comments?.length;
   c.fillStyle = VBG;
@@ -986,7 +990,7 @@ export function vidPost(c: Ctx, o: { time: string; photo: Photo; caption: string
   herAvatar(c, 110, 120, 30);
   say(c, o.author ?? HER, 156, 120, 30 * big, { weight: 700 });
   if (o.details) {
-    say(c, "我的日常", 408, 120, 21, { color: GREY });
+    say(c, words().postTag, 408, 120, 21, { color: GREY });
     socialIcon(c, "more", 550, 120, 32, "#eeeef3");
   }
   const px = 0, py = 170, pw = SW, ph = o.photoH ?? (compact ? 400 : 640);
@@ -1024,10 +1028,10 @@ export function vidPost(c: Ctx, o: { time: string; photo: Photo; caption: string
   if (compact) {
     say(c, "评论 " + (o.count ?? shown.length), 36, ty + 128, 26 * big, { color: "#c9cad1", weight: 700 });
     if (o.details) {
-      say(c, "互动消息", 538, ty + 128, 22, { color: "#b1b3c0", align: "right" });
+      say(c, words().inbox, 538, ty + 128, 22, { color: "#b1b3c0", align: "right" });
       socialIcon(c, "chevron", 561, ty + 128, 20, GREY);
       if (shown.length) {
-        c.fillStyle = "#fe2c55";
+        c.fillStyle = accent();
         c.beginPath(); c.arc(426, ty + 127, 4.5, 0, Math.PI * 2); c.fill();
       }
     }
@@ -1060,7 +1064,7 @@ export function vidPost(c: Ctx, o: { time: string; photo: Photo; caption: string
   if (o.details) {
     c.fillStyle = "#1b1c25"; c.fillRect(0, 1160, SW, 120);
     c.fillStyle = VLINE; c.fillRect(0, 1160, SW, 1);
-    socialButton(c, 24, 1178, 414, 56, "留下你的评论…", { color: "#8f909c", size: 24, radius: 28, fill: "#2a2b35" });
+    socialButton(c, 24, 1178, 414, 56, words().commentHint, { color: "#8f909c", size: 24, radius: 28, fill: "#2a2b35" });
     socialIcon(c, "smile", 405, 1206, 28, "#aaabb5");
     socialIcon(c, "bookmark", 477, 1206, 27, "#bbbcc6");
     socialIcon(c, "share", 547, 1206, 28, "#bbbcc6");
@@ -1078,7 +1082,7 @@ export function vidCompose(c: Ctx, o: { time: string; photo: Photo; caption: str
   say(c, "存草稿", 560, 120, 22, { color: GREY, align: "right" });
   c.fillStyle = VLINE; c.fillRect(24, 166, SW - 48, 1);
   const w = say(c, o.caption, 40, 230, 44, { weight: 700 });
-  if (o.caret) { c.fillStyle = "#fe2c55"; c.fillRect(46 + w, 204, 4, 52); }
+  if (o.caret) { c.fillStyle = accent(); c.fillRect(46 + w, 204, 4, 52); }
   say(c, o.caption.length + " / 1000", 560, 272, 18, { color: "#71727e", align: "right" });
   c.save(); rr(c, 40, 310, 360, 480, 18); c.clip(); o.photo(c, 40, 310, 360, 480); c.restore();
   socialButton(c, 304, 734, 72, 36, "1 / 1", { fill: "rgba(0,0,0,0.4)", size: 20, radius: 18 });
@@ -1099,13 +1103,15 @@ export function vidCompose(c: Ctx, o: { time: string; photo: Photo; caption: str
     c.fillStyle = VLINE; c.fillRect(40, y + 38, 520, 1);
   });
   const k = clamp(o.press ?? 0);
-  socialButton(c, 40, POST_BTN[1] - 48, SW - 80, 96, "发布", { fill: k > 0 ? "#d81e44" : "#fe2c55", radius: 22, size: 38 });
+  socialButton(c, 40, POST_BTN[1] - 48, SW - 80, 96, "发布", { fill: k > 0 ? "#d81e44" : accent(), radius: 22, size: 38 });
   say(c, "日常会展示在你的主页", SW / 2, 1200, 20, { color: "#797a86", align: "center" });
   socialHomeBar(c);
 }
 
 /** The body anchor stays at (140, y + 112) for the later match cut into her memory. */
-export function vidBanner(c: Ctx, k: number, o: { name: string; body: string; rose?: boolean; big?: boolean; reply?: boolean; details?: boolean }) {
+export type BannerOpts = { name: string; body: string; rose?: boolean; big?: boolean; reply?: boolean; details?: boolean };
+export function vidBanner(c: Ctx, k: number, o: BannerOpts) {
+  if (xhs()) return xhsBanner(c, k, o);
   if (k <= 0) return;
   const e = 1 - Math.pow(1 - clamp(k), 3);
   const big = o.big ? 1.25 : 1, h = 172 * big, y = -h + (84 + h) * e;
@@ -1124,7 +1130,12 @@ export function vidBanner(c: Ctx, k: number, o: { name: string; body: string; ro
 
 /** The unknown account stays anonymous: no location, portrait or biographical clues. */
 export const MENU_AT: [number, number] = [SW - 64, 116];
-export function vidProfile(c: Ctx, o: { name: string; pulse?: Guide; time: string; menu?: number; blocked?: number }) {
+export type ProfileOpts = { name: string; pulse?: Guide; time: string; menu?: number; blocked?: number };
+/** where 「1 关注」 is on the profile: `at` is tapped and boxed, `aim` is where shot 4's close-up centres */
+export const followsAt = (): { at: [number, number]; aim: [number, number] } =>
+  xhs() ? { at: [96, 452], aim: [242, 452] } : { at: [294, 452], aim: [294, 452] };
+export function vidProfile(c: Ctx, o: ProfileOpts) {
+  if (xhs()) return xhsProfile(c, o);
   c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
   const g = c.createLinearGradient(0, 0, 0, 408);
   g.addColorStop(0, "#3b3c49"); g.addColorStop(1, VBG);
@@ -1140,9 +1151,9 @@ export function vidProfile(c: Ctx, o: { name: string; pulse?: Guide; time: strin
   c.strokeStyle = "rgba(255,255,255,0.15)"; c.lineWidth = 3;
   c.beginPath(); c.arc(116, 283, 81, 0, Math.PI * 2); c.stroke();
   say(c, o.name, 220, 246, 36, { weight: 700 });
-  say(c, "抖音号：" + ACC_ID, 220, 300, 22, { color: "#b0b1bd" });
+  say(c, words().accountId + ACC_ID, 220, 300, 22, { color: "#b0b1bd" });
   say(c, "这个人很懒，什么都没留下", 40, 390, 24, { color: GREY });
-  const stats: [string, string][] = [["0", "获赞"], ["1", "关注"], ["0", "粉丝"]];
+  const stats = profileStats();
   stats.forEach(([n, l], i) => {
     const x = 70 + i * 170;
     say(c, n, x, 450, 44, { weight: 700 });
@@ -1164,30 +1175,31 @@ export function vidProfile(c: Ctx, o: { name: string; pulse?: Guide; time: strin
     fold(k, () => socialButton(c, 36, 512, 528, 70, "已拉黑", { icon: "shield", fill: "#292a34", color: "#b7b8c3", size: 29 }));
     c.save();
     c.globalAlpha *= k;
-    say(c, "对方无法再评论你的作品", SW / 2, 616, 21, { color: GREY, align: "center" });
+    say(c, words().blockedHint, SW / 2, 616, 21, { color: GREY, align: "center" });
     c.restore();
   } else {
     fold(1 - Math.pow(blocked * 2, 2), () => {
-      socialButton(c, 36, 512, 340, 70, "关注", { fill: "#fe2c55", icon: "plus", size: 29 });
+      socialButton(c, 36, 512, 340, 70, "关注", { fill: accent(), icon: "plus", size: 29 });
       socialButton(c, 392, 512, 172, 70, "私信", { size: 27 });
     });
   }
   c.fillStyle = VLINE; c.fillRect(0, 648, SW, 1);
-  say(c, "作品 0", 145, 691, 28, { weight: 700, align: "center" });
-  say(c, "喜欢", 435, 691, 27, { color: "#747582", align: "center" });
+  say(c, words().works + " 0", 145, 691, 28, { weight: 700, align: "center" });
+  say(c, words().likes, 435, 691, 27, { color: "#747582", align: "center" });
   socialIcon(c, "lock", 483, 691, 19, "#747582");
   c.fillStyle = "#eeeef3"; rr(c, 111, 727, 68, 4, 2); c.fill();
   c.fillStyle = VLINE; c.fillRect(0, 746, SW, 1);
   // A complete empty state: the zero works itself is part of the clue.
   c.fillStyle = "#1c1d28"; c.beginPath(); c.arc(300, 838, 50, 0, Math.PI * 2); c.fill();
   socialIcon(c, "image", 300, 838, 56, "#5d5e6b");
-  say(c, "暂无作品", SW / 2, 927, 30, { color: "#b3b4bf", weight: 700, align: "center" });
-  say(c, "TA 还没有发布过作品", SW / 2, 975, 23, { color: "#6e6f7d", align: "center" });
+  say(c, words().noWorks, SW / 2, 927, 30, { color: "#b3b4bf", weight: 700, align: "center" });
+  say(c, words().noWorksHint, SW / 2, 975, 23, { color: "#6e6f7d", align: "center" });
   socialHomeBar(c);
 }
 
 /** Only one person is in the list. Search and footer explain the otherwise empty screen. */
 export function vidFollowing(c: Ctx, o: { pulse?: Guide; time: string }) {
+  if (xhs()) return xhsFollowing(c, o);
   c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
   statusBar(c, { time: o.time, airplane: false, battery: 0.41 });
   socialIcon(c, "back", 40, 120, 30, "#fff");
@@ -1196,7 +1208,7 @@ export function vidFollowing(c: Ctx, o: { pulse?: Guide; time: string }) {
   c.fillStyle = VLINE; c.fillRect(0, 174, SW, 1);
   herAvatar(c, 90, 260, 50);
   say(c, HER, 166, 240, 36, { weight: 700 });
-  socialButton(c, 166 + measure(c, HER, 36, F.ui, 700) + 14, 223, 50, 34, "我", { fill: "#fe2c55", size: 22, radius: 7 });
+  socialButton(c, 166 + measure(c, HER, 36, F.ui, 700) + 14, 223, 50, 34, "我", { fill: accent(), size: 22, radius: 7 });
   say(c, "今天也要开心呀", 166, 288, 26, { color: GREY });
   socialIcon(c, "chevron", 550, 260, 23, "#777885");
   guideBox(c, 30, 196, SW - 60, 130, o.pulse ?? 0);
@@ -1208,7 +1220,7 @@ export function vidFollowing(c: Ctx, o: { pulse?: Guide; time: string }) {
 /** The history starts with the same two live comments that arrived in the opening shot.
  *  Each original post uses existing film art; the 2023 graduation is not a placeholder rectangle. */
 type HistoryItem = { text: string; date: string; photo: Photo };
-const HISTORY: HistoryItem[] = [
+export const HISTORY: HistoryItem[] = [
   { text: "窗户关好", date: "刚刚", photo: snowPhoto },
   { text: "这么晚还不睡？", date: "刚刚", photo: snowPhoto },
   { text: "又熬夜", date: "2026-01-09", photo: snowPhoto },
@@ -1231,10 +1243,12 @@ const HISTORY: HistoryItem[] = [
 ];
 export const ROW_A = HISTORY.findIndex(row => row.date === "2024-12-31");
 export const ROW_B = HISTORY.findIndex(row => row.date === "2023-06-18");
-const ROW_H = 150;
+export const ROW_H = 150;
 // The extra newest row moves the scroll distance equally; the landing row stays at y=500.
 export const HISTORY_END = (HISTORY.length - 6) * ROW_H;
-export function vidComments(c: Ctx, o: { scroll: number; time: string; marks?: [number, Guide][]; gone?: number; press?: number }) {
+export type CommentsOpts = { scroll: number; time: string; marks?: [number, Guide][]; gone?: number; press?: number };
+export function vidComments(c: Ctx, o: CommentsOpts) {
+  if (xhs()) return xhsComments(c, o);
   c.fillStyle = VBG; c.fillRect(0, 0, SW, SH);
   c.save(); c.beginPath(); c.rect(0, 176, SW, 1050); c.clip();
   HISTORY.forEach(({ text: body, date, photo }, i) => {
@@ -1246,8 +1260,8 @@ export function vidComments(c: Ctx, o: { scroll: number; time: string; marks?: [
       c.fillRect(0, y - 20, SW, ROW_H);
     }
     if (i < 2) {
-      c.fillStyle = "rgba(254,44,85,0.045)"; c.fillRect(0, y - 14, SW, ROW_H);
-      c.fillStyle = "#fe2c55"; c.beginPath(); c.arc(17, y + 43, 4, 0, Math.PI * 2); c.fill();
+      c.fillStyle = "rgba(" + accentRgb() + ",0.045)"; c.fillRect(0, y - 14, SW, ROW_H);
+      c.fillStyle = accent(); c.beginPath(); c.arc(17, y + 43, 4, 0, Math.PI * 2); c.fill();
     }
     grayAvatar(c, 64, y + 46, 36);
     say(c, ACC_A, 122, y + 15, 25, { color: "#a9aab5" });
@@ -1277,8 +1291,8 @@ export function vidComments(c: Ctx, o: { scroll: number; time: string; marks?: [
   c.fillStyle = VBG; c.fillRect(0, 0, SW, 176);
   statusBar(c, { time: o.time, airplane: false, battery: 0.41 });
   socialIcon(c, "back", 37, 120, 28, "#eeeef3");
-  say(c, "互动消息", 298, 113, 32, { weight: 700, align: "center" });
-  say(c, "评论与回复", 298, 154, 18, { color: "#858794", align: "center" });
+  say(c, words().inbox, 298, 113, 32, { weight: 700, align: "center" });
+  say(c, words().inboxSub, 298, 154, 18, { color: "#858794", align: "center" });
   socialIcon(c, "filter", 552, 120, 27, "#b9bac4");
   c.fillStyle = VLINE; c.fillRect(0, 175, SW, 1);
   socialHomeBar(c, { background: VBG });
@@ -1286,7 +1300,9 @@ export function vidComments(c: Ctx, o: { scroll: number; time: string; marks?: [
 
 /** The action rows clear the lyric band. The confirmation keeps its approved screen position. */
 export const BLOCK_AT: [number, number] = [300, 746];
-export function vidBlock(c: Ctx, o: { sheet: number; confirm: number; done: number; hot?: number }) {
+export type BlockOpts = { sheet: number; confirm: number; done: number; hot?: number };
+export function vidBlock(c: Ctx, o: BlockOpts) {
+  if (xhs()) return xhsBlock(c, o);
   if (o.sheet > 0) {
     c.save();
     c.fillStyle = "rgba(0,0,0," + (0.5 * clamp(o.sheet)).toFixed(3) + ")"; c.fillRect(0, 0, SW, SH);
@@ -1296,7 +1312,7 @@ export function vidBlock(c: Ctx, o: { sheet: number; confirm: number; done: numb
     say(c, ACC_A, SW / 2, y + 60, 25, { color: GREY, align: "center" });
     // Privacy actions are near the top; cancel remains in the bottom safe area.
     const actions: ["shield" | "filter", string, string, string][] = [
-      ["shield", "拉黑", "不再接收对方的评论", "#fe2c55"],
+      ["shield", "拉黑", "不再接收对方的评论", accent()],
       ["filter", "举报", "反馈不当内容", "#e4e4eb"],
     ];
     actions.forEach(([icon, label, hint, color], i) => {
@@ -1326,7 +1342,7 @@ export function vidBlock(c: Ctx, o: { sheet: number; confirm: number; done: numb
     say(c, "拉黑后，对方将无法评论你", 0, -18, 25, { color: "#a6a7b2", align: "center" });
     c.fillStyle = VLINE; c.fillRect(-250, 50, 500, 1); c.fillRect(0, 50, 1, 106);
     say(c, "取消", -120, 100, 32, { color: "#ddd", align: "center" });
-    say(c, "拉黑", 120, 100, 32, { color: "#fe2c55", weight: 700, align: "center" });
+    say(c, "拉黑", 120, 100, 32, { color: accent(), weight: 700, align: "center" });
     c.restore();
   }
   if (o.done > 0) {
@@ -1353,10 +1369,10 @@ export function vidCommentBox(c: Ctx, draft: string, caret: boolean, big = false
   const w = draft ? say(c, draft, 56, y + 60, fs, { rose: draft.endsWith("多穿点") }) : 0;
   if (!draft) say(c, "说点什么…", 56, y + 60, fs * 0.8, { color: GREY });
   if (caret) {
-    c.fillStyle = "#fe2c55";
+    c.fillStyle = accent();
     c.fillRect(56 + w + 4, y + 60 - fs * 0.6, 4, fs * 1.2);
   }
-  c.fillStyle = draft ? "#fe2c55" : "#55565f";
+  c.fillStyle = draft ? accent() : "#55565f";
   rr(c, SW - 110, y + 26, 90, 68, 34);
   c.fill();
   say(c, "发送", SW - 65, y + 60, 26, { weight: 700, align: "center" });
@@ -1398,10 +1414,10 @@ export function vidHandwriting(c: Ctx, o: { draft: string; caret: boolean; ink?:
   const w = o.draft ? say(c, o.draft, 56, y + 60, fs) : 0;
   if (!o.draft) say(c, "说点什么…", 56, y + 60, 40, { color: GREY });
   if (o.caret) {
-    c.fillStyle = "#fe2c55";
+    c.fillStyle = accent();
     c.fillRect(56 + w + 4, y + 60 - fs * 0.6, 4, fs * 1.2);
   }
-  c.fillStyle = o.draft ? "#fe2c55" : "#55565f";
+  c.fillStyle = o.draft ? accent() : "#55565f";
   rr(c, SW - 110, y + 26, 90, 68, 34);
   c.fill();
   say(c, "发送", SW - 65, y + 60, 26, { weight: 700, align: "center" });
@@ -1409,7 +1425,7 @@ export function vidHandwriting(c: Ctx, o: { draft: string; caret: boolean; ink?:
   const ky = y + 120;
   c.fillStyle = "#1f2026";
   c.fillRect(0, ky, SW, SH - ky);
-  (o.cands ?? []).forEach((s, i) => say(c, s, 60 + i * 108, ky + 34, 38, { color: i === 0 ? "#fe2c55" : "#c9cad2", weight: i === 0 ? 700 : 400, align: "center" }));
+  (o.cands ?? []).forEach((s, i) => say(c, s, 60 + i * 108, ky + 34, 38, { color: i === 0 ? accent() : "#c9cad2", weight: i === 0 ? 700 : 400, align: "center" }));
   const { x: gx, y: gy, size } = hwLayout(y).glyph;
   c.fillStyle = "#2b2c34";
   rr(c, 16, ky + 72, SW - 32, 306, 18);

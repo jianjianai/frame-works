@@ -8,7 +8,9 @@ import { Ctx, F, camera, castShadow, designScene, easeInOut, easeOut, filtered, 
 import { SW, SH, phoneBack, statusBar } from "@materials/s0rrow/code/phone";
 import { WECHAT_AT, appWindow, homeScreen } from "@materials/s0rrow/code/chat";
 import { SHOT, WORD, at } from "./timeline";
-import { ACC_B, DAD_CALLS_HER, MOMENTS_ROW, WALL_FACE, WALL_S, couplePhoto, dadLock, dadLockText, hwFinger, slide, vidHandwriting, wallpaperPhoto, wxContact, wxMomentsBlocked, type Guide } from "./ui";
+import { xhs } from "./platform";
+import { starIcon } from "./redbook";
+import { ACC_B, DAD_CALLS_HER, MOMENTS_ROW, bubbleIcon, heartIcon, WALL_FACE, WALL_S, couplePhoto, dadLock, dadLockText, hwFinger, slide, vidHandwriting, wallpaperPhoto, wxContact, wxMomentsBlocked, type Guide } from "./ui";
 import { boothBack, boothFront, boothFrontDesk, deskTop } from "@materials/s0rrow/code/blocked/booth";
 import { drawDad } from "@materials/s0rrow/code/blocked/dad";
 import { drawPhone, halo, tap, timeCard, whip, type Touch } from "./shots";
@@ -331,9 +333,21 @@ function hisDesk(p: Ctx, abs: number) {
     p.save();
     p.globalAlpha = 1 - up;
     p.fillStyle = "rgba(20,21,29,0.72)";
-    rr(p, 24, 1150, SW - 48, 64, 32);
-    p.fill();
-    text(p, "说点什么…", 60, 1182, { size: 30, font: F.ui, fill: "#b8b9c2", align: "left" });
+    if (xhs()) {
+      // 小红书: a short 说点什么 and 赞 / 收藏 / 评论 with her note's counts
+      rr(p, 24, 1150, 250, 64, 32);
+      p.fill();
+      text(p, "说点什么…", 60, 1182, { size: 28, font: F.ui, fill: "#c8c8cf", align: "left" });
+      const icons: [typeof heartIcon, string][] = [[heartIcon, "23"], [starIcon, "4"], [bubbleIcon, "6"]];
+      icons.forEach(([icon, n], i) => {
+        icon(p, 318 + i * 98, 1182, 34, "#fff");
+        text(p, n, 342 + i * 98, 1183, { size: 26, font: F.ui, fill: "#fff", align: "left" });
+      });
+    } else {
+      rr(p, 24, 1150, SW - 48, 64, 32);
+      p.fill();
+      text(p, "说点什么…", 60, 1182, { size: 30, font: F.ui, fill: "#b8b9c2", align: "left" });
+    }
     p.restore();
   }
   if (up > 0) {
