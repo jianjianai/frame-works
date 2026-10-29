@@ -14,5 +14,6 @@ const project: Project = {
   materials: ["s0rrow"],
   experiences: ["剧情音乐短片","s0rrow","情绪运镜"],
   timelines: ["main","xhs"],
+  publishedAt: "2026-10-29T09:50:42.120Z",
 };
 export default project;
