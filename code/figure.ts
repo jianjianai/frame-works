@@ -486,6 +486,15 @@ export interface DrawOptions {
   hold?: { L?: HoldFn; R?: HoldFn };
   /** 在横在胸前的手臂之前画（被抱的人等） */
   beforeFrontArms?: (ctx: CanvasRenderingContext2D) => void;
+  /**
+   * 按部位分开画（两个人抱在一起时，把一个人的某只胳膊插到另一个人的身子中间：真的遮挡，靠先后，不靠裁剪）。
+   * part："back" 只画身后那一层（后面的头发、画在身子后面的胳膊），"body" 画其余的；不写全画。
+   * onlyArm：只画这只胳膊（连手和手里的东西，整只胳膊照常描边）；skipArms：不画这些胳膊（身子在它们的肩膀那圈照旧不描边，接得上另外画的胳膊）。
+   * 例：她的 back → 他的 onlyArm（搂在她背后的那只）→ 她的 body（beforeFrontArms 里画他，skipArms 那只）
+   */
+  part?: "back" | "body";
+  onlyArm?: "L" | "R";
+  skipArms?: ("L" | "R")[];
 }
 
 /**
@@ -654,14 +663,26 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     if (hs !== 1 || hw !== 1) ctx.restore();
   };
 
+  // 按部位分开画（DrawOptions.part / onlyArm / skipArms）
+  const skip = (side: "L" | "R") => opts.skipArms?.includes(side) ?? false;
+  if (opts.onlyArm) {
+    const side = opts.onlyArm;
+    scoped(() => drawArm(ctx, rig, side, ink, opts));
+    return;
+  }
+  const backPart = opts.part !== "body";
+  const bodyPart = opts.part !== "back";
   scoped(() => {
-    headView((r, k) => look.backHair?.(ctx, r, k));
-    if (farBack("R")) drawArm(ctx, rig, "R", ink, opts);
-    if (farBack("L")) drawArm(ctx, rig, "L", ink, opts);
+    if (backPart) {
+      headView((r, k) => look.backHair?.(ctx, r, k));
+      if (farBack("R") && !skip("R")) drawArm(ctx, rig, "R", ink, opts);
+      if (farBack("L") && !skip("L")) drawArm(ctx, rig, "L", ink, opts);
+    }
+    if (!bodyPart) return;
     drawLegs(ctx, rig, ink);
     const behind = front ? (["R", "L"] as const).filter((side) => !farBack(side)) : [];
     const over = look.armsOver?.(rig) ?? false;
-    if (!over) for (const side of behind) drawUpperArm(ctx, rig, side, ink);
+    if (!over) for (const side of behind) if (!skip(side)) drawUpperArm(ctx, rig, side, ink);
     // 身子在这些手臂的肩膀圈里不描边：正面时画在身子后面的上臂，加上 3/4 时整只在身子后面的远侧手臂
     // （用户 2026-10-18：远侧肩膀的线要和参考图一样，从腋下才开始，不一直连到肩头）
     const merged = [...behind, ...(["R", "L"] as const).filter(farBack)];
@@ -669,7 +690,7 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     drawTorso(ctx, rig, ink, merged);
     look.overTorso?.(ctx, rig, ink, merged);
     // 外衣上面的正面上臂：袖子盖着外衣的边
-    if (over) for (const side of behind) drawUpperArmOver(ctx, rig, side, ink);
+    if (over) for (const side of behind) if (!skip(side)) drawUpperArmOver(ctx, rig, side, ink);
     look.neckFront?.(ctx, rig, ink);
     headView((r, k) => {
       look.underHead?.(ctx, r, k);
@@ -678,7 +699,8 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   });
   // 前面的手臂和挂在胸前的东西（围巾垂下来那头）：垂在身边、举起来的手臂在它后面（风把它吹过手臂时压在手臂上），
   // 横在胸前的前臂（抱臂、递东西、抱人）压在它上面
-  const fronts = (["R", "L"] as const).filter((side) => !farBack(side));
+  if (!bodyPart) return;
+  const fronts = (["R", "L"] as const).filter((side) => !farBack(side) && !skip(side));
   const drawFront = (side: "L" | "R") => (front ? drawForearm(ctx, rig, side, ink, opts) : drawArm(ctx, rig, side, ink, opts));
   // 姿势里写了 chestL / chestR 就照写的（over 压在围巾上、under 在围巾后），没写按前臂横没横在胸前判断。
   // 自动判断在一个动作的半路会翻（《引力》伸手进靴筒、走路摆臂），用户 2026-10-19：「加一个参数来控制前面还是后面，手动控制」
