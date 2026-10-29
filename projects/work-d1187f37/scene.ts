@@ -1,10 +1,10 @@
 import type { SceneOptions } from "@frame/engine/types";
 import { createCompositionScene } from "@frame/engine/compositor";
-import visual from "./visual.json";
+import { timeline } from "@frame/engine/timeline";
 
 // visual.json 排列图层；"scene" 图层的 module 名称在这里注册。幕数和 visual.json 保持一致。
 export function createScene(options: SceneOptions) {
-  return createCompositionScene(options, visual, {
+  return createCompositionScene(options, timeline().visual, {
     act1: () => import("./acts/act1"),
     act2: () => import("./acts/act2"),
     act3: () => import("./acts/act3"),
