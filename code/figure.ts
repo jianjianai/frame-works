@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { defineResources, resource } from "@frame/engine/resources";
+import { editable, editing } from "@frame/engine/editable";
 import {
   type Ink,
   type P,
@@ -502,6 +503,8 @@ export interface DrawOptions {
  * 函数都拿到骨架（rig，姿势和物品开关在 rig.pose 里）和画笔（ink）；不写就是基础模型本来的样子。
  */
 export interface Look {
+  /** 名字：「调整画面」和资源预览里显示的（不写是「角色」） */
+  name?: string;
   /** 配色：换掉基础模型的颜色（皮肤、眼睛、上衣 top、下装 bottom…） */
   colors?: Partial<Palette>;
   /** 物品的默认值（Pose.items） */
@@ -604,15 +607,36 @@ export function drawFigure(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, lo
   const prev = K;
   K = { ...BASE_COLORS, ...look.colors };
   const w = look.width ?? 1;
-  if (w !== 1) {
+  let rig = figureRig(pIn, look);
+  // 「调整画面」和资源预览里：用户拖关节、改数值以后的姿势（别处 editing() 是 false，原样画）
+  let at: V2 = [0, 0];
+  if (editing()) {
+    const values = figureValues(rig);
+    const pose = rig.pose;
+    const now = editable(look.name ?? (look === BASE_LOOK ? "基础模型" : "角色"), values, {
+      ctx,
+      params: FIGURE_PARAMS,
+      editor: () => import("./figure-editor"),
+      bounds: (v) => figureBounds(figureRig(withValues(pose, values, v, look), look), v, w),
+      data: { pose, look, values, width: w } satisfies FigureEditData,
+      part: Boolean(opts.part || opts.onlyArm || opts.skipArms?.length),
+    });
+    if (now !== values) {
+      rig = figureRig(withValues(pose, values, now, look), look);
+      at = [now.x, now.y];
+    }
+  }
+  const moved = at[0] !== 0 || at[1] !== 0;
+  if (w !== 1 || moved) {
     ctx.save();
+    ctx.translate(at[0], at[1]);
     ctx.scale(w, 1);
   }
   try {
-    render(ctx, figureRig(pIn, look), opts);
+    render(ctx, rig, opts);
   } finally {
     K = prev;
-    if (w !== 1) ctx.restore();
+    if (w !== 1 || moved) ctx.restore();
   }
 }
 
@@ -2261,6 +2285,195 @@ export function figurePose(options: FigureOptions = {}, t = 0, look: Look = BASE
   const y = o.ground ? groundHip(pose, look) : DEFAULT_POSE.hip[1];
   pose.hip = [0, y - o.lift];
   return pose;
+}
+
+// ——— 「调整画面」和资源预览：画出来的姿势按 figureOptions 的写法（角度用度）给出来，用户改了再放回姿势 ———
+
+/** 「调整画面」里显示、能改的数：和 figureOptions 同名（角度用度，是画出来的角度：用 IK 的手脚也换算成关节角度），加上整个人挪了多少 */
+export const FIGURE_PARAMS = figureOptions
+  .pick({
+    face: true,
+    headTurn: true,
+    expression: true,
+    blink: true,
+    happy: true,
+    sad: true,
+    fierce: true,
+    wide: true,
+    smile: true,
+    open: true,
+    lookX: true,
+    lookY: true,
+    blush: true,
+    tears: true,
+    squint: true,
+    round: true,
+    teeth: true,
+    wobble: true,
+    neck: true,
+    lean: true,
+    rot: true,
+    shoulderL: true,
+    elbowL: true,
+    wristL: true,
+    handL: true,
+    layerL: true,
+    chestL: true,
+    shoulderR: true,
+    elbowR: true,
+    wristR: true,
+    handR: true,
+    layerR: true,
+    chestR: true,
+    hipL: true,
+    kneeL: true,
+    ankleL: true,
+    thighL: true,
+    hipR: true,
+    kneeR: true,
+    ankleR: true,
+    thighR: true,
+    float: true,
+  })
+  .extend({
+    squash: z.number().min(-0.5).max(0.5).default(0).describe("落地压扁（正）/ 起跳拉长（负）"),
+    x: z.number().default(0).describe("整个人往右挪多少（角色单位，画它的地方的坐标）"),
+    y: z.number().default(0).describe("整个人往下挪多少（角色单位，负 = 往上）"),
+  });
+export type FigureValues = {
+  face: number;
+  headTurn: number;
+  expression?: string;
+  neck: number;
+  lean: number;
+  rot: number;
+  float: number;
+  squash: number;
+  x: number;
+  y: number;
+  lookX: number;
+  lookY: number;
+} & Record<(typeof EXPR_KEYS)[number], number> &
+  Record<`${"shoulder" | "elbow" | "wrist" | "hip" | "knee" | "ankle" | "thigh"}${"L" | "R"}`, number> &
+  Record<`hand${"L" | "R"}`, HandShape> &
+  Record<`layer${"L" | "R"}`, "auto" | "front" | "back"> &
+  Record<`chest${"L" | "R"}`, "auto" | "over" | "under">;
+/** figure-editor.ts 摆手柄用的：画出来的姿势、外观、它的数、体型宽窄 */
+export interface FigureEditData {
+  pose: Pose;
+  look: Look;
+  values: FigureValues;
+  width: number;
+}
+
+const wrapDeg = (deg: number) => {
+  const d = ((((deg + 180) % 360) + 360) % 360) - 180;
+  return Math.abs(d) < 1e-9 ? 0 : d;
+};
+/** 画出来的样子按参数写（角度：度，相对上一节；用 IK 的手脚按 IK 算出来的角度） */
+export function figureValues(rig: Rig): FigureValues {
+  const { pose } = rig;
+  const D = 1 / RAD;
+  const out: Record<string, unknown> = {
+    face: pose.face,
+    headTurn: pose.headTurn,
+    neck: wrapDeg(pose.neck * D),
+    lean: wrapDeg(pose.lean * D),
+    rot: wrapDeg(pose.rot * D),
+    float: pose.float,
+    squash: pose.squash,
+    x: 0,
+    y: 0,
+    lookX: pose.expr.look[0],
+    lookY: pose.expr.look[1],
+  };
+  for (const k of EXPR_KEYS) out[k] = pose.expr[k];
+  for (const side of ["L", "R"] as const) {
+    const arm = rig.arms[side];
+    const ap = side === "L" ? pose.armL : pose.armR;
+    out[`shoulder${side}`] = wrapDeg((arm.a1 - rig.chest.a) * D);
+    out[`elbow${side}`] = wrapDeg((arm.a2 - arm.a1) * D);
+    out[`wrist${side}`] = wrapDeg(ap.h * D);
+    out[`hand${side}`] = ap.shape;
+    out[`layer${side}`] = ap.layer ?? "auto";
+    out[`chest${side}`] = ap.chest ?? "auto";
+    const leg = rig.legs[side];
+    const lp = side === "L" ? pose.legL : pose.legR;
+    out[`hip${side}`] = wrapDeg((leg.a1 - rig.pelvis.a) * D);
+    out[`knee${side}`] = wrapDeg((leg.a2 - leg.a1) * D);
+    out[`ankle${side}`] = wrapDeg((leg.tip.a - leg.a2) * D);
+    out[`thigh${side}`] = lp.thighK ?? 1;
+  }
+  return out as FigureValues;
+}
+
+/**
+ * 用户改过的数放回姿势：改了哪只手臂 / 腿的角度，那只就按角度画（不再用 IK）；表情名换成表情的数值。
+ * 改了腿、转身、压扁时，脚照样踩在原来的高度（最低的着地点不动），不会悬空或陷进地里。
+ */
+export function withValues(pose: Pose, before: FigureValues, after: FigureValues, look: Look = BASE_LOOK): Pose {
+  const p: Pose = {
+    ...pose,
+    armL: { ...pose.armL },
+    armR: { ...pose.armR },
+    legL: { ...pose.legL },
+    legR: { ...pose.legR },
+    expr: { ...pose.expr, look: [...pose.expr.look] as V2 },
+  };
+  const changed = (key: keyof FigureValues) => after[key] !== before[key];
+  if (changed("face")) p.face = after.face;
+  if (changed("headTurn")) p.headTurn = after.headTurn;
+  if (changed("float")) {
+    p.float = after.float;
+    p.gravity = [0, 1 - 2 * after.float];
+  }
+  if (changed("squash")) p.squash = after.squash;
+  for (const key of ["neck", "lean", "rot"] as const) if (changed(key)) p[key] = after[key] * RAD;
+  if (after.expression && after.expression !== before.expression && EXPRESSIONS[after.expression]) p.expr = { ...NEUTRAL, ...EXPRESSIONS[after.expression] };
+  for (const k of EXPR_KEYS) if (changed(k)) p.expr[k] = after[k];
+  if (changed("lookX") || changed("lookY")) p.expr.look = [after.lookX, after.lookY];
+  for (const side of ["L", "R"] as const) {
+    const ap = side === "L" ? p.armL : p.armR;
+    if (changed(`shoulder${side}`) || changed(`elbow${side}`)) {
+      ap.a = after[`shoulder${side}`] * RAD;
+      ap.b = after[`elbow${side}`] * RAD;
+      ap.to = undefined;
+    }
+    if (changed(`wrist${side}`)) ap.h = after[`wrist${side}`] * RAD;
+    if (changed(`hand${side}`)) ap.shape = after[`hand${side}`];
+    if (changed(`layer${side}`)) ap.layer = after[`layer${side}`] === "auto" ? undefined : (after[`layer${side}`] as "front" | "back");
+    if (changed(`chest${side}`)) ap.chest = after[`chest${side}`] === "auto" ? undefined : (after[`chest${side}`] as "over" | "under");
+    const lp = side === "L" ? p.legL : p.legR;
+    if (changed(`hip${side}`) || changed(`knee${side}`) || changed(`ankle${side}`)) {
+      lp.a = after[`hip${side}`] * RAD;
+      lp.b = after[`knee${side}`] * RAD;
+      lp.f = after[`ankle${side}`] * RAD;
+      lp.to = undefined;
+    }
+    if (changed(`thigh${side}`)) lp.thighK = after[`thigh${side}`];
+  }
+  const grounded = (["face", "rot", "squash", "hipL", "kneeL", "ankleL", "thighL", "hipR", "kneeR", "ankleR", "thighR"] as const).some(changed);
+  if (grounded) {
+    const lowest = (q: Pose) => Math.max(...contactsOf(figureRig(q, look)).map((c) => c[1]));
+    p.hip = [p.hip[0], p.hip[1] + lowest(pose) - lowest(p)];
+  }
+  return p;
+}
+
+/** 选中框：骨架各点外扩一圈（画它的地方的坐标，算上挪动、体型宽窄、朝右镜像） */
+export function figureBounds(rig: Rig, values: Pick<FigureValues, "x" | "y">, width = 1): [number, number, number, number] {
+  const pts: V2[] = [rig.head.o, rig.neck, rig.pelvis.o];
+  for (const side of ["L", "R"] as const) {
+    for (const limb of [rig.arms[side], rig.legs[side]]) pts.push(limb.root, limb.mid, limb.end);
+  }
+  const sx = width * (1 + rig.pose.squash * 0.6) * (rig.mir ? -1 : 1);
+  const sy = 1 - rig.pose.squash;
+  const xs = pts.map((p) => values.x + p[0] * sx);
+  const ys = pts.map((p) => values.y + p[1] * sy);
+  const pad = 40;
+  const x0 = Math.min(...xs) - pad;
+  const y0 = Math.min(...ys) - pad - 60;
+  return [x0, y0, Math.max(...xs) + pad - x0, Math.max(...ys) + pad - y0];
 }
 
 /** 按参数画基础模型（或给 look 画某个角色）：(x, y) 是两脚之间的地面，s = 1 时全身约 590 高。 */

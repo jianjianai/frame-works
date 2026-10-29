@@ -1141,6 +1141,7 @@ export function holdBrick(ctx: CanvasRenderingContext2D, hand: Frame, _mir = fal
 
 // ——— 秤砣的外观：基础模型上的各层 ———
 export const CHENGTUO: Look = {
+  name: "秤砣",
   colors: { top: K.sweater, topShade: K.sweaterShade, topSeam: K.sweaterSeam, bottom: K.tights, bottomShade: K.tightsShade },
   items: { ...CHENGTUO_ITEMS },
   sleeve: sleeveColors,

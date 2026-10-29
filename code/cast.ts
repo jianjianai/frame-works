@@ -384,6 +384,7 @@ export function castLook(spec: CastSpec): Look {
   const cuff = coat ? garmentCuff(coat) : topCuff(top, col);
   const hoodBack = coat?.kind === "hoodie" ? coat : top?.kind === "hoodie" ? { color: col.top, shade: col.topShade } : null;
   return {
+    name: spec.name,
     // 自己画眉毛时把基础模型的细眉藏起来
     colors: spec.brows ? { ...spec.colors, brow: "rgba(0,0,0,0)" } : spec.colors,
     collar: topHasOwnCollar(top) ? false : (spec.collar ?? true),
