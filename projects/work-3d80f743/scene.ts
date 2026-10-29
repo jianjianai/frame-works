@@ -1,9 +1,9 @@
 import type { SceneOptions } from "@frame/engine/types";
 import { createCompositionScene } from "@frame/engine/compositor";
-import visual from "./visual.json";
+import { timeline } from "@frame/engine/timeline";
 
 export async function createScene(options: SceneOptions) {
-  return createCompositionScene(options, visual, {
+  return createCompositionScene(options, timeline().visual, {
     act1: () => import("./scenes/act1"),
     act2: () => import("./scenes/act2"),
     act3: () => import("./scenes/act3"),
