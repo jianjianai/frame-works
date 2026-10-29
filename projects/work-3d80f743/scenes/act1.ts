@@ -297,8 +297,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       // 手落下时弯腰到 28°，边揉边直起身：肩膀往后让，抵掉往前走的那一段，胳膊一直是伸着的，不折起来
       const farSwing = ((sw(p).shoulderR as number) - (p.lean as number)) * 0.3 - 26;
       // 小石头照参考图改成头大腿短、高到她胸口（用户 2026-10-28）：原来按矮小孩弯到 28°，肩膀比他头顶还低，胳膊从下往上斜着过去、
-      // 揉的时候前臂横在他脸前面。现在只弯到 10°（肩膀高过他的头），边揉边直起身、往后仰一点到 −8°：肩膀往后让的和原来一样多，抵掉往前走的那一段
-      const bow = t < T.pat + 0.12 ? 4 + 6 * clamp01((t - T.pat + 0.3) / 0.42) : 10 - 18 * clamp01((t - T.pat - 0.12) / 0.32);
+      // 揉的时候前臂横在他脸前面。现在只弯到 10°（肩膀高过他的头），边揉边直起身、往后仰一点到 −12°：肩膀往后让的和原来一样多，抵掉往前走的那一段
+      const bow = t < T.pat + 0.12 ? 4 + 6 * clamp01((t - T.pat + 0.3) / 0.42) : 10 - 22 * clamp01((t - T.pat - 0.12) / 0.3);
       const extra: Angles = pat
         ? { lean: bow, ...armL(50 + (k % 2 ? -8 : 6), 26, -26, "flat", bow), ...armR(farSwing, 14, 0, "relax", bow), neck: -14, expression: "微笑", squint: 0.4, lookX: -0.4, lookY: 0.9 }
         : wave > 0.5
@@ -657,10 +657,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   // 手离开头发以前，他画在她身子前面、她近处那只手后面（beforeFrontArms）
   const PAT_IN = T.pat - 0.2;
   const PAT_ON = T.pat + 0.12;
-  const PAT_UP = T.pat + 0.44;
+  const PAT_UP = T.pat + 0.38;
   const PAT_END = PAT_UP + 0.28;
-  /** 揉的时候手顺着头顶往后脑勺滑多远 */
-  const PAT_SLIDE = 60;
+  /** 揉的时候手掌中心沿着头形从头顶前面一点（θ 负，她那边）滑到后脑勺（θ 正，弧度）：原来沿切线直着往后滑 60，
+   *  头半径只有 40 多，手滑出头外悬在后脑勺后面（用户 2026-10-29：「摸头动作没对上」） */
+  const PAT_TH0 = -0.3;
+  const PAT_TH1 = 0.25;
   /** 他的头顶（相对他的根）和头顶朝上的方向：头以脖子为中心放大 headScale 倍；头顶（头发底下）离头的中心 53 个头的单位 */
   const KID_HEAD_R = 53 * STONE.scale * (STONE.headScale ?? 1) - 1.1;
   const kidCrown = (pose: PoseIn): { top: V2; up: V2 } => {
@@ -684,8 +686,6 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const f = kidMove(t);
     return { pose: f.pose, x: kidX0 - f.x };
   });
-  /** 手掌朝下、手指朝他后脑勺（画面左边）微微往下顺着头形 */
-  const PAT_HAND = 100 * (Math.PI / 180);
   const PAT_WRIST = 75 * (Math.PI / 180);
   const angleOf = (from: number[], to: number[]) => Math.atan2(-(to[0] - from[0]), to[1] - from[1]);
   const bez = (a: V2, b: V2, e: V2, s: number) => [0, 1].map((i) => (1 - s) ** 2 * a[i] + 2 * s * (1 - s) * b[i] + s * s * e[i]) as V2;
@@ -694,29 +694,39 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const c = chenAt(t);
     const k = kidAt(t);
     const cr = kidCrown(k.pose);
-    // 头顶往上 d、往他脸那边（画面右，她那边）side
-    const crown = (d: number, side: number): V2 => [k.x + cr.top[0] + cr.up[0] * d - cr.up[1] * side, cr.top[1] + cr.up[1] * d + cr.up[0] * side];
     // 原来摆臂的手：伸过去从它出发，抬起来以后回到它（位置和手的朝向都接得上，不跳）
     const j0 = jointsOf(c.pose);
     const swing: V2 = [c.x + j0.palmL[0], c.y + j0.palmL[1]];
     const swingHand = angleOf(j0.wristL, j0.palmL);
     const u = ph(t, PAT_ON, PAT_UP);
     const rub = t > PAT_ON && t < PAT_UP ? Math.sin(4 * Math.PI * u) : 0;
+    // 贴着头形：头的中心 + (R + d) 朝 θ 的方向（θ 从头顶往后脑勺量）；手指顺着头形的切线朝后脑勺、微微往头里扣
+    const R = KID_HEAD_R;
+    const ctr: V2 = [k.x + cr.top[0] - cr.up[0] * R, cr.top[1] - cr.up[1] * R];
+    const perp: V2 = [-cr.up[1], cr.up[0]];
+    const onHead = (th: number, d = 8): { at: V2; hand: number } => {
+      const dir: V2 = [Math.cos(th) * cr.up[0] - Math.sin(th) * perp[0], Math.cos(th) * cr.up[1] - Math.sin(th) * perp[1]];
+      const tan: V2 = [-Math.sin(th) * cr.up[0] - Math.cos(th) * perp[0], -Math.sin(th) * cr.up[1] - Math.cos(th) * perp[1]];
+      const f: V2 = [tan[0] - 0.15 * dir[0], tan[1] - 0.15 * dir[1]];
+      return { at: [ctr[0] + dir[0] * (R + d), ctr[1] + dir[1] * (R + d)], hand: Math.atan2(-f[0], f[1]) };
+    };
+    const first = onHead(PAT_TH0);
+    const last = onHead(PAT_TH1);
     let palm: V2;
     let hand: number;
     if (t < PAT_ON) {
       const x = ph(t, PAT_IN, PAT_ON);
-      palm = bez(swing, crown(66, 46), crown(8, 0), x * (2 - x));
-      hand = swingHand + (PAT_HAND - swingHand) * E.out(x);
+      palm = bez(swing, onHead(PAT_TH0 - 0.5, 66).at, first.at, x * (2 - x));
+      hand = swingHand + (first.hand - swingHand) * E.out(x);
     } else if (t < PAT_UP) {
-      // 手掌中心在头发上面 8（手的厚度）。边揉边顺着头顶往他后脑勺滑（她往前走、肩膀越来越近：小石头改高以后肩膀和他头顶差不多高，
-      // 手停在原地的话胳膊折下来、前臂挡在他脸前面，用户 2026-10-28）
-      palm = crown(8, 11 * rub - PAT_SLIDE * E.io(u));
-      hand = PAT_HAND + 0.06 * rub;
+      // 边揉边顺着头形往后脑勺滑（她往前走、肩膀越来越近，手停在原地的话胳膊折下来、前臂挡在他脸前面，用户 2026-10-28）
+      const h = onHead(PAT_TH0 + (PAT_TH1 - PAT_TH0) * E.io(u) + 0.12 * rub);
+      palm = h.at;
+      hand = h.hand;
     } else {
       const s = E.io(ph(t, PAT_UP, PAT_END));
-      palm = bez(crown(8, -PAT_SLIDE), crown(22, -70), swing, s);
-      hand = PAT_HAND + (swingHand - PAT_HAND) * s;
+      palm = bez(last.at, onHead(PAT_TH1 + 0.1, 80).at, swing, s);
+      hand = last.hand + (swingHand - last.hand) * s;
     }
     // 手掌中心离他头的中心多远（离开头发以后胳膊回到他后面）
     const off = Math.hypot(palm[0] - (k.x + cr.top[0] - cr.up[0] * KID_HEAD_R), palm[1] - (cr.top[1] - cr.up[1] * KID_HEAD_R));

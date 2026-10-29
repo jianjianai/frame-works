@@ -27,6 +27,10 @@ const PAIRS: Pair[] = [
   { ref: "女人", name: "千斤的妈妈", look: lookOf(CAST.千斤的妈妈), spec: CAST.千斤的妈妈, cx: [140, 385], top: 96, ground: 965 },
   // 用户 2026-10-28 生成的参考图（1493×2000），缩到和别的一样宽
   { ref: "小石头的妈妈", name: "小石头的妈妈", look: lookOf(CAST.小石头的妈妈), spec: CAST.小石头的妈妈, cx: [425, 1112], top: 124, ground: 1952, file: "比例参考-小石头的妈妈.jpg", k: 506 / 1493 },
+  // 用户 2026-10-29 生成的千斤参考图（687×1024）：只拿头（衣服是原来的）
+  { ref: "千斤", name: "千斤", look: lookOf(CAST.千斤), spec: CAST.千斤, cx: [206, 535.5], top: 63, ground: 1000, file: "比例参考-千斤.png", k: 506 / 687 },
+  // 用户 2026-10-29 生成的沉沉的妈妈参考图（687×1024）：只拿头（衣服是原来的）
+  { ref: "沉沉的妈妈", name: "沉沉的妈妈", look: lookOf(CAST.秤砣的妈妈), spec: CAST.秤砣的妈妈, cx: [205, 522], top: 65, ground: 1001, file: "比例参考-沉沉的妈妈.png", k: 506 / 687 },
 ];
 const ITEMS = { scarf: true, gloves: true, coat: true, band: true, boots: true, bricks: 2 };
 const VIEWS: Angles[] = [{ face: 0 }, { face: -1 }];

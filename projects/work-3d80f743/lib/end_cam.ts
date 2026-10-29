@@ -350,9 +350,11 @@ function handRaw(t: number): Cam {
   const z = 1.25 * Math.pow(1.6 / 1.25, E.settle(ph(t, TE.hand + 0.25, TE.hug)));
   const tgt = mix(bc, p, E.io(ph(t, TE.hug, TE.upright)));
   const c = aim(tgt[0], tgt[1], 540, 960, z);
-  // ③ 转正以后推到她的脸上停住（她睁开眼看着砖、一滴眼泪往下掉在砖上、闭上眼哭着笑）：她的脸在画面上面一点，砖在画面中间偏下，他的脸挨在她下巴旁边；
+  // ③ 转正以后推到她的脸上停住（她睁开眼看着砖、一滴眼泪往下掉在砖上、闭上眼哭着笑）：两张脸挨着在画面上面，砖在画面中间偏下；
   // 柔和起步、越推越慢（拥抱的推法，1.2 秒）；停住以后只极慢地再凑一点，④ 拉远（TE.dim0）从这里起
-  const face = aim(h.head[0] + 40, h.head[1] + 110, 540, 820, 3.9 * (1 + 0.035 * ph(t, TE.faceSet, TE.dim0)));
+  // 2026-10-29 改成她从身后抱着他（end_pair.ts 的 BACK_HEAD）：两张脸并排（他的头在她右边 92），对准两张脸中间偏她一点，砖在下面
+  // 用户 2026-10-29（2:15.49）：「镜头对准砖」——砖在画面正中，两张脸在它上面
+  const face = aim(b0[0], b0[1], 540, 960, 3.9 * (1 + 0.035 * ph(t, TE.faceSet, TE.dim0)));
   return camLerp(c, face, E.settle(ph(t, TE.faceIn, TE.faceSet)));
 }
 

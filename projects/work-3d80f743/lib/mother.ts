@@ -14,6 +14,7 @@
 
 import { CAST, type CastSpec, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { type Angles, type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
+import { type DrawOptions, type Look, type Rig, drawFigure } from "@materials/剪纸角色/code/figure";
 import { beatAt } from "@frame/engine/tempo";
 import { E, ph } from "./cam";
 import { INK, drawGlow, part } from "./world";
@@ -406,8 +407,12 @@ const Y0 = -420;
 const VA = 50;
 /** 拽的时候她走 1/3、他走 2/3（她比他重一倍） */
 const W_PULL = 1 / 3;
-/** 每一把手从头顶拉到胸前（她身上的坐标，红绳在她身上是竖直的）：头顶 O、胸前 C */
-const C: V2 = [-20, -360];
+/** 每一把手从头顶拉到胸前（她身上的坐标，红绳在她身上是竖直的）：头顶 O、胸前 C。
+ *  她差不多正对镜头：R 的肩在画面左（约 (−50, −412)），L 的肩在右（约 (+30, −415)），头的中心约 x 0、半径 52。
+ *  红绳走在 R 肩膀外侧、头的左边：R 在头顶伸直攥住（离肩 137），拉到肩膀下面一点、肘朝下收在身侧。
+ *  （用户 2026-10-29，0:44.43：「胳膊被遮挡了」——原来 x −20 从脸中间穿下来；接着「胳膊弯曲非常奇怪」——让 L 去拉，L 的肩在另一边，
+ *  胳膊横过整个身子和脸，头顶伸不直、拉到胸前又折成鸡翅膀） */
+const C: V2 = [-85, -367];
 const TRAVEL = 180;
 const O: V2 = [C[0], C[1] - TRAVEL];
 /** 她吊在往左上方斜着的红绳上：整个人顺着绳子斜过去（他也一样），「亮」拽进怀里以后回正 */
@@ -425,8 +430,9 @@ const S_HUG = 180;
 const HUG_OFF: V2 = [-128, -272];
 /** 推开以后吊着：他的胯在她根的哪里（红绳从她远处那只手腕垂下 420 到他举着的手上） */
 const HANG_OFF: V2 = [-36, 352];
-/** 他吊着时攥着的地方：胯上面多少（手举直） */
-const HANDS_UP = 176;
+/** 他吊着时攥着的地方：胯上面多少（手举直）。176 是按他 0.79 的身高量的；缩到 0.72 以后够不着，近处那只手折下来按在脸上
+ *  （用户 2026-10-29，0:50.43：「小石头拉绳子的动作有问题」）——跟着身高缩放 */
+const HANDS_UP = 230 * (STONE.scale / 0.79);
 /** 推开以后：他有了外套的分量，她没了外套——两个人差不多一样重，各走一半（他 0.47、她 0.53） */
 const W_PUSH = 0.53;
 /** 红绳绷直以后一起往上飘（慢一点） */
@@ -560,25 +566,30 @@ function bodyPt(root: V2, p: V2, a: number): V2 {
   return [root[0] + hip[0] + dx * c - dy * sn, root[1] + hip[1] + dx * sn + dy * c];
 }
 
-/** ②两只手：攥着红绳拉的那只（第一把 L、第二把 R、第三把 L，从头顶拉到胸前、拉完停在胸前），另一只拉完以后往上够、攥住头顶那一截 */
+/**
+ * ②两只手：R（红绳那一侧）攥着红绳一把把从头顶拉到胸前；拉完 L 从胸前斜过来在下面攥住红绳（别让他飘回去），R 松开滑回头顶再拉下一把，
+ * 下一把一开始 L 松开、垂到右边胯前（攥着多出来的那一截）
+ */
 function stageA(t: number) {
   const root: V2 = momRoot(t);
   const a = -tiltAt(t);
   const s = sep(t);
-  const which: ("L" | "R")[] = ["L", "R", "L"];
   let i = 0;
   if (t >= P[1][0]) i = 1;
   if (t >= P[2][0]) i = 2;
   const k = pullK(t, i);
-  const holdW = bodyPt(root, [C[0], O[1] + TRAVEL * k], a);
+  let holdW = bodyPt(root, [C[0], O[1] + TRAVEL * k], a);
   const ankle = bodyPt(root, [C[0], -s], a);
-  // 另一只手：上一把攥着的那只停在胸前，换手以后松开、垂到胸前下面一点（攥着多出来的那一截）；够的时候往上攥住头顶那一截
-  const rest = bodyPt(root, [C[0] + 34, C[1] + 70], a);
-  const chest = bodyPt(root, C, a);
-  let other: V2 = i === 0 ? rest : mix(chest, rest, E.io(ph(t, P[i][0], P[i][0] + 0.16)));
+  // R 拉完以后滑回头顶（下一把从那儿开始）
   const r = MT.reach[i];
-  if (r) other = mix(other, bodyPt(root, O, a), E.io(ph(t, r[0], r[1])));
-  return { root, ankle, holdW, other, hold: which[i], tilt: a };
+  if (r) holdW = mix(holdW, bodyPt(root, O, a), E.io(ph(t, r[0], r[1])));
+  // L：平时垂在右边胯前；R 拉到胸前起在它下面攥住，下一把开始时松开
+  const rest = bodyPt(root, [14, C[1] + 70], a);
+  const clamp = bodyPt(root, [C[0] + 6, C[1] + 34], a);
+  const on = E.io(ph(t, P[i][1] - 0.06, P[i][1] + 0.06)) * (r ? 1 : 0) + (i > 0 ? 1 - E.io(ph(t, P[i][0], P[i][0] + 0.12)) : 0);
+  const grip = Math.min(1, on);
+  const other = mix(rest, clamp, grip);
+  return { root, ankle, holdW, other, grip, hold: "R" as "L" | "R", tilt: a };
 }
 
 /** 他吊在红绳上（推开以后）：胯在她根下面，两只手攥着头顶的红绳 */
@@ -593,10 +604,13 @@ function stoneHang(t: number, withChain = 1): { pose: PoseIn; root: V2; ankle: V
   const hands: V2 = [hip[0] + 4, hip[1] - HANDS_UP];
   const sloc = (p: V2): V2 => [-(p[0] - root[0]) / sk, (p[1] - root[1]) / sk];
   const g = E.io(ph(t, T.push + 0.12, T.taut - 0.06));
+  // 目标放在头顶上面够不着的地方：两只胳膊伸直举过头（他头大，原来的目标落在头里，近处那只胳膊折下来按在脸上）；
+  // 红绳接到两只手实际攥着的地方
   setIk(sp, "armL", sloc([hands[0] + 6, hands[1] + 16]), g);
   setIk(sp, "armR", sloc([hands[0] - 4, hands[1] - 10]), g);
   const j = castJoints(STONE_COAT, sp);
-  return { pose: sp, root, ankle: [root[0] + j.ankleL[0], root[1] + j.ankleL[1]], hands };
+  const grip: V2 = [root[0] + (j.palmL[0] + j.palmR[0]) / 2, root[1] + Math.min(j.palmL[1], j.palmR[1])];
+  return { pose: sp, root, ankle: [root[0] + j.ankleL[0], root[1] + j.ankleL[1]], hands: mix(hands, grip, g) };
 }
 function momRootPush(t: number, withChain = 1): V2 {
   return [MOM_X + 8 * Math.sin(t * 1.3), momYPush(t) + (withChain && t > T.grab ? chainY(t) : 0)];
@@ -664,6 +678,22 @@ export type Scene2 = {
   coat: [V2, V2] | null;
   knife: { x: number; y: number; rot: number; glint: number; stuck: boolean } | null;
 };
+
+/**
+ * ②③她（拽红绳、拽进怀里抱着、脱外套裹在他身上，到推开以前）：L 横过胸前时（攥红绳、搂他的腰、环到他背上）上臂压在外套上面。
+ * 正面的画法上臂默认藏在身子后面，横过胸前时只露出前臂，像从外套里伸出来的（用户 2026-10-29，0:45.27「胳膊没正常显示」、
+ * 0:45.73「还是被遮挡了」）；不横过胸前时照原来的画法
+ */
+const CROSS_LOOKS = new Map<CastSpec, Look>();
+function drawMomCross(g: CanvasRenderingContext2D, spec: CastSpec, pose: PoseIn, root: V2, z: number, opts: DrawOptions = {}) {
+  let look = CROSS_LOOKS.get(spec);
+  if (!look) CROSS_LOOKS.set(spec, (look = { ...lookOf(spec), armsOver: (rig: Rig) => rig.arms.L.end[0] < rig.arms.L.root[0] - 30 }));
+  g.save();
+  g.translate(root[0], root[1]);
+  g.scale(spec.scale, spec.scale);
+  drawFigure(g, pose, look, { line: 1 / Math.sqrt(Math.max(0.3, z)), ...opts });
+  g.restore();
+}
 
 /** 这一刻所有的人和东西（世界坐标） */
 export function sceneAt(t: number): Scene2 {
@@ -747,8 +777,11 @@ export function sceneAt(t: number): Scene2 {
         tL = mix(wrapL, backL, toHold);
       }
     }
-    setIk(mp, "armR", momLoc(root, tR), w);
+    // 拽绳子时 R 的肘朝外（头顶时在头外侧、拉下来时朝下收在身侧；默认的弯法肘朝头那边拱）
+    setIk(mp, "armR", momLoc(root, tR), w, a ? -1 : undefined);
     setIk(mp, "armL", momLoc(root, tL), w);
+    // R 是远处那只（默认画在身子后面）：拽绳子时举在头的外侧，整只胳膊画在前面
+    if (a && t < T.haul + 0.1) mp.armR = { ...(mp.armR as object), layer: "front" } as PoseIn["armR"];
     stone = { spec: sSpec, pose: sp, root: sRoot, ankle: sAnkle, hands: null };
     const mj = castJoints(mSpec, mp);
     const palmL: V2 = add(root, mj.palmL as V2);
@@ -762,9 +795,10 @@ export function sceneAt(t: number): Scene2 {
       const yank = P.reduce((acc, p) => acc + (t > p[1] ? 30 * Math.exp(-(t - p[1]) / 0.08) * Math.sin((t - p[1]) * 70) : 0), 0);
       const letGo = E.io(ph(t, T.haul, T.haul + 0.12));
       rope.push(sagLine(sAnkle, holdP, 6 + 120 * letGo, yank));
-      const otherOn = a.other[1] < a.holdW[1] - 20;
+      // L 在下面攥着时红绳从 R 接到 L，多出来的从 L 垂下去
+      const otherOn = a.grip > 0.5;
       if (otherOn) rope.push([holdP, otherP]);
-      const lower = otherOn ? holdP : otherP[1] > holdP[1] ? otherP : holdP;
+      const lower = otherOn ? otherP : holdP;
       rope.push(loop(lower, wristR, ROPE - R0 + (R0 - (S3 + C[1])) * reeled, t));
     } else {
       // 抱着：他脚踝上的红绳垂成一个大弯，拴回她远处那只手腕
@@ -1097,7 +1131,7 @@ export function drawMothers(g: CanvasRenderingContext2D, t: number, z: number) {
   if (hugging) {
     // 抱在一起：他画在她身子和两只手臂之间；红绳的大弯、外套先画
     for (const r of s.rope) strokeRope(g, r, z);
-    drawPerson(g, m.spec, m.pose, m.root[0], m.root[1], z, {
+    drawMomCross(g, m.spec, m.pose, m.root, z, {
       beforeFrontArms: (cc) => {
         cc.save();
         cc.setTransform(wm);
@@ -1107,7 +1141,8 @@ export function drawMothers(g: CanvasRenderingContext2D, t: number, z: number) {
       },
     });
   } else {
-    if (m.root[1] > -4000) drawPerson(g, m.spec, m.pose, m.root[0], m.root[1], z);
+    if (t < MT.haul) drawMomCross(g, m.spec, m.pose, m.root, z);
+    else if (m.root[1] > -4000) drawPerson(g, m.spec, m.pose, m.root[0], m.root[1], z);
     for (const r of s.rope) strokeRope(g, r, z);
     if (!s.chen || t < MT.cut) {
       drawPerson(g, s.stone.spec, s.stone.pose, s.stone.root[0], s.stone.root[1], z);
