@@ -26,6 +26,19 @@ import { OLDZHONG_FACE0, OLDZHONG_FACE3, OLDZHONG_HAIR } from "./cast-oldzhong-a
 import { QINMOM_COAT, QINMOM_FACE0, QINMOM_FACE3, QINMOM_HAIR } from "./cast-qinmom-art";
 import { SHITOUMOM_COAT, SHITOUMOM_FACE0, SHITOUMOM_FACE3, SHITOUMOM_HAIR, SHITOUMOM_LEGS } from "./cast-shitoumom-art";
 import { ZHOULEI_HAIR } from "./cast-zhoulei-hair";
+import { QIANJIN_FACE0, QIANJIN_FACE3, QIANJIN_HAIR } from "./cast-qianjin-art";
+import { CHENCHENMOM_FACE0, CHENCHENMOM_FACE3, CHENCHENMOM_HAIR } from "./cast-chenchenmom-art";
+// 没有自己参考图的配角：照「不画头发的头」分层画的头发（作品 3d80f743 的 public/ref/<角色>-线稿.svg、侧面线稿.svg，2026-10-29）
+import { BOBWOMAN_HAIR } from "./cast-bobwoman-hair";
+import { BUNWOMAN_HAIR } from "./cast-bunwoman-hair";
+import { CHENMOM_HAIR } from "./cast-chenmom-hair";
+import { CREW_HAIR } from "./cast-crew-hair";
+import { LITTLECHEN_HAIR } from "./cast-littlechen-hair";
+import { PONYWOMAN_HAIR } from "./cast-ponywoman-hair";
+import { RECEDING_HAIR } from "./cast-receding-hair";
+import { SCHOOLGIRL_HAIR } from "./cast-schoolgirl-hair";
+import { UNCLE_HAIR } from "./cast-uncle-hair";
+import { YOUNGMAN_HAIR } from "./cast-youngman-hair";
 import {
   type Garment,
   type Pants,
@@ -81,8 +94,12 @@ function drawHat(ctx: CanvasRenderingContext2D, h: HeadView, hat: HatSpec, ink: 
       ctx.stroke();
     }
   } else {
-    // 毛线帽：圆圆地扣在头顶，几道针织的竖纹；一圈翻边（罗纹），翻边上一块小布标
-    const dome = map([[-56, -22, 1], [-60, -56], [-40, -90], [0, -100], [40, -90], [60, -56], [56, -22, 1]]);
+    // 毛线帽：扣在头发上（顶只比头发高一点，翻边下沿在眉毛上面），几道针织的竖纹；一圈翻边（罗纹），翻边上一块小布标。
+    // 原来顶在 −100、两边 ±60，比别人的头发高出一大截（用户 2026-10-29：「头看起来很长像是大头娃娃」）。
+    // 3/4 时后脑勺那边跟着头发往后放宽（分层画的头发 3/4 后脑勺伸到 +60），不然后面的头发从帽子后面露出来
+    const bx = (x: number) => sx(x + (x > 0 ? x * 0.22 * uh : 0));
+    const mapB = (pts: P[]) => smoothPath(pts.map(([x, y, c]) => [...H(bx(x), y), ...(c ? [c] : [])] as P));
+    const dome = mapB([[-52, -24, 1], [-55, -50], [-40, -73], [0, -80], [40, -73], [55, -50], [52, -24, 1]]);
     drawPart(ctx, dome, hat.color, hat.shade, ink, ink.lw * 0.8);
     if (fine) {
       ctx.save();
@@ -91,15 +108,15 @@ function drawHat(ctx: CanvasRenderingContext2D, h: HeadView, hat: HatSpec, ink: 
       ctx.lineWidth = ink.lw * 0.35;
       for (const x of [-36, -18, 0, 18, 36]) {
         ctx.beginPath();
-        const a = H(sx(x * 0.25), -97);
-        const b = H(sx(x), -30);
+        const a = H(bx(x * 0.25), -77);
+        const b = H(bx(x), -34);
         ctx.moveTo(a[0], a[1]);
-        ctx.quadraticCurveTo(...H(sx(x * 0.85), -70), b[0], b[1]);
+        ctx.quadraticCurveTo(...H(bx(x * 0.85), -60), b[0], b[1]);
         ctx.stroke();
       }
       ctx.restore();
     }
-    const cuff = map([[-58, -12, 1], [-61, -38, 1], [61, -38, 1], [58, -12, 1]]);
+    const cuff = mapB([[-54, -14, 1], [-56, -36, 1], [56, -36, 1], [54, -14, 1]]);
     drawPart(ctx, cuff, hat.shade, null, ink, ink.lw * 0.8);
     if (fine) {
       ctx.save();
@@ -107,15 +124,15 @@ function drawHat(ctx: CanvasRenderingContext2D, h: HeadView, hat: HatSpec, ink: 
       ctx.strokeStyle = "rgba(20,30,20,0.25)";
       ctx.lineWidth = ink.lw * 0.3;
       ctx.beginPath();
-      for (let x = -60; x <= 60; x += 5) {
-        const a = H(sx(x), -38);
-        const b = H(sx(x), -12);
+      for (let x = -55; x <= 55; x += 5) {
+        const a = H(bx(x), -36);
+        const b = H(bx(x), -14);
         ctx.moveTo(a[0], a[1]);
         ctx.lineTo(b[0], b[1]);
       }
       ctx.stroke();
       ctx.restore();
-      const tag = map([[20, -33, 1], [34, -33, 1], [34, -21, 1], [20, -21, 1]]);
+      const tag = mapB([[18, -31, 1], [30, -31, 1], [30, -20, 1], [18, -20, 1]]);
       drawPart(ctx, tag, "#e9e2d0", null, ink, ink.lw * 0.4);
     }
   }
@@ -326,6 +343,8 @@ export interface CastSpec {
   wrinkles?: boolean | "forehead";
   /** 发卡 */
   hairclip?: string;
+  /** 发卡的位置：夹子尾、星星（头的坐标，正面；不写别在画面左边的刘海上） */
+  hairclipAt?: [V2, V2];
   /** 脚踝上的铃铛（小孩） */
   bell?: boolean;
   /** 上衣的圆领 */
@@ -403,7 +422,7 @@ export function castLook(spec: CastSpec): Look {
     },
     frontHair: (ctx, h, ink) => {
       drawFrontHair(ctx, h, ink, hp);
-      if (spec.hairclip) drawHairclip(ctx, h, ink, spec.hairclip);
+      if (spec.hairclip) drawHairclip(ctx, h, ink, spec.hairclip, spec.hairclipAt);
       if (spec.hat) drawHat(ctx, h, spec.hat, ink);
     },
     face: (ctx, h, ink) => {
@@ -616,8 +635,9 @@ export const CAST = {
     // 身高、头身比照参考图里大人和小孩站在一起的那张（作品 3d80f743 的 public/ref/比例参考-大人和小孩.png）：
     // 小孩是大人（周磊 1.06）的 0.716（头发顶到鞋底 629 / 878 像素）；头（头发顶→下巴）和上身（下巴→上衣下摆）一样长、
     // 下身（下摆→鞋底）是上身的 1.36 倍。只按 scale 缩小时头太小、腿太长，像大人的缩小版（用户 2026-10-28）：
-    // 头以脖子为中心放大 1.335、腿缩到 0.70，全身从 634.5 变成 610.7，scale 跟着从 0.76 调到 0.79（身高比还是 0.716）
-    scale: 0.79,
+    // 头以脖子为中心放大 1.335、腿缩到 0.70，全身从 634.5 变成 610.7，scale 跟着从 0.76 调到 0.79（身高比还是 0.716）。
+    // 之后用户 2026-10-29（1:22.95 站在她身边）：「小石头的缩放有点大，调小一点」——0.79 → 0.72（身高比 0.65）
+    scale: 0.72,
     headScale: 1.335,
     legLength: 0.7,
     // 裤腿横着收到 0.87：照大人和小孩的参考图量，一条裤腿大腿那里约 104、往下收到 90，我们的 108–116（用户 2026-10-28：「腿太粗了」）
@@ -642,7 +662,7 @@ export const CAST = {
   /** 小石头裹着妈妈的橘色外套（爸爸留下的工装外套，大一号、袖子卷了两道、下摆缝了一圈铅）：副歌一以后一直穿着 */
   小石头穿妈妈的外套: {
     name: "小石头",
-    scale: 0.79,
+    scale: 0.72,
     headScale: 1.335,
     legLength: 0.7,
     // 裤腿横着收到 0.87：照大人和小孩的参考图量，一条裤腿大腿那里约 104、往下收到 90，我们的 108–116（用户 2026-10-28：「腿太粗了」）
@@ -655,9 +675,11 @@ export const CAST = {
     hairArt: KID_HAIR,
     hairColor: "#2f2e33",
     top: { kind: "tee", stripes: "#dfe7ee" },
-    // 就是妈妈身上那件（按她的线稿画，SHITOUMOM_COAT）：按两个人的身高比（0.98 / 0.79）放大，套在他身上大一号、到大腿中间，袖子卷两道
-    // （用户 2026-10-28：「外套换成她现在这件」；原来是秤砣外套版型加长的长外套，到脚踝）
-    coat: { kind: "workcoat", color: "#f29a4a", shade: "#de8538", size: 0.98 / 0.79, hem: "#8a6a5a", rolled: true, art: SHITOUMOM_COAT },
+    // 就是妈妈身上那件（按她的线稿画，SHITOUMOM_COAT）：按两个人的身高比（0.98 / 0.72）放大，套在他身上大一号、到大腿中间，袖子卷两道
+    // （用户 2026-10-28：「外套换成她现在这件」；原来是秤砣外套版型加长的长外套，到脚踝）。
+    // 他缩到 0.72 以后按身高比放大成了 1.36 倍，横着撑得太宽（用户 2026-10-29，0:56.59：「身体太宽了」）：
+    // 只放大 1.12（宽松一点、看得出是大人的），下摆用 long 往下接长，还是到大腿中间
+    coat: { kind: "workcoat", color: "#f29a4a", shade: "#de8538", size: 1.12, long: 40, hem: "#8a6a5a", rolled: true, art: SHITOUMOM_COAT },
     pants: { cuff: "#6a7690" },
     brows: { kind: "kid", color: "#2f2e33" },
     bell: true,
@@ -692,11 +714,18 @@ export const CAST = {
   千斤: {
     name: "千斤",
     scale: 0.94,
-    // 骨架、头的大小和主角一样，只按 scale 缩放；脸是主角的（年轻的女孩）
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸和头发照用户 2026-10-29 生成的参考图（作品 3d80f743 的 public/ref/比例参考-千斤.png，
+    // 线稿 public/ref/千斤-线稿.svg、侧面线稿.svg，cast-qianjin-art.ts）：描的脸，头发分层画（后面那片、三缕刘海、两边夹着脸的两缕；
+    // 风里、失重时发梢动）。原来借主角的脸配通用的侧分波波头，我又照「不画头发的头」画了两版，用户：「千金还是好丑啊」「还是不太行」
+    face0: QIANJIN_FACE0,
+    face3: QIANJIN_FACE3,
     colors: { ...SKIN, top: "#e2574c", topShade: "#c9473d", bottom: "#3d3f52", bottomShade: "#333545" },
     hair: "sidebob",
+    hairArt: QIANJIN_HAIR,
     hairColor: "#2c2a30",
     hairclip: "#f2c94c",
+    // 发卡照参考图别在画面右边那片刘海上，星星朝右上
+    hairclipAt: [[26, -19], [37, -32]],
     top: { kind: "sweater", trim: "#cc4a40", under: "#f7f4ee" },
     brows: { kind: "soft", color: "#2c2a30" },
     shoes: { color: "#6b4a3f", shade: "#5a3d33", style: "sneaker", sock: "#f7f3ee" },
@@ -728,6 +757,8 @@ export const CAST = {
     face3: ZHOULEI_FACE3,
     colors: { ...SKIN_WARM, top: "#d8cfb8", topShade: "#c6bca4", bottom: "#4f5361", bottomShade: "#434653" },
     hair: "short",
+    // 毛线帽底下是大叔的侧分短发（分层画的），帽子扣在头发上
+    hairArt: UNCLE_HAIR,
     hairColor: "#3a3539",
     hat: { kind: "beanie", color: "#5c9a64", shade: "#4c8554" },
     coat: { kind: "jacket", color: "#8c6a4c", shade: "#77593e", trim: "#6f5239", button: "#3a302a" },
@@ -763,6 +794,8 @@ export const CAST = {
     face3: ZHOULEI_FACE3,
     colors: { ...SKIN, top: "#4fa8a3", topShade: "#3f938e", bottom: "#3f4757", bottomShade: "#353c4a" },
     hair: "curtain",
+    // 中分分层画的（后面那片、两边各一片刘海，发梢一撮一撮），头顶和周磊一样高
+    hairArt: YOUNGMAN_HAIR,
     hairColor: "#3b3035",
     top: { kind: "hoodie", trim: "#f1ede4" },
     pants: { cuff: "#566079", seam: "rgba(230,190,120,0.7)" },
@@ -773,11 +806,15 @@ export const CAST = {
   秤砣的妈妈: {
     name: "秤砣的妈妈",
     scale: 1.0,
-    // 骨架、头的大小和主角一样，只按 scale 缩放；脸用参考图描的（成年女人：参考图「女人」，千斤的妈妈的脸）
-    face0: QINMOM_FACE0,
-    face3: QINMOM_FACE3,
+    // 骨架、头的大小和主角一样，只按 scale 缩放；脸、耳朵、头发照用户 2026-10-29 生成的参考图做的（作品 3d80f743 的
+    // public/ref/比例参考-沉沉的妈妈.png，线稿 沉沉的妈妈-线稿.svg、侧面线稿.svg，cast-chenchenmom-art.ts）：脸描的，
+    // 头发是一整片大头型 + 分缝两边各一片垂到下巴，每块 5–6 个节点、拉长手柄（照用户手画千斤的画法）；风里、失重时动。
+    // 原来借千斤的妈妈的脸、通用的中分长发（路人4 还用那套 CHENMOM_HAIR）
+    face0: CHENCHENMOM_FACE0,
+    face3: CHENCHENMOM_FACE3,
     colors: { ...SKIN, top: "#f3e2d6", topShade: "#e4cfc0", bottom: "#5c4a4c", bottomShade: "#4d3d3f" },
     hair: "long",
+    hairArt: CHENCHENMOM_HAIR,
     hairColor: "#2c2a30",
     top: { kind: "crew" },
     coat: { kind: "trench", color: "#b75b44", shade: "#a04a35", long: 50, trim: "#9a4632", button: "#5a3028" },
@@ -798,6 +835,8 @@ export const CAST = {
     bootScale: (0.58 * 1.55) / 0.79,
     colors: { ...SKIN, top: "#f4c95d", topShade: "#e2b54a", bottom: "#5d6177", bottomShade: "#4f5266", blush: "250,140,140" },
     hair: "bob",
+    // 齐刘海的圆波波头分层画的（刘海两道细缝，和主角的一样）；原来的通用波波头像一顶大蘑菇
+    hairArt: LITTLECHEN_HAIR,
     hairColor: "#2c2a30",
     top: { kind: "peter" },
     shoes: "boots",
@@ -822,6 +861,8 @@ export const SCHOOLGIRL: CastSpec = {
   // 骨架、头的大小和主角一样，只按 scale 缩放；脸是主角的（年轻的女孩）
   colors: { ...CAST.年轻人.colors, top: "#bcd5ec", topShade: "#a6c2dd", bottom: "#3f4a6b", bottomShade: "#353e5a" },
   hair: "highpony",
+  // 高马尾分层画的（马尾绕发根摆）
+  hairArt: SCHOOLGIRL_HAIR,
   hairColor: "#2f2e33",
   hairTie: "#e06c7a",
   top: { kind: "polo", trim: "#f7f5f0" },
@@ -837,6 +878,8 @@ export const GLASSES_UNCLE: CastSpec = {
   face3: ZHOULEI_FACE3,
   colors: { ...CAST.周磊.colors, top: "#d9d3c6", topShade: "#c9c2b3", bottom: "#4b4340", bottomShade: "#3f3835" },
   hair: "short",
+  // 侧分短发分层画的（男路人、阿满的帽子底下也用它）
+  hairArt: UNCLE_HAIR,
   hairColor: "#3a3539",
   glasses: "#3a3539",
   glassesShape: "square",
@@ -909,6 +952,21 @@ function darker(hex: string, k: number) {
   return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
+/**
+ * 路人每种发型分层画的头发（2026-10-29）：原来是通用发型，头顶比别人高出一截（用户：「头看起来很长像是大头娃娃」）。
+ * 女路人同一个中分、后面各不一样（波波头、髢、低马尾），长发和沉沉的妈妈一样；kid 换成板寸（小孩的毛茸茸头发在周磊的脸上像周磊）；
+ * receding 是发际线后移的花白头发（老钟是秃顶）
+ */
+const PASSERBY_HAIR: Partial<Record<HairStyle, HairArtSrc>> = {
+  short: UNCLE_HAIR,
+  bob: BOBWOMAN_HAIR,
+  bun: BUNWOMAN_HAIR,
+  ponytail: PONYWOMAN_HAIR,
+  long: CHENMOM_HAIR,
+  kid: CREW_HAIR,
+  receding: RECEDING_HAIR,
+};
+
 /** 路人（打伞走过、链上后来跑来的人）：几种衣服、发型、鞋轮着用 */
 export function passerby(i: number): CastSpec {
   const tops = ["#9ccbd8", "#f2b8a2", "#c6d89a", "#e7c9e9", "#f4d58a", "#a9b8e8", "#e8a7a7", "#a8d8c0"];
@@ -929,6 +987,7 @@ export function passerby(i: number): CastSpec {
     face3: hair === "receding" ? OLDZHONG_FACE3 : man ? ZHOULEI_FACE3 : QINMOM_FACE3,
     colors: { ...(i % 3 ? SKIN : SKIN_WARM), top: tops[k], topShade: darker(tops[k], 0.92), bottom: "#4e5266", bottomShade: "#434657" },
     hair,
+    hairArt: PASSERBY_HAIR[hair],
     hairColor: hc[j],
     top: PASSERBY_TOPS[k],
     coat: i % 2 ? { kind, color: c, shade: darker(c, 0.88), long: kind === "suit" || kind === "jacket" ? -14 : (i * 13) % 40, trim: darker(c, 0.82) } : undefined,

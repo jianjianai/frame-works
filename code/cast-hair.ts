@@ -110,6 +110,15 @@ export interface HairLayers {
   tie?: HairLayerPiece[];
   /** 压在脸上的几块在耳朵后面（耳朵压住它们）：老钟两鬓的白发，3/4 时近处那块从耳朵后面一直包到后颈 */
   underEars?: boolean;
+  /**
+   * 垂下来的部分从这个高度（头的坐标 y）往下跟着风、重力摆（同通用发型的 pivot / flowHair）；不写整片不动（短发）。
+   * 原来分层头发全是不动的，长发、波波头在风里、失重时像贴在头上的一块（2026-10-29 没有参考图的配角改成分层画以后加的）
+   */
+  pivot?: number;
+  /** 失重时漂起来的一缕一缕有多长：给了才漂（垂着的后面那片淡出，换成从头顶长出的一缕一缕，同通用发型的 float） */
+  float?: number;
+  /** 马尾的发根（正面、3/4，头的坐标）：马尾、发圈绕它摆，越往梢摆得越多；失重时往上漂 */
+  tailRoot?: [V2, V2];
 }
 const ART_DEFS = new WeakMap<HairArtSrc, HairDef>();
 /** 线稿发型 → 发型（算一次存起来） */
@@ -568,12 +577,38 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
   const layers = hp.art?.layers;
   if (layers) {
     const map = (p: V2) => head.p(p[0], p[1]);
+    const f = rotateV(field, -head.a);
+    const up = layers.float ? upness(f) : 0;
+    const hang = hangLayer(layers, f, pose.t, up);
+    const tail = tailOf(layers, uh, f, pose.t);
     // 正面时马尾垂在肩膀后面：在后面那片下面、身子后面，只露出肩上一截；发圈压在后面那片上（参考图正面从下颌后面露出来）
     const behind = rig.u < TAIL_OVER_U;
-    if (layers.bun) mergedHair(ctx, layerPaths(layers.bun, uh, map), hp, ink);
-    if (behind && layers.tail) mergedHair(ctx, layerPaths(layers.tail, uh, map), hp, ink);
-    mergedHair(ctx, layerPaths(layers.back ?? [], uh, map), hp, ink);
-    if (behind) for (const p of layerPaths(layers.tie ?? [], uh, map)) drawPart(ctx, p, hp.tie ?? hp.shade, null, ink, ink.lw * 0.7);
+    // 失重时垂着的后面那片和漂起来的一缕一缕交叉淡入淡出（同通用发型）
+    const aDown = 1 - clamp01((up - 0.35) / 0.3);
+    if (aDown > 0) {
+      ctx.save();
+      ctx.globalAlpha *= aDown;
+      if (layers.bun) mergedHair(ctx, layerPaths(layers.bun, uh, map), hp, ink);
+      if (behind && layers.tail) mergedHair(ctx, layerPathsBy(layers.tail, uh, map, tail), hp, ink);
+      mergedHair(ctx, layerPathsBy(layers.back ?? [], uh, map, hang), hp, ink);
+      if (behind) for (const p of layerPathsBy(layers.tie ?? [], uh, map, tail)) drawPart(ctx, p, hp.tie ?? hp.shade, null, ink, ink.lw * 0.7);
+      ctx.restore();
+    }
+    if (aDown < 1) {
+      ctx.save();
+      ctx.globalAlpha *= 1 - aDown;
+      const locks = floatLocks(map, uh, layers.float ?? 120, pose.t, f);
+      ctx.strokeStyle = ink.line;
+      ctx.lineWidth = ink.lw * 1.8;
+      ctx.lineJoin = "round";
+      for (const l of locks) ctx.stroke(l);
+      for (const l of locks) fillShaded(ctx, l, hp.color, hp.shade, ink);
+      // 头顶那一层还在：后面那片垂下来的部分收到 pivot 那一行（藏在脸、脖子后面）
+      const pv = layers.pivot ?? 10;
+      if (layers.bun) mergedHair(ctx, layerPaths(layers.bun, uh, map), hp, ink);
+      mergedHair(ctx, layerPathsBy(layers.back ?? [], uh, map, (pts) => pts.map(([x, y]): V2 => [x, Math.min(y, pv)])), hp, ink);
+      ctx.restore();
+    }
     return;
   }
   const hair = hairOf(hp);
@@ -685,6 +720,47 @@ export function drawBackHair(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink, 
 
 /** 分层头发的几块：转身的程度 uh 混合正面和 3/4，画成路径 */
 const layerPaths = (pcs: HairLayerPiece[], uh: number, map: (p: V2) => V2) => pcs.map((pc) => polylinePath(lerpPts(pc.front, pc.side, uh), map));
+/** 同上，混合好的点（头的坐标）再按受力变形（fx） */
+const layerPathsBy = (pcs: HairLayerPiece[], uh: number, map: (p: V2) => V2, fx: (pts: V2[]) => V2[]) =>
+  pcs.map((pc) => polylinePath(fx(lerpPts(pc.front, pc.side, uh)), map));
+/**
+ * 分层头发跟着受力：pivot 以下的点按风、重力的方向摆（同 flowHair）；flip（压在脸边的几缕）失重时往外、往上翻
+ * （同通用发型的刘海：绕 (±44, pivot) 转）。没有 pivot 的不动
+ */
+function hangLayer(layers: HairLayers, field: V2, t: number, up: number, flip = false) {
+  return (pts: V2[]): V2[] => {
+    const pv = layers.pivot;
+    if (pv === undefined) return pts;
+    const q = flowHair(pts as P[], field, pv, t).map((p): V2 => [p[0], p[1]]);
+    if (!flip || up <= 0) return q;
+    return q.map(([x, y]): V2 => {
+      const d = y - pv;
+      if (d <= 0) return [x, y];
+      const s = x < 0 ? -1 : 1;
+      const r = rotateV([x - s * 44, d], -s * up * 2.2 * clamp01(d / 60));
+      return [s * 44 + r[0], pv + r[1]];
+    });
+  };
+}
+/** 马尾绕发根摆：转向受力的方向，越往梢转得越多，带一点来回的晃；失重时一路转到朝上（同通用发型的 tailPath） */
+function swingTail(root: V2, field: V2, t: number) {
+  const up = upness(field);
+  const side = Math.max(-1.3, Math.min(1.3, Math.atan2(-field[0], Math.max(0.25, Math.abs(field[1])))));
+  const a0 = lerp(side, Math.atan2(-field[0], field[1]), up);
+  return (pts: V2[]): V2[] =>
+    pts.map(([x, y]): V2 => {
+      const dx = x - root[0];
+      const dy = y - root[1];
+      const d = Math.hypot(dx, dy);
+      const w = clamp01(d / 80);
+      const wob = 0.07 * loopSin(t, 2.4, d * 0.03) * w * Math.min(1, Math.abs(field[0]) + 0.3 + up);
+      const q = rotateV([dx, dy], a0 * w * (0.8 + 0.2 * up) + wob);
+      return [root[0] + q[0], root[1] + q[1]];
+    });
+}
+/** 这个人马尾的变形：有发根的绕发根摆，没有的跟着 pivot 垂 */
+const tailOf = (layers: HairLayers, uh: number, field: V2, t: number) =>
+  layers.tailRoot ? swingTail(lerpV2(layers.tailRoot[0], layers.tailRoot[1], uh), field, t) : hangLayer(layers, field, t, 0);
 
 /** 几块头发合成一片：外面一圈描边，里面的接缝不描；整片一起加阴影（几块的绕向都是顺时针，合起来填的是并集） */
 function mergedHair(ctx: CanvasRenderingContext2D, paths: Path2D[], hp: HairPaint, ink: Ink, lw = ink.lw * 0.9) {
@@ -711,8 +787,9 @@ export function drawHairUnder(ctx: CanvasRenderingContext2D, rig: Rig, ink: Ink,
   if (!layers || rig.u < TAIL_OVER_U) return;
   const uh = clamp01(-rig.thh / 0.62);
   const map = (p: V2) => rig.head.p(p[0], p[1]);
-  if (layers.tail) mergedHair(ctx, layerPaths(layers.tail, uh, map), hp, ink);
-  for (const p of layerPaths(layers.tie ?? [], uh, map)) drawPart(ctx, p, hp.tie ?? hp.shade, null, ink, ink.lw * 0.7);
+  const tail = tailOf(layers, uh, rotateV(rig.field, -rig.head.a), rig.pose.t);
+  if (layers.tail) mergedHair(ctx, layerPathsBy(layers.tail, uh, map, tail), hp, ink);
+  for (const p of layerPathsBy(layers.tie ?? [], uh, map, tail)) drawPart(ctx, p, hp.tie ?? hp.shade, null, ink, ink.lw * 0.7);
 }
 
 /** 刘海、鬓角（Look.frontHair），再画马尾的皮筋 */
@@ -724,19 +801,24 @@ export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: I
     // 压在别的头发（后面那片、马尾、别的几缕）上的边不描
     const uh = clamp01(h.uh);
     const map = (p: V2) => h.H(p[0], p[1]);
+    const f = rotateV(h.rig.field, -h.rig.head.a);
+    const up = layers.float ? upness(f) : 0;
+    // 垂在脸边的几缕跟着受力摆、失重时往外翻；后面那片、马尾（算描边时挡住的范围）和背后画的一样
+    const hang = hangLayer(layers, f, h.rig.pose.t, up, true);
+    const hangBack = hangLayer(layers, f, h.rig.pose.t, up);
     // 远处那边的：压在脸上的部分往脸的左边收（tuck 1 不收 → 0 收到边上），转过一半以后整缕在脸后面
     const tuck = clamp01(1 - uh / 0.5);
     const face = faceOf(h.rig);
     const tucked = (pc: HairLayerPiece) =>
       polylinePath(
-        lerpPts(pc.front, pc.side, uh).map(([x, y]): V2 => {
+        hang(lerpPts(pc.front, pc.side, uh)).map(([x, y]): V2 => {
           const edge = rowSpan(face, y)?.[0];
           return edge !== undefined && x > edge ? [edge + (x - edge) * tuck, y] : [x, y];
         }),
         map,
       );
     const far = (layers.far ?? []).map(tucked);
-    const near = layerPaths(layers.front ?? [], uh, map);
+    const near = layerPathsBy(layers.front ?? [], uh, map, hang);
     const facePath = h.skins[h.skins.length - 1];
     if (tuck <= 0 && far.length) {
       // 脸后面：只填脸外面的部分，再把这一截脸的轮廓线补回来（填色盖住了脸的描边外侧那一半）
@@ -758,7 +840,7 @@ export function drawFrontHair(ctx: CanvasRenderingContext2D, h: HeadView, ink: I
       ctx.restore();
     }
     const front = tuck > 0 ? [...far, ...near] : near;
-    const under = [...layerPaths(layers.back ?? [], uh, map), ...layerPaths(layers.tail ?? [], uh, map)];
+    const under = [...layerPathsBy(layers.back ?? [], uh, map, hangBack), ...layerPathsBy(layers.tail ?? [], uh, map, tailOf(layers, uh, f, h.rig.pose.t))];
     // 在耳朵后面：耳朵那块整个扣掉（h.skins 是耳朵们、最后是脸）
     const ears = layers.underEars ? h.skins.slice(0, -1) : [];
     if (ears.length) {

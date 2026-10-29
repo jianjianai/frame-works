@@ -8,7 +8,9 @@
 //     （hair-back、fringe、hair-数字、hair-tail、hair-tie）第一次写时挪进隐藏图层「描的头发（旧）」，换算就不读它们了。
 //     头发图层里已经有用户画的线（没有 data-by="ai" 的）时不写：用户画的不覆盖（真要覆盖加 --force）。
 // 点.json：{ "front": { "<id>": { "layer": "hair-back", "pts": [[X, Y], [X, Y, 1], …] } }, "side": { … } }（线稿坐标，顺时针逆时针都行）。
-//   第三项 1 是角点（尖、缝的底），其余是顺滑点（按前后两点取切线）。正面和 3/4 的同一块 id 一样、点一样多、从同一个位置起，
+//   第三项 1 是角点（尖、缝的底），其余是顺滑点（按前后两点取切线）。
+//   要像手画那样少几个节点、拉长手柄（经验库「配角头发.md」的「怎样画得像用户手画」）：顺滑点可以写 [X, Y, 0, tx, ty] 给切线
+//   （出手柄 = 点 + 切线/3、入手柄 = 点 − 切线/3，长度按想要的弧度定）；角点可以写 [X, Y, 1, 入dx, 入dy, 出dx, 出dy] 给两边的手柄（相对这个点）。正面和 3/4 的同一块 id 一样、点一样多、从同一个位置起，
 //   换算就按顺序一个对一个；做不到的在线稿配置的 art.hairMarks 里写对应（见 头发分层.mjs）。
 // layer：hair-bun 发髻（一直在后面那片后面）、hair-back 后面那片、hair-bangs 刘海、hair-lock-l 画面左边的鬓发（3/4 时远处、藏到脸后面）、
 //   hair-lock-r 画面右边的鬓发、hair-tail 马尾、hair-tie 发圈。
@@ -18,19 +20,23 @@ import path from "node:path";
 import { WORK, configOf, sharp } from "./描图工具.mjs";
 import { layerPathsById, sample } from "./线稿换算工具.mjs";
 
-/** 角点（第三项 1）和顺滑点 → 三次贝塞尔段 [起点, 控1, 控2, 终点]：顺滑点按前后两点的方向（Catmull-Rom）取切线，角点两边的控制点缩在点上 */
+/**
+ * 角点（第三项 1）和顺滑点 → 三次贝塞尔段 [起点, 控1, 控2, 终点]：顺滑点按前后两点的方向（Catmull-Rom）取切线，或者用给的切线（第四、五项）；
+ * 角点两边的控制点缩在点上，或者用给的两个手柄（第四到七项：入、出，相对这个点）
+ */
 export function toBezier(pts) {
   const n = pts.length;
-  const tan = pts.map((p, i) => {
-    if (p[2]) return [0, 0];
+  const hand = pts.map((p, i) => {
+    if (p[2]) return p.length >= 7 ? { in: [p[3], p[4]], out: [p[5], p[6]] } : { in: [0, 0], out: [0, 0] };
     const a = pts[(i - 1 + n) % n];
     const b = pts[(i + 1) % n];
-    return [(b[0] - a[0]) / 2, (b[1] - a[1]) / 2];
+    const t = p.length >= 5 ? [p[3], p[4]] : [(b[0] - a[0]) / 2, (b[1] - a[1]) / 2];
+    return { in: [-t[0] / 3, -t[1] / 3], out: [t[0] / 3, t[1] / 3] };
   });
   return pts.map((p, i) => {
     const q = pts[(i + 1) % n];
-    const [t0, t1] = [tan[i], tan[(i + 1) % n]];
-    return [[p[0], p[1]], [p[0] + t0[0] / 3, p[1] + t0[1] / 3], [q[0] - t1[0] / 3, q[1] - t1[1] / 3], [q[0], q[1]]];
+    const [h0, h1] = [hand[i].out, hand[(i + 1) % n].in];
+    return [[p[0], p[1]], [p[0] + h0[0], p[1] + h0[1]], [q[0] + h1[0], q[1] + h1[1]], [q[0], q[1]]];
   });
 }
 const dOf = (pts) => {
@@ -94,8 +100,16 @@ async function look(who, view, X0, Y0, X1, Y1, Z, out, file) {
     const cols = ["#e00060", "#a000e0", "#0090c0", "#c06000", "#008040", "#4040ff", "#c0a000", "#ff0000"];
     Object.entries(spec).forEach(([id, pc], k) => {
       const c = cols[k % cols.length];
+      const col = c;
       const sg = toBezier(pc.pts);
       s += `<path d="M${P(sg[0][0]).join(",")} ${sg.map((q) => "C" + q.slice(1).map(P).map((r) => r.join(",")).join(" ")).join(" ")} Z" fill="${c}" fill-opacity="0.12" stroke="${c}" stroke-width="2.2"/>`;
+      sg.forEach(([a, c1, c2, b]) => {
+        for (const [p, c] of [[a, c1], [b, c2]]) {
+          const [ax, ay] = P(p);
+          const [cx, cy] = P(c);
+          if (Math.hypot(cx - ax, cy - ay) > 1) s += `<line x1="${ax}" y1="${ay}" x2="${cx}" y2="${cy}" stroke="${col}" stroke-width="1" stroke-opacity="0.6"/><circle cx="${cx}" cy="${cy}" r="2" fill="none" stroke="${col}"/>`;
+        }
+      });
       pc.pts.forEach(([x, y, corner], i) => {
         const [px, py] = P([x, y]);
         s += corner ? `<rect x="${px - 4}" y="${py - 4}" width="8" height="8" fill="none" stroke="${c}" stroke-width="1.5"/>` : `<circle cx="${px}" cy="${py}" r="3" fill="${c}"/>`;

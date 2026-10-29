@@ -42,10 +42,16 @@ const hF = toHead("front");
 const hS = toHead("side");
 const r2 = (p) => `[${p[0].toFixed(2)}, ${p[1].toFixed(2)}]`;
 const bezOut = (p, map) => fmt(map([p.segs[0][0], ...p.segs.flatMap((s) => [s[1], s[2], s[3]])]));
-/** 眼珠：描的是参考图里深色的眼珠（外侧那道白月牙基础模型自己画），中心、半径照描的 */
-const iris = (p, map) => {
+/**
+ * 眼珠：描的是参考图里深色的眼珠（外侧那道白月牙基础模型自己画），中心、半径照描的。
+ * art.eyesWhole（描图.mjs 的 trace.eyesWhole 描的整只眼睛，和用户画眼睛的习惯一样：眼珠 + 眼白 + 上眼线）：按基础模型的比例换成眼珠——
+ * 眼珠 6.97 × 9.96 时整只眼睛宽 17.57（眼白在外侧，到 10.6）、高 19.92；s：−1 画面左那只（R）、1 画面右那只（L），眼珠往里挪
+ */
+const iris = (p, map, s) => {
   const b = bbox(map(sample(p.segs)));
-  return `{ c: [${((b[0] + b[2]) / 2).toFixed(2)}, ${((b[1] + b[3]) / 2).toFixed(2)}] as V2, rx: ${((b[2] - b[0]) / 2).toFixed(2)}, ry: ${((b[3] - b[1]) / 2).toFixed(2)} }`;
+  if (!C.eyesWhole) return `{ c: [${((b[0] + b[2]) / 2).toFixed(2)}, ${((b[1] + b[3]) / 2).toFixed(2)}] as V2, rx: ${((b[2] - b[0]) / 2).toFixed(2)}, ry: ${((b[3] - b[1]) / 2).toFixed(2)} }`;
+  const sx = (b[2] - b[0]) / (6.97 + 10.6);
+  return `{ c: [${((b[0] + b[2]) / 2 - (s * (10.6 - 6.97) * sx) / 2).toFixed(2)}, ${((b[1] + b[3]) / 2).toFixed(2)}] as V2, rx: ${(6.97 * sx).toFixed(2)}, ry: ${((b[3] - b[1]) / 2).toFixed(2)} }`;
 };
 const ends = (p, map) => {
   const q = map(sample(p.segs));
@@ -58,7 +64,7 @@ const noseOf = (p, map) => {
 };
 const view = (v, map, ears) => `{
     face: ${bezOut(v.face, map)} as V2[],
-    iris: { R: ${iris(v["eye-l"], map)}, L: ${iris(v["eye-r"], map)} },
+    iris: { R: ${iris(v["eye-l"], map, -1)}, L: ${iris(v["eye-r"], map, 1)} },
     nose: [${noseOf(v.nose, map).map(r2).join(", ")}] as V2[],
     mouth: [${ends(v.mouth, map).map(r2).join(", ")}] as V2[],
     ears: { ${ears.map(([k, id]) => `${k}: ${bezOut(v[id], map)} as V2[]`).join(", ")} },${
@@ -174,12 +180,22 @@ function liftTops(pts, face, eyeTop, margin = 2.5) {
     if (p[1] > eyeTop - 10) return p;
     const top = domeY(p[0]);
     if (!(p[1] > top - margin)) return p;
-    const a = pts[(i - 1 + n) % n], b = pts[(i + 1) % n];
-    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
-    let nrm = [(b[1] - a[1]) / len, -(b[0] - a[0]) / len];
-    // 朝外的那一侧
-    if (inside([p[0] + nrm[0] * 0.3, p[1] + nrm[1] * 0.3], pts)) nrm = [-nrm[0], -nrm[1]];
-    if (nrm[1] > -0.5) return p;
+    // 朝外的法线：a、b 是前后的点
+    const outward = (a, b) => {
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      const nrm = [(b[1] - a[1]) / len, -(b[0] - a[0]) / len];
+      return inside([p[0] + nrm[0] * 0.3, p[1] + nrm[1] * 0.3], pts) ? [-nrm[0], -nrm[1]] : nrm;
+    };
+    // 前后各隔开 1 以上的点：角点（两缕刘海之间的缝、发梢）上取样的点挤在一起，挨着的两点算出来的方向是乱的，
+    // 缝的底被当成朝上的边抬到圆顶上，刘海里竖起一根细刺（2026-10-29 年轻人）。两种算法都朝上才抬（原来抬的点不会多抬）
+    const step = (dir) => {
+      for (let k = 1, j = i; k < n; k++) {
+        j = (j + dir + n) % n;
+        if (Math.hypot(pts[j][0] - p[0], pts[j][1] - p[1]) >= 1) return pts[j];
+      }
+      return pts[(i + dir + n) % n];
+    };
+    if (outward(pts[(i - 1 + n) % n], pts[(i + 1) % n])[1] > -0.5 || outward(step(-1), step(1))[1] > -0.5) return p;
     moved++;
     return [p[0], +(top - margin).toFixed(2)];
   });
@@ -206,7 +222,12 @@ const layersSrc = () => {
     }
     return `\n      // ${id}\n      { front: ${fmt(m.front)} as V2[], side: ${fmt(m.side)} as V2[] },`;
   }).join("")}\n    ],`).join("");
-  return `\n  layers: {${body}${C.hairUnderEars ? "\n    underEars: true," : ""}\n  },`;
+  // 受力（素材库 cast-hair.ts 的 HairLayers.pivot / float / tailRoot）：配置的 art.hairPivot（头的坐标 y）、hairFloat、hairTailRoot（线稿坐标 { front, side }）
+  const dyn =
+    (C.hairPivot !== undefined ? `\n    pivot: ${C.hairPivot},` : "") +
+    (C.hairFloat !== undefined ? `\n    float: ${C.hairFloat},` : "") +
+    (C.hairTailRoot ? `\n    tailRoot: [${r2(hF([C.hairTailRoot.front])[0])}, ${r2(hS([C.hairTailRoot.side])[0])}] as [V2, V2],` : "");
+  return `\n  layers: {${body}${C.hairUnderEars ? "\n    underEars: true," : ""}${dyn}\n  },`;
 };
 
 if (HAIR_ONLY) {
