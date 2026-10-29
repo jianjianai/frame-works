@@ -138,6 +138,16 @@ export const HER = {
     ...armL(150, 20, 0, "grip", l),
     ...armR(140, 24, 0, "open", l),
   })),
+  /** ② 松手翻正的半路：膝盖收起来（转得快），近处那只手攥着砖、远处那只朝他伸，哭着笑 */
+  松手翻: pose(18, { face: 0.4, ground: false, rot: -105, float: 0.2, ...legL(70, -110, -30), ...legR(86, -118, -30), neck: 8, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.2 }, (l) => ({
+    ...armL(70, 30, 0, "grip", l),
+    ...armR(80, 30, 0, "open", l),
+  })),
+  /** ② 翻正了，荡向他：腿伸开往下垂，两只手朝他张开 */
+  荡向他: pose(8, { face: 0.4, ground: false, rot: -10, float: 0.25, chestL: "over", ...legL(-2, -34, -40), ...legR(16, -48, -40), neck: -8, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.4 }, (l) => ({
+    ...armL(50, 40, 0, "grip", l),
+    ...armR(60, 40, 0, "open", l),
+  })),
   /** ② 他接住她：头朝下搂住他，腿还在上面（接着从楼那边荡下来），闭着眼 */
   倒抱: pose(8, { face: 0.4, ground: false, rot: -128, float: 0.15, chestL: "over", ...legL(-10, -30, -40), ...legR(12, -40, -40), neck: 6, expression: "哭着笑", tears: 1, blink: 0.6, lookX: 0.3, lookY: 0.2 }, (l) => ({
     ...armL(40, 70, 0, "grip", l),
@@ -420,10 +430,10 @@ export const KID = {
     ...armL(140, 40, 0, "open", l),
     ...armR(12, 142, 0, "grip", l),
   })),
-  /** ② 她松开栏杆翻过来：两只手张开去接她 */
+  /** ② 她松开栏杆翻过来：两只手张开、朝前伸着去接她（举高了接住那一下手会扫过她的脸） */
   接她: pose(-2, { face: -0.7, ground: false, float: 0.15, ...legR(4, -14, -36), ...legL(10, -30, -40), neck: 18, expression: "哭着笑", tears: 1, lookX: -0.4, lookY: -0.5 }, (l) => ({
-    ...armL(118, 26, 0, "open", l),
-    ...armR(104, 30, 0, "open", l),
+    ...armL(84, 24, 0, "open", l),
+    ...armR(72, 28, 0, "open", l),
   })),
   /** 被她抱住：两只手搂着她，闭着眼哭着笑 */
   被抱2: pose(4, { face: -0.7, ground: false, float: 0.1, ...legR(6, -20, -40), ...legL(-4, -16, -40), neck: 8, expression: "哭着笑", tears: 1, blink: 0.85, lookX: -0.3, lookY: 0 }, (l) => ({

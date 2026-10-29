@@ -12,7 +12,7 @@
 //   坑的左边（X_LAND）；放下他（砖给他抱着），往后退一步，148.53 光着脚跺一下，地上一个坑（去捡外套给他穿上那段 2026-10-27 删了）。
 
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, figurePose, jointsOf } from "@materials/剪纸角色/code/chengtuo";
-import { type Look, drawFigure } from "@materials/剪纸角色/code/figure";
+import { type DrawOptions, type Look, drawFigure } from "@materials/剪纸角色/code/figure";
 import { CAST, type CastSpec, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { E, ph } from "./cam";
 import { part } from "./world";
@@ -88,10 +88,6 @@ const FALL_START: V2 = [WIN_C[0] + 150, WIN_C[1] + 150];
 /** 抱住那一刻（她头朝下）她的胸口相对他的胸口；身子甩过来以后（面对面，他在她右边低一点） */
 const CATCH_OFF: V2 = [-20, -190];
 const HOLD_OFF: V2 = [-60, -112];
-/** ② 他接住她那一刻（她头朝下搂着他）她的胸口相对他的胸口 */
-const DIVE_OFF: V2 = [-115, -175];
-/** ② 接住那一下她左手把砖按在他胸前的地方（相对他的胸口） */
-const PRESS: V2 = [-30, -10];
 /**
  * ② 转正以后两个人抱在一起（用户 2026-10-29，2:16.95：「小石头手应该向左抱住沉沉，沉沉手向右抱住小石头，左边的手不被小石头遮挡，
  * 右边的手被小石头遮挡，左边的手拿着砖的右侧」）：她在他左边、高一点，脸颊挨着他的头（她的头的中心在他的头的中心左边 BACK_HEAD[0]、
@@ -126,6 +122,23 @@ const HUG_L: V2 = [46, 6];
 /** 近处那只手腕往砖那边转多少（0 顺着前臂，1 手指朝上） */
 const HUG_WRIST = 0.3;
 const HUG_R: V2 = [8, 34];
+/**
+ * ② 撞进他怀里、转正的这一段远处那只手腕（她自己的坐标，朝左的写法；用户 2026-10-29 在「调整画面」里摆的 2:14.63：
+ * 上臂顺着身子垂下来、肘朝下，前臂往前伸到他背后，被他整个挡住。原来手搭到他上背，上臂从他肩膀上拱过去，是倒 V）。
+ * 用的时候按 HUG_R_AT 那一刻换成相对他的胸口（根 + KID_CHEST），跟着他走
+ */
+const HUG_R_UP: V2 = [-138, -366];
+const HUG_R_AT = 134.63;
+let HUG_R_REL: V2 | null = null;
+function hugRUp(): V2 {
+  if (!HUG_R_REL) {
+    const r = herRootRaw(HUG_R_AT);
+    const mir = ((herRaw(HUG_R_AT).face as number | undefined) ?? 1) > 0 ? -1 : 1;
+    const k = kidRoot(HUG_R_AT);
+    HUG_R_REL = [r[0] + mir * HUG_R_UP[0] - (k[0] + KID_CHEST[0]), r[1] + HUG_R_UP[1] - (k[1] + KID_CHEST[1])];
+  }
+  return HUG_R_REL;
+}
 const KID_AT_CATCH = kidSolo(TE.catch);
 const CHEST_AT_CATCH: V2 = [KID_AT_CATCH[0] + KID_CHEST[0] + CATCH_OFF[0], KID_AT_CATCH[1] + KID_CHEST[1] + CATCH_OFF[1]];
 /** 停住：她的靴底离地 280（够地的姿势；原来 30，用户：「离地面太近了，需要远一点」） */
@@ -231,19 +244,24 @@ export function herChest(t: number): V2 {
     return [a[0] + 5 * Math.sin((t - TE.hang) * 1.3) * k, a[1] + 4 * Math.sin((t - TE.hang) * 2.1) * k];
   }
   if (t < TE.pairDown) {
-    // ② 松开栏杆，头朝下朝他扑过去（横着蹬出去先快、竖着越坠越快）；他接住她（embrace）以后胸口贴着他，
-    // 腿从楼那边荡下来转正：胸口从他左上方（头朝下）挪到抱着他的地方（和抱着往下坠时一样）
+    // ② 松开栏杆（用户 2026-10-29：「2:14.00~2:14.83 这段的动作需要重做」——原来头朝下像一块板直直扑过去，倒着搂住他的脖子，
+    // 再横过来绕着他转半圈才站正）：手里砖的分量把她往下拽，先往下掉、再顺着弧线荡进他怀里（越荡越快，撞上去那一下他被撞得一晃）；
+    // 身子一路绕胸口翻正（姿势见 HER_KEYS），腿从楼那边荡下来
     const k = kidRoot(t);
     const kc: V2 = [k[0] + KID_CHEST[0], k[1] + KID_CHEST[1]];
     if (t < TE.embrace) {
       const hold: V2 = [HOLD_C[0] + 5 * Math.sin((TE.hug - TE.hang) * 1.3), HOLD_C[1] + 4 * Math.sin((TE.hug - TE.hang) * 2.1)];
       const ke = kidRoot(TE.embrace);
-      const to: V2 = [ke[0] + KID_CHEST[0] + DIVE_OFF[0], ke[1] + KID_CHEST[1] + DIVE_OFF[1]];
+      const to: V2 = [ke[0] + KID_CHEST[0] + BACK_OFF[0], ke[1] + KID_CHEST[1] + BACK_OFF[1]];
+      const ctrl: V2 = [hold[0] + 0.25 * (to[0] - hold[0]), hold[1] + 0.8 * (to[1] - hold[1]) + 40];
       const u = ph(t, TE.hug, TE.embrace);
-      return [hold[0] + (to[0] - hold[0]) * (u * (1.6 - 0.6 * u)), hold[1] + (to[1] - hold[1]) * u * u];
+      const v = 0.3 * u + 0.7 * u * u;
+      return [
+        (1 - v) * (1 - v) * hold[0] + 2 * v * (1 - v) * ctrl[0] + v * v * to[0],
+        (1 - v) * (1 - v) * hold[1] + 2 * v * (1 - v) * ctrl[1] + v * v * to[1],
+      ];
     }
-    const off = mix(DIVE_OFF, BACK_OFF, E.io(ph(t, TE.embrace, TE.upright)));
-    return [kc[0] + off[0], kc[1] + off[1]];
+    return [kc[0] + BACK_OFF[0], kc[1] + BACK_OFF[1]];
   }
   // 人链散开，抱着他慢慢落回街上：开头几乎不动，越落越快，到一半最快，再越落越慢，落地那一刻速度是 0
   const p0 = herChest(TE.pairDown - 1e-4);
@@ -493,12 +511,13 @@ const HER_KEYS: MoveKey[] = [
   { t: TE.hand + 0.08, ease: "inOut", p: HER.哭笑 },
   { t: TE.hug, p: HER.哭笑 },
   { t: TE.hug + 0.001, ease: "hold", p: { ...HER.哭笑, rot: -180 } },
-  // ② 头朝下朝他扑过去 → 他接住 → 腿从楼那边荡下来转正，荡过头一点再回来
-  { t: TE.hug + 0.2, ease: "out", p: HER.扑他 },
-  { t: TE.embrace, ease: "inOut", p: HER.倒抱 },
+  // ② 松手：腿从楼那边荡下来、膝盖收起来翻正（先慢后快），翻到差不多正了腿伸开往下垂，两只手朝他张开；
+  // 撞进他怀里那一下身子往他那边一靠，再回正
+  { t: TE.hug + 0.2, ease: "in", p: HER.松手翻 },
+  { t: TE.hug + 0.4, ease: "out", p: HER.荡向他 },
+  { t: TE.embrace, ease: "inOut", p: { ...HER.抱他, rot: 2 } },
+  { t: TE.embrace + 0.14, ease: "out", p: { ...HER.抱他, rot: 8 } },
   { t: TE.upright, ease: "inOut", p: HER.抱他 },
-  { t: TE.upright + 0.15, ease: "out", p: { ...HER.抱他, rot: 7 } },
-  { t: TE.upright + 0.34, ease: "inOut", p: HER.抱他 },
   // 转正以后睁开眼，低头看着手里的砖（自己写的「活下去」），哭着笑，一滴眼泪往下掉在砖上；砸下去以后闭上眼，哭着笑
   { t: TE.eyesOpen - 0.04, p: HER.抱他 },
   { t: TE.eyesOpen + 0.16, ease: "inOut", p: HER.抱他看 },
@@ -835,13 +854,26 @@ function herHoldBrick(t: number): BrickNow {
   // 跟着他走），落回街上放下他时交给他（BACK_HEAD 那里写了为什么这样抱）
   if (t > TE.hug) {
     const kr = kidRoot(t);
-    const press: V2 = [kr[0] + KID_CHEST[0] + PRESS[0], kr[1] + KID_CHEST[1] + PRESS[1]];
     const ch = chestOf(castJoints(STONE, kidMove(t).pose));
     const front: V2 = [kr[0] + ch[0] + BRICK_FRONT[0], kr[1] + ch[1] + BRICK_FRONT[1]];
-    c = t < TE.embrace ? mix(c, press, E.io(ph(t, TE.hug, TE.embrace))) : mix(press, front, E.io(ph(t, TE.embrace + 0.05, TE.upright + 0.1)));
+    // 荡过去的路上砖一直在她手里：跟着她的胸口走，离胸口的距离从松手时（胳膊伸直朝他）收到抱住时（两个人中间），翻身的半路收得近一点
+    if (t < TE.embrace) {
+      const u = ph(t, TE.hug, TE.embrace);
+      const ch0 = herChest(TE.hug);
+      const ch1 = herChest(TE.embrace - 1e-4);
+      const kr1 = kidRoot(TE.embrace - 1e-4);
+      const kc1 = chestOf(castJoints(STONE, kidMove(TE.embrace - 1e-4).pose));
+      const f1: V2 = [kr1[0] + kc1[0] + BRICK_FRONT[0], kr1[1] + kc1[1] + BRICK_FRONT[1]];
+      const o0: V2 = [c[0] - ch0[0], c[1] - ch0[1]];
+      const o1: V2 = [f1[0] - ch1[0], f1[1] - ch1[1]];
+      const o = mix(o0, o1, E.io(u));
+      const pull = 1 - 0.35 * Math.sin(Math.PI * u);
+      const ch = herChest(t);
+      c = [ch[0] + o[0] * pull, ch[1] + o[1] * pull + 20 * Math.sin(Math.PI * u)];
+    } else c = front;
   }
   // 扑过去、接住时砖跟着手斜一点；捧到他胸前以后是平的
-  const tilt = t > TE.hug ? E.io(ph(t, TE.hug, TE.embrace)) * (1 - E.io(ph(t, TE.embrace + 0.05, TE.upright + 0.1))) : 0;
+  const tilt = t > TE.hug ? Math.sin(Math.PI * ph(t, TE.hug, TE.embrace)) : 0;
   return { c, rot: -0.15 * tilt, flipY: -1 };
 }
 /** 砖亮到多亮：一接过来（「去」128.02）0.4 秒亮到头，之后很慢地一明一暗 */
@@ -891,9 +923,6 @@ export interface KidNow {
 const kidMemo = new Map<number, KidNow>();
 /** ① 他摸她脸的地方（相对她头的中心；她倒挂着，脸颊靠他这边） */
 const CHEEK: V2 = [56, 28];
-/** ② 搂她脖子的两只手（相对她的脖子） */
-const NECK_L: V2 = [10, 30];
-const NECK_R: V2 = [-30, 6];
 export function kidAt(t: number): KidNow {
   const key = Math.round(t * 1e4);
   const hit = kidMemo.get(key);
@@ -977,26 +1006,24 @@ export function kidAt(t: number): KidNow {
   }
   // ② 接住她（她头朝下）：两只手搂住她的脖子；她转正以后两个人抱在一起、一人拿砖的一头（用户 2026-10-29，2:15.27：
   // 「让小石头左边的手被沉沉挡住，沉沉右边的手被小石头挡住，这样他们两个就是抱在一起的动作。之后让沉沉左边的手刚好拿住砖的左边，
-  // 小石头右边的手刚好拿着砖的右边」）：近处那只（L，画面右边）捏住砖的右头；远处那只（R，画面左边）搂到她背后（画在她身子后面，见 armBehindHer），
+  // 小石头右边的手刚好拿着砖的右边」）：近处那只（L，画面右边）捏住砖的右头；远处那只（R，画面左边）搂到她背后（画在她身子后面，见 drawHer），
   // 放下他的时候从她背后抽出来、捏住砖的左头
   if (t > TE.embrace - 0.05) {
     const hr = herRootRaw(t);
     const hj = jointsOf(herRaw(t));
     const nk: V2 = [hr[0] + hj.neck[0], hr[1] + hj.neck[1]];
-    const back: V2 = [hr[0] + hj.neck[0] + 0.45 * (hj.hip[0] - hj.neck[0]) - 12, hr[1] + hj.neck[1] + 0.45 * (hj.hip[1] - hj.neck[1])];
-    const w = E.io(ph(t, TE.embrace - 0.05, TE.embrace + 0.25));
-    const take = her ? E.io(ph(t, HANDOFF[0], HANDOFF[1])) : 0;
-    const wrap = E.io(ph(t, TE.upright - 0.32, TE.upright + 0.12));
-    // 放下他的时候从她背后抽出来：先收到他自己胸口后面（这时从她身后换到她身前画，看不出来），再伸出来捏住砖的左头
+    const back: V2 = [hr[0] + hj.neck[0] + 0.66 * (hj.hip[0] - hj.neck[0]) - 12, hr[1] + hj.neck[1] + 0.66 * (hj.hip[1] - hj.neck[1])];
+    const w = E.io(ph(t, TE.embrace - 0.3, TE.embrace + 0.06));
     const outK = ph(t, TE.putDown - 0.4, TE.putDown + 0.1);
     const own: V2 = [root[0] + chestOf(j0)[0], root[1] + chestOf(j0)[1] + 20];
     const [e1, e2] = her ? ends(her) : [nk, nk];
-    // 近处那只捏在砖头外面一点（手画在砖前面，捏在砖头上会压住「去」），放下以后挪到砖头上
+    // 接住她的时候：近处那只直接捏住她手里的砖的右头（两个人一起拿着，交到他手里以后接着拿），远处那只搂到她腰后。
+    // 原来先往上搂她的脖子，胳膊横在她脸前（用户 2026-10-29，重做 2:14.00–2:14.83）
     const tight = E.io(ph(t, TE.putDown + 0.1, TE.putDown + 0.4));
-    ik("L", mix([nk[0] + NECK_L[0], nk[1] + NECK_L[1]], mix([e1[0] + 10, e1[1] + 2], e1, tight), take), w);
-    const r0 = mix([nk[0] + NECK_R[0], nk[1] + NECK_R[1]], back, wrap);
+    ik("L", mix([e1[0] + 10, e1[1] + 2], e1, tight), w);
+    const r0 = back;
     const rT = outK < 0.5 ? mix(r0, own, E.io(outK * 2)) : mix(own, e2, E.io(outK * 2 - 1));
-    ik("R", rT, w, wrap > 0.5 ? -1 : undefined);
+    ik("R", rT, w, -1);
   }
   const j = castJoints(spec, p);
   const at = (q: number[]): V2 => [root[0] + q[0], root[1] + q[1]];
@@ -1027,7 +1054,7 @@ export function herAt(t: number): HerNow {
   p.gravity = [-Math.sin(r) * (1 - 2 * fl), Math.cos(r) * (1 - 2 * fl)];
   if (t >= TE.flip0 && t < TE.upright) {
     // 翻过来以后被白往上拽（世界里朝上）
-    const k = E.io(ph(t, TE.flip0, TE.hang)) * (1 - E.io(ph(t, TE.hug, TE.upright)));
+    const k = E.io(ph(t, TE.flip0, TE.hang)) * (1 - E.io(ph(t, TE.hug, TE.hug + 0.35)));
     const g = p.gravity as V2;
     p.gravity = [g[0] * (1 - k), g[1] * (1 - k) - 1 * k];
   }
@@ -1154,7 +1181,13 @@ export function herAt(t: number): HerNow {
       const hugR: V2 = [kcc[0] + HUG_R[0], kcc[1] + HUG_R[1]];
       const give = E.io(ph(t, HANDOFF[0], HANDOFF[1] + 0.15));
       const toR = E.io(ph(t, TE.upright - 0.3, TE.upright + 0.2));
-      ik("R", mix(back, hugR, toR), w, "under");
+      // 撞进他怀里、转正的这一段远处那只：上臂垂下来、肘朝下，前臂往前伸到他背后（HUG_R_UP），再挪到腰背；一直肘朝下，不从他肩膀上拱过去
+      const up = hugRUp();
+      const upper: V2 = [kc[0] + up[0], kc[1] + up[1]];
+      const rIn = E.io(ph(t, TE.embrace - 0.15, TE.embrace + 0.15));
+      ik("R", mix(mix(back, upper, rIn), hugR, toR), w, "under");
+      if (t >= TE.embrace - 0.15) p.armR = { ...(p.armR as object), bend: -1 } as PoseIn["armR"];
+      if (t >= TE.embrace && toR <= 0.5) p.armR = { ...(p.armR as object), layer: "back" } as PoseIn["armR"];
       ik("L", mix(holdL, hugL, give), give < 1 ? 1 : w, "over");
       p.armL = { ...(p.armL as object), bend: -1 } as PoseIn["armL"];
       if (give > 0) {
@@ -1217,14 +1250,12 @@ function coatHands(t: number): [V2, V2] {
 // ——————————————— 画 ———————————————
 const lineOf = (z: number) => 1 / Math.sqrt(Math.max(0.3, z));
 /** 他（世界坐标）：手里的砖、脚上的铁靴（套上以后，跺地以后留在坑里的由 drawStayBoots 画） */
-export function drawKid(g: CanvasRenderingContext2D, t: number, z: number, opts: { boots?: boolean; tuck?: boolean } = {}) {
+export function drawKid(g: CanvasRenderingContext2D, t: number, z: number, opts: { boots?: boolean; onlyArm?: "L" | "R"; skipArms?: ("L" | "R")[] } = {}) {
   const k = kidAt(t);
-  let pose = k.pose;
-  if (opts.tuck) {
-    // 远处那只胳膊收到他自己身子后面（顺着身子斜着往下到胯，被身子和腿挡住）
-    const j = castJoints(k.spec, k.pose);
-    const sc = k.spec.scale;
-    pose = { ...pose, armR: { ...(pose.armR as object), to: [j.hip[0] / sc, (j.hip[1] - 30) / sc], ik: 1, layer: "back" } as PoseIn["armR"] };
+  const pose = k.pose;
+  if (opts.onlyArm) {
+    drawPerson(g, k.spec, pose, k.root[0], k.root[1], z, { onlyArm: opts.onlyArm });
+    return;
   }
   const line = lineOf(z);
   const M = g.getTransform();
@@ -1238,7 +1269,7 @@ export function drawKid(g: CanvasRenderingContext2D, t: number, z: number, opts:
     cc.restore();
   };
   if (layer === "back") drawEndBrick(g, "gift", k.gift.c, k.gift.rot, BS, -1, 0, line);
-  drawPerson(g, k.spec, pose, k.root[0], k.root[1], z, { beforeFrontArms: before });
+  drawPerson(g, k.spec, pose, k.root[0], k.root[1], z, { beforeFrontArms: before, skipArms: opts.skipArms });
   if (layer === "front") drawEndBrick(g, "gift", k.gift.c, k.gift.rot, BS, -1, 0, line);
   if (opts.boots !== false) drawKidBoots(g, t, z);
 }
@@ -1256,66 +1287,40 @@ export function drawKidBoots(g: CanvasRenderingContext2D, t: number, z: number) 
   if (r.on === "kid" || r.on === "stay") drawBoot(g, r.a, r.rot, line, 1, true);
   if (l.on === "kid" || l.on === "stay") drawBoot(g, l.a, l.rot, line, 1, true);
 }
-/**
- * ② 抱在一起时他远处那只胳膊搂在她背后（真的遮挡，靠画的先后，不靠裁剪）：一个人是整个一起画的，只能在 beforeFrontArms 那一处
- * 插进另一个人，没法把他的一只胳膊单独插到她身子后面。所以他画两遍：
- *   ① 先画一遍（胳膊伸着搂到她背后），压在她底下——她的身子、外套的轮廓线自己把胳膊盖住，胳膊消失在她的轮廓上；
- *   ② 她画完身子以后再画一遍，这一遍远处那只胳膊收到他自己身子后面（看不见），其余照常压在她前面。
- * ① 只在这只胳膊周围一圈画（kidArmZone），省得整个人画两遍、轮廓线变粗。
- * （之前按胶囊/矩形把他裁成两半，切口是裁出来的，不是她的轮廓，用户 2:15.48：「不是真正的遮挡」）
- */
-const armBehindHer = (t: number) => t >= TE.upright - 0.32 && t < TE.putDown - 0.15;
-function kidArmZone(t: number): Path2D {
-  const k = kidAt(t);
-  const kj = castJoints(k.spec, k.pose);
-  const a: V2 = [k.root[0] + kj.shoulderR[0], k.root[1] + kj.shoulderR[1]];
-  const b: V2 = [k.root[0] + kj.palmR[0], k.root[1] + kj.palmR[1]];
-  const e: V2 = [k.root[0] + kj.elbowR[0], k.root[1] + kj.elbowR[1]];
-  const zone = new Path2D();
-  const r = 34;
-  for (const [p, q] of [[a, e], [e, b]] as [V2, V2][]) {
-    const d = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1;
-    const n: V2 = [(-(q[1] - p[1]) / d) * r, ((q[0] - p[0]) / d) * r];
-    zone.moveTo(p[0] + n[0], p[1] + n[1]);
-    zone.lineTo(q[0] + n[0], q[1] + n[1]);
-    zone.lineTo(q[0] - n[0], q[1] - n[1]);
-    zone.lineTo(p[0] - n[0], p[1] - n[1]);
-    zone.closePath();
-    zone.moveTo(q[0] + r, q[1]);
-    zone.arc(q[0], q[1], r, 0, Math.PI * 2);
-  }
-  zone.moveTo(a[0] + r, a[1]);
-  zone.arc(a[0], a[1], r, 0, Math.PI * 2);
-  return zone;
-}
+/** ② 抱在一起（转正以后到放下他以前）：两个人远处那只胳膊互相搂到对方背后，按部位排先后画（drawHer） */
+const hugCross = (t: number) => t >= TE.upright - 0.32 && t < TE.putDown - 0.15;
 /** 抱着他时她的外观：上臂压在外套上面 */
 const HUG_LOOK: Look = { ...CHENGTUO, armsOver: () => true };
 /** 她（世界坐标）；inner：抱着他时他画在她的身子和近处那只手臂之间 */
 export function drawHer(g: CanvasRenderingContext2D, t: number, z: number, inner?: (g: CanvasRenderingContext2D) => void) {
-
   const h = herAt(t);
   const line = lineOf(z);
   const M = g.getTransform();
-  const tuck = !!inner && armBehindHer(t);
-  if (tuck) {
-    // ① 他（胳膊搂到她背后）先画，压在她底下
-    g.save();
-    g.clip(kidArmZone(t), "nonzero");
-    drawKid(g, t, z, { boots: false });
-    g.restore();
-  }
-  g.save();
-  g.translate(h.root[0], h.root[1]);
   // ② 转正以后抱着他：近处那只胳膊往右搂过来，上臂压在外套上面（正面的画法上臂默认藏在身子后面，前臂像是从胸口长出来的；
   // 用户 2026-10-29，2:15.49：「手臂被身体遮挡了，很奇怪」）
   const armsOver = t > TE.upright - 0.3 && t < TE.putDown + 0.4;
-  (armsOver ? (c: CanvasRenderingContext2D, p: PoseIn, o: Parameters<typeof drawChengtuo>[2]) => drawFigure(c, p, HUG_LOOK, o) : drawChengtuo)(g, h.pose, {
+  const drawSelf = (o: DrawOptions) => {
+    g.save();
+    g.translate(h.root[0], h.root[1]);
+    if (armsOver) drawFigure(g, h.pose, HUG_LOOK, o);
+    else drawChengtuo(g, h.pose, o);
+    g.restore();
+  };
+  // ② 抱在一起：按部位排先后（角色库 DrawOptions.part / onlyArm / skipArms）——他搂到她背后的那只胳膊 →
+  // 她后面的头发和搂到他背后的那只胳膊 → 她的身子 → 他（不画那只胳膊）→ 她近处那只胳膊。两只胳膊各自消失在对方的轮廓后面
+  const cross = !!inner && hugCross(t);
+  if (cross) {
+    // 他的胳膊在她的胳膊底下（用户 2026-10-29，2:15.47：「小石头的胳膊也要被沉沉的胳膊挡住」）
+    drawKid(g, t, z, { boots: false, onlyArm: "R" });
+    drawSelf({ line, part: "back" });
+  }
+  drawSelf({
     line,
+    part: cross ? "body" : undefined,
     beforeFrontArms: (cc) => {
       cc.save();
       cc.setTransform(M);
-      // ② 她身子前面的他：搂在她背后的那只胳膊收到他自己身子后面
-      if (tuck) drawKid(cc, t, z, { boots: false, tuck: true });
+      if (cross) drawKid(cc, t, z, { boots: false, skipArms: ["R"] });
       else inner?.(cc);
       // 她手里的砖（接过来以后、交给他以前）画在她身子前面、手臂后面
       if (t >= TE.hand + 0.05 && t < HANDOFF[1]) {
@@ -1325,7 +1330,6 @@ export function drawHer(g: CanvasRenderingContext2D, t: number, z: number, inner
       cc.restore();
     },
   });
-  g.restore();
   // 在她手里的那只靴子
   for (const side of ["R", "L"] as Side[]) {
     const s = bootState(t, side);
