@@ -511,6 +511,11 @@ export interface DrawOptions {
   part?: "back" | "body";
   onlyArm?: "L" | "R";
   skipArms?: ("L" | "R")[];
+  /**
+   * 头单独一层："skip" 不画头（领子前面那层和头，后面的头发照画），"only" 只画头（其余都不画）。
+   * 例：抱着他的那只胳膊压在他身子上、但被他的头挡住——他 skip → 她那只胳膊 → 他 only
+   */
+  head?: "skip" | "only";
 }
 
 /**
@@ -634,7 +639,7 @@ export function drawFigure(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, lo
       editor: () => import("./figure-editor"),
       bounds: (v) => figureBounds(figureRig(withValues(pose, values, v, look), look), v, w),
       data: { pose, look, values, width: w } satisfies FigureEditData,
-      part: Boolean(opts.part || opts.onlyArm || opts.skipArms?.length),
+      part: Boolean(opts.part || opts.onlyArm || opts.skipArms?.length || opts.head),
     });
     if (now !== values) {
       rig = figureRig(withValues(pose, values, now, look), look);
@@ -703,8 +708,17 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     if (hs !== 1 || hw !== 1) ctx.restore();
   };
 
-  // 按部位分开画（DrawOptions.part / onlyArm / skipArms）
+  // 按部位分开画（DrawOptions.part / onlyArm / skipArms / head）
   const skip = (side: "L" | "R") => opts.skipArms?.includes(side) ?? false;
+  if (opts.head === "only") {
+    scoped(() =>
+      headView((r, k) => {
+        look.underHead?.(ctx, r, k);
+        drawHead(ctx, r, k);
+      }),
+    );
+    return;
+  }
   if (opts.onlyArm) {
     const side = opts.onlyArm;
     scoped(() => drawArm(ctx, rig, side, ink, opts));
@@ -737,10 +751,11 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     // 外衣上面的正面上臂：袖子盖着外衣的边
     for (const side of behind) if (over(side) && !skip(side)) drawUpperArmOver(ctx, rig, side, ink);
     look.neckFront?.(ctx, rig, ink);
-    headView((r, k) => {
-      look.underHead?.(ctx, r, k);
-      drawHead(ctx, r, k);
-    });
+    if (opts.head !== "skip")
+      headView((r, k) => {
+        look.underHead?.(ctx, r, k);
+        drawHead(ctx, r, k);
+      });
   });
   // 前面的手臂和挂在胸前的东西（围巾垂下来那头）：垂在身边、举起来的手臂在它后面（风把它吹过手臂时压在手臂上），
   // 横在胸前的前臂（抱臂、递东西、抱人）压在它上面
