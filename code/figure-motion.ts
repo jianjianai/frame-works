@@ -222,6 +222,7 @@ export function swapSides(o: Angles): Angles {
     ["handL", "handR"],
     ["layerL", "layerR"],
     ["chestL", "chestR"],
+    ["upperArmL", "upperArmR"],
     ["hipL", "hipR"],
     ["kneeL", "kneeR"],
     ["ankleL", "ankleR"],

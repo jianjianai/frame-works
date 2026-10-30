@@ -48,11 +48,13 @@ export const chengtuoOptions = z.object({
   wristL: z.number().min(-120).max(120).default(15).describe("L 手腕（相对前臂）"),
   handL: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("L 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 平托"),
   layerL: z.enum(["auto", "front", "back"]).default("auto").describe("L 手臂画在身体前面还是后面（auto：3/4 时远侧的在后）"),
+  upperArmL: z.number().min(0.4).max(1).default(1).describe("L 上臂的长度比例：胳膊朝镜头伸出来时压短（同大腿）"),
   shoulderR: z.number().min(-180).max(180).default(15).describe("R 肩：0 垂下；正面时往外张是正"),
   elbowR: z.number().min(-170).max(170).default(1).describe("R 肘（相对上臂）"),
   wristR: z.number().min(-120).max(120).default(-15).describe("R 手腕（相对前臂）"),
   handR: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("R 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 平托"),
   layerR: z.enum(["auto", "front", "back"]).default("auto").describe("R 手臂画在身体前面还是后面"),
+  upperArmR: z.number().min(0.4).max(1).default(1).describe("R 上臂的长度比例"),
 
   hipL: z.number().min(-150).max(150).default(-6).describe("L 胯：0 腿竖直；往前抬是正"),
   kneeL: z.number().min(-170).max(170).default(-1).describe("L 膝（相对大腿）：往后弯是负"),

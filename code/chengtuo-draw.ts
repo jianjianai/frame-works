@@ -62,6 +62,7 @@ import {
   toLocal,
   SHOULDER_MERGE_R,
   upperArmPts,
+  upperOn,
   EAR_SIDE_IN,
   faceHW,
   faceOf,
@@ -1023,12 +1024,12 @@ function drawCuff(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink:
 /** 袖标在她的左臂上：正面是画面右边那只（L）；朝右时整套镜像，她的左臂成了远的那只（R） */
 function drawBand(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", upper: Path2D, ink: Ink) {
   if (!items(rig).band || side !== (rig.mir ? "R" : "L")) return;
-  const limb = rig.arms[side];
   const sx = side === "L" ? 1 : -1;
-  const f = new Frame(limb.root[0], limb.root[1], limb.a1);
+  // 上臂压短（upperK）时袖标跟着压
+  const on = upperOn(rig.arms[side]);
   ctx.save();
   ctx.clip(upper);
-  drawPart(ctx, cubicPath(BAND_L, ([x, y]) => f.p(x * sx, y)), K.band, K.bandShade, ink, ink.lw * 0.8);
+  drawPart(ctx, cubicPath(BAND_L, ([x, y]) => on([x * sx, y])), K.band, K.bandShade, ink, ink.lw * 0.8);
   ctx.restore();
 }
 

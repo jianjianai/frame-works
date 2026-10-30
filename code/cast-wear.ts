@@ -21,7 +21,7 @@ import {
   rowSpan,
   smoothPath,
 } from "./rig";
-import { type Rig, faceOf, fillBodyPart, legPaths, neckOutline, polyPath, strokeBodyPart, torsoPaths } from "./figure";
+import { type Rig, faceOf, fillBodyPart, legPaths, neckOutline, polyPath, strokeBodyPart, torsoPaths, upperOn } from "./figure";
 import { COAT_FRONT, COAT_SIDE } from "./chengtuo-costume";
 
 // ——— 外衣 ———
@@ -1022,11 +1022,12 @@ export function topCuff(top: Top | undefined, colors: { top: string; topShade: s
 export function sleeveStripe(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", clip: Path2D, color: string, upper: boolean) {
   const limb = rig.arms[side];
   const sx = side === "L" ? 1 : -1;
-  const f = upper ? new Frame(limb.root[0], limb.root[1], limb.a1) : new Frame(limb.mid[0], limb.mid[1], limb.a2);
+  const fl = new Frame(limb.mid[0], limb.mid[1], limb.a2);
+  const on = upper ? upperOn(limb) : ([x, y]: V2) => fl.p(x, y);
   ctx.save();
   ctx.clip(clip);
   ctx.fillStyle = color;
-  for (const dx of [9, 14]) ctx.fill(polyPath([[sx * dx, -20], [sx * (dx + 2.6), -20], [sx * (dx + 2.6), 90], [sx * dx, 90]], ([x, y]) => f.p(x, y)));
+  for (const dx of [9, 14]) ctx.fill(polyPath([[sx * dx, -20], [sx * (dx + 2.6), -20], [sx * (dx + 2.6), 90], [sx * dx, 90]], on));
   ctx.restore();
 }
 

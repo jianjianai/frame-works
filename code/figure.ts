@@ -92,13 +92,25 @@ export interface ArmPose {
   to?: V2;
   /** IK 的分量：0 用 a/b，1 用 to（默认有 to 就是 1）；关键帧之间渐变就能从摆臂过渡到伸手 */
   ik?: number;
-  /** IK 时肘往哪边拱：正 = 顺时针一侧 */
-  bend?: number;
+  /**
+   * IK 时肘往哪边拱：正 = 顺时针一侧（相对肩膀到手腕的连线，胳膊朝向一变，同一个符号的肘可能从朝下翻成朝上）。
+   * "down"：肘朝下——每一帧在两个解里取肘更低的（画面里往下），手腕在肩膀正下方、两个一样低时侧身的人取肘往后的。
+   * 伸手抓东西、拽东西用它，身子前倾后仰、胳膊抬高放低都不会拱成倒 V（《引力》用户 2026-10-29：「手臂不要倒V」）
+   */
+  bend?: number | "down";
   shape: HandShape;
   /** 画在身体后面还是前面（默认 3/4 时远侧的手在后） */
   layer?: "back" | "front";
   /** 和挂在胸前的东西（围巾垂下来那头）谁在前：over 手臂压在上面，under 手臂在它后面；不写按前臂横没横在胸前自动判断（crossesChest） */
   chest?: "over" | "under";
+  /**
+   * front：前臂和手画在最前面——抱着、搂着东西时前臂压在东西（DrawOptions.beforeFrontArms 里画的）和身子前面，上臂照旧
+   * （3/4 远侧那只的上臂在身子后面）。上臂被东西挡着、只露出前臂绕过来，这时从外面看可以是倒 V
+   * （《引力》用户 2026-10-29：「右手的小臂显示在杠铃前面，因为是抱住的动作并且是被遮挡上臂的因此可以倒V」）
+   */
+  fore?: "front";
+  /** 上臂在画面里的长度比例（胳膊朝镜头伸出来时看上去变短，同 LegPose.thighK；IK 也按压短的上臂算），默认 1 */
+  upperK?: number;
   /** 拇指朝哪边（手的局部 x 方向，±1） */
   thumb?: number;
 }
@@ -270,7 +282,7 @@ export interface Limb {
   end: V2;
   a1: number;
   a2: number;
-  /** 上面那节在画面里的长度比例（大腿朝镜头时变短） */
+  /** 上面那节在画面里的长度比例（大腿、上臂朝镜头时变短） */
   k?: number;
   /** 手 / 脚的坐标系 */
   tip: Frame;
@@ -351,17 +363,20 @@ export function figureRig(pIn: PoseIn | Pose, look: Look = BASE_LOOK): Rig {
     // 厚外衣：袖子接在外衣的肩线上，正面往外挪，转到 3/4 挪回来
     const out = side * (look.shoulderOut?.(pose) ?? 0) * (1 - u);
     const root = chest.p(sh[0] + out, sh[1] - br);
+    // 上臂朝镜头伸出来时压短（ArmPose.upperK，同大腿的 thighK）
+    const k = ap.upperK ?? 1;
+    const upperLen = BODY.upperArm * k;
     let a1 = chest.a + ap.a;
     let a2 = a1 + ap.b;
     const w = ap.to ? (ap.ik ?? 1) : 0;
     if (ap.to && w > 0) {
-      const r = ik2(root, ap.to, BODY.upperArm, BODY.foreArm, ap.bend ?? -side);
+      const r = ik2(root, ap.to, upperLen, BODY.foreArm, ap.bend === "down" ? elbowDown(root, ap.to, u, upperLen) : (ap.bend ?? -side));
       a1 = mixAngle(a1, r.a1, w);
       a2 = mixAngle(a2, r.a2, w);
     }
-    const mid = add(root, mul(dirOf(a1), BODY.upperArm));
+    const mid = add(root, mul(dirOf(a1), upperLen));
     const end = add(mid, mul(dirOf(a2), BODY.foreArm));
-    return { root, mid, end, a1, a2, tip: new Frame(end[0], end[1], a2 + ap.h) };
+    return { root, mid, end, a1, a2, k, tip: new Frame(end[0], end[1], a2 + ap.h) };
   };
   // 3/4：两腿整体挪到侧面线稿毛衣下摆的下面（下摆往前多出一块，腿不挪的话下摆前面底下是空的、后面露出腿的一角）；
   // 用 IK 的脚的目标点跟着一起挪，腿还是原来的样子
@@ -650,6 +665,7 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   };
   // 正面（和腿合并描边用同一个界限）：上臂画在身子后面，见 drawUpperArm
   const front = u < 0.55;
+  const foreFront = (side: "L" | "R") => (side === "L" ? pose.armL : pose.armR).fore === "front";
   const scoped = (fn: () => void) => {
     ctx.save();
     if (pose.squash) ctx.scale(1 + pose.squash * 0.6, 1 - pose.squash);
@@ -699,14 +715,19 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   scoped(() => {
     if (backPart) {
       headView((r, k) => look.backHair?.(ctx, r, k));
-      if (farBack("R") && !skip("R")) drawArm(ctx, rig, "R", ink, opts);
-      if (farBack("L") && !skip("L")) drawArm(ctx, rig, "L", ink, opts);
+      // 前臂在前（ArmPose.fore）的远侧手臂：这里只画上臂（和身子接成一块的画法），前臂和手最后画在前面（drawForeFront）
+      for (const side of ["R", "L"] as const) {
+        if (!farBack(side) || skip(side)) continue;
+        if (foreFront(side)) drawUpperArmOver(ctx, rig, side, ink);
+        else drawArm(ctx, rig, side, ink, opts);
+      }
     }
     if (!bodyPart) return;
     drawLegs(ctx, rig, ink);
     const behind = front ? (["R", "L"] as const).filter((side) => !farBack(side)) : [];
-    const over = look.armsOver?.(rig) ?? false;
-    if (!over) for (const side of behind) if (!skip(side)) drawUpperArm(ctx, rig, side, ink);
+    // 每只胳膊自己判断：外衣让上臂压在上面（Look.armsOver），或者上臂往身前摆得大（upperInward 超过 UPPER_FORWARD_DEG），就画在身子前面
+    const over = (side: "L" | "R") => upperOver(rig, side);
+    for (const side of behind) if (!over(side) && !skip(side)) drawUpperArm(ctx, rig, side, ink);
     // 身子在这些手臂的肩膀圈里不描边：正面时画在身子后面的上臂，加上 3/4 时整只在身子后面的远侧手臂
     // （用户 2026-10-18：远侧肩膀的线要和参考图一样，从腋下才开始，不一直连到肩头）
     const merged = [...behind, ...(["R", "L"] as const).filter(farBack)];
@@ -714,7 +735,7 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     drawTorso(ctx, rig, ink, merged);
     look.overTorso?.(ctx, rig, ink, merged);
     // 外衣上面的正面上臂：袖子盖着外衣的边
-    if (over) for (const side of behind) if (!skip(side)) drawUpperArmOver(ctx, rig, side, ink);
+    for (const side of behind) if (over(side) && !skip(side)) drawUpperArmOver(ctx, rig, side, ink);
     look.neckFront?.(ctx, rig, ink);
     headView((r, k) => {
       look.underHead?.(ctx, r, k);
@@ -728,7 +749,9 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   const drawFront = (side: "L" | "R") => (front ? drawForearm(ctx, rig, side, ink, opts) : drawArm(ctx, rig, side, ink, opts));
   // 姿势里写了 chestL / chestR 就照写的（over 压在围巾上、under 在围巾后），没写按前臂横没横在胸前判断。
   // 自动判断在一个动作的半路会翻（《引力》伸手进靴筒、走路摆臂），用户 2026-10-19：「加一个参数来控制前面还是后面，手动控制」
+  // 前臂在前（fore: front）的一定压在 beforeFrontArms 画的东西上面
   const overChest = (side: "L" | "R") => {
+    if (foreFront(side)) return true;
     const c = (side === "L" ? pose.armL : pose.armR).chest;
     return c ? c === "over" : crossesChest(rig, side);
   };
@@ -738,14 +761,54 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   });
   opts.beforeFrontArms?.(ctx);
   scoped(() => {
+    // 远侧手臂的前臂（fore: front）先画，近处的手臂再压在它上面
+    for (const side of ["R", "L"] as const) if (farBack(side) && foreFront(side) && !skip(side)) drawForeFront(ctx, rig, side, ink, opts);
     for (const side of fronts) if (overChest(side)) drawFront(side);
   });
+}
+
+/**
+ * 肘朝下（ArmPose.bend = "down"）：两个 IK 解里取肘更靠「下、稍微往后」的那个。角色坐标朝左写（往后 = +x），例如侧身时手腕在肩膀正下方
+ * 两个一样低，就取肘往后的；正面（u = 0）只看高低
+ */
+function elbowDown(root: V2, to: V2, u: number, upper = BODY.upperArm): number {
+  const px = 0.35 * u;
+  const score = (s: number) => {
+    const r = ik2(root, to, upper, BODY.foreArm, s);
+    const e = dirOf(r.a1);
+    return e[0] * px + e[1];
+  };
+  return score(1) >= score(-1) ? 1 : -1;
 }
 
 /** 向量沿头的中线镜像（头的坐标里 x 取反） */
 function reflectOnHead(rig: Rig, v: V2): V2 {
   const l = rotateV(v, -rig.head.a);
   return rotateV([-l[0], l[1]], rig.head.a);
+}
+
+/**
+ * 正面时上臂往身前摆的角度（度）超过多少就整只画在身子前面（用户 2026-10-29，《引力》2:27.17：「应该按照角度来判断胳膊应该在身体前面还是后面，
+ * 这种角度大的应该在身体前面」——往前、往身体中线摆的胳膊上臂藏在身子后面，只露出从胸口长出来的前臂）。
+ * 垂在身边、走路小幅摆臂（24° 以内）照旧画在身子后面，显示身子的边（用户 2026-10-17 定的）
+ */
+export const UPPER_FORWARD_DEG = 24;
+/** 上臂往身体中线那边摆了多少度（胸口坐标里，从竖直往下量；往外张是负的） */
+export function upperInward(rig: Rig, side: "L" | "R") {
+  const limb = rig.arms[side];
+  const d = rotateV(sub(limb.mid, limb.root), -rig.chest.a);
+  return (Math.atan2(side === "L" ? -d[0] : d[0], d[1]) * 180) / Math.PI;
+}
+/**
+ * 身子转过来多少（u）起近处那只胳膊（L）整只画在身子前面，和 3/4 时一样：半侧身时它在身子靠镜头这一侧，垂着也压在身上。
+ * 只看角度不够（用户 2026-10-29，《引力》2:28.00：「还是没修好」——她 u 0.4、近处那只上臂只往里摆 10°，身子在画面里宽，上臂还是被外套盖住大半）
+ */
+export const NEAR_ARM_TURN = 0.3;
+/** 正面时这只上臂画在身子前面：外衣让上臂压在上面（Look.armsOver）、半侧身时近处那只，或者往身前摆得大 */
+export function upperOver(rig: Rig, side: "L" | "R") {
+  if (rig.look.armsOver?.(rig)) return true;
+  if (side === "L" && rig.u >= NEAR_ARM_TURN) return true;
+  return upperInward(rig, side) > UPPER_FORWARD_DEG;
 }
 
 /** 前臂横在胸前（朝身体中线那边伸）：抱臂、递东西、抱人。按前臂在胸口坐标里朝里的分量判断 */
@@ -1108,23 +1171,43 @@ export function outside(path: Path2D): Path2D {
   return p;
 }
 
+/** 上臂压短（Limb.k）时肩头那个圆、肘那头的切口各留这么长不压，只压中间那段 */
+const UPPER_END = 12;
+/**
+ * 上臂的局部坐标 → 画面坐标（x 已按左右、宽窄换好；y 顺着骨头，0 在肩关节、BODY.upperArm 在肘）。
+ * 上臂压短（ArmPose.upperK）时只压中间那段，肩头和肘那头不变形；袖标这些画在上臂上的东西也用它放
+ */
+export function upperOn(limb: Limb): (p: V2) => V2 {
+  const f = new Frame(limb.root[0], limb.root[1], limb.a1);
+  const k = limb.k ?? 1;
+  if (k === 1) return ([x, y]) => f.p(x, y);
+  const L = BODY.upperArm;
+  const e = UPPER_END;
+  const s = (L * k - 2 * e) / (L - 2 * e);
+  return ([x, y]) => f.p(x, y <= e ? y : y >= L - e ? y - L * (1 - k) : e + (y - e) * s);
+}
+
 /** 一只手臂的两节放到现在的姿势上（线稿画的是 L 即画面右边那只，R 整只镜像） */
 export function armPaths(rig: Rig, side: "L" | "R") {
   const limb = rig.arms[side];
   const sx = side === "L" ? 1 : -1;
-  const fU = new Frame(limb.root[0], limb.root[1], limb.a1);
+  const uOn = upperOn(limb);
   const fF = new Frame(limb.mid[0], limb.mid[1], limb.a2);
   const aw = rig.look.armWidth ?? 1;
-  const on = (f: Frame) => ([x, y]: V2) => f.p(x * sx * aw, y);
-  return { limb, sx, upper: polyPath(ARM_PIECES.upper, on(fU)), lower: polyPath(ARM_PIECES.lower, on(fF)) };
+  return {
+    limb,
+    sx,
+    upper: polyPath(ARM_PIECES.upper, ([x, y]) => uOn([x * sx * aw, y])),
+    lower: polyPath(ARM_PIECES.lower, ([x, y]) => fF.p(x * sx * aw, y)),
+  };
 }
 /** 上臂的轮廓点（和 armPaths 的 upper 同一圈，画面坐标）：外衣的肩线按它接到胳膊上 */
 export function upperArmPts(rig: Rig, side: "L" | "R"): V2[] {
   const limb = rig.arms[side];
   const sx = side === "L" ? 1 : -1;
-  const f = new Frame(limb.root[0], limb.root[1], limb.a1);
+  const uOn = upperOn(limb);
   const aw = rig.look.armWidth ?? 1;
-  return ARM_PIECES.upper.map(([x, y]) => f.p(x * sx * aw, y));
+  return ARM_PIECES.upper.map(([x, y]) => uOn([x * sx * aw, y]));
 }
 
 function drawArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, opts: DrawOptions) {
@@ -1189,6 +1272,37 @@ function drawUpperArm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", 
   rig.look.onUpperArm?.(ctx, rig, side, upper, ink);
 }
 
+/** 肘那一圈（半径，基础模型的单位）：前臂单独画在前面时，这里面压在上臂上的那段边不描（和整只画的手臂一样没有接缝） */
+const ELBOW_SEAM_R = 30;
+/**
+ * 前臂 + 手套画在最前面（ArmPose.fore = front，上臂已经画在后面）：抱着、搂着东西时前臂压在东西和身子前面。
+ * 描边照 drawArm 的做法（两倍宽的边再盖上填色）；肘那一圈里前臂压在上臂上的那段不描，其余一圈都描（压在东西、身子上的边要有）
+ */
+function drawForeFront(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, opts: DrawOptions) {
+  const { limb, sx, upper, lower } = armPaths(rig, side);
+  const ap = side === "L" ? rig.pose.armL : rig.pose.armR;
+  const elbow = new Path2D();
+  elbow.arc(limb.mid[0], limb.mid[1], ELBOW_SEAM_R, 0, Math.PI * 2);
+  ctx.save();
+  ctx.strokeStyle = K.line;
+  ctx.lineWidth = ink.lw * 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.save();
+  ctx.clip(outside(elbow), "evenodd");
+  ctx.stroke(lower);
+  ctx.restore();
+  ctx.save();
+  ctx.clip(elbow);
+  ctx.clip(outside(upper), "evenodd");
+  ctx.stroke(lower);
+  ctx.restore();
+  ctx.restore();
+  fillForearm(ctx, rig, side, lower, ink);
+  rig.look.onForearm?.(ctx, rig, side, ink);
+  drawGlove(ctx, limb.tip, sx, ap.shape, ink, (c, layer) => opts.hold?.[side]?.(c, limb.tip, rig.mir, { layer, shape: ap.shape, sx }), rig.look.hands?.(rig) ?? null, lower);
+}
+
 /** 前臂 + 手套（正面，上臂已经画在身子后面）：前臂和露出来的上臂接的地方不描线；上臂藏在身子（连外套）后面的那段，前臂照常描 */
 function drawForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", ink: Ink, opts: DrawOptions) {
   const { limb, sx, upper, lower } = armPaths(rig, side);
@@ -1206,8 +1320,8 @@ function drawForearm(ctx: CanvasRenderingContext2D, rig: Rig, side: "L" | "R", i
   ctx.clip(out, "evenodd");
   ctx.stroke(lower);
   ctx.restore();
-  // 上臂压在外衣上时（drawUpperArmOver）没有藏起来的那段
-  if (!rig.look.armsOver?.(rig))
+  // 上臂压在身子上时（drawUpperArmOver）没有藏起来的那段
+  if (!upperOver(rig, side))
     for (const b of bodyPieces(rig)) {
       ctx.save();
       ctx.clip(b);
@@ -2226,12 +2340,16 @@ export const figureOptions = z.object({
   handL: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("L 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 平托"),
   layerL: z.enum(["auto", "front", "back"]).default("auto").describe("L 手臂画在身体前面还是后面（auto：3/4 时远侧的在后）"),
   chestL: z.enum(["auto", "over", "under"]).default("auto").describe("L 手臂和胸前挂的东西（围巾垂下来那头）谁在前：over 手臂压在上面，under 手臂在它后面，auto 按前臂横没横在胸前自动判断（动作里要稳定就手动写）"),
+  foreL: z.enum(["auto", "front"]).default("auto").describe("L 前臂在前：front 抱着、搂着东西时前臂和手压在东西、身子前面，上臂照旧（3/4 远侧那只的上臂在身子后面）"),
+  upperArmL: z.number().min(0.4).max(1).default(1).describe("L 上臂的长度比例：胳膊朝镜头伸出来时压短（同大腿）"),
   shoulderR: z.number().min(-180).max(180).default(15).describe("R 肩：0 垂下；正面时往外张是正"),
   elbowR: z.number().min(-170).max(170).default(1).describe("R 肘（相对上臂）"),
   wristR: z.number().min(-120).max(120).default(-15).describe("R 手腕（相对前臂）"),
   handR: z.enum(["relax", "open", "fist", "grip", "point", "pinky", "flat"]).default("relax").describe("R 手形：relax 放松、open 张开、fist 握拳、grip 抓住东西、point 伸一根手指、pinky 拉钩、flat 平托"),
   layerR: z.enum(["auto", "front", "back"]).default("auto").describe("R 手臂画在身体前面还是后面"),
   chestR: z.enum(["auto", "over", "under"]).default("auto").describe("R 手臂和胸前挂的东西谁在前（同 chestL）"),
+  foreR: z.enum(["auto", "front"]).default("auto").describe("R 前臂在前（同 foreL）"),
+  upperArmR: z.number().min(0.4).max(1).default(1).describe("R 上臂的长度比例"),
 
   hipL: z.number().min(-150).max(150).default(-6).describe("L 胯：0 腿竖直；往前抬是正"),
   kneeL: z.number().min(-170).max(170).default(-1).describe("L 膝（相对大腿）：往后弯是负"),
@@ -2270,8 +2388,8 @@ export function figurePose(options: FigureOptions = {}, t = 0, look: Look = BASE
     rot: o.rot * RAD,
     breath: o.idle ? breathAt(t) : 0,
     t,
-    armL: { a: o.shoulderL * RAD, b: o.elbowL * RAD, h: o.wristL * RAD, to: undefined, shape: o.handL, layer: auto(o.layerL), chest: o.chestL === "auto" ? undefined : o.chestL },
-    armR: { a: o.shoulderR * RAD, b: o.elbowR * RAD, h: o.wristR * RAD, to: undefined, shape: o.handR, layer: auto(o.layerR), chest: o.chestR === "auto" ? undefined : o.chestR },
+    armL: { a: o.shoulderL * RAD, b: o.elbowL * RAD, h: o.wristL * RAD, to: undefined, shape: o.handL, layer: auto(o.layerL), chest: o.chestL === "auto" ? undefined : o.chestL, fore: o.foreL === "front" ? "front" : undefined, upperK: o.upperArmL },
+    armR: { a: o.shoulderR * RAD, b: o.elbowR * RAD, h: o.wristR * RAD, to: undefined, shape: o.handR, layer: auto(o.layerR), chest: o.chestR === "auto" ? undefined : o.chestR, fore: o.foreR === "front" ? "front" : undefined, upperK: o.upperArmR },
     legL: { a: o.hipL * RAD, b: o.kneeL * RAD, f: o.ankleL * RAD, thighK: o.thighL, to: undefined },
     legR: { a: o.hipR * RAD, b: o.kneeR * RAD, f: o.ankleR * RAD, thighK: o.thighR, to: undefined },
     expr,
@@ -2319,12 +2437,16 @@ export const FIGURE_PARAMS = figureOptions
     handL: true,
     layerL: true,
     chestL: true,
+    foreL: true,
+    upperArmL: true,
     shoulderR: true,
     elbowR: true,
     wristR: true,
     handR: true,
     layerR: true,
     chestR: true,
+    foreR: true,
+    upperArmR: true,
     hipL: true,
     kneeL: true,
     ankleL: true,
@@ -2354,10 +2476,11 @@ export type FigureValues = {
   lookX: number;
   lookY: number;
 } & Record<(typeof EXPR_KEYS)[number], number> &
-  Record<`${"shoulder" | "elbow" | "wrist" | "hip" | "knee" | "ankle" | "thigh"}${"L" | "R"}`, number> &
+  Record<`${"shoulder" | "elbow" | "wrist" | "upperArm" | "hip" | "knee" | "ankle" | "thigh"}${"L" | "R"}`, number> &
   Record<`hand${"L" | "R"}`, HandShape> &
   Record<`layer${"L" | "R"}`, "auto" | "front" | "back"> &
-  Record<`chest${"L" | "R"}`, "auto" | "over" | "under">;
+  Record<`chest${"L" | "R"}`, "auto" | "over" | "under"> &
+  Record<`fore${"L" | "R"}`, "auto" | "front">;
 /** figure-editor.ts 摆手柄用的：画出来的姿势、外观、它的数、体型宽窄 */
 export interface FigureEditData {
   pose: Pose;
@@ -2397,6 +2520,8 @@ export function figureValues(rig: Rig): FigureValues {
     out[`hand${side}`] = ap.shape;
     out[`layer${side}`] = ap.layer ?? "auto";
     out[`chest${side}`] = ap.chest ?? "auto";
+    out[`fore${side}`] = ap.fore ?? "auto";
+    out[`upperArm${side}`] = ap.upperK ?? 1;
     const leg = rig.legs[side];
     const lp = side === "L" ? pose.legL : pose.legR;
     out[`hip${side}`] = wrapDeg((leg.a1 - rig.pelvis.a) * D);
@@ -2443,6 +2568,8 @@ export function withValues(pose: Pose, before: FigureValues, after: FigureValues
     if (changed(`hand${side}`)) ap.shape = after[`hand${side}`];
     if (changed(`layer${side}`)) ap.layer = after[`layer${side}`] === "auto" ? undefined : (after[`layer${side}`] as "front" | "back");
     if (changed(`chest${side}`)) ap.chest = after[`chest${side}`] === "auto" ? undefined : (after[`chest${side}`] as "over" | "under");
+    if (changed(`fore${side}`)) ap.fore = after[`fore${side}`] === "front" ? "front" : undefined;
+    if (changed(`upperArm${side}`)) ap.upperK = after[`upperArm${side}`];
     const lp = side === "L" ? p.legL : p.legR;
     if (changed(`hip${side}`) || changed(`knee${side}`) || changed(`ankle${side}`)) {
       lp.a = after[`hip${side}`] * RAD;
