@@ -711,12 +711,28 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   // 按部位分开画（DrawOptions.part / onlyArm / skipArms / head）
   const skip = (side: "L" | "R") => opts.skipArms?.includes(side) ?? false;
   if (opts.head === "only") {
-    scoped(() =>
+    scoped(() => {
       headView((r, k) => {
         look.underHead?.(ctx, r, k);
         drawHead(ctx, r, k);
-      }),
-    );
+      });
+      // 自己的手举到脸上（抹眼泪、捂脸）时本来压在头上：前面的手臂脚子以上那截再画一遍，
+      // 脖子以下不动（夹在中间的别人的胳膊照旧压在他身子和手臂上）
+      ctx.save();
+      ctx.translate(rig.neck[0], rig.neck[1]);
+      ctx.rotate(rig.chest.a);
+      ctx.beginPath();
+      ctx.rect(-4000, -8000, 8000, 8000);
+      ctx.rotate(-rig.chest.a);
+      ctx.translate(-rig.neck[0], -rig.neck[1]);
+      ctx.clip();
+      for (const side of ["R", "L"] as const) {
+        if (farBack(side) || skip(side)) continue;
+        if (front) drawForearm(ctx, rig, side, ink, opts);
+        else drawArm(ctx, rig, side, ink, opts);
+      }
+      ctx.restore();
+    });
     return;
   }
   if (opts.onlyArm) {
