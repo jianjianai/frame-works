@@ -503,6 +503,12 @@ export interface DrawOptions {
   /** 在横在胸前的手臂之前画（被抱的人等） */
   beforeFrontArms?: (ctx: CanvasRenderingContext2D) => void;
   /**
+   * 在身子（连领子）之后、头之前画：插在这个人的身子和头中间的东西（真的遮挡，靠先后：这个人照常只画一遍，不裁剪）。
+   * 例：从背后搂着他的人那只胳膊压在他身子上、被他的头挡住——他的 beforeHead 里画那只胳膊（onlyArm），搂他的人本身 skipArms 那只。
+   * 他自己画在头前面的手臂（抹眼泪、捂脸）照旧在头之后画
+   */
+  beforeHead?: (ctx: CanvasRenderingContext2D) => void;
+  /**
    * 按部位分开画（两个人抱在一起时，把一个人的某只胳膊插到另一个人的身子中间：真的遮挡，靠先后，不靠裁剪）。
    * part："back" 只画身后那一层（后面的头发、画在身子后面的胳膊），"body" 画其余的；不写全画。
    * onlyArm：只画这只胳膊（连手和手里的东西，整只胳膊照常描边）；skipArms：不画这些胳膊（身子在它们的肩膀那圈照旧不描边，接得上另外画的胳膊）。
@@ -511,11 +517,6 @@ export interface DrawOptions {
   part?: "back" | "body";
   onlyArm?: "L" | "R";
   skipArms?: ("L" | "R")[];
-  /**
-   * 头单独一层："skip" 不画头（领子前面那层和头，后面的头发照画），"only" 只画头（其余都不画）。
-   * 例：抱着他的那只胳膊压在他身子上、但被他的头挡住——他 skip → 她那只胳膊 → 他 only
-   */
-  head?: "skip" | "only";
 }
 
 /**
@@ -639,7 +640,7 @@ export function drawFigure(ctx: CanvasRenderingContext2D, pIn: PoseIn | Pose, lo
       editor: () => import("./figure-editor"),
       bounds: (v) => figureBounds(figureRig(withValues(pose, values, v, look), look), v, w),
       data: { pose, look, values, width: w } satisfies FigureEditData,
-      part: Boolean(opts.part || opts.onlyArm || opts.skipArms?.length || opts.head),
+      part: Boolean(opts.part || opts.onlyArm || opts.skipArms?.length),
     });
     if (now !== values) {
       rig = figureRig(withValues(pose, values, now, look), look);
@@ -708,33 +709,8 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     if (hs !== 1 || hw !== 1) ctx.restore();
   };
 
-  // 按部位分开画（DrawOptions.part / onlyArm / skipArms / head）
+  // 按部位分开画（DrawOptions.part / onlyArm / skipArms）
   const skip = (side: "L" | "R") => opts.skipArms?.includes(side) ?? false;
-  if (opts.head === "only") {
-    scoped(() => {
-      headView((r, k) => {
-        look.underHead?.(ctx, r, k);
-        drawHead(ctx, r, k);
-      });
-      // 自己的手举到脸上（抹眼泪、捂脸）时本来压在头上：前面的手臂脚子以上那截再画一遍，
-      // 脖子以下不动（夹在中间的别人的胳膊照旧压在他身子和手臂上）
-      ctx.save();
-      ctx.translate(rig.neck[0], rig.neck[1]);
-      ctx.rotate(rig.chest.a);
-      ctx.beginPath();
-      ctx.rect(-4000, -8000, 8000, 8000);
-      ctx.rotate(-rig.chest.a);
-      ctx.translate(-rig.neck[0], -rig.neck[1]);
-      ctx.clip();
-      for (const side of ["R", "L"] as const) {
-        if (farBack(side) || skip(side)) continue;
-        if (front) drawForearm(ctx, rig, side, ink, opts);
-        else drawArm(ctx, rig, side, ink, opts);
-      }
-      ctx.restore();
-    });
-    return;
-  }
   if (opts.onlyArm) {
     const side = opts.onlyArm;
     scoped(() => drawArm(ctx, rig, side, ink, opts));
@@ -767,15 +743,18 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
     // 外衣上面的正面上臂：袖子盖着外衣的边
     for (const side of behind) if (over(side) && !skip(side)) drawUpperArmOver(ctx, rig, side, ink);
     look.neckFront?.(ctx, rig, ink);
-    if (opts.head !== "skip")
-      headView((r, k) => {
-        look.underHead?.(ctx, r, k);
-        drawHead(ctx, r, k);
-      });
   });
+  if (!bodyPart) return;
+  // 插在身子和头中间的东西（DrawOptions.beforeHead），再画头
+  opts.beforeHead?.(ctx);
+  scoped(() =>
+    headView((r, k) => {
+      look.underHead?.(ctx, r, k);
+      drawHead(ctx, r, k);
+    }),
+  );
   // 前面的手臂和挂在胸前的东西（围巾垂下来那头）：垂在身边、举起来的手臂在它后面（风把它吹过手臂时压在手臂上），
   // 横在胸前的前臂（抱臂、递东西、抱人）压在它上面
-  if (!bodyPart) return;
   const fronts = (["R", "L"] as const).filter((side) => !farBack(side) && !skip(side));
   const drawFront = (side: "L" | "R") => (front ? drawForearm(ctx, rig, side, ink, opts) : drawArm(ctx, rig, side, ink, opts));
   // 姿势里写了 chestL / chestR 就照写的（over 压在围巾上、under 在围巾后），没写按前臂横没横在胸前判断。
