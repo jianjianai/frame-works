@@ -1156,15 +1156,28 @@ export function drawMothers(g: CanvasRenderingContext2D, t: number, z: number) {
         g.restore();
       }
     } else {
-      // 落地以后：他画在她的身子和近处那只手臂之间
+      // 落地以后：他画在她的身子和近处那只手臂之间；那只手臂压在他身子上、被他的头挡住
+      // （用户 2026-10-30，0:52.16：「主角的胳膊需要被小石头的头遮挡，但是不能被小石头的身体遮挡」）。
+      // 按部位排先后：她（不画近处那只胳膊）→ 他的身子 → 她近处那只胳膊（他的 beforeHead）→ 他的头、举到脸上的手
+      const line = 1 / Math.sqrt(Math.max(0.3, z));
+      const chenPose = s.chen.pose;
       g.save();
       g.translate(s.chen.root[0], s.chen.root[1]);
-      drawChengtuo(g, s.chen.pose, {
-        line: 1 / Math.sqrt(Math.max(0.3, z)),
+      const chenM = g.getTransform();
+      drawChengtuo(g, chenPose, {
+        line,
+        skipArms: ["L"],
         beforeFrontArms: (cc) => {
           cc.save();
           cc.setTransform(wm);
-          drawPerson(cc, s.stone.spec, s.stone.pose, s.stone.root[0], s.stone.root[1], z);
+          drawPerson(cc, s.stone.spec, s.stone.pose, s.stone.root[0], s.stone.root[1], z, {
+            beforeHead: (c2) => {
+              c2.save();
+              c2.setTransform(chenM);
+              drawChengtuo(c2, chenPose, { line, onlyArm: "L" });
+              c2.restore();
+            },
+          });
           cc.restore();
         },
       });
