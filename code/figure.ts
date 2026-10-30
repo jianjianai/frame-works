@@ -505,7 +505,9 @@ export interface DrawOptions {
   /**
    * 在身子（连领子）之后、头之前画：插在这个人的身子和头中间的东西（真的遮挡，靠先后：这个人照常只画一遍，不裁剪）。
    * 例：从背后搂着他的人那只胳膊压在他身子上、被他的头挡住——他的 beforeHead 里画那只胳膊（onlyArm），搂他的人本身 skipArms 那只。
-   * 他自己画在头前面的手臂（抹眼泪、捂脸）照旧在头之后画
+   * 他自己画在头前面的手臂（抹眼泪、捂脸）照旧在头之后画。
+   * 后面的头发这时跟着头画（插进来的东西在整个头后面，连后脑勺），压在这个人自己的身子上：短发后面那片只在头边上，看不出来；
+   * 长发垂到背上的人不要这样用（头发会盖到自己身上）
    */
   beforeHead?: (ctx: CanvasRenderingContext2D) => void;
   /**
@@ -718,9 +720,11 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   }
   const backPart = opts.part !== "body";
   const bodyPart = opts.part !== "back";
+  // 插了 beforeHead 时后面的头发跟着头画：插进来的东西在整个头（连后脑勺）后面
+  const hairWithHead = !!opts.beforeHead && backPart && bodyPart;
   scoped(() => {
     if (backPart) {
-      headView((r, k) => look.backHair?.(ctx, r, k));
+      if (!hairWithHead) headView((r, k) => look.backHair?.(ctx, r, k));
       // 前臂在前（ArmPose.fore）的远侧手臂：这里只画上臂（和身子接成一块的画法），前臂和手最后画在前面（drawForeFront）
       for (const side of ["R", "L"] as const) {
         if (!farBack(side) || skip(side)) continue;
@@ -749,6 +753,7 @@ function render(ctx: CanvasRenderingContext2D, rig: Rig, opts: DrawOptions) {
   opts.beforeHead?.(ctx);
   scoped(() =>
     headView((r, k) => {
+      if (hairWithHead) look.backHair?.(ctx, r, k);
       look.underHead?.(ctx, r, k);
       drawHead(ctx, r, k);
     }),
