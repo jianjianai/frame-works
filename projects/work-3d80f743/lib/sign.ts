@@ -358,6 +358,8 @@ const kidMove8 = live(KID8_KEYS, KID_OPTS);
 /** 抱在胸前时木牌的中心（相对她站着时的根）：仰头以后抱得更紧一点 */
 const HUG_C: V2 = [-4, -132];
 const HUG_C2: V2 = [-8, -136];
+/** 抱着木牌时两只手比抓在木牌两边再挪多少（她自己的坐标：朝左写，往下为正）、手腕弯多少（度） */
+const HUG_HANDS = { L: [16.6, 32.4] as V2, R: [-5.4, 41.5] as V2, hL: 57.25, hR: -33.24 };
 /** 她站着时前面那只脚踝（R）离根多远：跪下去时把根往后挪，前脚钉在原地（胯往后坐到脚跟上） */
 let ANKLE0: number | null = null;
 export function kidAt8(t: number) {
@@ -381,8 +383,13 @@ export function kidAt8(t: number) {
     const up = 1 - E.io(ph(t, T.grab, T.hug));
     const eL = add(boardC, rotV([-(BOARD.w / 2 + 2), 6 - 34 * up], boardRot));
     const eR = add(boardC, rotV([BOARD.w / 2 + 2, 2 - 30 * up], boardRot));
-    kp.armL = { ...(kp.armL as object), to: loc(eL), ik: w } as PoseIn["armL"];
-    kp.armR = { ...(kp.armR as object), to: loc(eR), ik: w } as PoseIn["armR"];
+    // 抱起来以后两只手托在木牌下半截（用户 2026-10-30 在「调整画面」1:02.74 摆的，HUG_HANDS：她自己的坐标里再挪多少、手腕弯多少）
+    const hu = 1 - up;
+    const off = (p: V2, d: V2): V2 => [p[0] + d[0] * hu, p[1] + d[1] * hu];
+    const rad = Math.PI / 180;
+    kp.armL = { ...(kp.armL as object), to: off(loc(eL), HUG_HANDS.L), ik: w, h: HUG_HANDS.hL * rad * hu } as PoseIn["armL"];
+    // 远处那只（R）的前臂和手画在铁靴、木牌前面（用户 2026-10-30：「右手还是被鞋子遮挡」），上臂照旧在身子后面
+    kp.armR = { ...(kp.armR as object), to: off(loc(eR), HUG_HANDS.R), ik: w, h: HUG_HANDS.hR * rad * hu, fore: "front" } as PoseIn["armR"];
   }
   return { pose: kp, root, boardC, boardRot };
 }
@@ -433,6 +440,8 @@ export function drawSign8(g: CanvasRenderingContext2D, t: number, z: number) {
   g.restore();
   const inArms = b && (b.who === "kid" || b.who === "ground") ? b : null;
   const wk = g.getTransform();
+  // 跪下去捡、抱着木牌时近处那只手（L）压在铁靴上面（用户 2026-10-30，1:02.74：「手不要被鞋子遮挡」）：先画她（不画这只胳膊），再单画这只胳膊
+  const armOnTop = t >= T.grab - 0.12;
   drawPerson(g, KID, k.pose, k.root[0], k.root[1], z, {
     beforeFrontArms: inArms
       ? (cc: CanvasRenderingContext2D) => {
@@ -442,7 +451,9 @@ export function drawSign8(g: CanvasRenderingContext2D, t: number, z: number) {
           cc.restore();
         }
       : undefined,
+    skipArms: armOnTop ? ["L"] : undefined,
   });
+  if (armOnTop) drawPerson(g, KID, k.pose, k.root[0], k.root[1], z, { onlyArm: "L" });
 }
 
 /** 掉在半空的木牌（画在拖影后面，保持清楚） */

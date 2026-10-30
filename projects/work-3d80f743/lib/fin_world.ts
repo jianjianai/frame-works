@@ -2,6 +2,7 @@
 // 白里的妈妈、她发梢化成的光。世界坐标（街面 y = 0）。
 
 import { seeded } from "@frame/engine/math";
+import { editing } from "@frame/engine/editable";
 import { CAST, lookOf } from "@materials/剪纸角色/code/cast";
 import { type MoveKey, jointsOf } from "@materials/剪纸角色/code/chengtuo";
 import { type Cam, E, H, W, applyCam, kick, ph, toScreen } from "./cam";
@@ -286,10 +287,16 @@ export function drawMama(g: CanvasRenderingContext2D, t: number, root: V2, z: nu
     [box[0], box[1]],
     [box[2], box[3]],
   ].map(([x, y]) => M.transformPoint(new DOMPoint(x, y)));
-  const x0 = Math.floor(Math.min(pts[0].x, pts[1].x));
-  const y0 = Math.floor(Math.min(pts[0].y, pts[1].y));
-  const w = Math.ceil(Math.abs(pts[1].x - pts[0].x));
-  const h = Math.ceil(Math.abs(pts[1].y - pts[0].y));
+  // 「调整画面」里小画布从画面左上角起：人登记的坐标（骨架手柄）就是画面上的坐标
+  let x0 = Math.floor(Math.min(pts[0].x, pts[1].x));
+  let y0 = Math.floor(Math.min(pts[0].y, pts[1].y));
+  let w = Math.ceil(Math.abs(pts[1].x - pts[0].x));
+  let h = Math.ceil(Math.abs(pts[1].y - pts[0].y));
+  if (editing()) {
+    w += x0;
+    h += y0;
+    x0 = y0 = 0;
+  }
   if (w <= 0 || h <= 0) return;
   const c = (cv.c ??= document.createElement("canvas"));
   if (c.width < w || c.height < h) {

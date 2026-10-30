@@ -153,8 +153,8 @@ function drawBootsFromAbove(g: CanvasRenderingContext2D) {
     g.restore();
   }
 }
-/** 一只小手和前臂：从画面底下伸上来，手指扣着砖的一头（grip：0 张着，1 攥住） */
-function drawHand(g: CanvasRenderingContext2D, from: V2, hand: V2, side: -1 | 1, grip: number) {
+/** 一只小手和前臂：从画面底下伸上来，圆圆的手压在砖的一头上 */
+function drawHand(g: CanvasRenderingContext2D, from: V2, hand: V2) {
   const dx = hand[0] - from[0];
   const dy = hand[1] - from[1];
   const len = Math.hypot(dx, dy);
@@ -178,28 +178,10 @@ function drawHand(g: CanvasRenderingContext2D, from: V2, hand: V2, side: -1 | 1,
   wrist.lineTo(len - 100, 40);
   wrist.closePath();
   part(g, wrist, SKIN, SKIN_SH, 5, [4, 4]);
-  // 手掌和四个手指（扣在砖的一头上：手指弯过去盖住砖边）
-  const palm = new Path2D();
-  palm.ellipse(len - 10, 0, 62, 54, 0, 0, Math.PI * 2);
-  part(g, palm, SKIN, SKIN_SH, 5, [5, 5]);
-  for (let i = 0; i < 4; i++) {
-    const fy = -36 + i * 24;
-    const curl = grip * 0.9;
-    const f = new Path2D();
-    const fl = [46, 54, 50, 40][i];
-    f.moveTo(len + 30, fy - 10);
-    f.quadraticCurveTo(len + 30 + fl * (1 - 0.4 * curl), fy - 12, len + 30 + fl * (1 - 0.6 * curl), fy + 4 + 14 * curl);
-    f.quadraticCurveTo(len + 30 + fl * 0.5, fy + 14, len + 30, fy + 10);
-    f.closePath();
-    part(g, f, SKIN, SKIN_SH, 4.5, [3, 3]);
-  }
-  // 大拇指（压在砖的正面）
-  const th = new Path2D();
-  th.moveTo(len - 20, side * 40);
-  th.quadraticCurveTo(len + 20, side * 74, len + 52, side * 58);
-  th.quadraticCurveTo(len + 30, side * 36, len - 6, side * 26);
-  th.closePath();
-  part(g, th, SKIN, SKIN_SH, 4.5, [3, 3]);
+  // 手：不画手指，一个描边的肤色圆压在砖的一头上（用户 2026-10-30，1:45.46：「这里就不画手指了，用圆圈代替就行」）
+  const fist = new Path2D();
+  fist.arc(len, 0, 60, 0, Math.PI * 2);
+  part(g, fist, SKIN, SKIN_SH, 5, [5, 5]);
   g.restore();
 }
 /** 两滴眼泪：从画面上面（他的脸）掉下来，砸在字上洇开 */
@@ -280,13 +262,12 @@ export function drawPov(g: CanvasRenderingContext2D, base: DOMMatrix, t: number)
     const sn = Math.sin(b.rot);
     const endL: V2 = [b.c[0] - (b.w / 2) * cs - 6, b.c[1] - (b.w / 2) * sn];
     const endR: V2 = [b.c[0] + (b.w / 2) * cs + 6, b.c[1] + (b.w / 2) * sn];
-    const grip = E.io(ph(t, TE.grab - 0.06, TE.grab + 0.08));
     const fromL: V2 = mix([80, 2100], [120, 1950], blur);
     const fromR: V2 = mix([1000, 2100], [960, 1950], blur);
     const handL = mix([150, 1950], endL, reach);
     const handR = mix([930, 1950], endR, reach);
-    drawHand(g, fromL, handL, 1, grip);
-    drawHand(g, fromR, handR, -1, grip);
+    drawHand(g, fromL, handL);
+    drawHand(g, fromR, handR);
   }
   // 暗角、暖光
   g.setTransform(base);

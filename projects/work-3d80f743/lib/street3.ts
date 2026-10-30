@@ -257,20 +257,21 @@ const AMAN_P = {
     ...armL(158, 26, 0, "open", l),
     ...armR(140, 34, 0, "open", l),
   })),
-  /** 被拽下来、往后一仰要坐下去：膝盖弯起来，两只手往后撑 */
+  /** 被拽下来、往后一仰要坐下去：膝盖弯起来，近处那只手往后撑，远处那只举起来朝她伸着（用户 2026-10-30 在「调整画面」里摆的 1:27.37） */
   跌: pose(-16, { face: 0.45, ground: false, ...legL(120, -120, 0), ...legR(132, -128, 0), neck: 12, expression: "惊", lookX: 0.4, lookY: -0.5 }, (l) => ({
     ...armL(-50, 20, 0, "open", l),
-    ...armR(-40, 24, 0, "open", l),
+    ...armR(122, -33, 0, "open", l),
   })),
-  /** 坐在街上：膝盖立起来，两只手往后撑着地，仰头看着她 */
+  /** 坐在街上：膝盖立起来，近处那只搭在膝盖上，仰头看着她；远处那只从伸着（跌）直接收向嘴边（笑），不先甩下去撑地 */
   坐: pose(-4, { face: 0.45, ground: false, ...legL(146, -136, 0), ...legR(150, -142, 0), neck: 20, expression: "含泪", lookX: 0.4, lookY: -0.7 }, (l) => ({
-    ...armL(-34, 22, 0, "open", l),
-    ...armR(-44, 22, 0, "open", l),
+    ...armL(36, 72, -60, "relax", l),
+    ...armR(60, 130, 0, "open", l),
   })),
-  /** 看着她，哭着笑 */
+  /** 看着她，哭着笑：远处那只手捂着嘴，近处那只搭在立起来的膝盖上（用户 2026-10-30 在「调整画面」里摆的 1:27.97；
+   * 之前近处那只搭在膝盖上、远处那只撑着地，更早垂在胯边、手从外套里戳出来） */
   笑: pose(-2, { face: 0.45, ground: false, ...legL(146, -136, 0), ...legR(150, -142, 0), neck: 24, expression: "哭着笑", lookX: 0.4, lookY: -0.8 }, (l) => ({
-    ...armL(-28, 24, 0, "relax", l),
-    ...armR(-40, 22, 0, "open", l),
+    ...armL(14, 65, 15, "relax", l),
+    ...armR(92, 156, 0, "open", l),
   })),
 };
 const amanMove = live(
@@ -802,8 +803,9 @@ function stoneAt(t: number, chen: ReturnType<typeof chenAt>): { pose: PoseIn; ro
   const w = E.io(ph(t, T.jump + 0.05, T.hug)) * (1 - E.io(ph(t, WK.let - 0.06, WK.let + 0.12)));
   const face = (p.face as number | undefined) ?? 0;
   const loc = (q: V2): V2 => [((face > 0 ? -1 : 1) * (q[0] - root[0])) / k, (q[1] - root[1]) / k];
-  p.armL = { ...(p.armL as object), to: loc([hold[0] - 12, hold[1] + 4]), ik: w, chest: "over" } as PoseIn["armL"];
-  p.armR = { ...(p.armR as object), to: loc([hold[0] + 10, hold[1] - 4]), ik: w } as PoseIn["armR"];
+  // 肘朝下（用户 2026-10-30，1:27.39：抱着她的腰时两只胳膊拱成倒 V）
+  p.armL = { ...(p.armL as object), to: loc([hold[0] - 12, hold[1] + 4]), ik: w, chest: "over", bend: "down" } as PoseIn["armL"];
+  p.armR = { ...(p.armR as object), to: loc([hold[0] + 10, hold[1] - 4]), ik: w, bend: "down" } as PoseIn["armR"];
   // ⑥ 被她牵住的那只手（近处那只）跟着两只手牵着的地方走
   if (t >= MS.grab) p.armL = { ...(p.armL as object), to: loc(claspAt(t)), ik: 1, chest: "over" } as PoseIn["armL"];
   return { pose: p, root, lift: Math.max(0, groundY - root[1]) };

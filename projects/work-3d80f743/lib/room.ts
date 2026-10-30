@@ -7,6 +7,7 @@
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
 import { E, ph } from "./cam";
 import { beatAt } from "@frame/engine/tempo";
+import { keyframes } from "@frame/engine/keyframes";
 import { COLORS as CHEN_COLORS } from "@materials/剪纸角色/code/chengtuo-draw";
 import { BOOT } from "@materials/剪纸角色/code/chengtuo-costume";
 import { REST, cubicPath, toLocal } from "@materials/剪纸角色/code/figure";
@@ -121,26 +122,31 @@ const ROW: [number, number, string][] = [
 
 /** 她写字时坐着：胯在椅面上一点 */
 const HIP: V2 = [ROOM.chair.x - 6, ROOM.chair.seat - 22];
+/** ⑨⑩ 坐着时整个人再挪多少（角色单位：往右、往下；用户 2026-10-30 在「调整画面」0:32.30 挪的，两次加起来） */
+const SIT_DX = 12.94 - 28.42;
+const SIT_DY = -11.75;
 
 // ——— 她：坐在椅子上朝左伏在桌上写砖（铁靴踩在地上，手套摘了） ———
 const chenMove = live(
   [
     { t: 0, x: 0, items: { bricks: 0, gloves: false }, p: CHEN2.写字 },
     { t: 32.0, p: CHEN2.写字 },
-    // ⑨ 笔悬在空白的砖面上想一想：头歪一点
-    { t: 32.5, ease: "inOut", p: { ...CHEN2.写字, neck: -26, headTurn: 0.1, lookX: -0.45, lookY: 0.85 } },
+    // ⑨ 笔悬在空白的砖面上想一想：头歪一点（头、腰的量都是相对写字姿势的：2026-10-30 写字姿势坐直了，前倾 24 → 14、头 −30 → −13.5）
+    { t: 32.5, ease: "inOut", p: { ...CHEN2.写字, neck: -9.5, headTurn: 0.1, lookX: -0.45, lookY: 0.85 } },
     { t: 32.8, ease: "inOut", p: CHEN2.写字 },
     { t: 33.66, p: CHEN2.写字 },
     // 写完：嘴角动了一下
-    { t: 33.86, ease: "out", p: { ...CHEN2.写字, neck: -24, smile: 0.35, lookY: 0.8 } },
+    { t: 33.86, ease: "out", p: { ...CHEN2.写字, neck: -7.5, smile: 0.35, lookY: 0.8 } },
     // ⑩ 放下笔，坐直一点，看着写好的那块砖（嘴角带一点笑）
-    { t: 34.05, p: { ...CHEN2.写字, neck: -24, smile: 0.35, lookY: 0.8 } },
-    { t: TEN_T.look, ease: "inOut", p: { ...CHEN2.写字, lean: 18, neck: -22, smile: 0.5, lookX: -0.3, lookY: 0.75 } },
-    { t: TEN_T.grab - 0.12, p: { ...CHEN2.写字, lean: 20, neck: -22, smile: 0.5, lookX: -0.3, lookY: 0.8 } },
+    { t: 34.05, p: { ...CHEN2.写字, neck: -7.5, smile: 0.35, lookY: 0.8 } },
+    { t: TEN_T.look, ease: "inOut", p: { ...CHEN2.写字, upperArmR: 1, lean: 10, neck: -5.5, smile: 0.5, lookX: -0.3, lookY: 0.75 } },
+    // 凑过去捧砖（坐得直、离桌子远，不凑过去两只胳膊就伸得笔直）
+    // （写字时握笔那只上臂朝镜头压短 upperArmR 0.62，放下笔、看着砖时回到原长）
+    { t: TEN_T.grab - 0.12, p: { ...CHEN2.写字, upperArmR: 1, lean: 20, neck: -12, smile: 0.5, lookX: -0.3, lookY: 0.8 } },
     // 捧起来抱进怀里、坐直，闭上眼笑（像许了个愿：「妄想用它拯救你」）
-    { t: TEN_T.lift - 0.1, ease: "inOut", p: { ...CHEN2.写字, lean: 6, neck: -10, smile: 0.7, lookX: -0.4, lookY: 0.6 } },
-    { t: TEN_T.lift + 0.12, ease: "out", p: { ...CHEN2.写字, lean: 4, neck: -14, expression: "闭眼", smile: 0.85 } },
-    { t: 36, p: { ...CHEN2.写字, lean: 3, neck: -15, expression: "闭眼", smile: 0.9 } },
+    { t: TEN_T.lift - 0.1, ease: "inOut", p: { ...CHEN2.写字, upperArmR: 1, lean: 6, neck: -10, smile: 0.7, lookX: -0.4, lookY: 0.6 } },
+    { t: TEN_T.lift + 0.12, ease: "out", p: { ...CHEN2.写字, upperArmR: 1, lean: 4, neck: -14, expression: "闭眼", smile: 0.85 } },
+    { t: 36, p: { ...CHEN2.写字, upperArmR: 1, lean: 3, neck: -15, expression: "闭眼", smile: 0.9 } },
     // ⑫ 回来了：坐在椅子上拔靴子 → 脚一抽（靴子掉下去）→ 收腿、一脚踢掉另一只 → 松一口气，飘起来 → 转成横着躺进床里
     { t: TWELVE_T.start, p: CHEN2.脱靴 },
     { t: TWELVE_T.off1 - 0.03, ease: "inOut", p: { ...CHEN2.脱靴, lean: 57 } },
@@ -327,7 +333,41 @@ export function drawPen(g: CanvasRenderingContext2D, palm: V2, tip: V2, lw = LW)
 }
 
 /** 她这一刻的姿势、根（屋子坐标），两只手按 IK 放好：写字时近处那只握着笔、远处那只按着砖；⑩ 两只手捧着那块砖 */
-export function roomChen(t: number) {
+/**
+ * ⑩ 抱在胸前的那块「活下去」放在哪：登记成关键帧对象（用户 2026-10-30：「这一幕把砖注册进去让我可以调整位置」），
+ * 「调整画面」里拖它、打关键帧（写进 keys.json 的场景 act2；手柄在 lib/room-brick-editor.ts）。
+ * x、y：抱在胸前时砖底边中点相对她两肩中点的位置（她自己的坐标：朝左写，往右、往下为正；用户 2026-10-30 在 0:35.58 挪到 (−2.7, 78.9)，原来 (−30, 92)）；rot：砖转多少度（顺时针为正）。
+ * 从桌上捧起来的路上按捧起来了多少渐变过去，放在桌上时不起作用；两只手抓着砖的两头，跟着砖走
+ */
+const BRICK_HOLD = keyframes("act2").object<BrickHold>("砖「活下去」", { x: -2.7, y: 78.9, rot: 0 }, {
+  params: {
+    x: { label: "抱着时离两肩中点（往右）", step: 1 },
+    y: { label: "抱着时离两肩中点（往下）", step: 1 },
+    rot: { label: "转角（度，顺时针）", min: -90, max: 90, step: 1 },
+  },
+});
+export interface BrickHold {
+  x: number;
+  y: number;
+  rot: number;
+}
+/** lib/room-brick-editor.ts 摆手柄用的：原来的值画出来砖的中心、值挪 1 画面上挪多少（k）、捧起来了多少（u）、转砖的圆点离中心多远 */
+export interface BrickEditData {
+  c0: V2;
+  k: number;
+  u: number;
+  r: number;
+}
+export interface RoomChen {
+  pose: PoseIn;
+  root: V2;
+  /** 正在写的那块砖：底边中点、转角（弧度，绕砖的中心） */
+  brick: V2;
+  brickRot?: number;
+}
+
+/** hold：⑩ 抱着的砖放在哪（不给就按关键帧，见 BRICK_HOLD） */
+export function roomChen(t: number, hold: BrickHold = BRICK_HOLD.at(t)): RoomChen {
   const T = TEN_T;
   const pose: PoseIn = { ...chenMove(t).pose };
   const S = ROOM.s;
@@ -349,8 +389,11 @@ export function roomChen(t: number) {
     pose.gravity = [-Math.sin(r) * (1 - 2 * fl), Math.cos(r) * (1 - 2 * fl)];
     return { pose, root: [hip[0] - j.hip[0] * S, hip[1] - j.hip[1] * S] as V2, brick: [-9999, -9999] as V2 };
   }
-  // 坐着：胯钉在椅面上；站起来：靴底踩在地板上；跑：根贴着地板往左（起步 0.12 秒加速到每秒 2100）
-  let root: V2 = [HIP[0] - j0.hip[0] * S, HIP[1] - j0.hip[1] * S];
+  // 坐着：胯钉在椅面上（再挪 SIT_DX / SIT_DY：用户 2026-10-30 在「调整画面」0:32.30 挪的）；站起来：靴底踩在地板上；跑：根贴着地板往左（起步 0.12 秒加速到每秒 2100）
+  // 大腿朝镜头压短（thighL / thighR）时靴子留在原地、人往下坐一点（同「调整画面」：最低的那只脚不动）
+  const full = jointsOf({ ...pose, legL: { ...(pose.legL as object), thighK: 1 }, legR: { ...(pose.legR as object), thighK: 1 } });
+  const sink = Math.max(full.ankleL[1], full.ankleR[1]) - Math.max(j0.ankleL[1], j0.ankleR[1]);
+  let root: V2 = [HIP[0] - j0.hip[0] * S + SIT_DX * S, HIP[1] - j0.hip[1] * S + (sink + SIT_DY) * S];
   const ks = E.io(ph(t, T.stand0, T.stand1));
   const standY = ROOM.floor - soleOf(pose) * S;
   if (ks > 0) root = mixV(root, [STAND_X, standY], ks);
@@ -361,41 +404,79 @@ export function roomChen(t: number) {
   }
   const loc = (p: V2): V2 => [(p[0] - root[0]) / S, (p[1] - root[1]) / S];
   const B = ROOM.brick;
+  // 近处那只手扶在砖的右头（⑨⑩ 一直在这里）
+  const desk: V2 = [B.x + B.w / 2 + 54, B.y - 36];
   if (t < T.penDown) {
     const tip = penTip(t);
-    // 握笔的手：手腕在笔尖右上方（笔斜着握），肘往下垂（胳膊从右上方伸过来，不横过脸）
-    pose.armL = { ...(pose.armL as object), to: loc([tip[0] + 34, tip[1] - 44]), ik: 1, bend: 1 };
-    // 按着砖的手：扶在砖的右头外面（不挡着写的字）
-    pose.armR = { ...(pose.armR as object), to: loc([B.x + B.w / 2 + 26, B.y - B.h - 22]), ik: 1 };
+    // 握笔的是远处那只手（用户 2026-10-30 在「调整画面」0:32.30 摆的）：手腕在笔尖右上方（笔斜着握），肘往下垂
+    pose.armR = { ...(pose.armR as object), to: loc([tip[0] + 106, tip[1] - 34]), ik: 1, bend: "down" };
+    pose.armL = { ...(pose.armL as object), to: loc(desk), ik: 1, bend: "down" };
     return { pose, root, brick: [B.x, B.y - 8] as V2 };
   }
-  // ⑩ 放下笔以后：坐着，近处那只手搁在桌上砖的旁边，远处那只还扶着砖
+  // ⑩ 放下笔以后：坐着，两只手都搁在桌上砖的右边（远处那只挨着砖；原来扶在砖的右头上面，坐直以后手从下面伸过来，手指翘起来像在招手）；
+  // 看着砖笑的时候两只手伸过去按在砖上（REACH_HANDS），「词」捧起来
+  const rad = Math.PI / 180;
   if (t < T.grab) {
-    pose.armL = { ...(pose.armL as object), to: loc([B.x + B.w / 2 + 70, B.y - 18]), ik: 1, bend: 1 };
-    pose.armR = { ...(pose.armR as object), to: loc([B.x + B.w / 2 + 26, B.y - B.h - 22]), ik: 1 };
+    const k = E.io(ph(t, T.look - 0.1, T.look + 0.2));
+    const c: V2 = [B.x, B.y - 8 - B.h / 2];
+    const on = (o: V2): V2 => [c[0] + o[0], c[1] + o[1]];
+    const arR = pose.armR as { h?: number };
+    pose.armL = { ...(pose.armL as object), to: loc(mixV(desk, on(REACH_HANDS.L), k)), ik: 1, bend: "down" };
+    pose.armR = {
+      ...(pose.armR as object),
+      to: loc(mixV([B.x + B.w / 2 + 34, B.y - 20], on(REACH_HANDS.R), k)),
+      ik: 1,
+      // 搁在桌上时肘朝下；伸到砖上那一刻（T.look + 0.2）胳膊是直的，在这里换成托砖的弯法（HOLD_HANDS 那样肘往外拐），捧起来时不翻
+      bend: t < T.look + 0.2 ? "down" : 1,
+      h: (arR.h ?? 0) + (REACH_HANDS.hR * rad - (arR.h ?? 0)) * k,
+      shape: "relax",
+    };
     return { pose, root, brick: [B.x, B.y - 8] as V2 };
   }
-  // （不用了）捧砖（两只手伸到砖的两头）→ 抱到胸前，一直扶着
-  const bp = brickPos(t, pose, root);
-  const w = E.io(ph(t, T.grab - 0.16, T.grab));
-  pose.armL = { ...(pose.armL as object), to: loc([bp[0] + 50, bp[1] - 24]), ik: w };
-  pose.armR = { ...(pose.armR as object), to: loc([bp[0] - 50, bp[1] - 24]), ik: w };
-  return { pose, root, brick: bp };
+  // 捧起来 → 抱在胸前：两只手相对砖的位置从「按在桌上的砖上」渐变到「托着」（HOLD_HANDS），砖转了跟着转；
+  // 两只手都画在砖前面（用户 2026-10-30：「把手放在砖的前面」）：近处那只压在砖（和围巾）上，远处那只前臂和手画到砖前面
+  const bp = brickPos(t, pose, root, hold);
+  const u = liftK(t);
+  const grip = (a: V2, b: V2): V2 => {
+    const o = mixV(a, b, u);
+    const cs = Math.cos(bp.rot);
+    const sn = Math.sin(bp.rot);
+    return [bp.at[0] + o[0] * cs - o[1] * sn, bp.at[1] - B.h / 2 + o[0] * sn + o[1] * cs];
+  };
+  const hL = (pose.armL as { h?: number }).h ?? 0;
+  pose.armL = { ...(pose.armL as object), to: loc(grip(REACH_HANDS.L, HOLD_HANDS.L)), ik: 1, h: hL + (HOLD_HANDS.hL * rad - hL) * u, shape: "grip", chest: "over" };
+  pose.armR = {
+    ...(pose.armR as object),
+    to: loc(grip(REACH_HANDS.R, HOLD_HANDS.R)),
+    ik: 1,
+    h: (REACH_HANDS.hR + (HOLD_HANDS.hR - REACH_HANDS.hR) * u) * rad,
+    shape: "relax",
+    fore: "front",
+  };
+  return { pose, root, brick: bp.at, brickRot: bp.rot };
 }
-/** 那块「活下去」在哪（底边中点）：桌上 → 捧起来 → 抱在胸前（跟着她的胸口） */
-function brickPos(t: number, pose: PoseIn, root: V2): V2 {
+/**
+ * ⑩ 两只手的手腕相对那块砖的中心（屋子坐标，砖转了跟着转）、手腕弯多少（度）。用户 2026-10-30 在「调整画面」摆的：
+ * 按在桌上的砖上（0:34.60：近处那只在右头外、远处那只按在砖的左上，胳膊伸直）；抱在胸前托着（0:35.58：两只手从下面托着两头）
+ */
+const REACH_HANDS = { L: [96.7, 4.6] as V2, R: [-8.3, -30.8] as V2, hR: -13.55 };
+const HOLD_HANDS = { L: [64.7, 18.8] as V2, R: [-41.4, 27.3] as V2, hL: 41.74, hR: -30.52 };
+/** 捧起来了多少：桌上 0 → 抱在胸前 1 */
+const liftK = (t: number) => E.io(ph(t, TEN_T.grab, TEN_T.lift));
+/** 那块「活下去」在哪（底边中点）、转了多少（弧度）：桌上 → 捧起来 → 抱在胸前（跟着她的胸口，位置见 BRICK_HOLD） */
+function brickPos(t: number, pose: PoseIn, root: V2, hold: BrickHold): { at: V2; rot: number } {
   const T = TEN_T;
   const B = ROOM.brick;
   const desk: V2 = [B.x, B.y - 8];
-  if (t <= T.grab) return desk;
+  if (t <= T.grab) return { at: desk, rot: 0 };
   const j = jointsOf(pose);
   const S = ROOM.s;
   // 抱进怀里：贴在胸口（她朝左，前面是 −x）；捧起来先抬一点再收进怀里，抱住那一下往怀里紧一紧
-  const chest: V2 = [root[0] + ((j.shoulderL[0] + j.shoulderR[0]) / 2 - 30) * S, root[1] + ((j.shoulderL[1] + j.shoulderR[1]) / 2 + 92) * S];
-  const u = E.io(ph(t, T.grab, T.lift));
+  const chest: V2 = [root[0] + ((j.shoulderL[0] + j.shoulderR[0]) / 2 + hold.x) * S, root[1] + ((j.shoulderL[1] + j.shoulderR[1]) / 2 + hold.y) * S];
+  const u = liftK(t);
   const p = mixV(desk, chest, u);
   const squeeze = 6 * Math.sin(Math.PI * ph(t, T.lift - 0.05, T.lift + 0.25));
-  return [p[0] + squeeze, p[1] - 30 * Math.sin(Math.PI * u)];
+  return { at: [p[0] + squeeze, p[1] - 30 * Math.sin(Math.PI * u)], rot: ((hold.rot * Math.PI) / 180) * u };
 }
 
 // ——— 画 ———
@@ -1161,16 +1242,40 @@ export function drawRoom(g: CanvasRenderingContext2D, t: number, on: number, lw 
   desk(g);
   // 桌上：一摞还没写的砖（台灯旁边）、正在写的那块（⑩ 捧起来以后跟着她）
   for (let i = 0; i < 3; i++) brickAt(g, 238, R.desk.top - 8 - i * 40, 112, 40, "");
-  const c = roomChen(t);
   const B = R.brick;
+  const inHands = t > TEN_T.grab && t < TWELVE_T.start;
+  // ⑩ 抱着的那块砖登记给「调整画面」（关键帧对象 BRICK_HOLD）：用它返回的值算她的手、画砖
+  let hold: BrickHold | undefined;
+  if (inHands && !AWAY) {
+    const at = (v: BrickHold): V2 => {
+      const b = roomChen(t, v).brick;
+      return [b[0], b[1] - B.h / 2];
+    };
+    const base = BRICK_HOLD.at(t);
+    const u = Math.max(0.05, liftK(t));
+    const data: BrickEditData = { c0: at(base), k: u * R.s, u, r: B.w / 2 + 28 };
+    hold = BRICK_HOLD.edit(t, {
+      ctx: g,
+      editor: () => import("./room-brick-editor"),
+      bounds: (v) => {
+        const p = at(v);
+        return [p[0] - B.w / 2 - 6, p[1] - B.h / 2 - 6, B.w + 12, B.h + 12];
+      },
+      data,
+      about: "lib/room.ts 的 BRICK_HOLD：抱在胸前时砖相对她两肩中点的位置（她的坐标）和转角，关键帧在 keys.json 的场景 act2",
+    });
+  }
+  const c = roomChen(t, hold);
   const workBrick = (gg: CanvasRenderingContext2D) => {
     gg.save();
-    gg.translate(c.brick[0] - B.x, c.brick[1] - (B.y - 8));
+    // 绕砖的中心转（抱着时 BRICK_HOLD.rot）
+    gg.translate(c.brick[0], c.brick[1] - B.h / 2);
+    gg.rotate(c.brickRot ?? 0);
+    gg.translate(-B.x, -(B.y - 8 - B.h / 2));
     brickAt(gg, B.x, B.y - 8, B.w, B.h, "");
     drawWritten(gg, t);
     gg.restore();
   };
-  const inHands = t > TEN_T.grab && t < TWELVE_T.start;
   if (t <= TEN_T.grab) workBrick(g);
   if (t >= TEN_T.penDown && AWAY?.pen !== false) penOnDesk(g);
   lamp(g, on);
@@ -1221,9 +1326,9 @@ export function drawRoom(g: CanvasRenderingContext2D, t: number, on: number, lw 
   doorFront(g, t);
   AWAY?.front?.(g);
   if (t < TEN_T.penDown) {
-    // 两块五的签字笔：笔尖在砖上，笔杆压在手心里
+    // 两块五的签字笔：笔尖在砖上，笔杆压在手心里（握笔的是远处那只手 R）
     const j = jointsOf(c.pose);
-    const palm: V2 = [c.root[0] + j.palmL[0] * R.s, c.root[1] + j.palmL[1] * R.s];
+    const palm: V2 = [c.root[0] + j.palmR[0] * R.s, c.root[1] + j.palmR[1] * R.s];
     drawPen(g, palm, penTip(t));
   }
   light(g, on);

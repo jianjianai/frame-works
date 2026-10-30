@@ -178,7 +178,21 @@ export const HER = {
     ...armL(40, 70, 0, "grip", l),
     ...armR(50, 80, 0, "grip", l),
   })),
-  /** 把他放下来：弯一点腰，两只手扶着他 */
+  /**
+   * 把他放下来（用户 2026-10-29 重做，2:26.23：「把这段把小石头放下来的动作重做一下」——原来直着腿只弯一点腰，他悬在半空斜着滑到地上）：
+   * 落地的势接着屈膝蹲下（两条大腿都往前压，不是弓步：后腿往后伸的话看上去像往左跨了一大步），后脚跟稍微抬起，身子往前探，抱着他一起低下去。
+   * 大腿朝前压、3/4 侧面里有透视缩短（thigh 0.7，用户 2026-10-29：「下蹲的时候腿太长了」）；没写的字段会沿用上一帧，直起身的 站弓 要写回 thigh 1
+   */
+  蹲放: pose(30, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(56, -90), ...legL(52, -86, -20), thighR: 0.68, thighL: 0.68, neck: -22, expression: "哭着笑", tears: 1, lookX: 0.3, lookY: 0.8 }, (l) => ({
+    ...armL(40, 70, 0, "grip", l),
+    ...armR(50, 80, 0, "grip", l),
+  })),
+  /** 他站稳了：还蹲着，两只手扶着他的肩膀和背（IK，lib/end_pair.ts），看着他笑。姿势里的胳膊是垂着的：直起身松手时手落回这里，胳膊不被弹簧甩出去 */
+  蹲扶: pose(26, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(54, -88), ...legL(50, -84, -20), thighR: 0.7, thighL: 0.7, neck: -12, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.3 }, (l) => ({
+    ...armL(8, 20, 0, "relax", l),
+    ...armR(10, 24, 0, "relax", l),
+  })),
+  /** 把他放下来：弯一点腰，两只手扶着他（2026-10-29 换成 蹲放 / 蹲扶，不用了） */
   放下: pose(26, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(16, -20), ...legL(-6, -10), neck: -20, expression: "哭着笑", tears: 1, lookX: 0.3, lookY: 0.8 }, (l) => ({
     ...armL(30, 30, 0, "open", l),
     ...armR(40, 30, 0, "open", l),
@@ -268,7 +282,7 @@ export const HER = {
     ...armR(12, 24, 0, "relax", l),
   })),
   /** 站起来了：前脚还踩在原地（弓步），看着他 */
-  站弓: pose(3, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(22, -8), ...legL(-12, -8), neck: -8, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.3 }, (l) => ({
+  站弓: pose(3, { face: 0.4, ground: true, lift: 0, float: 0, ...legR(22, -8), ...legL(-12, -8), thighR: 1, thighL: 1, neck: -8, expression: "哭着笑", tears: 1, lookX: 0.4, lookY: 0.3 }, (l) => ({
     ...armL(8, 20, 0, "relax", l),
     ...armR(10, 24, 0, "relax", l),
   })),
@@ -404,13 +418,16 @@ export const KID = {
   挣: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 30, expression: "坚定", tears: 1, lookX: -0.3, lookY: -1 }, (l) => UPB(l, 168)),
   /** 低头看见街上的人一个个抓上来：哭着笑 */
   看人: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: -24, expression: "哭着笑", tears: 1, lookX: 0.1, lookY: 0.9 }, (l) => UPB(l, 150)),
-  /** 第三声前抬起头找她（白的边上，左上）：近处那只手抱着砖，远处那只伸上去 */
-  找她: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 30, expression: "含泪", tears: 1, sad: 0.8, lookX: -0.4, lookY: -1 }, (l) => UPB(l, 158)),
+  /**
+   * 第三声前抬起头找她（白的边上，左上）：近处那只手抱着砖，远处那只伸上去。镜头推到他脸上（3.2 倍），整个人转正 8°
+   * （rot −8：被攥着的那条腿、身子竖直，只有仰起的头往后；用户 2026-10-30，2:02.40「镜头歪了」——原来从脚踝到头斜 15°，推近了像镜头歪）
+   */
+  找她: pose(-6, { face: -0.7, rot: -8, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 30, expression: "含泪", tears: 1, sad: 0.8, lookX: -0.4, lookY: -1 }, (l) => UPB(l, 158)),
   /**
    * 第三声「活」：朝她拼命喊（第三声「活下去」就是他喊的）——远处那只手伸直了够她，哭着张大嘴；
    * 和他看着妈妈飘走时喊她、七岁的她喊妈妈是同一个样子
    */
-  喊: pose(-8, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(22, -48, -44), neck: 36, expression: "吓一跳", wide: 0.3, sad: 1, tears: 1, open: 0.85, squint: 0.35, lookX: -0.45, lookY: -1 }, (l) => UPB(l, 172)),
+  喊: pose(-8, { face: -0.7, rot: -8, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(22, -48, -44), neck: 36, expression: "吓一跳", wide: 0.3, sad: 1, tears: 1, open: 0.85, squint: 0.35, lookX: -0.45, lookY: -1 }, (l) => UPB(l, 172)),
   /** 两只手把砖举过头顶朝着她（「活下去」朝外） */
   举砖: pose(-6, { face: -0.7, ground: false, float: 0.2, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 30, expression: "坚定", tears: 1, lookX: -0.3, lookY: -1 }, RAISED),
   /** 用力往左把砖递给她：身子朝她探过去，两只胳膊伸直（手 IK 在砖上），腿往后甩，咬着牙哭 */
@@ -459,6 +476,10 @@ export const KID = {
   高处: pose(-4, { face: -0.7, ground: false, float: 0.3, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: -12, expression: "哭着笑", tears: 1, lookX: 0.2, lookY: 0.7 }, HUGB),
   /** 抱着砖仰头找她 */
   高处仰: pose(-6, { face: -0.7, ground: false, float: 0.3, ...legR(2, -2, -30), ...legL(18, -40, -44), neck: 28, expression: "含泪", tears: 1, lookX: -0.4, lookY: -1 }, HUGB),
+  /** 被放下来：两条腿往下伸，脚尖朝下去够地，睁开眼看着她 */
+  伸脚: pose(2, { face: -0.7, ground: false, float: 0.05, ...legR(4, -8, -40), ...legL(-3, -6, -44), neck: 10, expression: "哭着笑", tears: 1, lookX: -0.3, lookY: -0.2 }, HUGB),
+  /** 脚着地：膝盖一软、身子往下一沉 */
+  站落: pose(4, { face: -0.7, ground: true, lift: 0, float: 0, ...legR(16, -30), ...legL(4, -26), neck: 12, expression: "哭着笑", tears: 1, lookX: -0.3, lookY: -0.4 }, HUGB),
   /** 落回街上，被放下来：站着，仰头看她 */
   站看: pose(-2, { face: -0.7, ground: true, lift: 0, float: 0, ...legR(6, -6), ...legL(-4, -2), neck: 16, expression: "哭着笑", tears: 1, lookX: -0.3, lookY: -0.6 }, HUGB),
   /** 站在她旁边，牵着她的手 */

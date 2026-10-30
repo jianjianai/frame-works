@@ -1,10 +1,11 @@
-// 城：暖光电影感的老城区。六层居民楼、防飘栏（窗外的铁笼）、空调外机、太阳能热水器、晾衣杆、电线、梧桐；
+// 城：暖光电影感的老城区。六层居民楼、防飘栏（窗外的铁笼）、太阳能热水器、晾衣杆、电线、梧桐；
 // 傍晚的太阳在左上方，斜着照进来：楼和街上有一道道斜的影子（楼缝里漏下来的光），影子是偏紫的暖灰，不压暗、不发黑；
 // 空气里飘着发亮的浮尘（就是「灰」），越远的楼越淡、越暖，只剩剪影和几点亮着的窗；天顶是发光的「白」，下沿一圈肥皂泡似的彩光。
 // 近处的东西和人物一样：深色描边、平涂、右下一道阴影。
 // 坐标：世界单位和人物一样（人 s = 1 时 590 高），街面 y = 0，往上是负；远处的层按 D 投影（见 cam.ts）。
 
 import { seeded } from "@frame/engine/math";
+import { editing } from "@frame/engine/editable";
 import { type Cam, H, W, applyCam, clamp01, toScreen, viewOf } from "./cam";
 
 export const INK = "#2e2530";
@@ -76,10 +77,12 @@ export function drawTinted(g: CanvasRenderingContext2D, box: [number, number, nu
   ].map(([x, y]) => M.transformPoint(new DOMPoint(x, y)));
   const cw = g.canvas.width;
   const ch = g.canvas.height;
-  const x0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p.x))));
-  const y0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p.y))));
+  let x0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p.x))));
+  let y0 = Math.max(0, Math.floor(Math.min(...pts.map((p) => p.y))));
   const x1 = Math.min(cw, Math.ceil(Math.max(...pts.map((p) => p.x))));
   const y1 = Math.min(ch, Math.ceil(Math.max(...pts.map((p) => p.y))));
+  // 「调整画面」里小画布从画面左上角起：人登记的坐标（骨架手柄）就是画面上的坐标，不然手柄和人错开一截
+  if (editing()) x0 = y0 = 0;
   const w = x1 - x0;
   const h = y1 - y0;
   if (w <= 0 || h <= 0) return;
@@ -289,9 +292,6 @@ interface Geom {
   shelves: Path2D;
   pots: Path2D;
   leaves: Path2D;
-  acs: Path2D;
-  fans: Path2D;
-  drips: Path2D;
   laundry: Laundry[];
   roofFill: Path2D;
   roofLines: Path2D;
@@ -339,9 +339,6 @@ function geomOf(b: Block): Geom {
   const shelves = new Path2D();
   const pots = new Path2D();
   const leaves = new Path2D();
-  const acs = new Path2D();
-  const fans = new Path2D();
-  const drips = new Path2D();
   const laundry: Laundry[] = [];
   const dots = new Path2D();
   const dotsLit = new Path2D();
@@ -425,18 +422,9 @@ function geomOf(b: Block): Geom {
           }
         }
       }
-      // 空调外机：底下拖一道锈水印
-      if (kind > 0.55 && i === units - 1) {
-        const ax = wx + ww + 14;
-        acs.rect(ax, y + 26, 60, 44);
-        fans.moveTo(ax + 45 + 14, y + 48);
-        fans.arc(ax + 45, y + 48, 14, 0, Math.PI * 2);
-        fans.moveTo(ax + 8, y + 34);
-        fans.lineTo(ax + 24, y + 34);
-        fans.moveTo(ax + 8, y + 42);
-        fans.lineTo(ax + 24, y + 42);
-        drips.rect(ax + 10, y + 70, 5, 40 + rr() * 50);
-      }
+      // （这里原来挂空调外机：只挂在最右那列窗旁边，伸出楼边一半，缩小又不行，用户 2026-10-30 让删掉。
+      // 随机数照样取一次，后面的晾衣杆和别的窗不变）
+      if (kind > 0.55 && i === units - 1) rr();
       // 晾衣杆：伸出窗外，挂着衣服
       if (kind > 0.8 && i < units - 1) {
         const items: Laundry["items"] = [];
@@ -506,9 +494,6 @@ function geomOf(b: Block): Geom {
     shelves,
     pots,
     leaves,
-    acs,
-    fans,
-    drips,
     laundry,
     roofFill,
     roofLines,
@@ -655,9 +640,6 @@ export function drawBlock(g: CanvasRenderingContext2D, b: Block, c: Cam, D: numb
   g.strokeStyle = "rgba(60,40,50,0.16)";
   g.lineWidth = L * 0.7;
   g.stroke(G.slabs);
-  // 锈水印
-  g.fillStyle = "rgba(140,92,70,0.16)";
-  g.fill(G.drips);
   // 窗：深色玻璃上一道斜的反光；亮着的窗是暖黄的
   g.fillStyle = "#5f6a7f";
   g.fill(G.glass);
@@ -683,11 +665,6 @@ export function drawBlock(g: CanvasRenderingContext2D, b: Block, c: Cam, D: numb
   // 花盆
   part(g, G.pots, "#c4775a", null, L * 0.6);
   part(g, G.leaves, "#7f9b5c", "#69844b", L * 0.6, [4, 3]);
-  // 空调外机
-  part(g, G.acs, "#ece7df", "#d6cfc4", L * 0.8, [4, 4]);
-  g.strokeStyle = INK;
-  g.lineWidth = L * 0.5;
-  g.stroke(G.fans);
   // 晾衣杆、衣服（被风吹）
   for (const ln of G.laundry) {
     g.strokeStyle = INK;

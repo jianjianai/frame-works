@@ -26,6 +26,8 @@ import { BS, HALF, drawEndBrick } from "./end_brick";
 import { RIM_TOP, SOLE_Y, bootPt, drawBoot, shinRot } from "./end_boot";
 import { H_GRAB, K_ARRIVE, chainTop } from "./end_rise";
 import { coatButtons, leadBand, standCollar } from "./leadcoat";
+import { editable, editing } from "@frame/engine/editable";
+import type { BrickEditData, BrickValues } from "./brick-editor";
 
 // ——————————————— 地方 ———————————————
 /** 他抱着她落回街上以后：她站在坑的左边，他被放在她右边，他妈妈那件外套（被跺地那一下掀到坑的左边）在他右边 */
@@ -95,7 +97,8 @@ const HOLD_OFF: V2 = [-60, -112];
  * 近处那只手（L）往右搂过来、露在他前面。砖她转正时交到他手里（HANDOFF），他捧在胸前（之后用户又改了，见 BRICK_FRONT）。
  * （这一天之前的两版：面对面、近处那只胳膊压过他的脸；从身后抱、远处那只前臂横过他胸口，用户：「还是很奇怪」）
  */
-const BACK_HEAD: V2 = [-92, -26];
+// 用户 2026-10-30（2:15.70）：「主角的头不要被小石头挡住」——原来 [−92, −26]，他的头盖住她右边的脸和下巴；拉开、她高一点
+const BACK_HEAD: V2 = [-128, -40];
 /** 他的头的中心相对他的根（头以脖子为中心放大 headScale 倍） */
 function kidHeadRel(p: PoseIn): V2 {
   const j = castJoints(STONE, p);
@@ -115,6 +118,20 @@ const BACK_OFF: V2 = (() => {
  * 「不要拿着砖，左边的手搂着小石头，右边的手臂不要倒 V 字，人是做不出这种动作的，小石头拿着砖」）
  */
 const BRICK_FRONT: V2 = [-53, 50];
+/**
+ * 放下他以后抱着砖：两只前臂搂在砖前面（不再两只拳头攥着砖的两头、胳膊肘往外撑，像叉腰）。用户 2026-10-29 在「调整画面」里摆的 2:27.16：
+ * 手腕在他自己的坐标里（朝左的写法，原点在两脚之间的地面，IK 的 to），手腕的转角（度）；远处那只（R）肘往另一边弯
+ */
+const KID_HUG_L: V2 = [21, -267];
+const KID_HUG_R: V2 = [-46, -266];
+const KID_HUG_WRIST = { L: 26.68, R: -38.35 };
+/**
+ * 第一视角捡起「活下去」以后抱在胸前（跺地、往上飞、被人链拽着，一直到伸出去递给她以前）：同样两只前臂搂在砖前面。
+ * 用户 2026-10-29 在「调整画面」里摆的 1:48.27，手腕换算成相对砖心（世界坐标），跟着砖走；手腕转角（度）
+ */
+const KID_CLUTCH_L: V2 = [23.3, 24.7];
+const KID_CLUTCH_R: V2 = [-25, 24.7];
+const KID_HUG_WRIST2 = { L: 39.54, R: -43.54 };
 /** 交砖：她转正的这一段把砖交到他手里（之前在她近处那只手里，之后在他两只手里） */
 const HANDOFF: [number, number] = [TE.upright - 0.3, TE.upright + 0.05];
 /** ② 转正以后她两只手搂着他：近处那只的手腕在砖左头外面多远、往下多少（手刚好碰到砖的左边，不盖住「活」）；远处那只相对他的胸口 chestOf，绕到他背后、贴着腰背（手肘朝下） */
@@ -334,18 +351,42 @@ export function kidRoot(t: number): V2 {
     const hit = s2 > 0 ? s2 * Math.exp(1 - s2) : 0;
     return [c[0] + 48 * hit, c[1] + tug + strain + bob + 24 * hit];
   }
-  if (t < TE.putDown) {
-    // 在她怀里（她从身后抱着他，落回街上）
-    const c = t < TE.herLand ? herChest(t) : landedChest(t);
-    return [c[0] - BACK_OFF[0] - KID_CHEST[0], c[1] - BACK_OFF[1] - KID_CHEST[1]];
+  // 在她怀里（她从身后抱着他，落回街上）；她蹲下去放他时跟着她的胸口一起低下去，脚够到地以后就站在那里
+  // （用户 2026-10-29 重做：原来她直着腿，他悬在半空 0.4 秒里斜着滑到地上）
+  const touch = kidTouch();
+  if (t < touch) return kidCarried(t);
+  return [kidCarried(touch)[0], kidGroundY(t)];
+}
+/** 抱在她怀里时他的根：跟着她的胸口；放下他时她的胳膊再把他往下、往前送一点（脸颊离开他的头） */
+function kidCarried(t: number): V2 {
+  const c = t < TE.herLand ? herChest(t) : landedChest(t);
+  const send = t > TE.lower0 ? E.io(ph(t, TE.lower0 + 0.08, TE.putDown)) : 0;
+  return [c[0] - BACK_OFF[0] - KID_CHEST[0] + 24 * send, c[1] - BACK_OFF[1] - KID_CHEST[1] + 56 * send];
+}
+/** 他低的那只脚踝离根多低 */
+const kidAnkleY = (p: PoseIn) => {
+  const j = castJoints(STONE, p);
+  return Math.max(j.ankleL[1], j.ankleR[1]);
+};
+let KID_STAND_ANKLE: number | null = null;
+/** 他的脚踩在地上时根该放多高（低的那只脚踝放到站着时脚踝的高度） */
+function kidGroundY(t: number) {
+  KID_STAND_ANKLE ??= kidAnkleY(figurePose(KID.站看, 0, lookOf(STONE)));
+  return KID_STAND_ANKLE - kidAnkleY(kidMove(t).pose);
+}
+let KID_TOUCH: number | null = null;
+/** 被放下时他的脚尖碰到地的那一刻（她蹲下去、他的腿往下伸，哪个先到都行） */
+function kidTouch() {
+  if (KID_TOUCH === null) {
+    KID_TOUCH = TE.putDown + 0.25;
+    for (let tt = TE.lower0; tt < TE.putDown + 0.25; tt += 0.004) {
+      if (kidCarried(tt)[1] >= kidGroundY(tt)) {
+        KID_TOUCH = tt;
+        break;
+      }
+    }
   }
-  // 放下来，站在她右边
-  const held = (() => {
-    const c = landedChest(TE.putDown);
-    return [c[0] - BACK_OFF[0] - KID_CHEST[0], c[1] - BACK_OFF[1] - KID_CHEST[1]] as V2;
-  })();
-  const u = E.io(ph(t, TE.putDown, TE.putDown + 0.4));
-  return [held[0] + (KID_DOWN - held[0]) * u, held[1] * (1 - u)];
+  return KID_TOUCH;
 }
 
 // ——————————————— 动作 ———————————————
@@ -443,9 +484,11 @@ const KID_KEYS: MoveKey[] = [
   { t: TE.embrace - 0.02, p: KID.接她 },
   { t: TE.embrace + 0.3, ease: "inOut", p: KID.被抱2 },
 
-  // 落回街上，被放下来：站着，抱着砖，仰头看她
-  { t: TE.putDown, p: KID.被抱2 },
-  { t: TE.putDown + 0.4, ease: "inOut", p: KID.站看 },
+  // 落回街上，被放下来：睁开眼，两条腿往下伸、脚尖去够地；踩到地膝盖一软，站稳了，抱着砖仰头看她
+  { t: TE.lower0, p: KID.被抱2 },
+  { t: TE.putDown - 0.04, ease: "inOut", p: KID.伸脚 },
+  { t: TE.putDown + 0.1, ease: "out", p: KID.站落 },
+  { t: TE.rise0 + 0.2, ease: "inOut", p: KID.站看 },
   // （她给他披上外套那段 2026-10-27 删了）
   // 她光着脚跺下去：一惊，低头看坑，再抬头看她，哭着笑
   { t: TE.stomp2, p: KID.站看 },
@@ -529,12 +572,14 @@ const HER_KEYS: MoveKey[] = [
   { t: TE.herLand - 0.3, p: HER.落 },
   { t: TE.herLand, ease: "inOut", squash: 0.05, p: HER.站抱 },
   { t: TE.herLand + 0.2, p: HER.站抱 },
-  // 放下他（砖给他抱着）
-  { t: TE.putDown, ease: "inOut", p: HER.放下 },
-  { t: TE.putDown + 0.25, p: HER.放下 },
+  // 放下他（砖给他抱着）：落地的势接着往下蹲，抱着他一起低下去；他踩稳了，扶着他的肩膀抬眼看他
+  { t: TE.lower0, p: HER.站抱 },
+  { t: TE.putDown + 0.06, ease: "inOut", p: HER.蹲放 },
+  { t: TE.putDown + 0.2, ease: "inOut", p: HER.蹲扶 },
+  { t: TE.rise0, p: HER.蹲扶 },
   // 直起身看着他，往后退一步（2026-10-27 去捡他妈妈的外套、走回来跪下给他披上那段删了，用户：「应该删减后面结尾无聊的内容」；
   // 原来的转身、迈步、捡、跪披、站起来的关键帧在版本 d52d6bd）
-  { t: TE.putDown + 0.55, ease: "inOut", p: HER.站弓 },
+  { t: TE.rise0 + 0.3, ease: "inOut", p: HER.站弓 },
   { t: TE.back - 0.18, ease: "inOut", p: HER.退抬 },
   { t: TE.back, ease: "inOut", p: HER.退落 },
   { t: TE.back + 0.14, ease: "inOut", p: HER.收 },
@@ -695,6 +740,48 @@ export function bootRim(t: number, side: Side): V2 {
 }
 
 // ——————————————— 两块砖 ———————————————
+/**
+ * 「调整画面」里拖砖（lib/brick-editor.ts）：finale 每个世界镜头画之前 editBricks 登记两块砖，拖过的挪动、转角记在 BRICK_EDIT，
+ * 只用在这一刻（t 一样时）；两个人的手跟着砖走，镜头不跟（end_cam 用 herBrickPlan）。编辑器之外一直是空的
+ */
+const BRICK_EDIT: { t: number; her?: { d: V2; rot: number }; gift?: { d: V2; rot: number } } = { t: NaN };
+function moved(kind: "her" | "gift", t: number, b: BrickNow): BrickNow {
+  const m = BRICK_EDIT.t === t ? BRICK_EDIT[kind] : undefined;
+  return m ? { c: [b.c[0] + m.d[0], b.c[1] + m.d[1]], rot: b.rot + m.rot, flipY: b.flipY } : b;
+}
+const BRICK_PARAMS = {
+  x: { label: "砖心 x（世界坐标）", step: 1 },
+  y: { label: "砖心 y（世界坐标，街面 0，往上为负）", step: 1 },
+  rot: { label: "转角（度，顺时针为正）", min: -180, max: 180, step: 0.5 },
+};
+/** 登记这一刻的两块砖（ctx 是世界坐标：applyCam 以后），之后算的砖位置、两个人的手都带上用户拖的 */
+export function editBricks(ctx: CanvasRenderingContext2D, t: number) {
+  BRICK_EDIT.t = NaN;
+  if (!editing()) return;
+  const one = (kind: "her" | "gift", name: string, b: BrickNow | null, about: string) => {
+    if (!b) return undefined;
+    const deg = (b.rot * 180) / Math.PI;
+    const v = editable<BrickValues>(name, { x: b.c[0], y: b.c[1], rot: deg }, {
+      ctx,
+      params: BRICK_PARAMS,
+      editor: () => import("./brick-editor"),
+      bounds: (q) => [q.x - HALF - 8, q.y - 24, 2 * HALF + 16, 48],
+      data: { half: HALF } satisfies BrickEditData,
+      about,
+    });
+    const d: V2 = [v.x - b.c[0], v.y - b.c[1]];
+    const rot = ((v.rot - deg) * Math.PI) / 180;
+    return d[0] || d[1] || rot ? { d, rot } : undefined;
+  };
+  const k = kidAt(t);
+  const her = one("her", "砖「活下去」", herBrickPlan(t, { root: k.root }), "lib/end_pair.ts herBrickAt（这一刻在谁手里、怎么走见那里的分段）");
+  const gift = one("gift", "砖「妈妈，明天见」", k.gift, "lib/end_pair.ts giftAt（拎着、举着、抱着）/ giftLoose（掉下去、躺在街上）");
+  if (her || gift) {
+    BRICK_EDIT.t = t;
+    BRICK_EDIT.her = her;
+    BRICK_EDIT.gift = gift;
+  }
+}
 interface BrickNow {
   c: V2;
   rot: number;
@@ -741,6 +828,9 @@ function giftFall() {
 /** 掉下去的那块砖落在街上的时刻（配一声轻的「嗒」） */
 export const giftLandAt = () => GIFT_DROP + giftFall().T;
 function giftLoose(t: number): BrickNow {
+  return moved("gift", t, giftLooseRaw(t));
+}
+function giftLooseRaw(t: number): BrickNow {
   const F = giftFall();
   const s = Math.min(t - GIFT_DROP, F.T);
   const c: V2 = [F.p[0] + F.v[0] * s, F.p[1] + F.v[1] * s + 0.5 * GIFT_G * s * s];
@@ -751,8 +841,21 @@ function giftLoose(t: number): BrickNow {
   const e = t - GIFT_DROP - F.T;
   const hop = 26 * Math.exp(-e / 0.08) * Math.abs(Math.sin(e * 24));
   const flat = Math.round(spin / Math.PI) * Math.PI;
-  return { c: [c[0] - 30 * (1 - Math.exp(-e / 0.1)), c[1] - hop], rot: flat + (spin - flat) * Math.exp(-e / 0.05), flipY: -1 };
+  const lay: V2 = [c[0] - 30 * (1 - Math.exp(-e / 0.1)), c[1] - hop];
+  const rot = flat + (spin - flat) * Math.exp(-e / 0.05);
+  if (t < TE.stomp) return { c: lay, rot, flipY: -1 };
+  // 他跺地那一下（和妈妈的外套一起）被震得弹起来、往右滑，落在他后来站的地方右边（用户 2026-10-29 在「调整画面」里拖的 2:27.16：
+  // 原来躺在他脚底下，被他的脚挡住）。第一视角捡砖那时还在原处（那时不在画面里，免得分不清是哪块）
+  const ds = t - TE.stomp;
+  const u = Math.min(1, ds / GIFT_JOLT_T);
+  const bounce = u >= 1 ? 8 * Math.exp(-(ds - GIFT_JOLT_T) / 0.07) * Math.abs(Math.sin((ds - GIFT_JOLT_T) * 30)) : 0;
+  const x = lay[0] + GIFT_JOLT[0] * E.out(u);
+  const y = lay[1] + GIFT_JOLT[1] * u - 70 * Math.sin(Math.PI * u) - bounce;
+  return { c: [x, y], rot: rot + 0.35 * Math.sin(Math.PI * u), flipY: -1 };
 }
+/** 跺地时这块砖被震开：挪多少（世界坐标，用户拖的）、用多久 */
+const GIFT_JOLT: V2 = [212, 6.66];
+const GIFT_JOLT_T = 0.5;
 /**
  * 举过头顶时砖心在哪：两个肩膀正上方，两只胳膊差不多伸直刚好捏住两头（砖的两头离肩膀横着差 dx）。
  * 原来按离脚多高（355，后来 395）：站着时对，飘起来腿一收，脚到肩膀近了，砖落到额头上、两只胳膊弯成菱形
@@ -768,6 +871,9 @@ function raisedAt(shL: V2, shR: V2, scale: number, crownY: number): V2 {
 }
 export function giftAt(t: number, root: V2, palmL: V2, raised: V2): BrickNow {
   if (t >= GIFT_DROP) return giftLoose(t);
+  return moved("gift", t, giftHeld(t, root, palmL, raised));
+}
+function giftHeld(t: number, root: V2, palmL: V2, raised: V2): BrickNow {
   const hang: V2 = [palmL[0] - 6, palmL[1] + 20];
   const chest: V2 = [root[0] + KID_CHEST[0] - 30, root[1] + KID_CHEST[1] + 22];
   const u = E.io(ph(t, TE.raise0, TE.raise1));
@@ -790,6 +896,11 @@ export const HB_REST: V2 = [X_K - 160, -12];
 const HB_V = 2800;
 const HB_G = 2200;
 export function herBrickAt(t: number, kid?: { root: V2 }): BrickNow | null {
+  const b = herBrickPlan(t, kid);
+  return b && moved("her", t, b);
+}
+/** 她那块砖按代码走的位置（不带编辑器里拖的；镜头跟着它，拖砖时镜头不动） */
+export function herBrickPlan(t: number, kid?: { root: V2 }): BrickNow | null {
   if (t < TE.land) return null;
   const d = TE.brickHit - t;
   if (d > 0) {
@@ -805,7 +916,8 @@ export function herBrickAt(t: number, kid?: { root: V2 }): BrickNow | null {
   if (t < TE.hand) {
     // 他手里：抱在胸口（「活下去」朝外）；人链升到顶上时两只手举过头顶
     const r = kid ? kid.root : kidRoot(t);
-    const chest: V2 = [r[0] + KID_CHEST[0] - 30, r[1] + KID_CHEST[1] + 22];
+    // 用户 2026-10-29（1:48.27 在「调整画面」里摆的）：往右 24、往上 8，两只前臂搂在砖前面（KID_CLUTCH_L / R）
+    const chest: V2 = [r[0] + KID_CHEST[0] - 6, r[1] + KID_CHEST[1] + 14];
     // 两只手往左伸直递给她（荡过去的路上伸出去，到她跟前正好递到她手里）：近处那只手（L）捏着右边那头，
     // 砖按他近处那只肩膀放在胳膊伸直够到的地方（稍微往下一点）。原来写死在根的 REACH [−125, −295]，再往左送 30：
     // 他缩到 0.72、荡过去时身子往左探，砖贴在胸前、两只胳膊折着（用户 2026-10-29，2:11.10：「小石头手没伸直」）
@@ -818,7 +930,8 @@ export function herBrickAt(t: number, kid?: { root: V2 }): BrickNow | null {
   // 站着时正好在肩膀那么高、贴着下巴，两只拳头从下面竖着攥住两头，像举着火把（用户 2026-10-29，2:29.62：「小石头拿砖的动作不对」）
   const r = kid ? kid.root : kidRoot(t);
   const kj = castJoints(STONE, kidMove(t).pose);
-  const chest: V2 = [r[0] + (kj.shoulderL[0] + kj.shoulderR[0]) / 2 - 6, r[1] + kj.hip[1] - 12];
+  // 用户 2026-10-29（2:27.16 在「调整画面」里摆的）：再往上 42、往左 2，抱在胸前，两只前臂搂在砖前面（KID_HUG_L / KID_HUG_R）
+  const chest: V2 = [r[0] + (kj.shoulderL[0] + kj.shoulderR[0]) / 2 - 8, r[1] + kj.hip[1] - 54];
   const from = herHoldBrick(TE.putDown + 0.15);
   return { c: mix(from.c, chest, E.io(ph(t, TE.putDown + 0.15, TE.putDown + 0.45))), rot: from.rot * (1 - E.io(ph(t, TE.putDown + 0.15, TE.putDown + 0.45))), flipY: -1 };
 }
@@ -925,7 +1038,7 @@ const kidMemo = new Map<number, KidNow>();
 const CHEEK: V2 = [56, 28];
 export function kidAt(t: number): KidNow {
   const key = Math.round(t * 1e4);
-  const hit = kidMemo.get(key);
+  const hit = BRICK_EDIT.t === t ? undefined : kidMemo.get(key);
   if (hit) return hit;
   const spec = t < TE.off || t >= TE.coatOn1 ? STONE_COAT : STONE;
   const p: PoseIn = { ...kidMove(t).pose };
@@ -987,14 +1100,24 @@ export function kidAt(t: number): KidNow {
   // 她那块（第一视角以后）：抱在胸口；举过头顶；交出去
   if (her && t > TE.pov && t < TE.hand + 0.1) {
     const [e1, e2] = ends(her);
-    ik("L", e1, 1 - E.io(ph(t, TE.hand, TE.hand + 0.1)));
-    // 从靴子里出来往上冲时远处那只手松开砖往上伸；朝她喊完（镜头在她那边）再抱好砖
-    const far = t < TE.out2 ? 1 : t < 123.3 ? 1 - E.io(ph(t, TE.out2, TE.out2 + 0.25)) : E.io(ph(t, 123.3, 123.7));
     // 往左伸给她时远处那只手挪到砖的右半边（左边那头留给她的左手来接）
     const give = E.io(ph(t, TE.hand - 1.8, TE.hand - 0.9));
+    // 抱在胸前时两只前臂搂在砖前面（不再两只拳头攥着两头）；伸出去递给她时手回到砖的两头
+    const clutch = 1 - give;
+    const atBrick = (o: V2): V2 => [her.c[0] + o[0], her.c[1] + o[1]];
+    ik("L", mix(e1, atBrick(KID_CLUTCH_L), clutch), 1 - E.io(ph(t, TE.hand, TE.hand + 0.1)));
+    // 从靴子里出来往上冲时远处那只手松开砖往上伸；朝她喊完（镜头在她那边）再抱好砖
+    const far = t < TE.out2 ? 1 : t < 123.3 ? 1 - E.io(ph(t, TE.out2, TE.out2 + 0.25)) : E.io(ph(t, 123.3, 123.7));
+    for (const [side, w] of [["L", clutch], ["R", clutch * far]] as const) {
+      const k = side === "L" ? "armL" : "armR";
+      const arm = p[k] as { h?: number };
+      p[k] = { ...(p[k] as object), h: (arm.h ?? 0) + ((KID_HUG_WRIST2[side] * Math.PI) / 180 - (arm.h ?? 0)) * w } as PoseIn["armL"];
+    }
     // 远处那只（R）的肩膀在近处那只左边 50：捏在砖心左边一点，两只胳膊一样伸直（原来捏在砖心右边 0.25 个半砖，
     // 比 L 近了 20，胳膊折着，用户 2026-10-29，2:11.30：「胳膊没伸直」）；左边那头留给她的左手
-    ik("R", mix(e2, [her.c[0] - 0.25 * HALF, her.c[1] + 4], give), far * (1 - E.io(ph(t, TE.hand, TE.hand + 0.1))));
+    ik("R", mix(atBrick(KID_CLUTCH_R), [her.c[0] - 0.25 * HALF, her.c[1] + 4], give), far * (1 - E.io(ph(t, TE.hand, TE.hand + 0.1))));
+    // 远处那只搂着砖的时候前臂和手在砖、身子前面（角色库 ArmPose.fore；用户 2026-10-29，1:49.00：「左手要在砖的前面」）
+    if (clutch * far > 0.5) p.armR = { ...(p.armR as object), fore: "front" } as PoseIn["armR"];
   }
   // ① 她接住砖以后：近处那只手摸着她倒过来的脸（脸颊靠他这边），哭得一抽一抽；她松开栏杆时放开
   if (t > TE.hand + 0.3 && t < TE.hug) {
@@ -1020,17 +1143,28 @@ export function kidAt(t: number): KidNow {
     // 接住她的时候：近处那只直接捏住她手里的砖的右头（两个人一起拿着，交到他手里以后接着拿），远处那只搂到她腰后。
     // 原来先往上搂她的脖子，胳膊横在她脸前（用户 2026-10-29，重做 2:14.00–2:14.83）
     const tight = E.io(ph(t, TE.putDown + 0.1, TE.putDown + 0.4));
-    ik("L", mix([e1[0] + 10, e1[1] + 2], e1, tight), w);
+    // 站稳以后砖抱到胸前：两只手从砖的两头挪到砖前面搂着（跟着砖往上走）
+    const hugK = E.io(ph(t, TE.putDown + 0.15, TE.putDown + 0.45));
+    const world = (q: V2): V2 => [root[0] + q[0] * sc, root[1] + q[1] * sc];
+    ik("L", mix(mix([e1[0] + 10, e1[1] + 2], e1, tight), world(KID_HUG_L), hugK), w);
     const r0 = back;
     const rT = outK < 0.5 ? mix(r0, own, E.io(outK * 2)) : mix(own, e2, E.io(outK * 2 - 1));
-    ik("R", rT, w, -1);
+    ik("R", mix(rT, world(KID_HUG_R), hugK), w, hugK > 0.5 ? 1 : -1);
+    if (hugK > 0.5) p.armR = { ...(p.armR as object), fore: "front" } as PoseIn["armR"];
+    if (hugK > 0) {
+      for (const side of ["L", "R"] as const) {
+        const k = side === "L" ? "armL" : "armR";
+        const arm = p[k] as { h?: number };
+        p[k] = { ...(p[k] as object), h: (arm.h ?? 0) + ((KID_HUG_WRIST[side] * Math.PI) / 180 - (arm.h ?? 0)) * hugK } as PoseIn["armL"];
+      }
+    }
   }
   const j = castJoints(spec, p);
   const at = (q: number[]): V2 => [root[0] + q[0], root[1] + q[1]];
   const chest = at(chestOf(j));
   const out: KidNow = { spec, pose: p, root, chest, head: at(j.head), ankleL: at(j.ankleL), ankleR: at(j.ankleR), gift, her };
   if (kidMemo.size > 400) kidMemo.clear();
-  kidMemo.set(key, out);
+  if (BRICK_EDIT.t !== t) kidMemo.set(key, out);
   return out;
 }
 
@@ -1044,7 +1178,7 @@ export interface HerNow {
 const herMemo = new Map<number, HerNow>();
 export function herAt(t: number): HerNow {
   const key = Math.round(t * 1e4);
-  const hit = herMemo.get(key);
+  const hit = BRICK_EDIT.t === t ? undefined : herMemo.get(key);
   if (hit) return hit;
   const p: PoseIn = { ...herRaw(t) };
   const root = herRootRaw(t);
@@ -1160,16 +1294,18 @@ export function herAt(t: number): HerNow {
   // 抱住他（往下一沉、抱着落下来、落地）；放下他时松开
   // ② 扑过去：近处那只（L）一直攥着砖（伸直），远处那只（R）环到他背上；转正以后 R 一直搂在他背上（画在他后面），
   // L 往右搂过来、露在他前面，手朝下扣住砖的右头（砖横在两个人前面、她的胳膊底下）
-  if (t > TE.hug - 0.1 && t < TE.putDown + 0.4) {
+  if (t > TE.hug - 0.1 && t < TE.rise0 + 0.3) {
     const k = kidRoot(t);
     const kc: V2 = [k[0] + KID_CHEST[0], k[1] + KID_CHEST[1]];
-    const w = E.io(ph(t, TE.hug - 0.1, TE.hug + 0.3)) * (1 - E.io(ph(t, TE.putDown, TE.putDown + 0.35)));
+    // 放下他以后还扶着他，直起身时才松手
+    // 不渐隐：手先落回她自己垂手的地方（drop），到了再直接放开（IK 权重渐隐时胳膊的角度绕远路，会往他那边甩一下）
+    const w = E.io(ph(t, TE.hug - 0.1, TE.hug + 0.3));
     const back: V2 = [kc[0] + 34, kc[1] - 18];
     if (t < TE.hug) {
       ik("R", back, w);
       ik("L", straightAim(t, p, root), 1);
     } else {
-      const b = herHoldBrick(t);
+      const b = moved("her", t, herHoldBrick(t));
       const cs = Math.cos(b.rot);
       const sn = Math.sin(b.rot);
       // 扑过去、翻过来的时候 L 从下面托着砖靠她那一头（手腕在砖头外面一点、下沿，手掌顺着砖头竖上去）；交到他手里以后两只手搂着他
@@ -1185,11 +1321,24 @@ export function herAt(t: number): HerNow {
       const up = hugRUp();
       const upper: V2 = [kc[0] + up[0], kc[1] + up[1]];
       const rIn = E.io(ph(t, TE.embrace - 0.15, TE.embrace + 0.15));
-      ik("R", mix(mix(back, upper, rIn), hugR, toR), w, "under");
-      if (t >= TE.embrace - 0.15) p.armR = { ...(p.armR as object), bend: -1 } as PoseIn["armR"];
+      // 他踩到地以后：近处那只手从砖的左头挪到他靠她这边的肩膀上（砖整块交给他），远处那只顺着他的背往上扶到肩胛；
+      // 她直起身时两只手顺着他的胳膊、背滑下来再松开（一下子松手的话，身子直起来时胳膊被弹簧甩到他头顶上）
+      const kj = castJoints(STONE, kidMove(t).pose);
+      const steady = E.io(ph(t, TE.putDown, TE.putDown + 0.25));
+      // 最后落到她自己垂着手的地方（姿势里的手腕）再松开，松手那一下胳膊不跳
+      const slide = E.io(ph(t, TE.rise0, TE.rise0 + 0.2));
+      const drop = E.io(ph(t, TE.rise0 + 0.08, TE.rise0 + 0.27));
+      const nj = jointsOf(p);
+      const own = (q: number[]): V2 => [root[0] + mir * q[0], root[1] + q[1]];
+      const shoulder = mix([k[0] + kj.shoulderR[0] - 22, k[1] + kj.shoulderR[1] + 4 + 60 * slide], own(nj.wristL), drop);
+      const blade = mix([kcc[0] + HUG_R[0] + 6, kcc[1] + HUG_R[1] - 40 + 50 * slide], own(nj.wristR), drop);
+      ik("R", mix(mix(mix(back, upper, rIn), hugR, toR), blade, steady), w, "under");
+      // 手落回身侧（drop）时不再强制手肘朝下：照姿势自己的弯法，放开那一下不跳（强制的话垂着的手成了叉腰）
+      const own1 = drop < 0.5;
+      if (t >= TE.embrace - 0.15 && own1) p.armR = { ...(p.armR as object), bend: -1 } as PoseIn["armR"];
       if (t >= TE.embrace && toR <= 0.5) p.armR = { ...(p.armR as object), layer: "back" } as PoseIn["armR"];
-      ik("L", mix(holdL, hugL, give), give < 1 ? 1 : w, "over");
-      p.armL = { ...(p.armL as object), bend: -1 } as PoseIn["armL"];
+      ik("L", mix(mix(holdL, hugL, give), shoulder, steady), give < 1 ? 1 : w, "over");
+      if (own1) p.armL = { ...(p.armL as object), bend: -1 } as PoseIn["armL"];
       if (give > 0) {
         // 手掌顺着砖的左边竖上去（手朝上、稍微朝右），只贴着砖头，不伸进去盖住「活」：按 IK 定下来的前臂转手腕（最多 75°）
         const jj = jointsOf(p);
@@ -1200,11 +1349,11 @@ export function herAt(t: number): HerNow {
         const arm = p.armL as { h: number };
         const h = mir * Math.max(-1.3, Math.min(1.3, dh));
         // 只转一小半：手腕折太多不自然（用户 2026-10-29，2:15.27：「手弯曲角度不要这么大」）
-        p.armL = { ...(p.armL as object), h: arm.h + (h - arm.h) * give * HUG_WRIST } as PoseIn["armL"];
+        p.armL = { ...(p.armL as object), h: arm.h + (h - arm.h) * give * HUG_WRIST * (1 - steady) } as PoseIn["armL"];
       }
       p.armL = { ...(p.armL as object), shape: give > 0.6 ? "open" : "grip" } as PoseIn["armL"];
       // 远处那只手肘朝下（贴着他的背往下搭；朝上拱的话从他肩膀后面翘出来，成了倒 V）
-      if (toR > 0.5) p.armR = { ...(p.armR as object), bend: -1, shape: "open", layer: "back" } as PoseIn["armR"];
+      if (toR > 0.5) p.armR = { ...(p.armR as object), ...(own1 ? { bend: -1 } : {}), shape: "open", layer: "back" } as PoseIn["armR"];
     }
   }
   // 外套：捡起来、拎着走回来、举着领子给他披上
@@ -1223,7 +1372,7 @@ export function herAt(t: number): HerNow {
   const chest = chestOf(j);
   const out: HerNow = { pose: p, root, chest: [root[0] + chest[0], root[1] + chest[1]], head: [root[0] + j.head[0], root[1] + j.head[1]] };
   if (herMemo.size > 400) herMemo.clear();
-  herMemo.set(key, out);
+  if (BRICK_EDIT.t !== t) herMemo.set(key, out);
   return out;
 }
 
@@ -1298,7 +1447,7 @@ export function drawHer(g: CanvasRenderingContext2D, t: number, z: number, inner
   const M = g.getTransform();
   // ② 转正以后抱着他：近处那只胳膊往右搂过来，上臂压在外套上面（正面的画法上臂默认藏在身子后面，前臂像是从胸口长出来的；
   // 用户 2026-10-29，2:15.49：「手臂被身体遮挡了，很奇怪」）
-  const armsOver = t > TE.upright - 0.3 && t < TE.putDown + 0.4;
+  const armsOver = t > TE.upright - 0.3 && t < TE.rise0 + 0.3;
   const drawSelf = (o: DrawOptions) => {
     g.save();
     g.translate(h.root[0], h.root[1]);
@@ -1324,7 +1473,7 @@ export function drawHer(g: CanvasRenderingContext2D, t: number, z: number, inner
       else inner?.(cc);
       // 她手里的砖（接过来以后、交给他以前）画在她身子前面、手臂后面
       if (t >= TE.hand + 0.05 && t < HANDOFF[1]) {
-        const b = herHoldBrick(t);
+        const b = moved("her", t, herHoldBrick(t));
         drawEndBrick(cc, "her", b.c, b.rot, BS, b.flipY, warmAt(t), line);
       }
       cc.restore();
@@ -1337,7 +1486,7 @@ export function drawHer(g: CanvasRenderingContext2D, t: number, z: number, inner
   }
 }
 /** 抱着他的时候：两个人一起画 */
-export const holding = (t: number) => (t >= TE.catch && t < TE.release) || (t >= TE.hug && t < TE.putDown + 0.2);
+export const holding = (t: number) => (t >= TE.catch && t < TE.release) || (t >= TE.hug && t < TE.rise0 + 0.3);
 /** 她那块砖：从天上掉下来、落在地上（第一视角以前） */
 export function drawGroundBrick(g: CanvasRenderingContext2D, t: number, z: number) {
   if (t < TE.land || t >= TE.pov + 0.2) return;

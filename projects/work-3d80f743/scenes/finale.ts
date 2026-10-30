@@ -24,7 +24,7 @@ import { TE, type V2 } from "../lib/end_t";
 import { drawWatchers, makeEndStage } from "../lib/end_map";
 import { wakeCast } from "../lib/end_ceil";
 import { ceilCam, chainCam, endCam, gripCam, handCam, oneTakeCam, slowCam, smileCam, stompCam, streetCam, zhongCam, zhongCloseCam } from "../lib/end_cam";
-import { HB_REST, drawCoat, drawCoatInHands, drawGroundBrick, drawHer, drawKid, drawKidBoots, drawLooseGift, herAt, herBrickAt, holding, kidAt, warmAt } from "../lib/end_pair";
+import { HB_REST, drawCoat, drawCoatInHands, drawGroundBrick, drawHer, drawKid, drawKidBoots, drawLooseGift, editBricks, herAt, herBrickAt, holding, kidAt, warmAt } from "../lib/end_pair";
 import { drawZhongHouse } from "../lib/end_zhong";
 import { drawChain } from "../lib/end_chain";
 import { drawBigLight, drawBrickLight, drawCrater, drawCraterFront, drawDiveLines, drawFallTear, drawFloatTears, drawLandBurst, drawLightMotes, drawRiseGlow, drawStompBurst, stompFlash } from "../lib/end_fx";
@@ -103,6 +103,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     // 街坊（lib/end_crowd.ts）：马路上的几排画在对面人行道那一层（D 1.25）之后、人这一层的楼之前
     drawWorld(ctx, cam, t, [0, 0], (D) => D < 1.3 && drawCrowdFar(ctx, base, cam, t, wide), wide);
     applyCam(ctx, base, cam, 1);
+    // 「调整画面」里两块砖能拖（lib/brick-editor.ts）：先登记，之后画的砖和两个人的手都带上拖过的
+    editBricks(ctx, t);
     const v = viewOf(cam, 1);
     const k = kidAt(t);
     drawWatchers(ctx, t, k.root, v);

@@ -259,7 +259,8 @@ function floatRoot(t: number): V2 {
 function knotPoint(t: number): V2 {
   const a = herAnkle(t);
   const pull = t > KN.pull ? 5 * Math.exp(-(t - KN.pull) / 0.08) : 0;
-  return [KNOT[0] + (a[0] - KNOT[0]) * 0.15, KNOT[1] + (a[1] - KNOT[1]) * 0.15 + pull];
+  // 沿麻绳从椅子腿往她脚踝那边 27%（原来 15%，绕上去的几圈压在他身上；用户 2026-10-30，1:20.39：「绳几圈需要向右移动一点」）
+  return [KNOT[0] + (a[0] - KNOT[0]) * 0.27, KNOT[1] + (a[1] - KNOT[1]) * 0.27 + pull];
 }
 const knotAngle = (t: number) => {
   const a = herAnkle(t);
@@ -304,10 +305,14 @@ function stoneAt(t: number) {
     const pull = E.out(ph(t, KN.pull - 0.06, KN.pull + 0.06));
     const circ: V2 = [kp[0] + n[0] * 16 * Math.cos(w) - d[0] * 10, kp[1] + n[1] * 16 * Math.cos(w) + 12 * Math.sin(w) - d[1] * 10];
     const handL: V2 = mix(circ, [kp[0] - d[0] * 46, kp[1] - d[1] * 46 + 6], pull);
-    const handR: V2 = mix([kp[0] + d[0] * 18, kp[1] + d[1] * 18 + 4], [kp[0] + d[0] * 52, kp[1] + d[1] * 52 - 4], pull);
+    // 远处那只（R）一直攥在结旁边（绕的时候、「么」一拉都是），不往外甩（用户 2026-10-30 在「调整画面」1:20.87 摆的：手腕在他自己的坐标里
+    // 比原来拉出去的地方往回 82、往上 8；「前面没改」：绕的时候也在这里）
+    const back: V2 = [(face > 0 ? -1 : 1) * 82 * sc, -8 * sc];
+    const handR: V2 = [kp[0] + d[0] * 52 + back[0], kp[1] + d[1] * 52 - 4 + back[1]];
     const up = E.io(ph(t, KN.tilt0, KN.tilt0 + 0.3));
-    p.armL = { ...(p.armL as object), to: loc(mix(handL, [kp[0] - 8, kp[1] + 4], up)), ik: 1 } as PoseIn["armL"];
-    p.armR = { ...(p.armR as object), to: loc(handR), ik: 1 - up } as PoseIn["armR"];
+    // 肘朝下（用户 2026-10-30，1:20.07：「这里小石头倒v」）
+    p.armL = { ...(p.armL as object), to: loc(mix(handL, [kp[0] - 8, kp[1] + 4], up)), ik: 1, bend: "down" } as PoseIn["armL"];
+    p.armR = { ...(p.armR as object), to: loc(handR), ik: 1 - up, bend: "down" } as PoseIn["armR"];
   }
   const j = castJoints(stoneSpec(t), p);
   const at = (q: number[]): V2 => [root[0] + q[0] * k, root[1] + q[1] * k];
@@ -469,9 +474,10 @@ export function roomAwayAt(t: number): RoomAway {
     rope: f.ankleL,
     door: 0,
     visitor: (g) => {
-      drawKnot(g, t);
       drawLooseCoat(g, t);
       drawStone(g, t);
+      // 结画在他后面：绕在麻绳上的红绳不被他的手挡住（用户 2026-10-30，1:19.73：「右手把红线挡住了」）
+      drawKnot(g, t);
       g.save();
       g.translate(f.root[0], f.root[1]);
       g.scale(f.sc, f.sc);

@@ -1,9 +1,11 @@
 // 三⑦「没有犯下任何错的你」（99.96–101.97；99.96 起约每字 0.2 秒，「你」约 101.56；100.02、101.02 重拍）：夜里，她的屋子。街上两个人牵着的手溶成夜里台灯下的两只手（溶的时候两双手在画面上同一个地方、一样大）：
-// 她坐在桌前的椅子上，把小石头抱在腿上（他坐在她近处那条大腿靠膝盖那头，脚垂在她膝盖前面），近处那只手从他身侧绕过来握着他攥笔的手，
+// 她坐在桌前的椅子上，把小石头抱在腿上（他坐在她近处那条大腿靠膝盖那头，脚垂在她膝盖前面），两个人都用右手写字（用户 2026-10-30）：
+// 他右手（远处那只）攥笔、左手搭在桌上，她右手从他身后伸过去搭在他手上、左手搂着他的肚子，
 // 带着他在砖上一笔一笔写「活下去」（活 100.42、下 100.9、去 101.37）；「你」她的眼睛从砖上挪到他脸上；写完他抿着嘴笑了。
 // 镜头溶完一路慢慢推近（柔和起步、一路减速），落在砖、两只手和两张脸上。
 // 三⑧ 接着同一个镜头（GIFT_T）：她松开手、拍一下他攥着笔的拳头，把笔给了他；溶过去、时间往后跳一点，他一个人在新砖上写「妈妈，明天见」。
-// 三⑨ 还是这个镜头（FULL_T）：又往后跳一点，他靠在她怀里睡着了；她写完自己那块「活下去」，拿起来往近处那只铁靴里插——塞满了，插不进去。
+// 三⑨ 还是这个镜头（FULL_T）：又往后跳一点，他靠在她怀里睡着了；她右手写完自己那块「活下去」、放下笔，左手拿起来往近处那只铁靴里插——
+// 塞满了，插不进去。
 // 坐标是屋子坐标（lib/room.ts），屋子按 setRoomAway 画：灯亮着，桌上那支放下的笔不画（在两个人手里），人、砖、笔从 sleeper 画进去。
 // 摆法（试了几版）：砖立着、字写在朝镜头那面，握笔的手比在纸上写字高得多——她站在椅子后面弯腰握他的手，胳膊一定横过他的脸；
 // 抱在腿上、他坐直、手放低、肘往下垂（bend −1），她再往后坐一点（近处的肩膀不在他头后面），两张脸才都露得出来。
@@ -243,12 +245,12 @@ function drawGlyphs(g: CanvasRenderingContext2D, t: number, words: Glyph[]) {
 
 // ——— 两个人 ———
 /**
- * 她坐在椅子上（和第二幕⑨写砖时一样，胯在椅面上），身子直一点，低头从他头顶上看砖：近处那只手从他身侧绕过来握着他攥笔的手
- * （肘往下垂，胳膊从他背后、胳膊底下过去，不横过他的脸），远处那只环着他的肚子（藏在他身后）
+ * 她坐在椅子上（和第二幕⑨写砖时一样，胯在椅面上），身子直一点，低头从他头顶上看砖：右手（远处那只）从他身后伸过去，搭在他攥笔的
+ * 右手上带着他写；左手（近处那只）从他身侧绕过来，手掌搭在他肚子上（压在他身上）（用户 2026-10-30 在「调整画面」1:28.17 摆的）
  */
 const HER_P = {
   教: pose(0, { face: -1, ground: false, ...legR(86, -86), ...legL(80, -82), neck: -16, expression: "微笑", smile: 0.45, lookX: -0.3, lookY: 0.95 }, (l) => ({
-    ...armL(30, 70, 0, "grip", l),
+    ...armL(30, 70, 0, "flat", l),
     ...armR(20, 80, 0, "relax", l),
   })),
 };
@@ -261,11 +263,11 @@ const HER_KEYS = [
     // 「你」101.56：眼睛从砖上挪到他脸上，头往他那边低一点，笑得深一点
     { t: 101.42, p: HER_P.教 },
     { t: 101.68, ease: "inOut", p: HER_LOOK },
-    // ⑧ 手抬起来张开、拍他的手；「心里」点一下头，手收回去时放松
+    // ⑧ 右手抬起来张开、拍他的手；「心里」点一下头，右手收回去时放松
     { t: G.lift0, p: HER_LOOK },
-    { t: G.lift1, ease: "out", p: { ...HER_LOOK, handL: "flat" } },
-    { t: G.nod - 0.12, p: { ...HER_LOOK, handL: "flat" } },
-    { t: G.nod, ease: "inOut", p: { ...HER_LOOK, handL: "flat", neck: -30, smile: 0.8 } },
+    { t: G.lift1, ease: "out", p: { ...HER_LOOK, handR: "flat" } },
+    { t: G.nod - 0.12, p: { ...HER_LOOK, handR: "flat" } },
+    { t: G.nod, ease: "inOut", p: { ...HER_LOOK, handR: "flat", neck: -30, smile: 0.8 } },
     { t: G.down0, ease: "inOut", p: { ...HER_LOOK, handL: "relax", smile: 0.8 } },
     { t: G.down1, ease: "inOut", p: { ...HER_B_HEAD, handL: "relax" } },
 ] as MoveKey[];
@@ -281,12 +283,15 @@ function herBase(t: number, move: Mover = herMove) {
   const at = (q: number[]): V2 => [root[0] + q[0] * S, root[1] + q[1] * S];
   return { p, root, knee: at(j0.kneeL) };
 }
-/** 他坐在她腿上（朝左，脚垂在她膝盖前面），近处那只手攥着笔，远处那只按着砖；低头认真看着砖 */
+/**
+ * 他坐在她腿上（朝左，脚垂在她膝盖前面），右手（远处那只）攥着笔，左手（近处那只）搭在砖右边的桌面上；低头认真看着砖
+ * （用户 2026-10-30：「改成用右手写字」，在「调整画面」1:28.17 摆的）
+ */
 const STONE = CAST.小石头穿妈妈的外套;
 const KID_P = {
   写: pose(0, { face: -0.6, ground: false, ...legR(80, -70, 0), ...legL(76, -64, 0), neck: -26, expression: "平常", lookX: -0.3, lookY: 0.9 }, (l) => ({
-    ...armL(50, 60, 0, "grip", l),
-    ...armR(60, 50, 0, "flat", l),
+    ...armL(50, 60, 0, "relax", l),
+    ...armR(60, 50, 0, "grip", l),
   })),
 };
 /** 写完「去」：抿着嘴笑了 */
@@ -330,49 +335,64 @@ function kidSeat(herMv: Mover): (t: number) => V2 {
     return [hip[0], hip[1] - SEAT_UP];
   };
 }
-/** 他：姿势按 IK 放好攥笔的手（手心 grip，笔尖 tip）和按着砖的手 */
+/** ⑦⑧ 写字时他往她胯那头挪 37（用户 2026-10-30 在「调整画面」1:28.17 摆的：右手攥笔，她两只手环着他）；⑨ 睡着了还坐在原处 */
+const WRITE_DX = 37;
+/** 攥笔的手（右手）：手腕在笔尖右上（笔斜着握） */
+const GRIP_OFF: V2 = [42, -16];
+/** 左手（近处那只）搭在砖右边的桌面上 */
+const REST_L: V2 = [BRICK.x + BRICK.w / 2 + 56, BRICK.y];
+/**
+ * 他：姿势按 IK 放好攥笔的右手（远处那只，手腕 grip，笔尖 tip；朝镜头伸着，上臂压短到 0.66）和搭在桌上的左手（近处那只），
+ * 两只肘都往下垂
+ */
 function kidPose(t: number, move: Mover, KID_HIP: V2, grip: V2, tip: V2) {
   const p: PoseIn = { ...move(t).pose };
   const j0 = castJoints(STONE, p);
   const root: V2 = [KID_HIP[0] - j0.hip[0] * KID_K, KID_HIP[1] - j0.hip[1] * KID_K];
   const sc = KID_K * STONE.scale;
   const loc = (q: V2): V2 => [(q[0] - root[0]) / sc, (q[1] - root[1]) / sc];
-  p.armL = { ...(p.armL as object), to: loc(grip), ik: 1, bend: -1 } as PoseIn["armL"];
-  p.armR = { ...(p.armR as object), to: loc([BRICK.x + BRICK.w / 2 + 10, BRICK.y - 20]), ik: 1 } as PoseIn["armR"];
+  p.armR = { ...(p.armR as object), to: loc(grip), ik: 1, bend: -1, upperK: 0.66 } as PoseIn["armR"];
+  p.armL = { ...(p.armL as object), to: loc(REST_L), ik: 1, bend: -1 } as PoseIn["armL"];
   const j = castJoints(STONE, p);
   const at = (q: number[]): V2 => [root[0] + q[0] * KID_K, root[1] + q[1] * KID_K];
-  return { pose: p, root, palm: at(j.palmL), tip, grip, hip: KID_HIP };
+  return { pose: p, root, palm: at(j.palmR), tip, grip, hip: KID_HIP };
 }
 type Kid = ReturnType<typeof kidPose>;
 const seatA = kidSeat(herMove);
+const seatW = (t: number): V2 => {
+  const h = seatA(t);
+  return [h[0] + WRITE_DX, h[1]];
+};
 function kidAt(t: number): Kid {
   const tip0 = penTip(t);
-  // 攥笔的手：手心在笔尖右上方（笔斜着握，放得低一点，手在他下巴底下够远的地方）
-  let grip: V2 = [tip0[0] + 34, tip0[1] - 24];
+  let grip: V2 = [tip0[0] + GRIP_OFF[0], tip0[1] + GRIP_OFF[1]];
   let tip = tip0;
   // ⑧ 把笔举起来一点、转平了看（价签朝着镜头）
   const u = E.io(ph(t, G.look0, G.look1));
   if (u > 0) {
     grip = mix(grip, [grip[0] + 2, grip[1] - 10], u);
-    const off = mix([-34, 24], [-46, 2], u);
+    const off = mix([-GRIP_OFF[0], -GRIP_OFF[1]], [-50, -2], u);
     tip = [grip[0] + off[0], grip[1] + off[1]];
   }
-  return kidPose(t, kidMove, seatA(t), grip, tip);
+  return kidPose(t, kidMove, seatW(t), grip, tip);
 }
+/** 她近处那只手（左手）搭在他肚子上的地方（相对他的胯，照用户 1:28.17 摆的）；远处那只（右手）收回去环着他时在他身后 */
+const HUG_L: V2 = [8, -60];
+const HUG_R: V2 = [-30, -56];
 function herAt(t: number, kid: Kid) {
   const { p, root } = herBase(t);
   const loc = (q: V2): V2 => [(q[0] - root[0]) / S, (q[1] - root[1]) / S];
-  // 手心盖在他手背上；⑧ 抬起来张开 → 拍一下他攥着笔的拳头 → 收回去环着他的肚子。远处那只一直环着他的肚子
-  const onHand: V2 = [kid.grip[0] + 14, kid.grip[1] - 5];
-  const up: V2 = [kid.grip[0] + 26, kid.grip[1] - 16];
-  const pat: V2 = [kid.grip[0] + 12, kid.grip[1] - 6];
-  const belly: V2 = [kid.hip[0] - 40, kid.hip[1] - 44];
+  // 右手搭在他攥笔的手上（她的手在他的手后面）；⑧ 抬起来张开 → 拍一下他攥着笔的拳头 → 收回去环着他。左手一直搭在他肚子上
+  const onHand: V2 = [kid.grip[0] + 4, kid.grip[1] + 8];
+  const up: V2 = [onHand[0] + 12, onHand[1] - 11];
+  const pat: V2 = [onHand[0] - 2, onHand[1] - 1];
+  const back: V2 = [kid.hip[0] + HUG_R[0], kid.hip[1] + HUG_R[1]];
   let hand = onHand;
   if (t > G.lift0) hand = mix(onHand, up, E.out(ph(t, G.lift0, G.lift1)));
   if (t > G.lift1) hand = mix(up, pat, E.in2(ph(t, G.lift1, G.pat)));
-  if (t > G.away0) hand = mix(pat, belly, E.io(ph(t, G.away0, G.away1)));
-  p.armL = { ...(p.armL as object), to: loc(hand), ik: 1, bend: -1, chest: "over" } as PoseIn["armL"];
-  p.armR = { ...(p.armR as object), to: loc([kid.hip[0] - 30, kid.hip[1] - 56]), ik: 1, bend: -1 } as PoseIn["armR"];
+  if (t > G.away0) hand = mix(pat, back, E.io(ph(t, G.away0, G.away1)));
+  p.armL = { ...(p.armL as object), to: loc([kid.hip[0] + HUG_L[0], kid.hip[1] + HUG_L[1]]), ik: 1, bend: -1, chest: "over" } as PoseIn["armL"];
+  p.armR = { ...(p.armR as object), to: loc(hand), ik: 1, bend: -1 } as PoseIn["armR"];
   return { pose: p, root };
 }
 type Her = ReturnType<typeof herAt>;
@@ -383,7 +403,7 @@ const handsAt = (t: number): V2 => kidAt(t).grip;
 function kidB(t: number): Kid {
   // 写完把笔挪到砖的右头外面，让开写好的字
   const tip = tipAlong(GIFT_WORDS, t, [BRICK.x + BRICK.w / 2 + 8, BRICK.y - 22]);
-  return kidPose(t, kidMoveB, seatA(t), [tip[0] + 36, tip[1] - 18], tip);
+  return kidPose(t, kidMoveB, seatW(t), [tip[0] + GRIP_OFF[0], tip[1] + GRIP_OFF[1]], tip);
 }
 
 /** 屋里这一刻要画的：桌上的东西（人前面那层之前）、他、她、夹在他和她近处那只手臂之间的（笔、她手里的砖）、她之后的 */
@@ -430,23 +450,6 @@ function awayOf(t: number, sc: Scene): RoomAway {
           cc.restore();
         },
       });
-      g.restore();
-      // 围巾垂下来那头不被手臂挡（用户 2026-10-19 的规矩）：只在围巾垂下来那一条的范围里（他够不着）按「手臂在围巾后面」再画一遍
-      // （框对齐到屏幕的整像素：框边半透明的那一圈会在外套上留一道细线）
-      g.save();
-      const m = g.getTransform();
-      const a = m.transformPoint(new DOMPoint(HER_HIP[0] - 30, HER_HIP[1] - 192));
-      const b = m.transformPoint(new DOMPoint(HER_HIP[0] + 14, HER_HIP[1] - 48));
-      const box = new Path2D();
-      const x0 = Math.round(Math.min(a.x, b.x));
-      const y0 = Math.round(Math.min(a.y, b.y));
-      box.rect(x0, y0, Math.round(Math.max(a.x, b.x)) - x0, Math.round(Math.max(a.y, b.y)) - y0);
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.clip(box);
-      g.setTransform(m);
-      g.translate(her.root[0], her.root[1]);
-      g.scale(S, S);
-      drawChengtuo(g, { ...her.pose, armL: { ...(her.pose.armL as object), chest: "under" } } as PoseIn, { line });
       g.restore();
       sc.after?.(g, line);
     },
@@ -553,7 +556,9 @@ const kidMoveC = live(
 );
 function kidC(t: number) {
   const p: PoseIn = { ...kidMoveC(t).pose };
-  const hip = seatA(t);
+  // 跳过去时还坐在⑧写字的地方（溶的时候身子不叠出两个）；她往前探身拿砖时被她带着往她膝盖那头挪回去（不挪的话她低下头脸被他的头挡住）
+  const a = seatA(t);
+  const hip: V2 = [a[0] + WRITE_DX * (1 - E.io(ph(t, F.pen0, F.carry1))), a[1]];
   const j0 = castJoints(STONE, p);
   const root: V2 = [hip[0] - j0.hip[0] * KID_K, hip[1] - j0.hip[1] * KID_K];
   return { pose: p, root, hip };
@@ -564,10 +569,10 @@ const herMoveC = live(
   [
     ...HER_KEYS,
     { t: F.mix0 - 0.01, p: { ...HER_B_HEAD, handL: "relax" } },
-    { t: F.mix0, p: { ...HER_B_HEAD, handL: "grip" } },
+    { t: F.mix0, p: { ...HER_B_HEAD, handL: "relax", handR: "grip" } },
     // 跳过去以后：睁着眼看着自己写的字（笑得浅一点，眼睛不眯成线）
-    { t: F.mix1 + 0.12, ease: "inOut", p: { ...HER_B_HEAD, handL: "grip", smile: 0.2, lookY: 0.85 } },
-    { t: F.pen1, p: { ...HER_B_HEAD, handL: "grip", smile: 0.2, lookY: 0.85 } },
+    { t: F.mix1 + 0.12, ease: "inOut", p: { ...HER_B_HEAD, handL: "relax", handR: "grip", smile: 0.2, lookY: 0.85 } },
+    { t: F.pen1, p: { ...HER_B_HEAD, handL: "relax", handR: "grip", smile: 0.2, lookY: 0.85 } },
     { t: F.grab0 + 0.06, ease: "inOut", p: { ...HER_B_HEAD, handL: "relax", neck: -33, smile: 0.2, lookY: 0.85 } },
     { t: F.grab1, ease: "inOut", p: { ...HER_B_HEAD, handL: "grip", neck: -33, smile: 0.2, lookY: 0.85 } },
     { t: F.carry1, ease: "inOut", p: HER_C_DOWN },
@@ -627,16 +632,18 @@ function herC(t: number, kid: { hip: V2 }) {
   const her0: Her = { pose: p, root };
   const boot = bootOf(her0);
   const loc = (q: V2): V2 => [(q[0] - root[0]) / S, (q[1] - root[1]) / S];
+  // 右手（远处那只，从他身后绕到砖上）写、放笔，放下以后收回去环着他；左手（近处那只）先搭在他肚子上，放笔时挪到砖上捏住、拿起来
   const tip = herPenTip(t);
   const penHand: V2 = [tip[0] + 40 + 4 * ph(t, F.pen0, F.pen1), tip[1] - 22 + 10 * ph(t, F.pen0, F.pen1)];
+  const back: V2 = [kid.hip[0] + HUG_R[0], kid.hip[1] + HUG_R[1]];
+  const handR = mix(penHand, back, E.io(ph(t, F.pen1, F.pen1 + 0.3)));
   const b = heldBrick(t, boot.mouth);
-  let hand = penHand;
-  if (t > F.grab0) hand = mix(penHand, gripOf(b), E.io(ph(t, F.grab0, F.grab1)));
-  if (t >= F.grab1) hand = gripOf(b);
-  p.armL = { ...(p.armL as object), to: loc(hand), ik: 1, bend: -1, chest: "over" } as PoseIn["armL"];
-  p.armR = { ...(p.armR as object), to: loc([kid.hip[0] - 30, kid.hip[1] - 56]), ik: 1, bend: -1 } as PoseIn["armR"];
+  const hug: V2 = [kid.hip[0] + HUG_L[0], kid.hip[1] + HUG_L[1]];
+  const handL = t >= F.grab1 ? gripOf(b) : mix(hug, gripOf(b), E.io(ph(t, F.pen0, F.grab1)));
+  p.armL = { ...(p.armL as object), to: loc(handL), ik: 1, bend: -1, chest: "over" } as PoseIn["armL"];
+  p.armR = { ...(p.armR as object), to: loc(handR), ik: 1, bend: -1 } as PoseIn["armR"];
   const j = jointsOf(p);
-  const palm: V2 = [root[0] + j.palmL[0] * S, root[1] + j.palmL[1] * S];
+  const palm: V2 = [root[0] + j.palmR[0] * S, root[1] + j.palmR[1] * S];
   return { pose: p, root, tip, brick: b, palm, boot: bootOf({ pose: p, root }) };
 }
 /** 靴筒里塞满的砖（翻边下沿以下藏在靴筒里），再把翻边和一圈铆钉画回去压在砖上 */

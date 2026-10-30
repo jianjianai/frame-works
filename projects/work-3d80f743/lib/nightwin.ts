@@ -96,8 +96,8 @@ const floorK = (y: number) => ROOM.s * (1 + 0.6 * Math.max(0, Math.min(1, (y - W
 const STAND_S = floorK(BOOT_Y);
 
 // ——— 她（姿势按她自己的上下写：① 她的世界里坐着；画的时候整个人再转 θ） ———
-/** ① 坐在框上（倒着的画面里朝右）：远处的膝盖立起来，拴着的那条腿往前伸、脚踩在框上，弯着腰看着脚踝边的刀 */
-const SIT = pose(30, { face: 0.75, ground: false, float: 0, ...legL(122, -62, 0), ...legR(140, -134, -2), neck: -22, expression: "难过", sad: 0.9, tears: 0.6, lookX: 0.45, lookY: 1 }, (l) => ({
+/** ① 坐在框上（倒着的画面里朝右）：两个膝盖都立起来、两只脚踩在框上（用户 2026-10-30 在「调整画面」1:13.83 摆的；原来拴着的那条腿往前伸），弯着腰看着脚踝边的刀 */
+const SIT = pose(30, { face: 0.75, ground: false, float: 0, ...legL(130.06, -101.21, 13.56), ...legR(137.68, -92.87, 10.51), neck: -22, expression: "难过", sad: 0.9, tears: 0.6, lookX: 0.45, lookY: 1 }, (l) => ({
   ...armL(40, 40, 0, "grip", l),
   ...armR(-20, 30, 0, "open", l),
 }));
@@ -293,9 +293,10 @@ function herAt(t: number) {
   if (wHead > 0.001) {
     const top = hisHeadTop(t);
     const armR0 = p.armR;
-    p.armR = { ...(armR0 as object), to: h.toL(top), ik: 1 } as PoseIn["armR"];
+    // 肘朝下（用户 2026-10-30，1:17.93：「这里也是倒v」；默认弯法上臂往前举、前臂往下折到他头上）
+    p.armR = { ...(armR0 as object), to: h.toL(top), ik: 1, bend: "down" } as PoseIn["armR"];
     const palm0 = h.toW(jointsOf(p).palmR);
-    p.armR = { ...(armR0 as object), to: h.toL([2 * top[0] - palm0[0], 2 * top[1] - palm0[1]]), ik: wHead } as PoseIn["armR"];
+    p.armR = { ...(armR0 as object), to: h.toL([2 * top[0] - palm0[0], 2 * top[1] - palm0[1]]), ik: wHead, bend: "down" } as PoseIn["armR"];
     h = { ...h, palmL: h.toW(jointsOf(p).palmL), palmR: h.toW(jointsOf(p).palmR), j: jointsOf(p) };
   }
   const wK = 1 - E.out(ph(t, T.pull1, T.slip));
@@ -490,8 +491,9 @@ function himAt(t: number) {
       reach = 150 + (40 - 150) * E.out(ph(t, P - 0.04, P + 0.13)) * (1 - back);
     }
     const on = (d: number): V2 => [chest[0] + dir[0] * d, chest[1] + dir[1] * d];
-    p.armL = { ...(p.armL as object), to: loc(on(reach + 30)), ik: wRope } as PoseIn["armL"];
-    p.armR = { ...(p.armR as object), to: loc(on(reach - 30)), ik: wRope } as PoseIn["armR"];
+    // 肘朝下（用户 2026-10-30，1:16.50：「小石头的胳膊倒v修改一下」；默认弯法拽到胸口时拱成倒 V）
+    p.armL = { ...(p.armL as object), to: loc(on(reach + 30)), ik: wRope, bend: "down" } as PoseIn["armL"];
+    p.armR = { ...(p.armR as object), to: loc(on(reach - 30)), ik: wRope, bend: "down" } as PoseIn["armR"];
   }
   // 抱住她的腿：两只手搂在她腿上他胸口那么高的地方（她往下坠时腿从他怀里滑下去）
   const wHug = E.io(ph(t, T.hug - 0.12, T.hug + 0.04)) * (1 - E.io(ph(t, T.look, T.look + 0.14)));
@@ -499,8 +501,9 @@ function himAt(t: number) {
     const h = herAt(t);
     const y0 = root[1] - H * 0.52;
     const q = legAt(h, y0);
-    p.armL = { ...(p.armL as object), to: loc([q[0] - 30, y0 + 8]), ik: wHug } as PoseIn["armL"];
-    p.armR = { ...(p.armR as object), to: loc([q[0] - 46, y0 - 16]), ik: wHug } as PoseIn["armR"];
+    // 肘朝下（用户 2026-10-30，1:17.93：小石头抱腿的胳膊也是倒 V）
+    p.armL = { ...(p.armL as object), to: loc([q[0] - 30, y0 + 8]), ik: wHug, bend: "down" } as PoseIn["armL"];
+    p.armR = { ...(p.armR as object), to: loc([q[0] - 46, y0 - 16]), ik: wHug, bend: "down" } as PoseIn["armR"];
   }
   // 捡刀：近处那只手伸到脚边的刀上
   const wPick = E.io(ph(t, T.pick - 0.14, T.pick)) * (1 - E.io(ph(t, T.pick + 0.04, T.up)));
@@ -737,9 +740,19 @@ function drawKnifeAt(g: CanvasRenderingContext2D, k: KnifeState) {
   g.restore();
 }
 
+/**
+ * 别处借这一夜的画面时，把镜头横着挪一点（画面像素，正 = 画面里的东西往右）：终章回忆（scenes/recall.ts）开头让他的脸对上现在他的脸，
+ * 不然看的那一块出了画面的边。画之前设、画完设回 0
+ */
+let VIEW_SHIFT = 0;
+export function setNightShift(px: number) {
+  VIEW_SHIFT = px;
+}
+
 /** 主歌二①–④ 一帧（t：作品时间） */
 export function drawNightWindow(g: CanvasRenderingContext2D, base: DOMMatrix, grain: HTMLCanvasElement, t: number) {
-  const c = nwCam(t);
+  const c0 = nwCam(t);
+  const c: Cam = VIEW_SHIFT ? { ...c0, x: c0.x - (VIEW_SHIFT * Math.cos(c0.r)) / c0.z, y: c0.y + (VIEW_SHIFT * Math.sin(c0.r)) / c0.z } : c0;
   const sh: [number, number] = (() => {
     const k = nwShake(t);
     return [k * Math.sin(t * 71.3), k * Math.sin(t * 63.7 + 2.1)];

@@ -10,7 +10,7 @@
 import type { Scene, SceneOptions } from "@frame/engine/types";
 import { E, ph, toScreen } from "../lib/cam";
 import { memoryGrade } from "../lib/memory";
-import { nwCam, nwHisHead } from "../lib/nightwin";
+import { nwCam, nwHisHead, setNightShift } from "../lib/nightwin";
 import { TE } from "../lib/end_t";
 import { chainCam } from "../lib/end_cam";
 import { kidAt } from "../lib/end_pair";
@@ -47,9 +47,11 @@ export async function createScene(options: SceneOptions): Promise<Scene> {
 
   /**
    * ① 开头对上他的脸：他喊着的脸在画面上哪、多大，那一夜他的脸就在哪、多大（把那一夜的画面放大、挪过去），
-   * 0.6 秒里柔和地松开到那一夜原来的取景（她在上面被他拽着）。放大最多 2.4 倍；看到的范围不出那一夜的画面
+   * 0.6 秒里柔和地松开到那一夜原来的取景（她在上面被他拽着）。放大最多 2.4 倍；看到的范围不出那一夜的画面——
+   * 现在他的脸在画面中间偏右（镜头对准他的胸口），那一夜他在画面左下，看的那一块会出左边：那一夜的镜头先横着挪 shift（画面像素），
+   * 松开的时候一起挪回去
    */
-  let MATCH: { s0: number; c0: [number, number] } | null = null;
+  let MATCH: { s0: number; c0: [number, number]; shift: number } | null = null;
   const matchOf = () => {
     if (MATCH) return MATCH;
     const t = TE.mem0;
@@ -61,16 +63,21 @@ export async function createScene(options: SceneOptions): Promise<Scene> {
     const c = nwCam(tau);
     const sa = toScreen(c, h.head[0], h.head[1]);
     const s0 = Math.min(2.4, Math.max(1, n.z / (c.z * h.k)));
-    // 看到的那一块（act4 画面里，设计坐标）的中心：让 sa 落在 sp
-    MATCH = { s0, c0: [sa[0] + (540 - sp[0]) / s0, sa[1] + (960 - sp[1]) / s0] };
+    // 看到的那一块（act4 画面里，设计坐标）的中心：让 sa 落在 sp；出了画面的边就把那一夜的镜头横着挪进来
+    const cx = sa[0] + (540 - sp[0]) / s0;
+    const half = 540 / s0;
+    const shift = Math.min(1080 - half, Math.max(half, cx)) - cx;
+    MATCH = { s0, c0: [cx + shift, sa[1] + (960 - sp[1]) / s0], shift };
     return MATCH;
   };
+  /** 开头对上脸以后松开到原来取景的进度 */
+  const loosen = (t: number) => E.io(ph(t, TE.mem0 + 0.12, TE.mem0 + 0.72));
   /** 这一刻看 act4 画面的哪一块：中心、放大多少（设计坐标） */
   const viewAt = (i: number, t: number): { s: number; c: [number, number] } => {
     const sh = SHOTS[i];
     if (i === 0) {
       const m = matchOf();
-      const e = E.io(ph(t, TE.mem0 + 0.12, TE.mem0 + 0.72));
+      const e = loosen(t);
       return { s: m.s0 * Math.pow(1 / m.s0, e), c: [m.c0[0] + (540 - m.c0[0]) * e, m.c0[1] + (960 - m.c0[1]) * e] };
     }
     // 其余几镜：极慢地推近一点（像想起来的时候往里看）
@@ -79,7 +86,9 @@ export async function createScene(options: SceneOptions): Promise<Scene> {
   /** 画一镜：act4 画这一刻，按看的那一块放大贴上来（不出 act4 画面的边） */
   const drawShot = (i: number, t: number, alpha: number) => {
     if (alpha <= 0.002) return;
+    if (i === 0) setNightShift(matchOf().shift * (1 - loosen(t)));
     night.render(tauOf(i, t));
+    setNightShift(0);
     const v = viewAt(i, t);
     const half = [540 / v.s, 960 / v.s];
     const cx = Math.min(1080 - half[0], Math.max(half[0], v.c[0]));

@@ -6,6 +6,7 @@
 // 「门口的妈妈—铁桩—红线—半空的女儿」一竖条上停住，几乎不动（窒息）。下一镜妈妈攥着红线一把一把把她拽下来。
 
 import { beatAt } from "@frame/engine/tempo";
+import { editing } from "@frame/engine/editable";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import type { MoveKey, PoseIn } from "@materials/剪纸角色/code/chengtuo";
 import { type Cam, E, aim, camLerp, kick, ph, toScreen } from "./cam";
@@ -14,7 +15,7 @@ import { drawPerson } from "./people";
 import { groundShadow } from "./props";
 import { ARMS, LIMP, SMOOTH, fade, live, smoothTrack } from "./motion";
 import { MOM, MOM_HOME, QIANJIN } from "./poses2";
-import { BIG_R, drawDumbbell, drawShopShade } from "./shop";
+import { BIG_R, type BarGrip, type GripKeys, MOM_HUG, drawDumbbell, drawShopShade, gripAt as barGripAt, holdBar } from "./shop";
 
 type V2 = [number, number];
 const b = beatAt;
@@ -528,6 +529,17 @@ export function drawPadlock(g: CanvasRenderingContext2D, x: number, y: number, o
 
 // ——————————————— 人和哑铃 ———————————————
 const MOM_SPEC = CAST.千斤的妈妈;
+/**
+ * 弯腰放下时（用户 2026-10-30：「后面放下杠铃的动作也需要重新调整」）：抱法（MOM_HUG）两只手都扣在朝着镜头那只铁饼上，原来一直按抱法抓，
+ * 哑铃转回侧躺时那只铁饼转到最右边，手跟着伸出去、最后搭在铁饼顶上。现在远处的手（R）不松开那只铁饼，顺着它转到它的上沿
+ * （弯法、前臂在前和抱着时一样，肘不翻面）；近处的手（L）滑到离她近那一头的把手上、从上面握住。最后一截哑铃掉下去（够不着，胳膊伸直跟着往下）。
+ * 试过的：远处的手也握把手——把手太低，肘要从倒 V 翻成朝下，一帧里肘跳过去；近处的手扣离她近的那只铁饼上沿——铁饼就在她身前，
+ * 手要往回折、还从脸前面扫过
+ */
+const MOM_PUT: Record<"L" | "R", BarGrip> = {
+  L: { s: -52, h: -22, bend: "down", chest: "over" },
+  R: { s: 110, h: -100, fore: "front" },
+};
 const QJ = CAST.千斤;
 /** 拽红线时妈妈从门口往右挪多少（站到哑铃和铁桩中间） */
 const PULL_DX = 270;
@@ -624,6 +636,17 @@ export function makeHome() {
     return { x: ON_GROUND[0], y: ON_GROUND[1] + 4 * Math.exp(-a / 0.06) * Math.sin(a * 40), phi: 0.3, rot: 0.02 * Math.exp(-a / 0.1) * Math.sin(a * 30) };
   };
 
+  /** 妈妈的手抓在哑铃上的哪里：抱着（MOM_HUG）→ 一弯腰换成放下的抓法（MOM_PUT） */
+  const MOM_GRIPS: Record<"L" | "R", GripKeys> = {
+    L: [
+      [T.dissolve1, MOM_HUG.L],
+      [T.dissolve1 + 0.22, MOM_PUT.L],
+    ],
+    R: [
+      [T.dissolve1, MOM_HUG.R],
+      [T.dissolve1 + 0.22, MOM_PUT.R],
+    ],
+  };
   // 妈妈的手：抱着、放下时箍在哑铃上（和哑铃店一样的抓法），放下以后松开
   const reach = (pose: PoseIn, rootX: number, side: "L" | "R", p: V2, w: number, rootY = 0, spec = MOM_SPEC) => {
     if (w <= 0) return;
@@ -678,10 +701,10 @@ export function makeHome() {
     const pose: PoseIn = { ...f.pose };
     const x = momRoot(t);
     const d = bigAt(t);
-    const c = Math.cos(d.phi);
+    // 抱着时和哑铃店最后一样的抱法（lib/shop.ts 的 MOM_HUG），弯腰放下时换成 MOM_PUT，放下以后松开
     const w = 1 - fade(t, T.set + 0.02, T.set + 0.18);
-    reach(pose, x, "L", [d.x + 70 * c - 16, d.y + 40], w);
-    reach(pose, x, "R", [d.x - 70 * c - 36, d.y - 8], w);
+    holdBar(pose, MOM_SPEC, x, 0, "L", d, barGripAt(MOM_GRIPS.L, t), w);
+    holdBar(pose, MOM_SPEC, x, 0, "R", d, barGripAt(MOM_GRIPS.R, t), w);
     // ③ 拽红线：两只手攥在线上（远处的手在近处那只的上面一点）；后来远处的手去抓铁链、举到她脚踝上
     const hold = fade(t, 19.72, 19.88) * (1 - fade(t, T.drop, T.drop + 0.1));
     if (hold > 0) {
@@ -1062,10 +1085,12 @@ export function makeHome() {
       [cx - 200, 20],
       [cx + 200, 20],
     ].map(([x, y]) => M.transformPoint(new DOMPoint(x, y)));
-    const x0 = Math.floor(Math.min(...corners.map((p) => p.x)));
-    const y0 = Math.floor(Math.min(...corners.map((p) => p.y)));
+    let x0 = Math.floor(Math.min(...corners.map((p) => p.x)));
+    let y0 = Math.floor(Math.min(...corners.map((p) => p.y)));
     const x1 = Math.ceil(Math.max(...corners.map((p) => p.x)));
     const y1 = Math.ceil(Math.max(...corners.map((p) => p.y)));
+    // 「调整画面」里小画布从画面左上角起：人登记的坐标（骨架手柄）就是画面上的坐标
+    if (editing()) x0 = y0 = 0;
     const w = Math.max(1, x1 - x0);
     const h = Math.max(1, y1 - y0);
     if (backlit.width < w || backlit.height < h) {
@@ -1161,8 +1186,8 @@ export function makeHome() {
       return;
     }
     if (t < T.set) {
-      // 还抱在怀里：画在她的身子和近处那只手臂之间
-      drawPerson(g, MOM_SPEC, { ...m.pose, armL: { ...(m.pose.armL as object), chest: "over" } }, m.x, 0, z, {
+      // 还抱在怀里：画在她的身子和近处那只手臂之间（近处那只压在上面、远处那只的前臂在前面，跟着抓法 MOM_HUG）
+      drawPerson(g, MOM_SPEC, m.pose, m.x, 0, z, {
         beforeFrontArms: (cc) => {
           cc.save();
           cc.setTransform(worldM);

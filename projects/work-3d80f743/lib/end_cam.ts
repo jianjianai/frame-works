@@ -4,7 +4,7 @@
 import { type Cam, E, aim, camLerp, kick, ph } from "./cam";
 import { TE, type V2, breath, lerp, mix } from "./end_t";
 import { CORNER, RAIL_TOP, X_K, ZW } from "./end_map";
-import { HB_REST, KID_CHEST, X_LAND, herAt, herBrickAt, herChest, kidAt, kidRoot } from "./end_pair";
+import { HB_REST, KID_CHEST, X_LAND, herAt, herBrickPlan, herChest, kidAt, kidRoot } from "./end_pair";
 import { MEMBERS, X_JOIN, chainH } from "./end_rise";
 import { memberHead } from "./end_chain";
 
@@ -97,7 +97,7 @@ function landCam(t: number): Cam {
   const k = kidChest(TE.land);
   c = camLerp(c, aim(k[0] + 20, k[1] - 260, 540, 1060, 1.35), E.out(ph(t, TE.land + 0.06, TE.land + 0.26)));
   // 跟着砖落：对准砖（晚 0.03 秒），砖在画面上 820
-  const b = herBrickAt(Math.min(t - 0.03, TE.brickHit));
+  const b = herBrickPlan(Math.min(t - 0.03, TE.brickHit));
   if (b) c = camLerp(c, aim(b.c[0] + 40, b.c[1], 540, 820, 1.5), E.io(ph(t, TE.land + 0.14, TE.brickHit - 0.06)));
   // 砸地以后推到砖上
   const z = 1.5 * Math.pow(2.9 / 1.5, E.out(ph(t, TE.brickHit + 0.03, TE.pov)));
@@ -262,15 +262,16 @@ function wideAt(t: number): Cam {
 /**
  * 第三声前：他抬起头朝白的边上的她喊（2026-10-27 重排，用户：「这个从上往下的镜头有点多余……删除这个多余镜头，补一点新剧情」——
  * 原来第三声从他往下一张脸一张脸扫到街上最后那个人）。接着第二声跟着他往上时偷偷推近的那一下，越推越近推到他脸上：
- * 他的头在画面左边一点、偏下，上面留给他朝上喊；「活」上推到，「下」溶进回忆以前停稳
+ * 横着对准他的胸口、头在画面偏下，上面留给他朝上喊；「活」上推到，「下」溶进回忆以前停稳
  */
 /** 第三声推到他喊的脸上：起、止 */
 const CALL_PUSH: [number, number] = [121.5, TE.mem0];
 function callCam(t: number): Cam {
   const c = streetChain(t);
-  const h = kidAt(t).head;
-  // 他的头在画面左边一点、偏下（上面留出他朝上喊的地方）：回忆溶进来时，那一夜他拽绳子的脸正好对在这里（那一夜他站在画面左下）
-  const close = aim(h[0], h[1], 480, 830, 3.2);
+  const k = kidAt(t);
+  // 横着对准他的胸口，头在画面偏下（上面留出他朝上喊的地方）。用户 2026-10-30（2:02.37）「镜头没对准」：原来按头放在 x 480
+  // （好让回忆里那一夜他的脸对上），他仰着头、身子在左边，胸口落在 x 384
+  const close = aim(k.chest[0], k.head[1], 540, 830, 3.2);
   // 最后那一下越推越快（用户 2026-10-27：「最后的那一下加速」）：121.5 起从 0 慢慢加速，「下」溶进回忆（mem0）那一刻正好推到（叠化盖住停下来那一下；
   // 回忆按 mem0 那一刻的镜头对上他的脸）
   return camLerp(c, close, Math.pow(ph(t, CALL_PUSH[0], CALL_PUSH[1]), 2.4));
@@ -337,7 +338,7 @@ export function handCam(t: number): Cam {
 function handRaw(t: number): Cam {
   // 用户 2026-10-27（2:11.38）：「这里镜头太近了，要拉远一点，并且对准砖」——原来推到他身上 1.7 倍、对准他的胸口；
   // 现在对准砖（递的时候在他伸直的两只手上，接住以后在她伸直的左手上），1.25 倍，两个人伸直的胳膊都在画面里
-  const bAt = (tt: number): V2 => herBrickAt(tt)!.c;
+  const bAt = (tt: number): V2 => herBrickPlan(tt)!.c;
   const b0 = bAt(t);
   const b1 = bAt(Math.max(TE.brickHit + 0.01, t - 0.1));
   const bc: V2 = [lerp(b0[0], b1[0], 0.5), lerp(b0[1], b1[1], 0.5)];
@@ -352,7 +353,7 @@ function handRaw(t: number): Cam {
   const c = aim(tgt[0], tgt[1], 540, 960, z);
   // ③ 转正以后推到她的脸上停住（她睁开眼看着砖、一滴眼泪往下掉在砖上、闭上眼哭着笑）：两张脸挨着在画面上面，砖在画面中间偏下；
   // 柔和起步、越推越慢（拥抱的推法，1.2 秒）；停住以后只极慢地再凑一点，④ 拉远（TE.dim0）从这里起
-  // 2026-10-29 改成她从身后抱着他（end_pair.ts 的 BACK_HEAD）：两张脸并排（他的头在她右边 92），对准两张脸中间偏她一点，砖在下面
+  // 2026-10-29 改成她从身后抱着他（end_pair.ts 的 BACK_HEAD）：两张脸并排（他的头在她右边 128），对准两张脸中间偏她一点，砖在下面
   // 用户 2026-10-29（2:15.49）：「镜头对准砖」——砖在画面正中，两张脸在它上面
   const face = aim(b0[0], b0[1], 540, 960, 3.9 * (1 + 0.035 * ph(t, TE.faceSet, TE.dim0)));
   return camLerp(c, face, E.settle(ph(t, TE.faceIn, TE.faceSet)));
@@ -365,7 +366,7 @@ export function endCam(t: number): Cam {
   // 从两个人的近景退开，砖（她的光）一直在画面正中，不往下摇去看人链
   // 「在这反乌托邦里」后半句（TE.dim0）就开始退，句子唱完退稳，光一炸开镜头被推得一顶
   const close = handCam(TE.dim0 - 1e-3);
-  const b = herBrickAt(Math.min(t, TE.let0))!.c;
+  const b = herBrickPlan(Math.min(t, TE.let0))!.c;
   // 从她脸上（约 4 倍）退开：2.4 秒，光炸开的时候退到一大半，剩下的在白里退完（原来 2 秒）
   let c = camLerp(close, aim(b[0], b[1], 540, 960, 0.34), E.settle(ph(t, TE.dim0, TE.dim0 + 2.4)));
   c = { ...c, z: c.z * (1 + 0.04 * kick(t, TE.descend, 0.16)) };

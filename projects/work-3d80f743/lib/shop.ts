@@ -499,6 +499,134 @@ const QUEUE_SPECS: CastSpec[] = [passerby(9), passerby(14), passerby(11), passer
 const MOM_X = TX + 422;
 const RIVAL_X = TX + 906;
 /**
+ * 手抓在哑铃上的哪里（手腕，相对哑铃中心，世界坐标）：沿轴 s（乘 cos(phi)：哑铃转过来时跟着转）、再横着挪 dx、往下 h。
+ * 跟着抓法走的还有：IK 的弯法 bend（肘朝哪边）、近处那只手压在哑铃上（chest: over）、前臂画在哑铃前面（fore: front，角色库 ArmPose.fore）、
+ * 手腕转角 wrist（度）。哑铃店和千斤家门口（lib/home.ts）共用，溶过去的那一帧两边一样
+ */
+export interface BarGrip {
+  s: number;
+  dx?: number;
+  h: number;
+  bend?: number | "down";
+  chest?: "over";
+  fore?: "front";
+  wrist?: number;
+}
+/**
+ * 抢的时候（夺到以前；哑铃在展台上不转）。用户 2026-10-29 在「调整画面」里摆的 0:17.06（两只胳膊伸直往回拽）、
+ * 0:16.80 / 0:16.83（他远处那只手弯着伸到铁饼后面）换算到哑铃上：她两只手在把手靠她这边，他两只手扣在他那头铁饼上。
+ * 两个人都手肘朝下（角色库 bend: "down"，不往上拱成倒 V：「手臂不要倒V字」）。原来写固定的 1 / −1：那是「肘在肩膀到手腕连线的哪一侧」，
+ * 她往后一仰、胳膊从往前下伸变成往前平伸，同一侧就从朝下翻成朝上（0:16.80 修好了，0:17.13 又拱起来）
+ */
+const MOM_TUG: Record<"L" | "R", BarGrip> = {
+  L: { s: -120.7, h: -48, bend: "down", chest: "over" },
+  R: { s: -47, h: -48, bend: "down" },
+};
+const RIVAL_TUG: Record<"L" | "R", BarGrip> = {
+  L: { s: 136.9, h: -40.9 },
+  R: { s: 57, h: -40, bend: "down" },
+};
+/**
+ * 抱在怀里（哑铃转过来朝着镜头以后；用户 2026-10-30 在「调整画面」里摆的 0:17.60）：两只手都扣在朝着镜头那只铁饼上（s 128 是它的外面）——
+ * 近处的手（L）托在铁饼左半边、压在哑铃上，肘朝下；远处的手（R）从铁饼上沿绕过来扣在中心右上，前臂压在铁饼前面，上臂被铁饼挡着，
+ * 从外面看是倒 V（用户 2026-10-29：「右手的小臂显示在杠铃前面，因为是抱住的动作并且是被遮挡上臂的因此可以倒V」）
+ */
+export const MOM_HUG: Record<"L" | "R", BarGrip> = {
+  L: { s: 128, dx: -63, h: 2, bend: "down", chest: "over" },
+  R: { s: 128, dx: 14, h: -54, fore: "front", wrist: -9.52 },
+};
+/**
+ * 夺的那一下两只手（用户 2026-10-30 在「调整画面」里一帧一帧摆的 0:17.37–0:17.60，换算到哑铃上；时刻是 T.yank 之后几秒）：
+ * 0:17.37 远处的手（R）还攥在把手上，手肘朝下、在哑铃后面（「这一帧先不把手臂画在杠铃前面」）→ 0:17.40 一下折回来抱住离她近的那只铁饼
+ * （「下一帧抱住杠铃」，前臂压在铁饼前面）→ 她往后一坐（MOM_BRACE），两只手跟着身子带回来一点 → 0:17.50 起哑铃转过来朝着镜头，
+ * 两只手挪到朝着镜头那只铁饼上（0:17.53 远处的手已经扣到铁饼中心上面）→ 0:17.60 抱好（MOM_HUG）。
+ * 近处的手（L）一直肘朝下、压在哑铃上；s 只写沿轴的位置的，是手还扣在离她近的那只铁饼 / 把手上，跟着哑铃转
+ */
+const MOM_YANK: Record<"L" | "R", [number, BarGrip][]> = {
+  L: [
+    [0.06, { s: -115, h: -45, bend: "down", chest: "over" }],
+    [0.093, { s: -117, h: -37, bend: "down", chest: "over" }],
+    [0.127, { s: -121, h: -22, bend: "down", chest: "over" }],
+    [0.16, { s: -87, h: 24, bend: "down", chest: "over" }],
+    [0.193, { s: 128, dx: -82, h: -21, bend: "down", chest: "over", wrist: 13.22 }],
+    [0.26, MOM_HUG.L],
+  ],
+  R: [
+    [0.027, { s: -57, h: -40, bend: "down" }],
+    [0.06, { s: -85, h: -8, fore: "front", wrist: 10.13 }],
+    [0.093, { s: -86, h: -34, fore: "front", wrist: 10.13 }],
+    [0.127, { s: -101, h: -30, fore: "front", wrist: 10.13 }],
+    [0.16, { s: -91, h: -42, fore: "front", wrist: 10.13 }],
+    [0.193, { s: 128, dx: -41, h: -78, fore: "front", wrist: 10.13 }],
+    [0.26, MOM_HUG.R],
+  ],
+};
+/**
+ * 夺到以后她往后一坐、又顶回来（用户 2026-10-30 在「调整画面」里拖的：0:17.43 −15、0:17.47 −43、0:17.50 −38、0:17.53 −24、0:17.60 回到原处）：
+ * 人往后退、哑铃不跟着退——两只胳膊伸长把它架在身前，站稳了再收进怀里。[T.yank 之后几秒, 人往右挪多少]，只挪她的根，哑铃按没退的胸口走
+ */
+const MOM_BRACE: [number, number][] = [
+  [0.06, 0],
+  [0.093, -15],
+  [0.127, -43],
+  [0.16, -38],
+  [0.193, -24],
+  [0.26, 0],
+];
+/** 抓法的关键帧：[时刻, 抓法, 从上一帧过来的缓动]，之间按 mixGrip 过渡 */
+export type GripKeys = [number, BarGrip, ((x: number) => number)?][];
+export function gripAt(keys: GripKeys, t: number): BarGrip & { wristW?: number } {
+  if (t <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    const [t1, g1, ease] = keys[i];
+    if (t <= t1) {
+      const [t0, g0] = keys[i - 1];
+      return mixGrip(g0, g1, (ease ?? E.io)((t - t0) / (t1 - t0)));
+    }
+  }
+  return keys[keys.length - 1][1];
+}
+/** 两种抓法之间过渡（数按 u 插；弯法、前后在过半时换） */
+export function mixGrip(a: BarGrip, b: BarGrip, u: number): BarGrip & { wristW?: number } {
+  const n = (x: number | undefined) => x ?? 0;
+  const pick = u < 0.5 ? a : b;
+  return {
+    s: a.s + (b.s - a.s) * u,
+    dx: n(a.dx) + (n(b.dx) - n(a.dx)) * u,
+    h: a.h + (b.h - a.h) * u,
+    bend: pick.bend,
+    chest: pick.chest,
+    fore: pick.fore,
+    wrist: a.wrist !== undefined && b.wrist !== undefined ? a.wrist + (b.wrist - a.wrist) * u : (b.wrist ?? a.wrist),
+    wristW: b.wrist !== undefined ? (a.wrist !== undefined ? 1 : u) : a.wrist !== undefined ? 1 - u : 0,
+  };
+}
+/** 哑铃（中心、轴转角 phi）上这个抓法的手腕位置（世界坐标） */
+export const barPoint = (d: { x: number; y: number; phi: number }, g: BarGrip): V2 => [d.x + g.s * Math.cos(d.phi) + (g.dx ?? 0), d.y + g.h];
+/**
+ * 一只手抓在哑铃上：手腕 IK 到抓的地方（分量 w），带上这个抓法的弯法、前后和手腕。人的根在 (rootX, rootY)；
+ * 角色坐标按身高、胖瘦缩放，朝右的人 x 取反
+ */
+export function holdBar(pose: PoseIn, spec: CastSpec, rootX: number, rootY: number, side: "L" | "R", d: { x: number; y: number; phi: number }, g: BarGrip & { wristW?: number }, w: number) {
+  if (w <= 0) return;
+  const k = spec.scale;
+  const wd = spec.width ?? 1;
+  const mir = (pose.face ?? 0) > 0 ? -1 : 1;
+  const q = barPoint(d, g);
+  const key = side === "L" ? "armL" : "armR";
+  const arm = pose[key] as { h: number };
+  const ww = (g.wristW ?? (g.wrist !== undefined ? 1 : 0)) * Math.min(1, w);
+  pose[key] = {
+    ...(pose[key] as object),
+    to: [((q[0] - rootX) / (k * wd)) * mir, (q[1] - rootY) / k],
+    ik: Math.min(1, w),
+    ...(g.bend !== undefined ? { bend: g.bend } : {}),
+    ...(w > 0.5 && g.chest ? { chest: g.chest } : {}),
+    ...(w > 0.5 && g.fore ? { fore: g.fore } : {}),
+    ...(g.wrist !== undefined ? { h: arm.h + ((g.wrist * Math.PI) / 180 - arm.h) * ww } : {}),
+  } as PoseIn["armL"];
+}
+/**
  * 排队的人：从门口往右，一个挨一个。店一直在第一幕的世界里（镜头升起来时露出来），队尾不能伸到她走的路上：
  * 原来 5 个人、隔 178，队尾在 TX + 1742，镜头刚开始慢慢升（13.0–13.2）就站在她身边抢视线。
  * 第二幕店里的镜头只看得到队头那一个（TX + 1030 不动）
@@ -517,9 +645,10 @@ export function makeShop() {
   const PHI1 = 1.16;
   // 妈妈的动作：伸手 → 攥住 → 往后拽（被拽过去一点）→ 夺 → 抱着、往后退一步
   const momKeys: MoveKey[] = [
-    { t: 15.9, x: 0, p: { ...MOM.够, lean: 18, neck: 0 } },
+    // 刚攥住的时候人在左边一点（用户 2026-10-29 在「调整画面」里拖的：0:16.80 −33、0:16.83 −24），往回拽以前挪回来
+    { t: 15.9, x: -33, p: { ...MOM.够, lean: 18, neck: 0 } },
     { t: T.reach, ease: "inOut", p: MOM.够 },
-    { t: T.tug - 0.05, ease: "inOut", p: { ...MOM.拽, lean: -6 } },
+    { t: T.tug - 0.05, ease: "inOut", dx: 33, p: { ...MOM.拽, lean: -6 } },
     // 「争」：被他一下拽过去，往前一个踉跄
     { t: T.tug + 0.1, ease: "out", dx: 26, p: { ...MOM.拽, lean: 14, neck: -4, expression: "吓一跳" } },
     // 站稳、咬牙往后坐
@@ -545,7 +674,8 @@ export function makeShop() {
   const rivalKeys: MoveKey[] = [
     { t: 15.9, x: 0, p: QUEUE.站 },
     { t: T.rival - 0.2, p: QUEUE.站 },
-    { t: T.rival, ease: "inOut", dx: -40, p: RIVAL.够 },
+    // 探身出来抓住（用户 2026-10-29 在「调整画面」里把他往左拖了 31：dx −40 → −71）
+    { t: T.rival, ease: "inOut", dx: -71, p: RIVAL.够 },
     { t: T.tug - 0.05, ease: "inOut", p: { ...RIVAL.拽, lean: 4 } },
     // 「争」：他猛地往回一拽
     { t: T.tug + 0.1, ease: "out", dx: 22, p: { ...RIVAL.拽, lean: -14 } },
@@ -555,7 +685,7 @@ export function makeShop() {
   ];
   const rivalMove = live(rivalKeys, { look: lookOf(RIVAL_SPEC), base: { wind: 0.5 }, idle: true, seed: 22, springs: ARMS });
 
-  // 她夺到以后，哑铃跟着她胸口走（抱在肚子前面、低一点）
+  // 她夺到以后，哑铃跟着她胸口走（抱在肚子前面、低一点）；她往后一坐那一下（MOM_BRACE）哑铃不跟着退
   const momRaw = (t: number) => momMove(t);
   const momChest = (t: number): V2 => {
     const f = momRaw(t);
@@ -587,61 +717,41 @@ export function makeShop() {
     };
   };
 
-  /** 把手抓到世界里的某一点：改 pose 的手臂 IK（角色坐标：按身高、胖瘦缩放，朝右的人 x 取反） */
-  const reach = (pose: PoseIn, spec: CastSpec, rootX: number, side: "L" | "R", p: V2, w: number) => {
-    if (w <= 0) return;
-    const k = spec.scale;
-    const wd = spec.width ?? 1;
-    const mir = (pose.face ?? 0) > 0 ? -1 : 1;
-    const local: V2 = [((p[0] - rootX) / (k * wd)) * mir, p[1] / k];
-    const key = side === "L" ? "armL" : "armR";
-    pose[key] = { ...(pose[key] as object), to: local, ik: Math.min(1, w) };
+  /** 她两只手抓的地方：抢的时候抓把手 → 夺的那一下一帧一帧按用户摆的（MOM_YANK），0.26 秒抱好 */
+  const MOM_GRIPS: Record<"L" | "R", GripKeys> = {
+    L: [[T.yank, MOM_TUG.L], ...MOM_YANK.L.map(([dt, g]): GripKeys[number] => [T.yank + dt, g])],
+    R: [[T.yank, MOM_TUG.R], ...MOM_YANK.R.map(([dt, g]): GripKeys[number] => [T.yank + dt, g])],
   };
-
-  // 抓的地方：她两只手在把手靠她这边，他两只手扣在他那头铁饼的上沿
-  const momGrip = (t: number): [V2, V2] => {
-    const d = bigAt(t);
-    const c = Math.cos(d.phi);
-    if (t < T.yank + 0.16) {
-      return [
-        [d.x - 50 * c, d.y - 18],
-        [d.x - 16 * c, d.y - 22],
-      ];
-    }
-    // 抱着：近处的手箍在朝着镜头那只铁饼的下沿，远处的手从后面托着
-    return [
-      [d.x + 70 * c - 10, d.y + 54],
-      [d.x - 70 * c - 30, d.y + 6],
-    ];
-  };
-  const rivalGrip = (t: number): [V2, V2] => {
-    const d = bigAt(t);
-    const c = Math.cos(d.phi);
-    return [
-      [d.x + 126 * c + 12, d.y - 62],
-      [d.x + 138 * c + 20, d.y - 8],
-    ];
+  const momGrip = (t: number, side: "L" | "R") => gripAt(MOM_GRIPS[side], t);
+  /** 她的根往右挪多少（MOM_BRACE：夺到以后往后一坐又顶回来） */
+  const braceAt = (t: number) => {
+    const k = MOM_BRACE;
+    const dt = t - T.yank;
+    if (dt <= k[0][0] || dt >= k[k.length - 1][0]) return 0;
+    let i = 1;
+    while (k[i][0] < dt) i++;
+    return k[i - 1][1] + (k[i][1] - k[i - 1][1]) * E.io((dt - k[i - 1][0]) / (k[i][0] - k[i - 1][0]));
   };
 
   const momAt = (t: number) => {
     const f = momRaw(t);
     const pose: PoseIn = { ...f.pose };
-    const x = MOM_X + f.x;
-    const [gL, gR] = momGrip(t);
-    const hold = t < T.yank + 0.12 ? fade(t, T.reach - 0.2, T.reach) : 1;
-    // 手掌中心在手腕往指尖 17：IK 给的是手腕，往回收一点
-    reach(pose, MOM_SPEC, x, "L", [gL[0] - 6, gL[1] - 14], hold);
-    reach(pose, MOM_SPEC, x, "R", [gR[0] - 6, gR[1] - 14], hold);
+    const x = MOM_X + f.x + braceAt(t);
+    const d = bigAt(t);
+    const hold = fade(t, T.reach - 0.2, T.reach);
+    holdBar(pose, MOM_SPEC, x, 0, "L", d, momGrip(t, "L"), hold);
+    holdBar(pose, MOM_SPEC, x, 0, "R", d, momGrip(t, "R"), hold);
     return { pose, x };
   };
   const rivalAt = (t: number) => {
     const f = rivalMove(t);
     const pose: PoseIn = { ...f.pose };
     const x = RIVAL_X + f.x;
-    const w = fade(t, T.rival - 0.1, T.rival + 0.05) * (1 - fade(t, T.yank + 0.02, T.yank + 0.1));
-    const [gL, gR] = rivalGrip(t);
-    reach(pose, RIVAL_SPEC, x, "L", [gL[0] + 8, gL[1] - 10], w);
-    reach(pose, RIVAL_SPEC, x, "R", [gR[0] + 8, gR[1] - 10], w);
+    const d = bigAt(t);
+    // 手先抓上去（0:16.80 已经抓住，用户在「调整画面」里摆的），身子跟着探出来（T.rival）
+    const w = fade(t, T.rival - 0.14, T.rival - 0.06) * (1 - fade(t, T.yank + 0.02, T.yank + 0.1));
+    holdBar(pose, RIVAL_SPEC, x, 0, "L", d, RIVAL_TUG.L, w);
+    holdBar(pose, RIVAL_SPEC, x, 0, "R", d, RIVAL_TUG.R, w);
     return { pose, x };
   };
 
@@ -697,22 +807,27 @@ export function makeShop() {
     const m = momAt(t);
     const r = rivalAt(t);
     const worldM = g.getTransform();
-    if (t < T.yank) {
+    const inFront = (cc: CanvasRenderingContext2D) => {
+      cc.save();
+      cc.setTransform(worldM);
+      big();
+      cc.restore();
+    };
+    if (t >= T.reach - 0.2 && t < T.yank) {
+      // 两个人抢：哑铃画在她的身子和近处那只手之间（远处的手、他的远处那只手在哑铃后面，见 MOM_TUG / RIVAL_TUG）；
+      // 他近处那只手（L）扣在哑铃前面：先画他（不画这只手）→ 她 → 这只手
+      drawPerson(g, RIVAL_SPEC, r.pose, r.x, 0, z, { skipArms: ["L"] });
+      drawPerson(g, MOM_SPEC, m.pose, m.x, 0, z, { beforeFrontArms: inFront });
+      drawPerson(g, RIVAL_SPEC, r.pose, r.x, 0, z, { onlyArm: "L" });
+    } else if (t < T.yank) {
       // 还在展台上：先画哑铃，再画两个人（两个人的手扣在上面）
       big();
       drawPerson(g, MOM_SPEC, m.pose, m.x, 0, z);
       drawPerson(g, RIVAL_SPEC, r.pose, r.x, 0, z);
     } else {
-      // 夺到怀里：画在她的身子和近处那只手臂之间（近处的手箍在上面，远处的手在后面托着）
+      // 夺到怀里：画在她的身子和近处那只手之间；远处那只手的前臂横在哑铃前面（MOM_HUG）
       drawPerson(g, RIVAL_SPEC, r.pose, r.x, 0, z);
-      drawPerson(g, MOM_SPEC, { ...m.pose, armL: { ...(m.pose.armL as object), chest: "over" } }, m.x, 0, z, {
-        beforeFrontArms: (cc) => {
-          cc.save();
-          cc.setTransform(worldM);
-          big();
-          cc.restore();
-        },
-      });
+      drawPerson(g, MOM_SPEC, m.pose, m.x, 0, z, { beforeFrontArms: inFront });
     }
   };
   /** 对面人行道上拎着哑铃的人（画在 D = 2.2 那一层的空气后面） */
@@ -728,7 +843,7 @@ export function makeShop() {
   const drawShadows = (g: CanvasRenderingContext2D, t: number) => {
     groundShadow(g, STAND.x + 24, 150, 0.32);
     for (const q of queue) groundShadow(g, q.x0 + q.move(t).x + 16, 110, 0.26);
-    groundShadow(g, MOM_X + momRaw(t).x + 18, 130, 0.3);
+    groundShadow(g, MOM_X + momRaw(t).x + braceAt(t) + 18, 130, 0.3);
     groundShadow(g, RIVAL_X + rivalMove(t).x + 18, 120, 0.3);
   };
   return { bigAt, momAt, rivalAt, momChest, drawFront, drawPeople, drawWalkers, drawShadows, WALK_D };

@@ -756,7 +756,8 @@ export function sceneAt(t: number): Scene2 {
     // 她的两只手（目标连续地换，权重不跳）：攥红绳 →「亮」环到他背上（他朝右，背在左边）→ 脱外套（交给姿势）→ 裹到他肩膀上 → 又环回他背上
     const backR: V2 = [sShoulder[0] - 56, sShoulder[1] + 50];
     const backL: V2 = [sShoulder[0] - 40, sShoulder[1] + 110];
-    const wrapR: V2 = [sShoulder[0] - 62, sShoulder[1] + 6];
+    // 远处那只（R）攥着外套领子：用户 2026-10-30 在「调整画面」0:46.63 摆的（手腕往右下挪一点，肘往下弯，原来拱成倒 V）
+    const wrapR: V2 = [sShoulder[0] - 50.2, sShoulder[1] + 20.7];
     const wrapL: V2 = [sShoulder[0] + 66, sShoulder[1] + 10];
     let tR: V2 = backR;
     let tL: V2 = backL;
@@ -778,7 +779,7 @@ export function sceneAt(t: number): Scene2 {
       }
     }
     // 拽绳子时 R 的肘朝外（头顶时在头外侧、拉下来时朝下收在身侧；默认的弯法肘朝头那边拱）
-    setIk(mp, "armR", momLoc(root, tR), w, a ? -1 : undefined);
+    setIk(mp, "armR", momLoc(root, tR), w, a ? -1 : t > T.coat0 + 0.16 ? -1 : undefined);
     setIk(mp, "armL", momLoc(root, tL), w);
     // R 是远处那只（默认画在身子后面）：拽绳子时举在头的外侧，整只胳膊画在前面
     if (a && t < T.haul + 0.1) mp.armR = { ...(mp.armR as object), layer: "front" } as PoseIn["armR"];
@@ -886,8 +887,10 @@ export function sceneAt(t: number): Scene2 {
   const hug = E.io(ph(t, T.cut + 0.02, T.land));
   // 两只手一直搂着他（小刀扎在跟前，只是看着它，不去捡）
   const kn = knifeAt2(t, [ch.root[0], 0]);
-  const hugL: V2 = mix([ankle[0] - 4, ankle[1] + 8], [sh[0] + 30, sh[1] + 10], hug);
+  // 近处那只（L）搂在他胸前、画在他前面（用户 2026-10-30 在「调整画面」0:54.13 摆的：「主角的左边的手不被小石头遮挡」；原来伸到他背后、被他挡住）
+  const hugL: V2 = mix([ankle[0] - 4, ankle[1] + 8], [sh[0] - 27.3, sh[1] - 41.5], hug);
   setIk(cp, "armL", cLoc(hugL), 1);
+  if (hug > 0) cp.armL = { ...(cp.armL as object), chest: "over" } as PoseIn["armL"];
   setIk(cp, "armR", cLoc(mix([ankle[0] + 6, ankle[1] - 6], [sh[0] - 20, sh[1] + 34], hug)), 1);
   chen = { pose: cp, root: ch.root };
   stone = { spec: STONE_COAT, pose: sp, root: sRoot, ankle, hands: null };
