@@ -14,7 +14,6 @@ const project: Project = {
   experiences: ["剧情音乐短片","s0rrow"],
   materials: ["s0rrow"],
   loadAudio: () => import("./audio"),
-  publishedAt: "2026-10-08T21:06:05.689Z",
   timelines: ["main"],
 };
 export default project;
