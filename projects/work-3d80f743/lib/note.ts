@@ -6,10 +6,12 @@
 // 砖上的「活下去」还是签字笔手写体（龙藏体，HAND_FONT），那是她的手写。
 
 import { assetUrl } from "@frame/engine/types";
-import { clamp01 } from "./cam";
+import { LANDSCAPE, clamp01 } from "./cam";
 
 export const HAND_FONT = "LongCang";
 const NOTE_FONT = "NoteSerif";
+/** B 站横屏点赞那句（一键三连）另截的子集：不动 NoteSerif 那个文件（加字重截会让竖屏的字差零点几个像素） */
+const NOTE_FONT_BILI = "NoteSerifBili";
 
 let loading: Promise<void> | null = null;
 export function loadHandFont() {
@@ -17,6 +19,7 @@ export function loadHandFont() {
     const faces = [
       new FontFace(HAND_FONT, `url(${assetUrl("films/work-3d80f743/fonts/LongCang-Regular.ttf")})`),
       new FontFace(NOTE_FONT, `url(${assetUrl("films/work-3d80f743/fonts/NotoSerifSC-Bold-subset.woff2")})`, { weight: "700" }),
+      new FontFace(NOTE_FONT_BILI, `url(${assetUrl("films/work-3d80f743/fonts/NotoSerifSC-Bold-bili.woff2")})`, { weight: "700" }),
     ];
     for (const f of await Promise.all(faces.map((f) => f.load()))) document.fonts.add(f);
   })();
@@ -30,6 +33,12 @@ export interface Note {
   /** 中心（设计坐标） */
   x: number;
   y: number;
+  /** 用哪个字体子集（不给：NoteSerif；"bili"：B 站横屏点赞那句另截的） */
+  font?: "bili";
+  /** B 站横屏（1920×1080）的中心和字号（不给：x、y、size 照竖屏） */
+  wx?: number;
+  wy?: number;
+  wsize?: number;
   /** 出现（整句一下子在）、开始淡出的时刻 */
   in: number;
   out: number;
@@ -41,12 +50,12 @@ export interface Note {
 const INK_TEXT = "#3a2629";
 const ACCENT = "#b4472f";
 const GLOW = "rgba(255,247,234,0.95)";
-const cache = new Map<Note, { img: HTMLCanvasElement; k: number }>();
+const cache = new Map<Note, { img: HTMLCanvasElement; k: number; wide: boolean }>();
 
 /** 整句画进一张图 */
 function render(n: Note, k: number) {
-  const size = n.size ?? 52;
-  const font = `700 ${size}px ${NOTE_FONT}, "Noto Serif SC", "Songti SC", serif`;
+  const size = (LANDSCAPE ? n.wsize : undefined) ?? n.size ?? 52;
+  const font = `700 ${size}px ${n.font === "bili" ? NOTE_FONT_BILI : NOTE_FONT}, "Noto Serif SC", "Songti SC", serif`;
   const spacing = size * 0.06;
   // 按关键词分段：关键词暖赭红，其余深暖棕
   const hot = new Array<boolean>(n.text.length).fill(false);
@@ -116,10 +125,10 @@ export function drawNoteAt(g: CanvasRenderingContext2D, base: DOMMatrix, n: Note
   if (alpha <= 0.003) return;
   const k = Math.max(1, Math.hypot(base.a, base.b));
   let c = cache.get(n);
-  if (!c || c.k !== k) cache.set(n, (c = { img: render(n, k), k }));
+  if (!c || c.k !== k || c.wide !== LANDSCAPE) cache.set(n, (c = { img: render(n, k), k, wide: LANDSCAPE }));
   g.save();
   g.setTransform(base);
-  g.translate(n.x, n.y + dy);
+  g.translate(LANDSCAPE ? (n.wx ?? n.x) : n.x, (LANDSCAPE ? (n.wy ?? n.y) : n.y) + dy);
   g.scale(1 / c.k, 1 / c.k);
   g.globalAlpha = alpha;
   g.drawImage(c.img, -c.img.width / 2, -c.img.height / 2);

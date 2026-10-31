@@ -17,7 +17,7 @@
 import { type Angles, type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf } from "@materials/剪纸角色/code/chengtuo";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, H as SH, W as SW, kick, ph } from "./cam";
+import { type Cam, E, VH as SH, VW as SW, kick, ph } from "./cam";
 import { INK, drawGlow, drawGrade } from "./world";
 import { ARMS, LIMP, live, smoothTrack } from "./motion";
 import { armL, armR, legL, legR } from "./poses";

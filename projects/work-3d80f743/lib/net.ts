@@ -14,7 +14,7 @@ import { type CastSpec, castJoints, lookOf, passerby } from "@materials/剪纸�
 import { type Angles, type MoveKey, type PoseIn, figurePose } from "@materials/剪纸角色/code/chengtuo";
 import { seeded } from "@frame/engine/math";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, H, W, aim, camLerp, kick, ph } from "./cam";
+import { type Cam, E, VH as H, VW as W, aim, camLerp, kick, ph } from "./cam";
 import { type Block, INK, LAYERS, QJ_HOME, STREET, TOWER, Y_WHITE, drawAshFall, drawBurst, drawGlow, drawSilhouette, drawTinted, whiteEdge } from "./world";
 import { LIMP, live } from "./motion";
 import { armL, armR, legL, legR } from "./poses";

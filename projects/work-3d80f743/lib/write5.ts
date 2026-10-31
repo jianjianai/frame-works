@@ -14,7 +14,7 @@ import { type MoveKey, type PoseIn, CHENGTUO, COLORS as CHEN_COLORS, bootMap, dr
 import { BOOT } from "@materials/剪纸角色/code/chengtuo-costume";
 import { REST, cubicPath, toLocal } from "@materials/剪纸角色/code/figure";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
-import { type Cam, E, camLerp, ph, toScreen } from "./cam";
+import { type Cam, E, camLerp, ph, toScreenV } from "./cam";
 import { part } from "./world";
 import { ARMS, live } from "./motion";
 import { armL, armR, legL, legR } from "./poses";
@@ -802,7 +802,7 @@ const breath = (t: number): V2 => [
 function cam7(t: number): Cam {
   const tm = Math.min(t, L.mix1);
   const sc = walkCam(tm);
-  const s = toScreen(sc, ...streetClasp(tm));
+  const s = toScreenV(sc, ...streetClasp(tm));
   const match = aimRoom(handsAt(tm), s[0], s[1], sc.z / ROOM.s);
   const z = 2.8;
   const h = ph(t, L.mix1, L.mix1 + 0.5);

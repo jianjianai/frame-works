@@ -4,3 +4,4 @@
 - public/ref/比例参考-*.png（沉沉、男人、小孩、老人、女人）: 用户 2026-10-27 用生图模型生成的配角比例参考图，只作对照、不进片子。比例参考-大人和小孩.png：用户 2026-10-28 给的大人和小孩站在一起的参考图（定小孩的身高），同上。比例参考-沉沉-胳膊.png：用户 2026-10-28 给的主角正面 / 3/4 参考图（定穿外套时胳膊的位置和遮挡），同上。比例参考-小石头的妈妈.jpg：用户 2026-10-28 生成的小石头的妈妈参考图（描脸、头发、外套、裤腿），同上。
 - public/fonts/NotoSerifSC-Bold-cover.woff2: 思源宋体 Noto Serif SC Bold（Google Fonts，SIL Open Font License 1.1）。抖音封面用的子集：只含封面上的字「她拽住了全城飘起来的人，可谁来拽住她？《引力》反乌托邦-乌托邦P·｜|」「人不是被地拉住的，是被人拉住的。」（2026-10-30 截取，加字重截过一次，fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&text=<这些字>）
 - public/fonts/NotoSerifSC-Bold-cover-zuichen.woff2: 思源宋体 Noto Serif SC Bold（Google Fonts，SIL Open Font License 1.1）。抖音封面第四版「最沉」用的子集：只含「引力城里都说，她是最沉的人」（2026-10-30 截取，同上）
+- public/fonts/NotoSerifSC-Bold-bili.woff2: Noto Serif SC Bold（Google Fonts，SIL Open Font License 1.1），按 B 站横屏点赞那句截的子集：一键三连的人，身边一直有个拽住你的人

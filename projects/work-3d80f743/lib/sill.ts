@@ -8,7 +8,7 @@
 
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf } from "@materials/剪纸角色/code/chengtuo";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, aim, camLerp, ph } from "./cam";
+import { type Cam, E, LANDSCAPE, aim, camLerp, ph } from "./cam";
 import { INK, part } from "./world";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { ARMS, live } from "./motion";
@@ -473,6 +473,8 @@ export function roomAwayAt(t: number): RoomAway {
   return {
     rope: f.ankleL,
     door: 0,
+    // 她这时铁靴还穿在脚上：⑫ 脱下来的那两只不画（竖屏在画面外，横屏往左看得见）
+    ...(LANDSCAPE ? { boots: false } : {}),
     visitor: (g) => {
       drawLooseCoat(g, t);
       drawStone(g, t);

@@ -15,7 +15,7 @@
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf } from "@materials/剪纸角色/code/chengtuo";
 import { CAST, type CastSpec, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, H, W, ph } from "./cam";
+import { type Cam, E, H, W, lensOf, ph } from "./cam";
 import { INK, TOWER_HOME, addEllipse, part } from "./world";
 import { ARMS, live } from "./motion";
 import { legL, legR } from "./poses";
@@ -588,11 +588,13 @@ export interface CeilingCast {
   empty?: boolean;
 }
 export function drawCeiling(g: CanvasRenderingContext2D, base: DOMMatrix, t: number, cam: Cam, cast?: CeilingCast) {
+  // 横屏按横屏镜头摆（描边粗细还按取景的倍数，和竖屏一样）
+  const o = lensOf(cam);
   g.setTransform(base);
   g.translate(W / 2, H / 2);
-  if (cam.r) g.rotate(cam.r);
-  g.scale(cam.z, cam.z);
-  g.translate(-cam.x, -cam.y);
+  if (o.r) g.rotate(o.r);
+  g.scale(o.z, o.z);
+  g.translate(-o.x, -o.y);
   LW = Math.max(0.45, Math.min(1, 1 / Math.sqrt(cam.z)));
   ceiling(g);
   const her = cast?.her ?? herAt(t);

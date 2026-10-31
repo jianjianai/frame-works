@@ -4,6 +4,7 @@
 
 import { seeded } from "@frame/engine/math";
 import { moteSprite } from "./world";
+import { H, W } from "./cam";
 import { MOM_X } from "./dawn";
 import { MT } from "./mother";
 
@@ -78,7 +79,7 @@ export function drawSkyBloom(g: CanvasRenderingContext2D, base: DOMMatrix, t: nu
   gr.addColorStop(0.8, `rgba(255,240,200,${0.14 * k})`);
   gr.addColorStop(1, "rgba(255,240,200,0)");
   g.fillStyle = gr;
-  g.fillRect(0, 0, 1080, 1920);
+  g.fillRect(0, 0, W, H);
   g.restore();
 }
 

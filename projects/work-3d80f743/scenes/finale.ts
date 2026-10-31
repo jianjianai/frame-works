@@ -16,7 +16,8 @@
 //   （用户 2026-10-25 第二次改 112.02 以后：下面的人是在救他；人链钉在地上的那一点不动，随风摆；砖不翻面；她给他穿外套，光着脚跺出一个坑）
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
-import { type Cam, applyCam, kick, toScreen, viewOf } from "../lib/cam";
+import { type Cam, H, W, applyCam, kick, setLens, syncFrame, toScreen, viewOf } from "../lib/cam";
+import { lensAt } from "../lib/wide";
 import { drawGlow, drawStreet, drawTinted, makeGrain, prepareCity, setDusk } from "../lib/world";
 import { loadHandFont } from "../lib/note";
 import { drawCeiling } from "../lib/bed";
@@ -48,12 +49,13 @@ const E_io = (x: number) => {
 const wideOf = (cam: Cam) => Math.min(1, Math.max(0, (0.62 - cam.z) / 0.3));
 
 export async function createScene({ width, height }: SceneOptions): Promise<Scene> {
+  syncFrame(width, height);
   await loadHandFont();
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
-  const base = new DOMMatrix([width / 1080, 0, 0, height / 1920, 0, 0]);
+  const base = new DOMMatrix([width / W, 0, 0, height / H, 0, 0]);
   const grain = makeGrain();
   prepareCity();
   const { drawWorld, drawAir } = makeEndStage(base, grain);
@@ -75,7 +77,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const n = 9;
-    const py = (Math.min(260, Math.abs(dy)) * Math.sign(dy) * height) / 1920;
+    const py = (Math.min(260, Math.abs(dy)) * Math.sign(dy) * height) / H;
     for (let i = 1; i < n; i++) {
       ctx.globalAlpha = 1 / (i + 1);
       ctx.drawImage(buf, 0, (i / (n - 1) - 0.5) * py);
@@ -279,7 +281,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 0.34 * a;
-    ctx.filter = `blur(${Math.max(1, Math.round((3 * width) / 1080))}px)`;
+    ctx.filter = `blur(${Math.max(1, Math.round((3 * width) / W))}px)`;
     ctx.drawImage(buf, 0, 0);
     ctx.restore();
     applyCam(ctx, base, cam, 1);
@@ -319,6 +321,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   return {
     canvas,
     render(t) {
+      syncFrame(width, height);
+      setLens(lensAt("finale", t));
       try {
         if (t < TE.ceil) renderStreet(t);
         else if (t < TE.launch) renderCeiling(t);

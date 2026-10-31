@@ -14,7 +14,7 @@ import { castJoints, passerby } from "@materials/剪纸角色/code/cast";
 import { type MoveKey, type PoseIn } from "@materials/剪纸角色/code/chengtuo";
 import { seeded } from "@frame/engine/math";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, H, W, aim, camLerp, kick, ph, toScreen } from "./cam";
+import { type Cam, E, H, LANDSCAPE, W, aim, camLerp, kick, ph, toScreen, toScreenV } from "./cam";
 import { drawGlow, moteSprite, part } from "./world";
 import { live } from "./motion";
 import { armL, armR, legL, legR } from "./poses";
@@ -403,14 +403,46 @@ const WALKERS: Walker[] = [
 ];
 const WALK_FROM = 61.6 + SHIFT;
 const WALK_TO = 63.2 + SHIFT;
-
-/** 画⑧里街上和天上的人（人这一层，世界坐标）；木牌在谁手里就画在谁的身子和近处那只手臂之间 */
-export function drawSign8(g: CanvasRenderingContext2D, t: number, z: number) {
-  if (t > WALK_FROM && t < WALK_TO)
-    for (const w of WALKERS) {
-      const p = walkerAt(w, t - WALK_FROM);
-      drawPerson(g, w.spec, p.pose, p.x, 0, z);
+/**
+ * B 站横屏（用户 2026-10-30 看着 1:02.67：「旁边两个人从画面消失」）：竖屏 62.2–62.6 他们走出画面、63.0 天上一亮时只剩她一个人；
+ * 横屏画面宽，62.7 不画的时候他们还在画面里，一下没了。横屏他们早动身 WALK_LEAD 秒（走得一样快，木牌落地时离她远一点），
+ * 各自整个走出画面那一刻才不画（walkersOut）；最晚画到十二年前这一层溶完（间奏第一拍前后各 0.2 秒溶到公交站）
+ */
+const walkTo = () => (LANDSCAPE ? beatAt(128) + 0.2 : WALK_TO);
+const WALK_LEAD = () => (LANDSCAPE ? 1 : 0);
+const walkerNow = (w: Walker, t: number) => walkerAt(w, t - WALK_FROM + WALK_LEAD());
+/**
+ * 横屏：每个路人整个走出画面的那一刻（木牌落地以后第一次）。之后间奏的镜头退开也不再画——接着画的话他们又回到画面边上，
+ * 竖屏里他们走出去以后就只剩她一个人。cam：这条时间轴画面上的镜头（横屏镜头换算过的）
+ */
+export function walkersOut(cam: (t: number) => Cam): number[] {
+  const end = walkTo();
+  return WALKERS.map((w) => {
+    for (let t = T.land; t < end; t += 1 / 60) {
+      const c = cam(t);
+      const p = walkerNow(w, t);
+      // 离根最远的关节，再留出手掌、鞋、头发
+      const j = Object.values(castJoints(w.spec, p.pose)) as V2[];
+      const reach = Math.max(...j.map((q) => Math.abs(q[0]))) + 45;
+      const x = p.x - w.dir * reach;
+      const out = [0, -600 * w.spec.scale].every((y) => {
+        const sx = toScreen(c, x, y)[0];
+        return w.dir < 0 ? sx < 0 : sx > W;
+      });
+      if (out) return t;
     }
+    return end;
+  });
+}
+
+/** 画⑧里街上和天上的人（人这一层，世界坐标）；木牌在谁手里就画在谁的身子和近处那只手臂之间。out：横屏各个路人走出画面的那一刻 */
+export function drawSign8(g: CanvasRenderingContext2D, t: number, z: number, out?: number[]) {
+  if (t > WALK_FROM && t < walkTo())
+    WALKERS.forEach((w, i) => {
+      if (out && t >= out[i]) return;
+      const p = walkerNow(w, t);
+      drawPerson(g, w.spec, p.pose, p.x, 0, z);
+    });
   const b = boardAt(t);
   // 妈妈（丢下以后很快飘出画面）
   if (t < T.rel + 0.8) {
@@ -557,8 +589,8 @@ export function signCam(t: number, base: (t: number) => Cam): Cam {
     // 落地那一下镜头一下停住（砸下去的一震）
     const A = camA(T.rel);
     const F = fall();
-    const s0 = toScreen(A, F.c0[0], F.c0[1]);
-    const s1 = toScreen(C0, LAND_C[0], LAND_C[1]);
+    const s0 = toScreenV(A, F.c0[0], F.c0[1]);
+    const s1 = toScreenV(C0, LAND_C[0], LAND_C[1]);
     const b = boardAt(t)!.c;
     const L = 0.1;
     // 头 L 秒里它在画面上多走的一段：∫ (v0 + a·s)·(1 − smoothstep(s / L))·z ds

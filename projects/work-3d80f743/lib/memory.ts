@@ -8,7 +8,7 @@
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { type MoveKey, type PoseIn, jointsOf } from "@materials/剪纸角色/code/chengtuo";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, H, W, aim, camLerp, ph, toScreen } from "./cam";
+import { type Cam, E, H, W, aim, camLerp, ph, toScreenV } from "./cam";
 import { drawGlow } from "./world";
 import { ARMS, LIMP, live } from "./motion";
 import { armL, armR, legL, legR } from "./poses";
@@ -141,7 +141,7 @@ export function thenCam(t: number, now: (t: number) => Cam): Cam {
   const match = (tt: number) => {
     const n = now(tt);
     const f = nowFace(tt);
-    const s = toScreen(n, f[0], f[1]);
+    const s = toScreenV(n, f[0], f[1]);
     const kh = thenAt(tt).kid.head;
     return aim(kh[0], kh[1], s[0], s[1], n.z / (KID.scale * (KID.headScale ?? 1)));
   };

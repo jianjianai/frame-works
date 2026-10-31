@@ -23,7 +23,8 @@ import { beatAt } from "@frame/engine/tempo";
 import { seeded } from "@frame/engine/math";
 import { CAST, type CastSpec, castJoints, lookOf, passerby } from "@materials/剪纸角色/code/cast";
 import { type Angles, type HoldFn, type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, drawFigure, figureJoints, figurePose, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
-import { type Cam, E, H, W, aim, applyCam, camLerp, clamp01, kick, ph, shake, toScreen, viewOf } from "../lib/cam";
+import { type Cam, E, H, LANDSCAPE, VH, VW, W, aim, applyCam, camLerp, clamp01, kick, lensOf, ph, shake, setLens, syncFrame, toScreenV, viewOf } from "../lib/cam";
+import { lensAt } from "../lib/wide";
 import {
   type Block,
   QJ_HOME,
@@ -47,6 +48,7 @@ import {
   drawWhite,
   makeGrain,
   prepareCity,
+  streetSide,
   whiteEdge,
 } from "../lib/world";
 import {
@@ -204,6 +206,7 @@ const FOREGROUND: { x: number; kind: FgKind }[] = [
 ];
 
 export async function createScene({ width, height }: SceneOptions): Promise<Scene> {
+  syncFrame(width, height);
   await loadHandFont();
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -621,6 +624,11 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const KID_Y = 22;
   const KID_N = 5;
   const kid0 = T.kidStop - KID_STEP * KID_N;
+  // B 站横屏（用户 2026-10-30 看着 0:10.67：「小石头突然出现」）：横屏画面往左多看一截，竖屏起跑的地方就在画面里——他凭空冒出来、
+  // 原地定 0.2 秒才跑。横屏在前面多跑 KID_PRE 步（同样的步子），从画面左边外面跑进来；停下的地方按摸头那一刻算，起跑以后照旧
+  const KID_PRE = LANDSCAPE ? 3 : 0;
+  /** 从这一刻起画他 */
+  const kidIn = kid0 - KID_STEP * KID_PRE - 0.2;
   const KRUN: [number, Angles, number, number][] = [
     [0, KID.跑_落地, 0.04, 0],
     [0.22, KID.跑_下沉, 0.07, 0],
@@ -628,12 +636,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     [0.76, KID.跑_腾空, 0, 20],
   ];
   const kidKeys: MoveKey[] = [];
-  for (let k = 0; k <= KID_N; k++) {
+  for (let k = -KID_PRE; k <= KID_N; k++) {
     const foot = k % 2 === 0 ? "L" : "R";
     const prev = k % 2 === 0 ? "R" : "L";
     for (const [at, p, squash, lift] of KRUN) {
       if (k === KID_N && at > 0) break;
-      kidKeys.push({ t: kid0 + (k + at) * KID_STEP, ease: SMOOTH, squash, plant: k === 0 && at === 0 ? undefined : at === 0 ? prev : foot, p: { ...(foot === "L" ? p : swapSides(p)), lift } });
+      kidKeys.push({ t: kid0 + (k + at) * KID_STEP, ease: SMOOTH, squash, plant: k === -KID_PRE && at === 0 ? undefined : at === 0 ? prev : foot, p: { ...(foot === "L" ? p : swapSides(p)), lift } });
     }
   }
   kidKeys.push(
@@ -861,10 +869,11 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   // 所以中心在 x 520。开头两句第一帧就一起在、在她鞋子下面；切到周磊以后（他就是「一绝望就飘起来」的人）开始慢慢淡出，
   // 2.45 秒淡完——2.51 她的铁靴从画面下面冲进来
   const notes: Note[] = [
-    { text: "这里的人，一绝望就会飘起来", accent: "飘起来", x: 515, y: 1350, size: 56, in: -1, out: T.cut + 0.1, fade: 0.85 },
-    { text: "飘进天上的强光，就会化成灰", accent: "化成灰", x: 515, y: 1430, size: 56, in: -1, out: T.cut + 0.1, fade: 0.85 },
+    // B 站横屏：没有抖音那一列按钮，两句像电影字幕一样放在画面下面正中（她在上面正中；切到周磊时在他鞋子下面），底边留出进度条
+    { text: "这里的人，一绝望就会飘起来", accent: "飘起来", x: 515, y: 1350, size: 56, in: -1, out: T.cut + 0.1, fade: 0.85, wx: 960, wy: 900, wsize: 50 },
+    { text: "飘进天上的强光，就会化成灰", accent: "化成灰", x: 515, y: 1430, size: 56, in: -1, out: T.cut + 0.1, fade: 0.85, wx: 960, wy: 970, wsize: 50 },
     // 她把飘着的人一把拽回地面以后才上（刚证明了她有多沉），在上面的楼前；砖亮起来那一刻开始慢慢淡出，鼓进来之前淡完
-    { text: "城里都说，她是最沉的人", accent: "最沉", x: 515, y: 330, size: 56, in: T.land + 0.25, out: T.take, fade: 0.9 },
+    { text: "城里都说，她是最沉的人", accent: "最沉", x: 515, y: 330, size: 56, in: T.land + 0.25, out: T.take, fade: 0.9, wx: 960, wy: 150, wsize: 52 },
   ];
 
   // ——————————— 镜头 ———————————
@@ -939,7 +948,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const x1 = Math.max(...xs);
     const y0 = Math.min(...ys);
     const y1 = Math.max(...ys);
-    const z = Math.max(0.55, Math.min(2.0, Math.min((W * 0.9) / (x1 - x0), (H * 0.86) / (y1 - y0))));
+    const z = Math.max(0.55, Math.min(2.0, Math.min((VW * 0.9) / (x1 - x0), (VH * 0.86) / (y1 - y0))));
     // 竖着有富余时把脚下放到画面底边附近（1740），不空出一大块地；他的头不出画
     return [(x0 + x1) / 2, Math.min(y1 - 780 / z, y0 + 860 / z), z];
   };
@@ -961,7 +970,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     if (!BELL0) {
       const c0 = twoCam(ZOOM0);
       const p0 = caseAt(ZOOM0);
-      BELL0 = { z: c0.z, s: toScreen(c0, p0.x, p0.y) };
+      BELL0 = { z: c0.z, s: toScreenV(c0, p0.x, p0.y) };
     }
     const e = E.io(ph(t, ZOOM0, T.slam));
     const p = caseAt(Math.min(t, T.slam));
@@ -988,7 +997,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const top = r.y + k.head[1] - 70;
     const bottom = c.y + Math.max(j.ankleL[1], j.ankleR[1]) + 70;
     const mid = (top + bottom) / 2;
-    const y = Math.min(mid, bottom - (H / 2 - 150) / ACTION_Z);
+    const y = Math.min(mid, bottom - (VH / 2 - 150) / ACTION_Z);
     return [(c.x + (j.shoulderL[0] + j.shoulderR[0]) / 2 + r.x + (k.shoulderL[0] + k.shoulderR[0]) / 2) / 2, y];
   });
   // 前后 0.1 秒、9 个样本的平均（他被拽到地上那一下很快，不平均的话镜头会跟着一抖）
@@ -1026,7 +1035,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     return aim(BRICK_AT[0], BRICK_AT[1], BRICK_S[0], BRICK_S[1] + 150 * (1 - e), z);
   };
   // 两个人落定时在画面上的位置：正好是往砖推的镜头起步时的取景（往下拽的一路慢慢挪过去，落定不用再找位置）
-  const LAND_S = toScreen(brickCam(T.land + 0.2), ...pairMid(T.land + 0.16));
+  const LAND_S = toScreenV(brickCam(T.land + 0.2), ...pairMid(T.land + 0.16));
   const actionCam = (t: number) => {
     const m = pairMid(t - 0.04);
     const k = E.io(ph(t, T.grab + 0.1, T.land + 0.05));
@@ -1094,7 +1103,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const K = (() => {
     const startCam = groundChain(T.r0);
     const A: V2 = [chenAt(T.r0).x - 60, -300];
-    return { startCam, A, s0: toScreen(startCam, A[0], A[1]) };
+    return { startCam, A, s0: toScreenV(startCam, A[0], A[1]) };
   })();
   // 他抬头冲她哭着笑：镜头一顶（鼓进来那一下就是砖亮起来、推上去）
   const DRUM_KICK = (t: number) => (t < T.smile ? 1 : 1 + 0.045 * Math.exp(-(t - T.smile) / 0.22) * (1 - Math.exp(-(t - T.smile) / 0.04)));
@@ -1138,7 +1147,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   {
     const cw = camBase(T.wide);
     const r = seeded(57);
-    const at = (sx: number, sy: number, D: number): V2 => [cw.x + ((sx - W / 2) * D) / cw.z, cw.y + ((sy - H / 2) * D) / cw.z];
+    const at = (sx: number, sy: number, D: number): V2 => [cw.x + ((sx - VW / 2) * D) / cw.z, cw.y + ((sy - VH / 2) * D) / cw.z];
     // 被吸进去的五个：和白在同一层（D = 1），碰到白的地方在画面上散开，最后一个（第 31 拍、最大的那下）在正中间
     const bx = [200, 700, 330, 900, 540];
     BURN_BEATS.forEach((b, i) => crowd.push({ x: at(bx[i], 0, 1)[0], D: 1, y0: 650 + r() * 700, tb: T.beat(b), v: 0, spec: passerby(Math.floor(r() * 40)), ph: r() * 6, k: 0.42 }));
@@ -1156,6 +1165,26 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       const sy = 470 + 640 * u;
       const [x, y] = at(-40 + r() * 1160, sy, D);
       lanterns.push({ x, y0: y, D, v: 25 + 90 * (1 - u), h: 590 * (0.26 + r() * 0.16), ph: r() * 6.28, a: (0.75 - 0.35 * u) * (D > 6 ? 0.7 : D > 4 ? 0.85 : 1) });
+    }
+    // B 站横屏：画面两边（竖屏画面外的左右各一大块）也铺满往上飘的人，整片天都是（竖屏不画，随机数另起一串，竖屏那些人不变）
+    if (LANDSCAPE) {
+      const rw = seeded(571);
+      const side = () => (rw() < 0.5 ? -800 + rw() * 760 : 1120 + rw() * 760);
+      for (let i = 0; i < 64; i++) {
+        const D = [1.15, 1.4, 1.8, 2.4, 3.2][i % 5];
+        const u = rw();
+        const sy = 420 + 1050 * Math.pow(u, 1.35);
+        const [x, y] = at(side(), sy, D);
+        crowd.push({ x, D, y0: y, tb: 1e9, v: 40 + 150 * (1 - u), spec: passerby(Math.floor(rw() * 40)), ph: rw() * 6, k: 0.36 + rw() * 0.2 });
+      }
+      for (let i = 0; i < 170; i++) {
+        const D = [3.6, 4.8, 6.4][i % 3];
+        const u = Math.pow(rw(), 1.7);
+        const sy = 470 + 640 * u;
+        const [x, y] = at(side(), sy, D);
+        lanterns.push({ x, y0: y, D, v: 25 + 90 * (1 - u), h: 590 * (0.26 + rw() * 0.16), ph: rw() * 6.28, a: (0.75 - 0.35 * u) * (D > 6 ? 0.7 : D > 4 ? 0.85 : 1) });
+      }
+      lanterns.sort((a, b) => b.D - a.D);
     }
     // 离镜头近的几个：镜头升起来时一个个从画面里掠过去（看得出是在人群里往上升）
     (
@@ -1358,8 +1387,9 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
             lastD = p.D;
           }
           const y = p.y0 - p.v * (t - T.wide);
-          const s = cam.z / p.D;
-          const [sx, sy] = [W / 2 + (p.x - cam.x) * s, H / 2 + (y - cam.y) * s];
+          const oc = lensOf(cam);
+          const s = oc.z / p.D;
+          const [sx, sy] = [W / 2 + (p.x - oc.x) * s, H / 2 + (y - oc.y) * s];
           if (sx < -60 || sx > W + 60 || sy < -60 || sy > H + 60) continue;
           const tw = 0.75 + 0.25 * Math.sin(t * 2.3 + p.ph * 3);
           drawGlow(g, p.x, y - p.h * 0.45, p.h * 1.25 + 9 / s, p.a * tw * k);
@@ -1379,7 +1409,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     // 镜头升起来时跟着楼一起露出来；街上的镜头看不到这一段，前面的画面不变
     const shopSeen = SHOP_SPAN.x0 < view.x1 && SHOP_SPAN.x1 > view.x0;
     if (shopSeen) shop.drawFront(g, t);
-    for (const b of NEIGHBORS) {
+    for (const b of NEIGHBORS.concat(streetSide())) {
       if (b.x > view.x1 + 50 || b.x + b.w < view.x0 - 50) continue;
       drawBlock(g, b, cam, 1, 2, 3.2, t);
       drawBlockGlow(g, b, cam, 1);
@@ -1429,9 +1459,12 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     const bc = caseAt(t);
     const c = chenAt(t);
     const zr = zRootAt(t);
+    // B 站横屏：扎进哑铃店那一下起不画她（她一路往家走，正好走进店门口那块；横屏看得宽，她在队伍后面走着，
+    // 换到第二幕图层（店门口没有她）时一下没了。扎下去的一刻镜头在整座城上，她只有几个像素，看不出来）
+    const herAway = LANDSCAPE && t > T.end;
     // ——— 地上的影子：人站在地上才有分量（离地越高越淡、越小）；掉下来的公文包的影子越落越实——先告诉观众它会砸在哪 ———
     if (t >= T.cut) {
-      if (c.x > view.x0 - 300 && c.x < view.x1 + 300) {
+      if (!herAway && c.x > view.x0 - 300 && c.x < view.x1 + 300) {
         const j = jointsOf(c.pose);
         const h = Math.max(0, -(c.y + Math.max(j.ankleL[1], j.ankleR[1])) - 64);
         groundShadow(g, c.x + (j.ankleL[0] + j.ankleR[0]) / 2 + 16, 125 / (1 + h / 260), 0.3 / (1 + h / 200));
@@ -1445,7 +1478,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
         const near = Math.max(0, 1 - bh / 900);
         groundShadow(g, bc.x + 10, 70 + 40 * near, t < T.slam ? 0.38 * near * near : 0.3);
       }
-      if (t > kid0 - 0.2) {
+      if (t > kidIn) {
         const k = kidAt(t);
         if (k.x > view.x0 - 300 && k.x < view.x1 + 300) {
           const kj = castJoints(STONE, k.pose);
@@ -1483,7 +1516,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     };
     const pat = patAt(t);
     const drawHer = () => {
-      if (c.x < view.x0 - 400 || c.x > view.x1 + 400) return;
+      if (herAway || c.x < view.x0 - 400 || c.x > view.x1 + 400) return;
       const hasBrick = t >= T.pull && t < T.take;
       const kidBetween = pat?.front
         ? (cc: CanvasRenderingContext2D) => {
@@ -1540,7 +1573,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     for (const f of late) f();
     if (t >= T.drop && t < T.slam) drawBell(g, bc, cam.z);
     // 小石头
-    if (t > kid0 - 0.2 && !kidDrawn) drawKid();
+    if (t > kidIn && !kidDrawn) drawKid();
     // 尘土：砸地、刹车、落地
     const puff = (x0: number, t0: number, n: number, seed: number, dur: number, spread: number, rise: number, size: number, alpha: number) => {
       const a = t - t0;
@@ -1710,6 +1743,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   return {
     canvas,
     render(wallT) {
+      syncFrame(width, height);
+      setLens(lensAt("act1", wallT));
       const t = wallT;
       // 竖向拖影：往下甩、落到他身上的时候按每帧镜头的竖向位移拖（画面像素）；切镜头那一帧按切过去以后的镜头算
       const t0 = wallT - 1 / 30;
@@ -1721,8 +1756,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       const blur = !falling ? 0 : Math.min(260, Math.max(0, Math.abs(dy) - 30) * 0.9);
       // 扎进哑铃店：按每帧镜头的推近和位移拖一下（从这一帧的样子往上一帧的样子叠 9 份，1/48 秒快门）
       const dive = t > T.end && t < SHOP_T.land + 0.05 ? (() => {
-        const a = camAt(t);
-        const p = camAt(t - 1 / 30);
+        const a = lensOf(camAt(t));
+        const p = lensOf(camAt(t - 1 / 30));
         const r = a.z / p.z;
         // 这一帧画面上的一点在上一帧在哪：s0 = A·s1 + B
         const A = 1 / r;

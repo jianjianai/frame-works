@@ -1,7 +1,7 @@
 // 第二幕和副歌一共用的「舞台」：天、远处的城、人这一层的楼（最高那栋楼带着沉沉家那扇窗）、浮尘和光；
 // 进了她的屋子以后（窗的玻璃盖住整个画面）只画屋里。两幕从同一套函数画，跨图层接过去的那一帧一样。
 
-import { type Cam, H, W, applyCam, clamp01, toScreen, viewOf } from "./cam";
+import { type Cam, H, W, applyCam, clamp01, lensOf, toScreen, viewOf } from "./cam";
 import {
   type Block,
   QJ_HOME,
@@ -18,6 +18,7 @@ import {
   drawTinted,
   drawWhite,
   setDusk,
+  streetSide,
 } from "./world";
 import { TOWER_ROOF, drawRoof } from "./props";
 import { SKY_T, skyLook } from "./sky";
@@ -47,7 +48,7 @@ export function makeStage(base: DOMMatrix, grain: HTMLCanvasElement, extra: Bloc
         drawTinted(g, [TOWER.x - 120, TOWER_ROOF - 520, TOWER.x + TOWER.w + 120, TOWER_ROOF + 40], (gg) => drawRoof(gg, t, t < SKY_T.cut));
       if (view.y1 > TOWER_ROOF && view.y0 < TOWER_ROOF + 700) drawHomeWindow(g, t, cam.z);
     }
-    for (const b of blocks) {
+    for (const b of blocks.concat(streetSide())) {
       if (b.x > view.x1 + 50 || b.x + b.w < view.x0 - 50) continue;
       drawBlock(g, b, cam, 1, 2, 3.2, t);
       drawBlockGlow(g, b, cam, 1);
@@ -73,7 +74,8 @@ export function makeStage(base: DOMMatrix, grain: HTMLCanvasElement, extra: Bloc
     }
   };
   /** 她家那扇窗的玻璃是不是已经盖住了整个画面（盖住了就只画屋里） */
-  const windowCovers = (cam: Cam) => {
+  const windowCovers = (cam0: Cam) => {
+    const cam = lensOf(cam0);
     const w = homeWindow();
     if (!cam.r) {
       const [x0, y0] = toScreen(cam, w.x, w.y);

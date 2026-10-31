@@ -16,7 +16,7 @@ import { CAST, type CastSpec, castJoints, lookOf } from "@materials/剪纸角色
 import { type Angles, type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
 import { type DrawOptions, type Look, type Rig, drawFigure } from "@materials/剪纸角色/code/figure";
 import { beatAt } from "@frame/engine/tempo";
-import { E, ph } from "./cam";
+import { E, LANDSCAPE, ph } from "./cam";
 import { INK, drawGlow, part } from "./world";
 import { ARMS, LIMP, SMOOTH, live } from "./motion";
 import { CHEN, armL, armR, legL, legR } from "./poses";
@@ -399,6 +399,32 @@ const chenMove = live(
   ] as MoveKey[],
   { look: CHENGTUO, base: { wind: 0.6, chestL: "under", chestR: "under" }, idle: false, seed: 51, springs: ARMS, follow: 0 },
 );
+// B 站横屏（用户 2026-10-30 看着 0:47.93：「主角突然出现」）：竖屏她在画面左边外面起跑；横屏这一镜退到 0.6，起跑的地方就在画面里，
+// 她一下子冒出来。横屏在前面多跑 CHEN_PRE 步（同样的步子，按起跑那一刻的速度），起跑那一刻接回原来那段（位置、速度、姿势都接得上）：
+// 那时镜头还在半空的两个人身上，镜头退开、落到街上时她已经在跑。这几步另做一段、不带弹簧（原来那段起跑时手臂还没开始甩，
+// 姿势就是关键帧本身），原来那段一点不动（竖屏、镜头、起跳的路线都照旧）
+const CHEN_PRE = 4;
+const chenPre = live(
+  [
+    ...Array.from({ length: CHEN_PRE }, (_, i) => {
+      // 往前数第 n 步（n = CHEN_PRE … 1），和原来一样一步 0.2 秒：蹬地 → 腾空 → 换脚落地
+      const n = CHEN_PRE - i;
+      const sw = n % 2 === 1;
+      const t0 = RUN0 - 0.2 * n;
+      return [
+        { t: t0, ease: SMOOTH, p: RUN(CHEN.跑_蹬地, sw) },
+        { t: t0 + 0.08, ease: SMOOTH, p: RUN(CHEN.跑_腾空, sw) },
+        { t: t0 + 0.13, ease: SMOOTH, p: RUN(CHEN.跑_落地, !sw) },
+      ];
+    }).flat(),
+    { t: RUN0, ease: SMOOTH, p: RUN(CHEN.跑_蹬地, false) },
+    { t: RUN0 + 0.08, ease: SMOOTH, p: RUN(CHEN.跑_腾空, false) },
+    { t: RUN0 + 0.13, ease: SMOOTH, p: RUN(CHEN.跑_落地, true) },
+  ] as MoveKey[],
+  { look: CHENGTUO, base: { wind: 0.6, chestL: "under", chestR: "under" }, idle: false, seed: 51, follow: 0 },
+);
+/** 从这一刻起画她 */
+const chenFrom = () => (LANDSCAPE ? RUN0 - 0.2 * CHEN_PRE : RUN0);
 
 // ——————————————————— 物理 ———————————————————
 /** 切过来时她的根（脚底）离街面多高：两层楼 */
@@ -619,10 +645,13 @@ function momRootPush(t: number, withChain = 1): V2 {
 /** 沉沉这一刻：根、姿势（手 IK 到该攥的地方） */
 function chenAt(t: number): { pose: PoseIn; root: V2 } {
   const I = init();
-  const cp: PoseIn = { ...chenMove(t).pose };
+  // 横屏起跑以前多跑的那几步：按起跑那一刻的速度往回推
+  const pre = LANDSCAPE && t < T.run0;
+  const cp: PoseIn = { ...(pre ? chenPre(t) : chenMove(t)).pose };
   const cLoc = (root: V2, p: V2): V2 => [-(p[0] - root[0]), p[1] - root[1]];
   let root: V2;
-  if (t < T.crouch) {
+  if (pre) root = [I.xJump - 760 - ((760 * 1.5) / (T.crouch - T.run0)) * (T.run0 - t), 0];
+  else if (t < T.crouch) {
     // 跑：从画面左边外面冲进来，慢下来停在起跳的地方
     const u = ph(t, T.run0, T.crouch);
     const x0 = I.xJump - 760;
@@ -848,7 +877,7 @@ export function sceneAt(t: number): Scene2 {
   if (t < T.cut) {
     const st = stoneHang(t);
     stone = { spec: STONE_COAT, pose: st.pose, root: st.root, ankle: st.ankle, hands: st.hands };
-    if (t >= T.run0) chen = chenAt(t);
+    if (t >= chenFrom()) chen = chenAt(t);
     // 红绳：她的手腕 → 他攥着的地方（推出去以后先松着，绷直那一下抖一下）→ 顺着他的身子松松地垂到脚踝
     const d = Math.hypot(st.hands[0] - wristR[0], st.hands[1] - wristR[1]);
     const L = 420;

@@ -8,7 +8,8 @@
 // （之前几版：她在白的边上睁眼、七岁的她喊妈妈、妈妈飘走、「活下去」的木牌掉下来；用户：「这个回忆的内容我感觉不太行」）
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
-import { E, ph, toScreen } from "../lib/cam";
+import { type Cam, E, H, LANDSCAPE, W, ph, reframe, setLens, syncFrame, toScreen } from "../lib/cam";
+import { lensAt, reframeAt } from "../lib/wide";
 import { memoryGrade } from "../lib/memory";
 import { nwCam, nwHisHead, setNightShift } from "../lib/nightwin";
 import { TE } from "../lib/end_t";
@@ -30,10 +31,17 @@ const SHOTS = [
 /** 两镜之间叠化多久（以交界为中心） */
 const DISSOLVE = 0.16;
 const tauOf = (i: number, t: number) => SHOTS[i].tau0 + SHOTS[i].rate * (t - SHOTS[i].t0);
+/** 世界里一点在画面上的位置：横屏按那个场景那一刻的横屏取景（现在的终章、那一夜的 act4 各是各的） */
+const proj = (scene: string, tm: number, c: Cam, x: number, y: number) => (LANDSCAPE ? toScreen(reframe(c, reframeAt(scene, tm)), x, y) : toScreen(c, x, y));
+/** 那一夜（act4）在回忆里的横屏取景用哪张表：act4 自己 1:12–1:16 倒着的屋子那一段横屏另外收近过，回忆不跟着（lib/wide.ts） */
+const MEM = "act4mem";
+/** 横屏取景多缩放了多少（竖屏 1） */
+const zk = (scene: string, tm: number) => (LANDSCAPE ? reframeAt(scene, tm).k : 1);
 
 export async function createScene(options: SceneOptions): Promise<Scene> {
+  syncFrame(options.width, options.height);
   const { width, height } = options;
-  const night = await createNight(options);
+  const night = await createNight(options, MEM);
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -42,8 +50,8 @@ export async function createScene(options: SceneOptions): Promise<Scene> {
   buf.width = width;
   buf.height = height;
   const bctx = buf.getContext("2d")!;
-  const base = new DOMMatrix([width / 1080, 0, 0, height / 1920, 0, 0]);
-  const px = width / 1080;
+  const base = new DOMMatrix([width / W, 0, 0, height / H, 0, 0]);
+  const px = width / W;
 
   /**
    * ① 开头对上他的脸：他喊着的脸在画面上哪、多大，那一夜他的脸就在哪、多大（把那一夜的画面放大、挪过去），
@@ -57,17 +65,17 @@ export async function createScene(options: SceneOptions): Promise<Scene> {
     const t = TE.mem0;
     const n = chainCam(t);
     const b = kidAt(t).head;
-    const sp = toScreen(n, b[0], b[1]);
+    const sp = proj("finale", t, n, b[0], b[1]);
     const tau = tauOf(0, t);
     const h = nwHisHead(tau);
     const c = nwCam(tau);
-    const sa = toScreen(c, h.head[0], h.head[1]);
-    const s0 = Math.min(2.4, Math.max(1, n.z / (c.z * h.k)));
+    const sa = proj(MEM, tau, c, h.head[0], h.head[1]);
+    const s0 = Math.min(2.4, Math.max(1, (n.z * zk("finale", t)) / (c.z * zk(MEM, tau) * h.k)));
     // 看到的那一块（act4 画面里，设计坐标）的中心：让 sa 落在 sp；出了画面的边就把那一夜的镜头横着挪进来
-    const cx = sa[0] + (540 - sp[0]) / s0;
-    const half = 540 / s0;
-    const shift = Math.min(1080 - half, Math.max(half, cx)) - cx;
-    MATCH = { s0, c0: [cx + shift, sa[1] + (960 - sp[1]) / s0], shift };
+    const cx = sa[0] + (W / 2 - sp[0]) / s0;
+    const half = W / 2 / s0;
+    const shift = Math.min(W - half, Math.max(half, cx)) - cx;
+    MATCH = { s0, c0: [cx + shift, sa[1] + (H / 2 - sp[1]) / s0], shift };
     return MATCH;
   };
   /** 开头对上脸以后松开到原来取景的进度 */
@@ -78,25 +86,26 @@ export async function createScene(options: SceneOptions): Promise<Scene> {
     if (i === 0) {
       const m = matchOf();
       const e = loosen(t);
-      return { s: m.s0 * Math.pow(1 / m.s0, e), c: [m.c0[0] + (540 - m.c0[0]) * e, m.c0[1] + (960 - m.c0[1]) * e] };
+      return { s: m.s0 * Math.pow(1 / m.s0, e), c: [m.c0[0] + (W / 2 - m.c0[0]) * e, m.c0[1] + (H / 2 - m.c0[1]) * e] };
     }
     // 其余几镜：极慢地推近一点（像想起来的时候往里看）
-    return { s: 1 + 0.035 * ph(t, sh.t0 - DISSOLVE, sh.t0 + 1.0), c: [540, 960] };
+    return { s: 1 + 0.035 * ph(t, sh.t0 - DISSOLVE, sh.t0 + 1.0), c: [W / 2, H / 2] };
   };
   /** 画一镜：act4 画这一刻，按看的那一块放大贴上来（不出 act4 画面的边） */
   const drawShot = (i: number, t: number, alpha: number) => {
     if (alpha <= 0.002) return;
-    if (i === 0) setNightShift(matchOf().shift * (1 - loosen(t)));
+    // 那一夜的镜头横着挪（画面像素；横屏那一夜的取景还要缩放 k，按竖屏的像素给）
+    if (i === 0) setNightShift((matchOf().shift * (1 - loosen(t))) / zk(MEM, tauOf(0, t)));
     night.render(tauOf(i, t));
     setNightShift(0);
     const v = viewAt(i, t);
-    const half = [540 / v.s, 960 / v.s];
-    const cx = Math.min(1080 - half[0], Math.max(half[0], v.c[0]));
-    const cy = Math.min(1920 - half[1], Math.max(half[1], v.c[1]));
+    const half = [W / 2 / v.s, H / 2 / v.s];
+    const cx = Math.min(W - half[0], Math.max(half[0], v.c[0]));
+    const cy = Math.min(H - half[1], Math.max(half[1], v.c[1]));
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = alpha;
-    ctx.translate(540 * px, 960 * px);
+    ctx.translate((W / 2) * px, (H / 2) * px);
     ctx.scale(v.s, v.s);
     ctx.translate(-cx * px, -cy * px);
     ctx.drawImage(night.canvas, 0, 0);
@@ -109,7 +118,7 @@ export async function createScene(options: SceneOptions): Promise<Scene> {
     bctx.drawImage(canvas, 0, 0);
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.filter = `blur(${Math.max(1, Math.round((7 * width) / 1080))}px)`;
+    ctx.filter = `blur(${Math.max(1, Math.round((7 * width) / W))}px)`;
     ctx.globalCompositeOperation = "screen";
     ctx.globalAlpha = 0.24;
     ctx.drawImage(buf, 0, 0);
@@ -119,6 +128,8 @@ export async function createScene(options: SceneOptions): Promise<Scene> {
   return {
     canvas,
     render(t) {
+      syncFrame(width, height);
+      setLens(lensAt("recall", t));
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = "#1c1820";
       ctx.fillRect(0, 0, width, height);

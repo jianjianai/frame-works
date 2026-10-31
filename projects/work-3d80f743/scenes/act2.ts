@@ -24,8 +24,9 @@
 //   ⑫ 37.79–39.39「顺便拯救我自己」（lib/room.ts 的 TWELVE_T，切回她的屋子）：脱掉铁靴「咚、咚」，飘起来躺进天花板上的床里，脚绳拉直。
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
-import { E, H, W, applyCam, ph, shake, spinBlur, toScreen, viewOf } from "../lib/cam";
-import { QJ_HOME, drawStreet, drawTinted, makeGrain, prepareCity, setDusk } from "../lib/world";
+import { E, H, LANDSCAPE, W, applyCam, ph, shake, spinBlur, setLens, syncFrame, toScreenV, viewOf } from "../lib/cam";
+import { lensAt } from "../lib/wide";
+import { ACT1_FIVE, QJ_HOME, drawBlock, drawBlockGlow, drawStreet, drawTinted, makeGrain, prepareCity, setDusk } from "../lib/world";
 import { loadHandFont } from "../lib/note";
 import { drawShopShade, drawShopSpill, makeShop, shopCam, shopLook, shopShake } from "../lib/shop";
 import { HOME_T, drawHomeDusk, drawHomeLights, homeCam, homeLook, homeShake, makeHome } from "../lib/home";
@@ -38,6 +39,7 @@ import { makeStage } from "../lib/stage";
 import { TEN_T, TWELVE_T } from "../lib/room";
 
 export async function createScene({ width, height }: SceneOptions): Promise<Scene> {
+  syncFrame(width, height);
   await loadHandFont();
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -67,6 +69,14 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       if (D === shop.WALK_D) shop.drawWalkers(g, t, cam);
     });
     shop.drawFront(g, t);
+    // B 站横屏：店门口排队的人后面是第一幕老钟家左边那栋五层楼（第一幕扎下来时画着，这里接着画，换图层那一下楼不变）
+    if (LANDSCAPE) {
+      const v = viewOf(cam, 1);
+      if (ACT1_FIVE.x < v.x1 + 50 && ACT1_FIVE.x + ACT1_FIVE.w > v.x0 - 50) {
+        drawBlock(g, ACT1_FIVE, cam, 1, 2, 3.2, t);
+        drawBlockGlow(g, ACT1_FIVE, cam, 1);
+      }
+    }
     drawStreet(g, cam);
     drawShopShade(g, base, t);
     applyCam(g, base, cam, 1, sh);
@@ -81,7 +91,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   const shopMatch = (t: number) => {
     const c = shopCam(t, shop.bigAt);
     const d = shop.bigAt(t);
-    const [sx, sy] = toScreen(c, d.x, d.y);
+    const [sx, sy] = toScreenV(c, d.x, d.y);
     return { sx, sy, z: c.z };
   };
   const drawHome = (g: CanvasRenderingContext2D, t: number) => {
@@ -146,6 +156,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   return {
     canvas,
     render(t) {
+      syncFrame(width, height);
+      setLens(lensAt("act2", t));
       // ⑫ 切回她的屋子
       if (t >= TWELVE_T.start) {
         drawInside(ctx, t, twelveCam(t));

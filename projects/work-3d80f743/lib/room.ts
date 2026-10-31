@@ -5,7 +5,7 @@
 // 左右画得比画面宽（−700…1780）：窗比 9:16 宽，远看时窗的两边也是屋里。
 
 import { type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
-import { E, ph } from "./cam";
+import { E, LANDSCAPE, ph } from "./cam";
 import { beatAt } from "@frame/engine/tempo";
 import { keyframes } from "@frame/engine/keyframes";
 import { COLORS as CHEN_COLORS } from "@materials/剪纸角色/code/chengtuo-draw";
@@ -41,6 +41,12 @@ export const ROOM = {
   /** 她画多大 */
   s: 1.22,
 };
+/**
+ * 屋子往两边画到哪：B 站横屏看得更宽，墙、天花板、地板往两边各多画 1280（20 道墙纸竖纹，竖纹对齐），
+ * 门左边多一个旧木衣柜（roomWings）。竖屏还是 ROOM.x0–x1
+ */
+const XL = () => ROOM.x0 - (LANDSCAPE ? 1280 : 0);
+const XR = () => ROOM.x1 + (LANDSCAPE ? 1280 : 0);
 
 /**
  * ⑩「东拼西凑的词句」（33.9–35.88）：放下笔，坐在桌前看着刚写好的那块砖，「词」捧起来、「句」举到胸前看着它笑；
@@ -945,7 +951,7 @@ function light(g: CanvasRenderingContext2D, on: number) {
   const gr = g.createRadialGradient(cx, cy, 0, cx, cy, 1500 + 700 * day);
   for (const [k, c] of stops) gr.addColorStop(k, `rgb(${c.join(",")})`);
   g.fillStyle = gr;
-  g.fillRect(R.x0, -600, R.x1 - R.x0, 3200);
+  g.fillRect(XL(), -600, XR() - XL(), 3200);
   g.restore();
   if (day > 0.01) {
     g.save();
@@ -954,7 +960,7 @@ function light(g: CanvasRenderingContext2D, on: number) {
     warm.addColorStop(0, `rgba(255,206,150,${0.7 * day})`);
     warm.addColorStop(1, "rgba(255,206,150,0)");
     g.fillStyle = warm;
-    g.fillRect(R.x0, -600, R.x1 - R.x0, 3200);
+    g.fillRect(XL(), -600, XR() - XL(), 3200);
     g.restore();
   }
   if (on <= 0.01) return;
@@ -964,7 +970,7 @@ function light(g: CanvasRenderingContext2D, on: number) {
   warm.addColorStop(0, `rgba(255,190,110,${0.75 * on})`);
   warm.addColorStop(1, "rgba(255,190,110,0)");
   g.fillStyle = warm;
-  g.fillRect(R.x0, -600, R.x1 - R.x0, 3200);
+  g.fillRect(XL(), -600, XR() - XL(), 3200);
   // 灯罩底下照到桌面的一道光
   g.globalCompositeOperation = "screen";
   const cone = new Path2D();
@@ -1001,7 +1007,7 @@ function tenNight(g: CanvasRenderingContext2D, t: number, k: number) {
   gr.addColorStop(0.6, `rgb(${m([246, 236, 236])})`);
   gr.addColorStop(1, `rgb(${m([214, 196, 214])})`);
   g.fillStyle = gr;
-  g.fillRect(R.x0, -600, R.x1 - R.x0, 3200);
+  g.fillRect(XL(), -600, XR() - XL(), 3200);
   g.restore();
   // 暖：灯下一大团暖光（soft-light），她把砖抱进怀里时涌上来
   const hug = E.io(ph(t, TEN_T.lift - 0.2, TEN_T.end));
@@ -1013,7 +1019,7 @@ function tenNight(g: CanvasRenderingContext2D, t: number, k: number) {
   warm.addColorStop(0, `rgba(255,196,120,${k * (0.45 + 0.35 * hug)})`);
   warm.addColorStop(1, "rgba(255,196,120,0)");
   g.fillStyle = warm;
-  g.fillRect(R.x0, -600, R.x1 - R.x0, 3200);
+  g.fillRect(XL(), -600, XR() - XL(), 3200);
   g.restore();
   // 灰尘：灯光里慢慢往上浮、左右飘，离灯越近越亮
   g.save();
@@ -1196,41 +1202,112 @@ function penOnDesk(g: CanvasRenderingContext2D) {
  * 画整间屋子（屋子坐标）：墙、天花板、地板、照片、天花板上的床、脚绳、桌子、台灯、砖、椅子、她、灯下的光。
  * on：台灯亮了多少（0 黑着，只有窗外一点夜色）；lw：描边粗细倍数（推近时 1/√倍数，远景 1）
  */
+/** 横屏才看得见的两边：门左边一个旧木衣柜（两扇门、一道镜子的反光、顶上搁着一个纸箱），衣柜旁边墙上一个挂钩挂着一把伞 */
+function roomWings(g: CanvasRenderingContext2D) {
+  const R = ROOM;
+  const lw = L(3.2);
+  const wx0 = -1240;
+  const wx1 = -800;
+  const top = 760;
+  // 衣柜：柜身、顶上的线脚、两扇门、门把手、底座
+  part(g, rectPath(wx0, top, wx1 - wx0, R.floor - 30 - top), "#a87a5c", "#946649", lw, [10, 8]);
+  part(g, rectPath(wx0 - 18, top - 26, wx1 - wx0 + 36, 30), "#8f6247", null, lw);
+  part(g, rectPath(wx0 + 4, R.floor - 34, wx1 - wx0 - 8, 34), "#7d543d", null, lw);
+  const mid = (wx0 + wx1) / 2;
+  for (const [a, b] of [
+    [wx0 + 22, mid - 6],
+    [mid + 6, wx1 - 22],
+  ] as const) {
+    part(g, rectPath(a, top + 26, b - a, R.floor - 90 - top), "#b48867", null, lw * 0.8);
+    g.strokeStyle = "rgba(90,60,44,0.35)";
+    g.lineWidth = L(2.4);
+    g.strokeRect(a + 22, top + 58, b - a - 44, (R.floor - 90 - top) * 0.42);
+    g.strokeRect(a + 22, top + 74 + (R.floor - 90 - top) * 0.42, b - a - 44, (R.floor - 90 - top) * 0.4);
+  }
+  for (const x of [mid - 26, mid + 26]) {
+    g.fillStyle = "#e3c27a";
+    g.beginPath();
+    g.arc(x, top + 420, 9, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = INK;
+    g.lineWidth = L(2.4);
+    g.stroke();
+  }
+  // 右边那扇门上一道镜子的反光
+  g.fillStyle = "rgba(255,246,232,0.18)";
+  g.beginPath();
+  g.moveTo(mid + 40, top + 80);
+  g.lineTo(mid + 90, top + 80);
+  g.lineTo(mid + 40, top + 300);
+  g.closePath();
+  g.fill();
+  // 顶上搁着一个纸箱
+  part(g, rectPath(wx0 + 40, top - 26 - 120, 220, 120), "#d6b98d", "#c4a477", lw, [6, 5]);
+  g.strokeStyle = "rgba(110,80,50,0.5)";
+  g.lineWidth = L(3);
+  g.beginPath();
+  g.moveTo(wx0 + 150, top - 146);
+  g.lineTo(wx0 + 150, top - 26);
+  g.stroke();
+  // 挂钩和一把收着的伞（衣柜和门中间）
+  const hx = -620;
+  part(g, rectPath(hx - 14, 980, 28, 16), "#8f6247", null, lw);
+  const umb = new Path2D();
+  umb.moveTo(hx, 1000);
+  umb.quadraticCurveTo(hx + 40, 1010, hx + 34, 1060);
+  umb.lineTo(hx + 30, 1380);
+  umb.lineTo(hx - 30, 1380);
+  umb.lineTo(hx - 34, 1060);
+  umb.quadraticCurveTo(hx - 40, 1010, hx, 1000);
+  umb.closePath();
+  part(g, umb, "#6f8f86", "#5d7b73", lw, [6, 5]);
+  g.strokeStyle = INK;
+  g.lineWidth = L(4);
+  g.beginPath();
+  g.moveTo(hx, 1380);
+  g.lineTo(hx, 1450);
+  g.quadraticCurveTo(hx, 1480, hx + 24, 1478);
+  g.stroke();
+}
+
 export function drawRoom(g: CanvasRenderingContext2D, t: number, on: number, lw = 1) {
   LW = lw;
   if (AWAY?.lamp !== undefined) on = AWAY.lamp;
   const R = ROOM;
   // 墙：一道道很淡的旧墙纸竖纹
+  const x0 = XL();
+  const x1 = XR();
   g.fillStyle = WALL;
-  g.fillRect(R.x0, R.ceil, R.x1 - R.x0, R.floor - R.ceil);
+  g.fillRect(x0, R.ceil, x1 - x0, R.floor - R.ceil);
   g.fillStyle = "rgba(140,104,96,0.08)";
-  for (let x = R.x0; x < R.x1; x += 64) g.fillRect(x, R.ceil, 26, R.floor - R.ceil);
+  for (let x = x0; x < x1; x += 64) g.fillRect(x, R.ceil, 26, R.floor - R.ceil);
   // 天花板、地板、踢脚线
   // （往上、往下多画一截：⑫ 退到整间屋子时镜头比 1 倍还远一点）
   g.fillStyle = "#5c4752";
-  g.fillRect(R.x0, -600, R.x1 - R.x0, R.ceil + 600);
+  g.fillRect(x0, -600, x1 - x0, R.ceil + 600);
   g.fillStyle = "#4a3943";
-  g.fillRect(R.x0, R.ceil - 16, R.x1 - R.x0, 16);
+  g.fillRect(x0, R.ceil - 16, x1 - x0, 16);
   g.fillStyle = "#7b5646";
-  g.fillRect(R.x0, R.floor, R.x1 - R.x0, 2600 - R.floor);
+  g.fillRect(x0, R.floor, x1 - x0, 2600 - R.floor);
   g.strokeStyle = "rgba(60,36,30,0.4)";
   g.lineWidth = L(3);
   for (let y = R.floor + 46; y < 2600; y += 62) {
     g.beginPath();
-    g.moveTo(R.x0, y);
-    g.lineTo(R.x1, y);
+    g.moveTo(x0, y);
+    g.lineTo(x1, y);
     g.stroke();
   }
   g.fillStyle = "#5e4038";
-  g.fillRect(R.x0, R.floor - 18, R.x1 - R.x0, 18);
+  g.fillRect(x0, R.floor - 18, x1 - x0, 18);
   g.strokeStyle = INK;
   g.lineWidth = L(4);
   g.beginPath();
-  g.moveTo(R.x0, R.floor);
-  g.lineTo(R.x1, R.floor);
-  g.moveTo(R.x0, R.ceil);
-  g.lineTo(R.x1, R.ceil);
+  g.moveTo(x0, R.floor);
+  g.lineTo(x1, R.floor);
+  g.moveTo(x0, R.ceil);
+  g.lineTo(x1, R.ceil);
   g.stroke();
+  if (LANDSCAPE) roomWings(g);
   AWAY?.floor?.(g);
   photo(g);
   wallShelf(g);

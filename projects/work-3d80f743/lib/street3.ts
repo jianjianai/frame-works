@@ -22,7 +22,8 @@
 import { type Angles, type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, aim, kick, ph, shake } from "./cam";
+import { type Cam, E, LANDSCAPE, W, aim, kick, ph, shake, toScreen } from "./cam";
+import { lensAt } from "./wide";
 import { ARMS, SMOOTH, live, smoothTrack } from "./motion";
 import { CHEN, KID, armL, armR, legL, legR } from "./poses";
 import { pose } from "./dawn";
@@ -723,6 +724,50 @@ stoneKeys.push({ t: MS.land, ease: "in", p: FLOAT.落 });
 stoneKeys.push({ t: MS.land + 0.3, ease: "inOut", p: FLOAT.牵 });
 stoneKeys.push({ t: 102, p: FLOAT.牵 });
 const stoneMove = live(stoneKeys, { look: lookOf(STONE), base: { wind: 0.6 }, idle: true, seed: 105, springs: ARMS, follow: 0 });
+// B 站横屏（用户 2026-10-30 看着 1:25.40：「小石头突然出现」）：竖屏他在画面右边外面起跑；横屏右边多看一截，起跑的地方就在画面里，
+// 他一下子冒出来。横屏在前面多跑 KID_PRE 步（同样的步子、一样快），从横屏画面右边外面跑进来，起跑那一刻接回原来那段。
+// 这几步另做一段、不带弹簧：原来那段起跑时手臂还没开始甩，姿势就是关键帧本身，两段在起跑那一刻姿势、位置都一样；
+// 原来那段一点不动（竖屏、起跑以后的动作、跳起来的路线、吊着的位置都照旧）
+const KID_PRE = 12;
+const preKeys: MoveKey[] = [];
+{
+  for (let k = -KID_PRE; k <= 1; k++) {
+    const foot = k % 2 === 0 ? "L" : "R";
+    const prev = k % 2 === 0 ? "R" : "L";
+    for (const [at, q, lift] of KRUN) {
+      if (k === 1 && at > 0) break;
+      const r = (foot === "L" ? q : swapSides(q)) as Angles;
+      preKeys.push({ t: KID_RUN0 + (k + at) * KID_STEP, ease: SMOOTH, plant: k === -KID_PRE && at === 0 ? undefined : at === 0 ? prev : foot, p: { ...r, lift, face: -0.85, expression: "使劲", lookX: -0.6, lookY: -0.6 } } as MoveKey);
+    }
+  }
+  preKeys[0] = { ...preKeys[0], x: 0 } as MoveKey;
+}
+const preMove = live(preKeys, { look: lookOf(STONE), base: { wind: 0.6 }, idle: true, seed: 105, follow: 0 });
+/**
+ * 横屏从这一刻起画他：切过来头几帧镜头还在右边、跟着她冲进来，那时（已经在跑的）他伸着的手在画面右边，镜头往左带开以后他才整个在画外。
+ * 按横屏镜头算：多跑的第一步以后，他第一次整个在画面右边外面的那一刻
+ */
+let KID_FROM_W: number | null = null;
+function kidFromW(): number {
+  if (KID_FROM_W !== null) return KID_FROM_W;
+  const t0 = KID_RUN0 - KID_PRE * KID_STEP;
+  let from = t0;
+  for (let t = t0; t < KID_RUN0; t += 1 / 120) {
+    const lens = lensAt("act5", t);
+    const c = lens ? lens(pullCam(t)) : pullCam(t);
+    const s = stoneAt(t, chenAt(t, amanAt(t)));
+    const j = Object.values(castJoints(STONE, s.pose)) as V2[];
+    // 离根最远的关节，再留出手掌、头发
+    const left = s.root[0] - Math.max(...j.map((q) => Math.abs(q[0]))) - 45;
+    if (toScreen(c, left, s.root[1] - 300)[0] > W) {
+      from = t;
+      break;
+    }
+  }
+  return (KID_FROM_W = from);
+}
+/** 从这一刻起画他 */
+const kidFrom = () => (LANDSCAPE ? kidFromW() : KID_RUN0);
 /** 他攥着的地方：她两只铁靴的靴口中间 */
 const bootsOf = (c: ReturnType<typeof chenAt>): V2 => [(c.ankle[0] + c.ankleL[0]) / 2, (c.ankle[1] + c.ankleL[1]) / 2 + 10];
 /** 吊着的根：两只手在她的铁靴上，人在她靴子右后方一点（根 = 攥着的地方 − 姿势里两只手的位置） */
@@ -778,14 +823,17 @@ function kidDown() {
 /** ⑤⑥（已剪掉）小石头松开她的腿那一刻站在哪：按原来的位置（⑦ 的溶接要用，别跟着③变） */
 const STONE_LET = 3176.944;
 function stoneAt(t: number, chen: ReturnType<typeof chenAt>): { pose: PoseIn; root: V2; lift: number } {
-  const p: PoseIn = { ...stoneMove(t).pose };
+  // 横屏起跑以前多跑的那几步（位置接在原来起跑的地方）
+  const pre = LANDSCAPE && t < KID_RUN0;
+  const p: PoseIn = { ...(pre ? preMove(t) : stoneMove(t)).pose };
   const k = STONE.scale;
   const j0 = castJoints(STONE, p);
   const sole = Math.max(j0.ankleL[1], j0.ankleR[1]) + 18;
   const groundY = -sole;
   let root: V2;
   // 跑的时候根的高度不动（姿势里的 lift 让他腾空）；按「最低那只脚贴地」算会把腾空按回地上
-  if (t < T.crouch) root = [boyRunX(t), kidRunY()];
+  if (pre) root = [boyRunX(KID_RUN0) + (preMove(t).x - preMove(KID_RUN0).x) * STONE.scale, kidRunY()];
+  else if (t < T.crouch) root = [boyRunX(t), kidRunY()];
   else if (t < T.jump) root = [boyRunX(t), groundY];
   else if (t < T.hug) root = boyJump(t, groundY);
   else root = boyHangRoot(p, chen);
@@ -858,7 +906,7 @@ export function drawPull3(g: CanvasRenderingContext2D, t: number, z: number) {
   const s = stoneAt(t, c);
   shadow(g, a.hip[0] + 20, a.lift, 130);
   shadow(g, c.root[0], Math.max(0, c.sole), 120);
-  if (t >= KID_RUN0) shadow(g, s.root[0], s.lift, 70);
+  if (t >= kidFrom()) shadow(g, s.root[0], s.lift, 70);
   const line = 1 / Math.sqrt(Math.max(0.3, z));
   // 他被拽歪：整个人绕胯转（cast 的人在 pose 里写 rot 不管用）
   g.save();
@@ -872,7 +920,7 @@ export function drawPull3(g: CanvasRenderingContext2D, t: number, z: number) {
   drawChengtuo(g, c.pose, { line });
   g.restore();
   // 小石头从画面右边外面跑进来（起跑前不画）
-  if (t >= KID_RUN0) drawPerson(g, STONE, s.pose, s.root[0], s.root[1], z);
+  if (t >= kidFrom()) drawPerson(g, STONE, s.pose, s.root[0], s.root[1], z);
 }
 
 // ——— 镜头 ———

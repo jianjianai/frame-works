@@ -21,7 +21,8 @@ import { nextTask } from "@frame/engine/scheduling";
 import { LYRICS, type LyricTiming } from "../lib/lyrics_t";
 import { NET_T, netCam, netShake } from "../lib/net";
 import { chainCam } from "../lib/end_cam";
-import { shake } from "../lib/cam";
+import { H, LANDSCAPE, W, shake, syncFrame } from "../lib/cam";
+import { frameAtWork } from "../lib/wide";
 import {
   type Key,
   type Key2,
@@ -142,6 +143,16 @@ interface Look extends Arr {
   quake?: (t: number) => number;
   /** 跟着镜头推近放大：第一个排列（re 之前的那个）绕画面上的 at 放大 s(t) 倍，max 是最大倍数（字形按它画，放大了也清楚） */
   zoom?: { at: [number, number]; s: (t: number) => number; max: number };
+  /**
+   * B 站横屏单独排的（横屏画面 1920×1080 的坐标，没写的项照竖屏）。不写 w 的句子在横屏按那一刻画面的横屏取景
+   * （lib/wide.ts）把竖屏的排列换算过去：字和画面里的人、东西的关系不变
+   */
+  w?: Partial<Pick<Look, "x" | "y" | "dir" | "size" | "gap" | "rows" | "re" | "move" | "zoom" | "rot" | "spin" | "dropH">>;
+  /**
+   * B 站横屏换算用的底子：2026-10-30 竖屏按竖屏的画面重排了一些句子（用户：「歌词和视频中文字的显示位置，也做一个竖屏的重新构图优化」），
+   * 横屏已经逐句看过，还按重排以前的竖屏排列和时机换算。这里写改掉的那几项原来的值（undefined：原来没写）
+   */
+  wb?: Partial<Omit<Look, "text" | "w" | "wb">>;
 }
 
 // 第三声：跟着镜头推到他脸上一起放大（121.7 字出来那一刻算 1 倍）
@@ -173,7 +184,8 @@ const LOOK: Look[] = [
       { k: "blur", t0: 22.8, t1: 23.15, px: 2.4, alpha: 0.62 }],
     out: 23.45, dOut: 0.35 },
   // 红线断了，她吊着哑铃慢慢往上飘、低头望着家门：唱过的字一个个往上飘
-  { text: "但我还想做些什么", x: 360, y: 340, size: 58, floatV: 16, exit: "up" },
+  // 竖屏（2026-10-30 重排）：她从右边一路飘到画面上面正中，横成一行时字尾正顶着她的头：拆成两行收在左上，和她隔开
+  { text: "但我还想做些什么", x: 300, y: 350, size: 58, rows: 2, floatV: 16, exit: "up", wb: { x: 360, y: 340, rows: undefined } },
   // 高空：字竖着挂在左边空着的天上；镜头推近她开锁（她占满左边和中间），字让到右下角拆成两行；
   // 27.01「咔」锁开了、哑铃掉下去，字松开、越飘越快（往右上，让开中间抱住的两个人），化成灰
   { text: "其实还想要说很多", x: 170, y: 760, dir: "v", size: 60,
@@ -186,9 +198,10 @@ const LOOK: Look[] = [
   // 抱着慢慢落到楼顶上（30.01 坐下），天黑下来：字也慢慢落下来、坐定，跟着天色变成夜里的字
   // 第二遍在同一个位置重唱（字先暗回去、再一个个亮）；落到楼顶那一下（30.01）一沉
   { text: "请你等等我", x: 540, y: 420, gap: 0.12, enter: "fade", dIn: 0.2, night: [{ t: 30.8, v: 0 }, { t: 31.6, v: 1 }],
-    fx: [{ k: "jolt", t: 30.01, dy: 8, decay: 0.25 }], out: 31.72, dOut: 0.22 },
+    fx: [{ k: "jolt", t: 30.01, dy: 8, decay: 0.25 }], out: 31.72, dOut: 0.22, stagger: 0 },
   // 笔尖写「活、下、去」：唱到的字像笔写出来一样扫亮（和笔同步）
-  { text: "两块五的签字笔", x: 440, y: 470, enter: "fade", kara: "wipe", accent: ["两块五"], lead: 0.18, dIn: 0.18, out: 33.5, dOut: 0.2 },
+  // 竖屏（2026-10-30）：往下挪到画面上三分之一那条线上、笔和砖的正上方（原来在顶上，和下面写字的笔隔着半个画面）
+  { text: "两块五的签字笔", x: 520, y: 620, enter: "fade", kara: "wipe", accent: ["两块五"], lead: 0.18, dIn: 0.18, out: 33.5, dOut: 0.2, stagger: 0, wb: { x: 440, y: 470 } },
   // 东一块西一块拼起来：字从四处飞来拼成一句；「句」她抱着砖冲出门，字跟着往左冲走
   { text: "东拼西凑的词句", x: 400, y: 480, enter: "gather", dIn: 0.4, lead: 0.3, exit: "left", out: 35.3, dOut: 0.42 },
   // 夜里的楼顶：她跳下来（36.016 落地），整句跟着落下来；36.81 砖一沉；砖暖暖地亮起来，「拯救你」也亮
@@ -196,7 +209,8 @@ const LOOK: Look[] = [
     fx: [{ k: "jolt", t: 36.016, dy: 12, decay: 0.2 }, { k: "jolt", t: 36.81, dy: 16, decay: 0.3, idx: [4, 5, 6] },
       { k: "glow", t0: 37.0, t1: 37.45, peak: 0.85, idx: [4, 5, 6] }] },
   // 脱铁靴（38.016、38.43 两只「咚」），没了铁靴她飘起来，字也飘；39.016 脚绳绷直把她拉住，字被拽一下
-  { text: "顺便拯救我自己", x: 540, y: 330,
+  // 竖屏（2026-10-30 重排）：她坐直、飘起来时头顶到了 y 240–350，正中一行压在她头上：拆成两行放到左边的空墙上（她在右边）
+  { text: "顺便拯救我自己", x: 300, y: 430, rows: 2, wb: { x: 540, y: 330, rows: undefined },
     move: [{ t: 38.55, y: 0, e: "io" }, { t: 39.0, y: -70, e: "lin" }, { t: 39.016, y: -62, e: "out" }, { t: 39.2, y: -52 }],
     fx: [{ k: "jolt", t: 38.016, dy: 12, decay: 0.18 }, { k: "jolt", t: 38.43, dy: 12, decay: 0.18 }],
     out: 39.27, dOut: 0.15, stagger: 0 },
@@ -217,7 +231,8 @@ const LOOK: Look[] = [
     fx: [{ k: "hang", drop: 22, sway: 0.07 }, { k: "pulse", ts: [42.516, 43.016, 43.516], idx: [0, 1, 2, 3, 4, 5, 6, 7, 8], amp: 0.08 }],
     out: 43.8, dOut: 0.12, stagger: 0 },
   // 天亮的街上：妈妈一把一把往下拽（44.52 / 45.06 / 45.45），字跟着一顿；「光亮」亮起来（竖在右边：妈妈被拽着从画面中间一路往下）
-  { text: "我们的周围并非没光亮", x: 880, y: 640, dir: "v", size: 58, accent: ["光亮"], lead: 0.0, dIn: 0.2,
+  // 竖屏（2026-10-30）：整列往上提，最下面的字在 880 以上（抖音右边那列按钮从头像起）
+  { text: "我们的周围并非没光亮", x: 880, y: 575, dir: "v", size: 58, accent: ["光亮"], lead: 0.0, dIn: 0.2, wb: { y: 640 },
     fx: [{ k: "jolt", t: 44.52, dy: 12 }, { k: "jolt", t: 45.06, dy: 12 }, { k: "jolt", t: 45.45, dy: 12 },
       { k: "glow", t0: 45.45, t1: 45.6, t2: 45.8, t3: 46.1, peak: 0.8, idx: [8, 9] }] },
   // 抱着、一道光照下来：「太耀眼」白得发烫，「灼」把他推开那一下，「灼伤」烫一下
@@ -229,17 +244,21 @@ const LOOK: Look[] = [
     fx: [{ k: "wander", t0: 49.3, amp: 8, blur: 1.4 }] },
   // 「带」51.06 妈妈割断红绳：字一刀劈开，上半截跟着她飞上去；「带在身上」跟着掉下去的两个人落地（51.43「咚」）
   { text: "但别再把小刀带在身上", x: 172, y: 800, dir: "v", size: 60, accent: ["小刀"],
-    fx: [{ k: "cut", t: 51.06, at: 6, angle: -0.55 }, { k: "jolt", t: 51.43, dy: 20, decay: 0.24, idx: [6, 7, 8, 9] }, { k: "shake", t: 51.43, amp: 4, decay: 0.2 }] },
+    fx: [{ k: "cut", t: 51.06, at: 6, angle: -0.55 }, { k: "jolt", t: 51.43, dy: 20, decay: 0.24, idx: [6, 7, 8, 9] }, { k: "shake", t: 51.43, amp: 4, decay: 0.2 }],
+    // 下一句往上提以后两句不再挨着，退场的时机照原来的写死（下一句开唱前让开）
+    out: 51.76, dOut: 0.12, stagger: 0 },
   // 跪在街上抱着他；52.517 天上炸开彩色的光（她碰到了白），字上掠过一道彩光，之后灰像雪一样落
-  { text: "至少我还在为你而歌唱", x: 540, y: 470, enter: "fade", fx: [{ k: "rainbow", t: 52.52, dur: 1.0 }, { k: "snow", t0: 52.7, t1: 56.0 }] },
+  // 竖屏（2026-10-30）：这两句往上提 50：镜头越推越近，55.5 起她的头顶到了 y 550，原来字的下沿只隔几十像素
+  { text: "至少我还在为你而歌唱", x: 540, y: 420, enter: "fade", lead: 0.14, dIn: 0.12, fx: [{ k: "rainbow", t: 52.52, dur: 1.0 }, { k: "snow", t0: 52.7, t1: 56.0 }], wb: { y: 470 } },
   // 54.518 小刀从天上掉下来「叮」砸在铁靴跟前
-  { text: "在黑暗漫长的反乌托邦", x: 540, y: 470, enter: "fade", fx: [{ k: "shake", t: 54.52, amp: 3, decay: 0.2 }, { k: "snow", t0: 53.9, t1: 56.0 }] },
+  { text: "在黑暗漫长的反乌托邦", x: 540, y: 420, enter: "fade", fx: [{ k: "shake", t: 54.52, amp: 3, decay: 0.2 }, { k: "snow", t0: 53.9, t1: 56.0 }], wb: { y: 470 } },
   // 回忆（旧照片的颜色）：「即便」「我们」「都在」三声隔着很远，一声一声排到上面（妈妈从上面正中飘下来，中间空着让给她）；
   // 妈妈写下「活下去」丢下来，「这黑暗漫长的反乌托邦」跟着木牌落下来（62.018「咚」），整句最后化成灰
-  { text: "即便", x: 190, y: 290, pal: "memory", enter: "fade", dIn: 0.45, exit: "ash", out: 63.9, dOut: 0.7, stagger: 0.02 },
-  { text: "我们", x: 410, y: 290, pal: "memory", enter: "fade", dIn: 0.45, exit: "ash", out: 63.9, dOut: 0.7, stagger: 0.02 },
-  { text: "都在", x: 870, y: 290, pal: "memory", enter: "fade", dIn: 0.45, exit: "ash", out: 63.9, dOut: 0.7, stagger: 0.02 },
-  { text: "这黑暗漫长的反乌托邦", x: 540, y: 445, pal: "memory", enter: "drop", dropH: 70, dIn: 0.34, lead: 0.32,
+  // B 站横屏：妈妈在上面正中飘着、七岁的她在下面正中仰着头，三声排在上面左右两边，隔得更远，中间整个空给妈妈
+  { text: "即便", x: 190, y: 290, pal: "memory", enter: "fade", dIn: 0.45, exit: "ash", out: 63.9, dOut: 0.7, stagger: 0.02, w: { x: 250, y: 150, size: 54 } },
+  { text: "我们", x: 410, y: 290, pal: "memory", enter: "fade", dIn: 0.45, exit: "ash", out: 63.9, dOut: 0.7, stagger: 0.02, w: { x: 520, y: 150, size: 54 } },
+  { text: "都在", x: 870, y: 290, pal: "memory", enter: "fade", dIn: 0.45, exit: "ash", out: 63.9, dOut: 0.7, stagger: 0.02, w: { x: 1660, y: 150, size: 54 } },
+  { text: "这黑暗漫长的反乌托邦", x: 540, y: 445, pal: "memory", enter: "drop", dropH: 70, dIn: 0.34, lead: 0.32, w: { x: 960, y: 262, size: 54 },
     fx: [{ k: "jolt", t: 62.018, dy: 14, decay: 0.22 }, { k: "shake", t: 62.018, amp: 3, decay: 0.2 }], exit: "ash", out: 63.9, dOut: 0.7, stagger: 0.02 },
   // 倒着的屋子（她的世界）：刀压在脚绳上，「挣脱」字跟着手发抖，「生活」闭上眼；「做」脚绳一拽，字被拽歪拖走
   { text: "忍着想要挣脱的生活", x: 540, y: 520, size: 60, pal: "night", enter: "fade", lead: 0.04, dIn: 0.3,
@@ -256,9 +275,13 @@ const LOOK: Look[] = [
   // 他把自己的红绳一圈圈绕在她的脚绳上，「么」一拉勒紧：红绳从字底下绕过去，勒紧时字挤到一起
   { text: "但我还想做些什么", x: 540, y: 330,
     fx: [{ k: "thread", t0: 80.0, t1: 81.0, tight: 81.18 }, { k: "gap", keys: [{ t: 81.12, v: 0.1, e: "out" }, { t: 81.32, v: -0.02 }] }] },
-  // 早上：镜头从天花板往下摇到门口，字从下面跟着摇上来；「说很多」没说出口，淡淡的（竖在右边墙上：阿满从门口飘上去）
-  { text: "其实还想要说很多", x: 880, y: 560, dir: "v", size: 58, lead: 0, dIn: 0.2, move: [{ t: 81.87, y: 170, e: "out" }, { t: 82.6, y: 0 }],
-    fx: [{ k: "fadeTo", t0: 83.0, t1: 83.55, v: 0.42, idx: [5, 6, 7] }], out: 83.66, dOut: 0.14 },
+  // 早上：镜头从天花板往下摇到门口；「说很多」没说出口，淡淡的（竖在右边墙上：阿满从门口飘上去）
+  // 竖屏（2026-10-30 重排）：唱第一个字时还是仰头看的两张床，右边竖排正压在他那张床上、上一句还挂在上面：
+  // 先接在上一句的位置（上一句让开），往下摇的时候换到右边竖排（82.3 起，82.55 他从画面上面掉下来之前让开）
+  { text: "其实还想要说很多", x: 540, y: 330, size: 58, lead: 0, dIn: 0.2,
+    re: [{ t: 82.3, x: 880, y: 560, dir: "v", dur: 0.3, via: "fade" }],
+    fx: [{ k: "fadeTo", t0: 83.0, t1: 83.55, v: 0.42, idx: [5, 6, 7] }], out: 83.66, dOut: 0.14,
+    wb: { x: 880, y: 560, dir: "v", re: undefined, move: [{ t: 81.87, y: 170, e: "out" }, { t: 82.6, y: 0 }] } },
   // 阿满往上飘，她跳起来 84.45「等」攥住脚踝：字一拽，跟着两个人往上升
   { text: "请你等等我", x: 860, y: 560, dir: "v", size: 64, enter: "pop",
     move: [{ t: 84.5, y: 0, e: "io" }, { t: 85.75, y: -70 }], fx: [{ k: "jolt", t: 84.45, dy: 18, decay: 0.2 }] },
@@ -272,10 +295,12 @@ const LOOK: Look[] = [
   // 他靠在她怀里睡着了：字像哼的歌一样一起一伏（镜头往下推到铁靴，她的脸到了上面，字竖在左边墙上）
   { text: "胡乱哼唱的旋律", x: 150, y: 500, dir: "v", size: 60, fx: [{ k: "wave", amp: 7, f: 1.1 }], out: 91.93, dOut: 0.1, stagger: 0 },
   // 天快亮，他把手从她手里抽出来：最后那个「你」慢慢滑开
+  // 2026-10-30：整句一起退（原来一个字比一个字晚 0.03 秒，「拯救你」拖进了下一镜街上）
   { text: "但是还想拯救你", x: 540, y: 1400, pal: "night", enter: "fade", lead: 0.05, dIn: 0.3,
-    fx: [{ k: "slip", t0: 93.5, t1: 94.0, idx: 6, dx: 56, dy: 26, r: 0.22 }], out: 93.86, dOut: 0.16 },
+    fx: [{ k: "slip", t0: 93.5, t1: 94.0, idx: 6, dx: 56, dy: 26, r: 0.22 }], out: 93.86, dOut: 0.16, stagger: 0 },
   // 天快亮的街上：94.6 外套「咚」掉在地上，字一沉；举起砖、脚跟离地，字也飘起来
-  { text: "同时拯救我自己", x: 600, y: 360, move: [{ t: 94.9, y: 0, e: "in2" }, { t: 95.45, y: -50 }],
+  // 2026-10-30：跟着切镜出来（94.02），不提前出现在上一镜的两张床上
+  { text: "同时拯救我自己", x: 600, y: 360, lead: 0.02, dIn: 0.12, move: [{ t: 94.9, y: 0, e: "in2" }, { t: 95.45, y: -50 }],
     fx: [{ k: "jolt", t: 94.6, dy: 16, decay: 0.22 }], out: 95.34, dOut: 0.16, stagger: 0 },
   // 她的手在床缝里攥了个空，95.58 睁眼：字一惊
   { text: "就请你", x: 760, y: 640, size: 60, pal: "night", enter: "fade", dIn: 0.15, lead: 0.04,
@@ -284,17 +309,23 @@ const LOOK: Look[] = [
   { text: "放心大胆更妄为肆意", x: 540, y: 360, size: 66, enter: "pop", accent: ["肆意"], lead: 0.04, dIn: 0.2, out: 97.7, dOut: 0.14, stagger: 0,
     fx: [{ k: "shake", t: 96.62, amp: 4, decay: 0.2 }, { k: "shake", t: 97.62, amp: 11, decay: 0.3 }, { k: "jolt", t: 97.62, dy: -14, decay: 0.2 }] },
   // 她从楼顶头朝下扑下去：字竖着往下扎，99.02 抱住他猛地一顿，惯性再往下坠到 100.27 停住
+  // 竖屏（2026-10-30）：下一句挪到它右边的竖排，唱完整句一起退、下一句开唱时已经退完（两列并排时竖排从右往左读，会先读到下一句）
   { text: "迈步向前别害怕失去", x: 750, y: 560, dir: "v", size: 60, enter: "fall", dIn: 0.3, lead: 0.1,
     move: [{ t: 97.95, y: -60, e: "in2" }, { t: 99.02, y: 150, e: "out" }, { t: 99.12, y: 136, e: "io" }, { t: 100.27, y: 210 }],
-    fx: [{ k: "jolt", t: 99.02, dy: -22, decay: 0.14 }] },
+    fx: [{ k: "jolt", t: 99.02, dy: -22, decay: 0.14 }], out: 99.78, dOut: 0.15, stagger: 0, wb: { out: undefined, dOut: undefined, stagger: undefined } },
   // 旁边窗里的人一扇接一扇关上窗（100.77 起每半拍一扇）：字后面的窗光一盏盏灭
-  { text: "没有犯下任何错的你", x: 540, y: 1390,
-    fx: [{ k: "windows", ts: [100.77, 101.02, 101.27, 101.52, 101.77, 102.02, 102.27, 102.52, 102.77] }] },
+  // 竖屏（2026-10-30 重排）：原来横在下沿（y 1390），两个人抱着停在半空时正压着她的铁靴和他的鞋：竖在右上两扇窗中间的墙上，
+  // 像一列亮着的窗，和左边楼上关窗的那一列对着；画面里五扇窗关完（101.77）字的窗也灭完（两个字一扇），之后让给下一句
+  { text: "没有犯下任何错的你", x: 880, y: 575, dir: "v", size: 58, lead: 0.02, dIn: 0.15,
+    fx: [{ k: "windows", ts: [100.77, 100.77, 101.02, 101.02, 101.27, 101.27, 101.52, 101.52, 101.77] }],
+    wb: { x: 540, y: 1390, dir: undefined, size: undefined, lead: undefined, dIn: undefined,
+      fx: [{ k: "windows", ts: [100.77, 101.02, 101.27, 101.52, 101.77, 102.02, 102.27, 102.52, 102.77] }] } },
   // 把铁靴给他，手指一根根掰开，103.45 松手：字从中间分开，上一截往上、下一截往下
-  { text: "在我心里只用做自己", x: 880, y: 590, dir: "v", size: 58, enter: "fade",
+  { text: "在我心里只用做自己", x: 880, y: 575, dir: "v", size: 58, enter: "fade", wb: { y: 590 },
     fx: [{ k: "split", t0: 103.45, t1: 103.95, at: 6, dy1: -36, dy2: 30 }] },
   // 104.02「咚」他穿着铁靴落地，104.52 砖砸在他靴尖前「咚」：整句砸下来，跟着两下「咚」顿两下
-  { text: "这段胡乱拼凑的词语", x: 330, y: 400, rows: 2, enter: "drop",
+  // B 站横屏：放到左上角（右边是上一句竖排的「在我心里只用做自己」；之后第一视角里那堆外套在它右下方，不压）
+  { text: "这段胡乱拼凑的词语", x: 330, y: 400, rows: 2, enter: "drop", w: { x: 330, y: 150, size: 56 },
     fx: [{ k: "jolt", t: 104.02, dy: 14, decay: 0.2 }, { k: "jolt", t: 104.52, dy: 14, decay: 0.2 }] },
   // 她光着脚越升越快，低头冲他笑：唱过的字往上飘，最后化成灰
   { text: "如果伤到你也请你忘记", x: 172, y: 1010, dir: "v", size: 58, floatV: 22, exit: "ash", out: 107.86, dOut: 0.9 },
@@ -308,7 +339,8 @@ const LOOK: Look[] = [
   // 字上往外扩的暖光一层层密起来（一个人说、几个人说、一群人说），第四声 128.02 她接过砖，全片最强的光，光收拢进字里
   { text: "活下去", x: 540, y: 340, font: "hand", size: 138, gap: 0.02, enter: "fade", kara: "wipe", lead: 0.05, dIn: 0.3,
     fx: [{ k: "glow", t0: 114.93, t1: 116.2, t2: 117.3, t3: 117.9, peak: 0.45, idx: [2] }] },
-  { text: "活下去", x: 540, y: 340, font: "hand", size: 148, gap: 0.02, enter: "fade", kara: "wipe",
+  // B 站横屏：人链在画面正中竖着往上长，他在上三分之一；字放到他右边空着的天上（横在他头顶会压到他的头）
+  { text: "活下去", x: 540, y: 340, font: "hand", size: 148, gap: 0.02, enter: "fade", kara: "wipe", w: { x: 1400, y: 300, size: 124 },
     fx: [{ k: "echo", keys: [{ t: 118.0, v: 0, e: "lin" }, { t: 121.8, v: 5 }] }, { k: "glow", t0: 118.89, t1: 120.2, t2: 121.4, t3: 121.9, peak: 0.5, idx: [2] }],
   },
   // 第三声「下」溶进那一夜的回忆（他拽她的脚绳 → 落进铁靴 → 系绳）：字淡到左边竖着，躲开两个人；回到两张床那一镜再横回上面
@@ -342,6 +374,8 @@ interface Line {
   i: number;
   tm: LyricTiming;
   L: Look;
+  /** 横屏单独排的（排列是横屏画面的坐标，不再换算） */
+  wide: boolean;
   chars: string[];
   hot: boolean[];
   /** 字形按这句最大的字号画，小的时候缩着贴 */
@@ -387,18 +421,25 @@ const overlaps = (a: ReturnType<typeof boxOf>, b: ReturnType<typeof boxOf>) => a
 
 function build(): Line[] {
   if (LOOK.length !== LYRICS.length) throw new Error(`歌词设计 ${LOOK.length} 句，时间 ${LYRICS.length} 句，对不上`);
-  const base = LYRICS.map((tm, i) => {
-    const L = LOOK[i];
-    if (L.text !== tm.text) throw new Error(`第 ${i + 1} 句对不上：${L.text} / ${tm.text}`);
+  const arrsOf = (L: Look) => {
     const first = { x: L.x, y: L.y, dir: L.dir ?? "h", size: L.size ?? 62, gap: L.gap ?? 0.1, rows: L.rows ?? 1, t: -1, dur: 0, via: "fly" as "fly" | "fade" };
     const arrs = [first];
     for (const r of [...(L.re ?? [])].sort((a, b) => a.t - b.t)) {
       const prev = arrs[arrs.length - 1];
       arrs.push({ x: r.x ?? prev.x, y: r.y ?? prev.y, dir: r.dir ?? prev.dir, size: r.size ?? prev.size, gap: r.gap ?? prev.gap, rows: r.rows ?? prev.rows, t: r.t, dur: r.dur ?? 0.5, via: r.via ?? "fly" });
     }
-    return { tm, L, arrs };
+    return arrs;
+  };
+  const base = LYRICS.map((tm, i) => {
+    const V = LOOK[i];
+    // 横屏：换算的底子是竖屏重排以前的（wb），单独排的句子再把横屏的排列（w）盖上
+    const B: Look = LANDSCAPE && V.wb ? { ...V, ...V.wb } : V;
+    const L: Look = LANDSCAPE && V.w ? { ...B, ...V.w } : B;
+    if (L.text !== tm.text) throw new Error(`第 ${i + 1} 句对不上：${L.text} / ${tm.text}`);
+    // varrs：上一句、下一句叠不叠（进场、退场的时机）按它算。竖屏按竖屏的排列；横屏按换算的底子、不按单独排的 w：横屏只换位置，节奏和竖屏原来一样
+    return { tm, L, arrs: arrsOf(L), varrs: arrsOf(B) };
   });
-  return base.map(({ tm, L, arrs }, i) => {
+  return base.map(({ tm, L, arrs, varrs }, i) => {
     const chars = [...tm.text];
     const n = chars.length;
     const hot = chars.map(() => false);
@@ -409,10 +450,10 @@ function build(): Line[] {
     // 和上一句、下一句叠不叠在一起：叠就上一句先让开、这一句晚一点出来；不叠就早一点出来，两句可以同时在
     const prev = base[i - 1];
     const next = base[i + 1];
-    const startBox = boxOf(arrs[0], n);
-    const endBox = boxOf(arrs[arrs.length - 1], n);
-    const withPrev = !!prev && overlaps(boxOf(prev.arrs[prev.arrs.length - 1], [...prev.tm.text].length), startBox);
-    const withNext = !!next && overlaps(endBox, boxOf(next.arrs[0], [...next.tm.text].length));
+    const startBox = boxOf(varrs[0], n);
+    const endBox = boxOf(varrs[varrs.length - 1], n);
+    const withPrev = !!prev && overlaps(boxOf(prev.varrs[prev.varrs.length - 1], [...prev.tm.text].length), startBox);
+    const withNext = !!next && overlaps(endBox, boxOf(next.varrs[0], [...next.tm.text].length));
     // 叠在一起时一先一后、不重叠：上一句在下一句开唱前 0.27 秒开始退（0.12 秒退完），这一句开唱前 0.14 秒才出来
     const lead = L.lead ?? (withPrev ? 0.14 : 0.4);
     const tIn = tm.t[0] - lead;
@@ -427,6 +468,7 @@ function build(): Line[] {
     const particles = exit === "ash" || exit === "light" || exit === "dust";
     return {
       i, tm, L, chars, hot,
+      wide: LANDSCAPE && !!LOOK[i].w,
       sprSize: Math.max(...arrs.map((a) => a.size)) * (L.zoom?.max ?? 1),
       font: L.font ?? "serif",
       tIn, dIn, out, dOut, stagger,
@@ -515,8 +557,39 @@ export function createScene({ width, height }: SceneOptions): Scene | Promise<Sc
   buf.width = width;
   buf.height = height;
   const bctx = buf.getContext("2d")!;
-  const k = width / 1080;
-  const base = new DOMMatrix([width / 1080, 0, 0, height / 1920, 0, 0]);
+  syncFrame(width, height);
+  const k = width / W;
+  /** 画面设计坐标 → 画布 */
+  const frameBase = new DOMMatrix([width / W, 0, 0, height / H, 0, 0]);
+  /** 这一句用的（竖屏就是 frameBase；横屏没单独排的句子：竖屏的排列按画面的横屏取景换算过去） */
+  let base = frameBase;
+  /**
+   * 横屏：竖屏排列 → 横屏画面。位置按画面的取景（k、ox、oy），字比画面略大一点（k^0.6：0.72 → 0.82），横屏也看得清。
+   * 竖屏里贴着左右两边的句子（离中线 150 以外），横屏往两边的空处挪（离中线越远挪得越多：竖屏 172 / 880 → 横屏约 280 / 1570）；
+   * 换算完出了画面安全区（上下 56、左右 70）的整句挪回来
+   */
+  const lineBase = (ln: Line, t: number) => {
+    if (!LANDSCAPE || ln.wide) return frameBase;
+    const f = frameAtWork(t);
+    const s = Math.pow(f.k, 0.6);
+    // 这一刻用的排列（换排列的那一下跟着字一起飞过去）
+    let a = ln.arrs[0];
+    for (let q = 1; q < ln.arrs.length; q++) if (t >= ln.arrs[q].t) a = ln.arrs[q];
+    const bx = boxOf(a, ln.chars.length);
+    const d = (bx.x0 + bx.x1) / 2 - 540;
+    const spread = 1.25 * Math.min(1, Math.max(0, (Math.abs(d) - 150) / 220));
+    let dx = s * d * spread;
+    let dy = 0;
+    const x0 = W / 2 + f.ox + s * (bx.x0 - 540) + dx;
+    const x1 = W / 2 + f.ox + s * (bx.x1 - 540) + dx;
+    const y0 = H / 2 + f.oy + s * (bx.y0 - 960);
+    const y1 = H / 2 + f.oy + s * (bx.y1 - 960);
+    if (x0 < 70) dx += 70 - x0;
+    else if (x1 > W - 70) dx -= x1 - (W - 70);
+    if (y0 < 56) dy += 56 - y0;
+    else if (y1 > H - 56) dy -= y1 - (H - 56);
+    return frameBase.translate(W / 2 + f.ox + dx, H / 2 + f.oy + dy).scale(s, s).translate(-540, -960);
+  };
   const lines = build();
 
   const styleOf = (ln: Line): Pal => ln.L.pal ?? "day";
@@ -997,7 +1070,9 @@ export function createScene({ width, height }: SceneOptions): Scene | Promise<Sc
     const place = (x: number, y: number): [number, number] => {
       const lx = cx + (x - cx) * oc - (y - cy) * os;
       const ly = cy + (x - cx) * os + (y - cy) * oc;
-      return spin ? [540 + (lx - 540) * pc - (ly - 960) * ps, 960 + (lx - 540) * ps + (ly - 960) * pc] : [lx, ly];
+      // 绕画面中心（横屏单独排的句子是横屏画面的中心）
+      const [qx, qy] = ln.wide ? [W / 2, H / 2] : [540, 960];
+      return spin ? [qx + (lx - qx) * pc - (ly - qy) * ps, qy + (lx - qx) * ps + (ly - qy) * pc] : [lx, ly];
     };
     const lay = slot.map(([x, y]) => place(x + ox, y + oy));
     const pos = slot.map(([x, y], j): [number, number] => {
@@ -1279,13 +1354,16 @@ export function createScene({ width, height }: SceneOptions): Scene | Promise<Sc
     return {
       canvas,
       render(t: number) {
+        syncFrame(width, height);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, width, height);
-        ctx.setTransform(base);
+        ctx.setTransform(frameBase);
         for (const ln of lines) {
           if (t < ln.tIn - 0.02 || t > ln.until) continue;
-          drawLine(ctx, ln, t);
+          base = lineBase(ln, t);
           ctx.setTransform(base);
+          drawLine(ctx, ln, t);
+          ctx.setTransform(frameBase);
         }
       },
       dispose() {

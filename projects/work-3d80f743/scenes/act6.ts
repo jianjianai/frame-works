@@ -24,7 +24,8 @@
 // 开头接着三⑨（scenes/act5.ts）：屋子照样从 lib/write5.ts 画（同一个镜头函数 lessonCam，接过去的那一帧一样）。
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
-import { applyCam, clamp01, viewOf } from "../lib/cam";
+import { H, W, applyCam, clamp01, setLens, syncFrame, viewOf } from "../lib/cam";
+import { lensAt } from "../lib/wide";
 import { DIVE_T, cageAt, diveSmear, drawDiveHer, drawHugPair, diveHer } from "../lib/dive";
 import { drawNeighbors } from "../lib/hug4";
 import { BOOTS5_T, boots5Cam, drawKidBoots, drawLandDust } from "../lib/boots5";
@@ -45,12 +46,13 @@ import { drawCeiling } from "../lib/bed";
 import { roomTiltCam, untieCam, untieCast, untieMix } from "../lib/untie";
 
 export async function createScene({ width, height }: SceneOptions): Promise<Scene> {
+  syncFrame(width, height);
   await loadHandFont();
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
-  const base = new DOMMatrix([width / 1080, 0, 0, height / 1920, 0, 0]);
+  const base = new DOMMatrix([width / W, 0, 0, height / H, 0, 0]);
   const grain = makeGrain();
   prepareCity();
   // 人这一层还有老钟家左右那两栋（和第一幕、副歌一同一条街；老钟家本身由 drawZhongHouse 画）
@@ -77,7 +79,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const n = 9;
-    const py = (Math.min(260, Math.abs(dy)) * Math.sign(dy) * height) / 1920;
+    const py = (Math.min(260, Math.abs(dy)) * Math.sign(dy) * height) / H;
     for (let i = 1; i < n; i++) {
       ctx.globalAlpha = 1 / (i + 1);
       ctx.drawImage(buf, 0, (i / (n - 1) - 0.5) * py);
@@ -88,6 +90,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   return {
     canvas,
     render(t) {
+      syncFrame(width, height);
+      setLens(lensAt("act6", t));
       try {
         if (t >= DIVE_T.start) {
           // ③ 顺着她家那栋楼往上甩到窗口，她扑出来往下冲，在半空抱住他（天色、窗、栏门和②一样，栏门「哐」一下甩开）

@@ -9,7 +9,7 @@ import { beatAt } from "@frame/engine/tempo";
 import { editing } from "@frame/engine/editable";
 import { CAST, castJoints, lookOf } from "@materials/剪纸角色/code/cast";
 import type { MoveKey, PoseIn } from "@materials/剪纸角色/code/chengtuo";
-import { type Cam, E, aim, camLerp, kick, ph, toScreen } from "./cam";
+import { type Cam, E, H, W, aim, camLerp, kick, ph, toScreenV } from "./cam";
 import { INK, QJ_HOME, addEllipse, drawGlow, part, rectPath } from "./world";
 import { drawPerson } from "./people";
 import { groundShadow } from "./props";
@@ -1329,7 +1329,7 @@ export function drawHomeDusk(g: CanvasRenderingContext2D, base: DOMMatrix, t: nu
   g.setTransform(base);
   g.globalCompositeOperation = "multiply";
   g.fillStyle = `rgba(150,128,168,${0.3 * k})`;
-  g.fillRect(0, 0, 1080, 1920);
+  g.fillRect(0, 0, W, H);
   g.restore();
 }
 
@@ -1450,7 +1450,7 @@ function cam4(t: number, c0: Cam, follow5: (t: number) => V2): Cam {
   if (t > T.snap) {
     // ⑤ 对准她的胸口（弹簧跟着），只插她在画面上的位置和倍数：一断就往后打开（E.out），她在画面里只往上走、不往下掉
     const C0 = c;
-    const p0 = toScreen(C0, ...follow5(T.snap));
+    const p0 = toScreenV(C0, ...follow5(T.snap));
     const f = follow5(t);
     const zu = E.out(ph(t, T.snap, T.end5 + 0.3));
     const pu = E.io(ph(t, T.snap, T.end5 + 0.3));

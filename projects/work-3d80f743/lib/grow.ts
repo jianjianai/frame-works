@@ -17,7 +17,7 @@
 import { type CastSpec, castJoints, lookOf, youngChengtuo } from "@materials/剪纸角色/code/cast";
 import { type Angles, type MoveKey, type PoseIn, CHENGTUO, drawChengtuo, jointsOf, swapSides } from "@materials/剪纸角色/code/chengtuo";
 import { beatAt } from "@frame/engine/tempo";
-import { type Cam, E, aim, camLerp, kick, ph, toScreen } from "./cam";
+import { type Cam, E, aim, camLerp, kick, ph, toScreenV } from "./cam";
 import { ARMS, type LiveOpts, SMOOTH, hitch, live } from "./motion";
 import { CHEN, ZHOU, armL, armR, legL, legR } from "./poses";
 import { drawPerson } from "./people";
@@ -613,7 +613,7 @@ export function backCam(t: number, base: (t: number) => Cam, past: (t: number) =
   const tm = Math.min(t, G.dis1);
   const k = girlAt(tm);
   const pc = past(tm);
-  const hipS = toScreen(pc, k.root[0] + k.j.hip[0], k.root[1] + k.j.hip[1]);
+  const hipS = toScreenV(pc, k.root[0] + k.j.hip[0], k.root[1] + k.j.hip[1]);
   const now = knifeAt(tm);
   const cj = jointsOf(now.chen.pose);
   const hip: V2 = [now.chen.root[0] + cj.hip[0], now.chen.root[1] + cj.hip[1]];

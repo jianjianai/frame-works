@@ -2,9 +2,10 @@
 // 她从天上丢下来的那块砖砸在靴尖前面；两只小手伸下去捡起来，捧到眼前：「活下去」，她写给自己的；两滴眼泪砸在字上，手一直在抖；
 // 他抬头（105.84）：整个画面带着竖向拖影往下滑走，接她往上升的那一镜。用户 2026-10-25：「⑥ 简化一下，改成捡和看」（不翻、不下笔）。
 // 设计坐标 1080×1920，自己画（不是世界里的镜头）；颜色、描边和街上一样。
+// B 站横屏：同一张近景按横屏取一块（povFrame）：低头先看见脚下的铁靴和砖，捧起来时视线跟着抬到砖上；地面往两边铺开。
 
 import { COLORS as CHEN_COLORS } from "@materials/剪纸角色/code/chengtuo";
-import { E, ph } from "./cam";
+import { E, H as FH, LANDSCAPE, W as FW, ph } from "./cam";
 import { INK, part } from "./world";
 import { TE, type V2, mix } from "./end_t";
 import { drawEndBrick } from "./end_brick";
@@ -12,6 +13,8 @@ import { leadBand } from "./leadcoat";
 
 const W = 1080;
 const H = 1920;
+/** 横屏往两边多画多少（竖屏不多画，画面和原来一模一样） */
+const EX = () => (LANDSCAPE ? 1200 : 0);
 const SKIN = "#f6d8c4";
 const SKIN_SH = "#e7bea6";
 const SLEEVE = "#f3efe8";
@@ -38,27 +41,31 @@ function drawGround(g: CanvasRenderingContext2D, blur: number) {
   gr.addColorStop(0.55, "#dcc7b0");
   gr.addColorStop(1, "#e6d3bd");
   g.fillStyle = gr;
-  g.fillRect(0, 0, W, H);
+  // 横屏取景看得见两边（x −900…1980）：地面、地砖缝、斜光都往两边铺开（竖屏画面里看不见多出来的部分）
+  const ex = EX();
+  g.fillRect(-ex, 0, W + 2 * ex, H);
   g.strokeStyle = `rgba(90,64,70,${0.22 * (1 - 0.6 * blur)})`;
   g.lineWidth = 3;
   g.beginPath();
   for (let i = 0, y = 120; i < 10; i++) {
-    g.moveTo(0, y);
-    g.lineTo(W, y);
+    g.moveTo(-ex, y);
+    g.lineTo(W + ex, y);
     y += 90 + i * 34;
   }
-  for (let x = -600; x < W + 600; x += 210) {
+  const nx = ex ? 9 : 0;
+  for (let x = -600 - 210 * nx; x < W + 600 + 210 * nx; x += 210) {
     g.moveTo(540 + (x - 540) * 0.55, 0);
     g.lineTo(540 + (x - 540) * 1.6, H);
   }
   g.stroke();
   // 一道楼缝里漏下来的斜光
   g.fillStyle = `rgba(255,236,206,${0.22 * (1 - blur * 0.5)})`;
+  // 斜光：照原来的斜度往两边延长（每 1080 往上 220）
   g.beginPath();
-  g.moveTo(0, 340);
-  g.lineTo(W, 120);
-  g.lineTo(W, 520);
-  g.lineTo(0, 760);
+  g.moveTo(-ex, 340 + (220 * ex) / W);
+  g.lineTo(W + ex, 120 - (220 * ex) / W);
+  g.lineTo(W + ex, 520 - (220 * ex) / W);
+  g.lineTo(-ex, 760 + (220 * ex) / W);
   g.closePath();
   g.fill();
 }
@@ -234,8 +241,21 @@ function drawTears(g: CanvasRenderingContext2D, t: number, b: { c: V2; w: number
   });
 }
 
+/**
+ * 横屏取景：这张竖着画的近景缩到 s 倍，竖着的 cy 放在横屏画面正中（横着 540 在正中）。
+ * 低头时看脚下（铁靴的靴尖、砖、外套都在画面里），捧起来时视线跟着砖往上抬，砖在画面中间偏上一点
+ */
+function povFrame(base: DOMMatrix, t: number): DOMMatrix {
+  if (!LANDSCAPE) return base;
+  const s = 0.74;
+  const up = E.io(ph(t, TE.grab + 0.02, TE.lift + 0.22));
+  const cy = 1165 + (1010 - 1165) * up;
+  return base.translate(FW / 2, FH / 2).scale(s, s).translate(-540, -cy);
+}
+
 /** 画第一视角（base 是设计坐标到画布像素的缩放）；slide：抬头时整个画面往下滑走多少（像素） */
-export function drawPov(g: CanvasRenderingContext2D, base: DOMMatrix, t: number) {
+export function drawPov(g: CanvasRenderingContext2D, base0: DOMMatrix, t: number) {
+  const base = povFrame(base0, t);
   const slide = 2200 * E.in2(ph(t, TE.lookUp, TE.smile));
   const blur = E.io(ph(t, TE.grab, TE.lift + 0.1));
   g.setTransform(base);
@@ -249,7 +269,7 @@ export function drawPov(g: CanvasRenderingContext2D, base: DOMMatrix, t: number)
   // 焦点在砖上：地面、靴子蒙一层空气（虚一点）
   if (blur > 0.01) {
     g.fillStyle = `rgba(232,214,198,${0.4 * blur})`;
-    g.fillRect(-100, -100 - slide, W + 200, H + 400);
+    g.fillRect(-100 - EX(), -100 - slide, W + 200 + 2 * EX(), H + 400);
   }
   const b = brickAt(t);
   // 砖（「活下去」朝上：她写给自己的那块）
@@ -275,6 +295,7 @@ export function drawPov(g: CanvasRenderingContext2D, base: DOMMatrix, t: number)
   v.addColorStop(0, "rgba(60,40,44,0)");
   v.addColorStop(1, "rgba(60,40,44,0.32)");
   g.fillStyle = v;
-  g.fillRect(0, 0, W, H);
+  if (LANDSCAPE) g.fillRect(-EX(), -600, W + 2 * EX(), H + 1200);
+  else g.fillRect(0, 0, W, H);
   void INK;
 }

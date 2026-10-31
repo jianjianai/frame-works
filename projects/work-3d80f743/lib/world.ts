@@ -6,7 +6,7 @@
 
 import { seeded } from "@frame/engine/math";
 import { editing } from "@frame/engine/editable";
-import { type Cam, H, W, applyCam, clamp01, toScreen, viewOf } from "./cam";
+import { type Cam, H, LANDSCAPE, VW, VH, W, applyCam, clamp01, lensOf, toScreen, viewOf } from "./cam";
 
 export const INK = "#2e2530";
 /** 白的下沿（世界 y） */
@@ -234,7 +234,8 @@ export function skyRGB(y: number): number[] {
 export const skyAt = (y: number) => `rgb(${skyRGB(y).join(",")})`;
 
 /** 天色（按人这一层的高度换算到画面上）；alpha < 1 时当作空气蒙在远处的楼上 */
-export function drawSky(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, alpha = 1) {
+export function drawSky(g: CanvasRenderingContext2D, base: DOMMatrix, c0: Cam, alpha = 1) {
+  const c = lensOf(c0);
   g.setTransform(base);
   // 画面转着时（副歌一转场），天的渐变跟着转：沿着世界里「往下」在画面上的方向
   const dx = -Math.sin(c.r || 0);
@@ -518,6 +519,10 @@ export function prepareCity() {
   geomOf(TOWER_HOME);
   for (const b of STREET) geomOf(b);
   geomOf(QJ_HOME);
+  if (LANDSCAPE) {
+    for (const L of LAYERS) for (const b of L.side ?? []) geomOf(b);
+    for (const b of STREET_SIDE) geomOf(b);
+  }
 }
 
 /** 一件晾着的衣服（衣架坐标：挂在 (0,0)，往下垂），sway 被风吹的角度 */
@@ -787,6 +792,16 @@ interface Layer {
   lw: number;
   ground: string;
   blocks: Block[];
+  /** B 站横屏才画的：这一层往两边接着排的楼（竖屏画面外，见 LAYERS 后面） */
+  side?: Block[];
+}
+
+/** 一排楼的宽窄、层数、墙色、一楼铺面的颜色 */
+interface RowSpec {
+  w: [number, number];
+  f: [number, number];
+  walls: [string, string][];
+  shop?: string[];
 }
 
 function row(seed: number, x0: number, x1: number, wMin: number, wMax: number, fMin: number, fMax: number, fh: number, walls: [string, string][], gaps: [number, number][] = [], shop?: string[]): Block[] {
@@ -803,36 +818,39 @@ function row(seed: number, x0: number, x1: number, wMin: number, wMax: number, f
   return out;
 }
 
+/** 从 from 往 to 一栋挨一栋地排（to < from 时往左排），宽窄、层数、墙色、铺面、间距和 row 一样：接在一排楼的头上，接缝看不出来 */
+function rowOut(seed: number, from: number, to: number, s: RowSpec, fh = 190): Block[] {
+  const r = seeded(seed);
+  const out: Block[] = [];
+  const dir = Math.sign(to - from);
+  for (let x = from + dir * (30 + r() * 90); dir * (to - x) > 0; ) {
+    const w = s.w[0] + r() * (s.w[1] - s.w[0]);
+    const [wall, wallShade] = s.walls[Math.floor(r() * s.walls.length)];
+    const b: Block = { x: dir > 0 ? x : x - w, w, floors: s.f[0] + Math.floor(r() * (s.f[1] - s.f[0] + 1)), wall, wallShade, seed: Math.floor(r() * 9999), fh };
+    if (s.shop && r() < 0.75) b.shop = s.shop[Math.floor(r() * s.shop.length)];
+    out.push(b);
+    x += dir * (w + 30 + r() * 90);
+  }
+  return out;
+}
+
+/** 远处三层城各自那排楼 */
+const ROWS: RowSpec[] = [
+  { w: [500, 900], f: [8, 19], walls: [["#ead2c3", "#dfc4b6"], ["#e8d6c6", "#dccabb"], ["#e4cdc6", "#d8c0b9"]] },
+  { w: [420, 760], f: [6, 13], walls: [["#dcb6a4", "#cfa796"], ["#e2c2aa", "#d5b29a"], ["#d8b8ae", "#cba99f"], ["#e4cba0", "#d6ba8e"]] },
+  {
+    w: [380, 620],
+    f: [5, 9],
+    walls: [["#efd8b8", "#e1c6a2"], ["#e7ac92", "#d6987e"], ["#ecd09a", "#dcbd84"], ["#e3b2a4", "#d39f91"], ["#d2d0b2", "#c2bf9f"], ["#dcc5b6", "#cdb3a3"]],
+    shop: ["#c96a52", "#d9a441", "#6f8f86", "#9b6a8a"],
+  },
+];
+const rowOf = (seed: number, x0: number, x1: number, s: RowSpec, gaps: [number, number][] = []) => row(seed, x0, x1, s.w[0], s.w[1], s.f[0], s.f[1], 190, s.walls, gaps, s.shop);
+
 export const LAYERS: Layer[] = [
-  { D: 4, haze: 0.5, detail: 0, lw: 0, ground: "#e0c2b2", blocks: row(11, -14000, 14000, 500, 900, 8, 19, 190, [["#ead2c3", "#dfc4b6"], ["#e8d6c6", "#dccabb"], ["#e4cdc6", "#d8c0b9"]]) },
-  {
-    D: 2.2,
-    haze: 0.26,
-    detail: 1,
-    lw: 2.4,
-    ground: "#d3b7a8",
-    blocks: row(12, -9000, 9000, 420, 760, 6, 13, 190, [["#dcb6a4", "#cfa796"], ["#e2c2aa", "#d5b29a"], ["#d8b8ae", "#cba99f"], ["#e4cba0", "#d6ba8e"]]),
-  },
-  {
-    D: 1.5,
-    haze: 0.05,
-    detail: 2,
-    lw: 3.2,
-    ground: "#c9b3a2",
-    blocks: row(
-      14,
-      -6200,
-      6200,
-      380,
-      620,
-      5,
-      9,
-      190,
-      [["#efd8b8", "#e1c6a2"], ["#e7ac92", "#d6987e"], ["#ecd09a", "#dcbd84"], ["#e3b2a4", "#d39f91"], ["#d2d0b2", "#c2bf9f"], ["#dcc5b6", "#cdb3a3"]],
-      [[-430, 520]],
-      ["#c96a52", "#d9a441", "#6f8f86", "#9b6a8a"],
-    ),
-  },
+  { D: 4, haze: 0.5, detail: 0, lw: 0, ground: "#e0c2b2", blocks: rowOf(11, -14000, 14000, ROWS[0]) },
+  { D: 2.2, haze: 0.26, detail: 1, lw: 2.4, ground: "#d3b7a8", blocks: rowOf(12, -9000, 9000, ROWS[1]) },
+  { D: 1.5, haze: 0.05, detail: 2, lw: 3.2, ground: "#c9b3a2", blocks: rowOf(14, -6200, 6200, ROWS[2], [[-430, 520]]) },
 ];
 
 // 远处高低错落的高楼（用户 2026-10-19：全城那个画面「中间有点空」）：远处两层城里各插几栋高的，天际线有起伏，城占的画面高一点。
@@ -866,6 +884,53 @@ export const LAYERS: Layer[] = [
   mid.forEach(([x, w, floors], i) => LAYERS[1].blocks.push({ x, w, floors, fh: 190, wall: ["#dcb6a4", "#e2c2aa", "#d8b8ae"][i % 3], wallShade: ["#cfa796", "#d5b29a", "#cba99f"][i % 3], seed: 950 + i, wide: true }));
 }
 
+// B 站横屏（用户 2026-10-30 看着 0:14.34：「这个场景有点空，补一下」）：横屏看得宽，镜头拉开到整座城上时三层城只排到画面中间，
+// 两边只剩空地和斜光。每层往两边接着排（随机数另起一串），远处两层再插几栋高的（和中间那几栋一样只在拉开时浮出来），
+// 两边的天际线也有起伏。只在横屏画（drawCity 的 side），竖屏的城一栋不变；net.ts 找拴红绳的楼只找原来那排
+{
+  const reach = [46000, 30000, 20000];
+  LAYERS.forEach((L, i) => {
+    const xs = L.blocks.filter((b) => !b.wide);
+    const lo = Math.min(...xs.map((b) => b.x));
+    const hi = Math.max(...xs.map((b) => b.x + b.w));
+    L.side = [...rowOut(700 + i, lo, -reach[i], ROWS[i]), ...rowOut(710 + i, hi, reach[i], ROWS[i])];
+  });
+  const far: [number, number, number, number][] = [
+    [-34100, 460, 33, 1],
+    [-30600, 420, 29, 0],
+    [-26900, 500, 37, 2],
+    [-23500, 440, 31, 0],
+    [-19600, 480, 35, 1],
+    [-16700, 400, 28, 2],
+    [16500, 440, 30, 1],
+    [19800, 500, 38, 0],
+    [23200, 420, 27, 2],
+    [26500, 480, 34, 1],
+    [30300, 440, 31, 0],
+    [33600, 400, 36, 2],
+  ];
+  const fw = ROWS[0].walls;
+  far.forEach(([x, w, floors, k], i) => LAYERS[0].side!.push({ x, w, floors, fh: 190, wall: fw[k][0], wallShade: fw[k][1], seed: 1900 + i, wide: true }));
+  const mid: [number, number, number][] = [
+    [-18300, 460, 18],
+    [-14700, 420, 21],
+    [-11200, 400, 16],
+    [10900, 440, 20],
+    [14100, 400, 17],
+    [17500, 460, 19],
+  ];
+  const mw = ROWS[1].walls;
+  mid.forEach(([x, w, floors], i) => LAYERS[1].side!.push({ x, w, floors, fh: 190, wall: mw[i % 3][0], wallShade: mw[i % 3][1], seed: 1950 + i, wide: true }));
+}
+const SIDED = new Map<Layer, Block[]>();
+/** 这一层要画的楼（横屏连两边接着排的） */
+const blocksOf = (L: Layer): Block[] => {
+  if (!LANDSCAPE || !L.side) return L.blocks;
+  let all = SIDED.get(L);
+  if (!all) SIDED.set(L, (all = [...L.blocks, ...L.side]));
+  return all;
+};
+
 /**
  * 全城最高那栋楼（和人在同一层）：一栋三十层的老塔楼，楼顶差一点碰到白，她住在顶层，楼脚下是哑铃店。
  * 在她往前走的方向（左边）：前奏里她救完人往家走，16 秒走到 −2370，楼就在她前面（用户 2026-10-19：「这栋楼不是主角的家，
@@ -892,6 +957,36 @@ export const STREET: Block[] = [
   { x: -6140, w: 680, floors: 6, wall: "#ecd5a6", wallShade: "#dcc290", seed: 313, fh: 220, shop: "#d9a441" },
   { x: -6740, w: 540, floors: 4, wall: "#dcc5b6", wallShade: "#cdb3a3", seed: 314, fh: 240 },
 ];
+
+/**
+ * B 站横屏：街这一边往两边接着排的老楼（和 STREET 一样的高矮、墙色、铺面；竖屏画面外）。镜头拉开到整座城上时，
+ * 横屏两个下角原来只有空地。画在人这一层那排楼的地方（第一幕 NEIGHBORS、stage.ts、end_map.ts），只在横屏画（streetSide）
+ */
+export const STREET_SIDE: Block[] = (() => {
+  const s: RowSpec = {
+    w: [540, 900],
+    f: [4, 8],
+    walls: [
+      ["#f1e1c6", "#e0ccac"],
+      ["#e9c3a8", "#dbb195"],
+      ["#e2d3b0", "#d3c29c"],
+      ["#e6b39d", "#d69f88"],
+      ["#ecd5a6", "#dcc290"],
+      ["#dcc5b6", "#cdb3a3"],
+    ],
+    shop: ["#c96a52", "#6f8f86", "#d9a441"],
+  };
+  const lo = Math.min(...STREET.map((b) => b.x));
+  const hi = Math.max(...STREET.map((b) => b.x + b.w));
+  return [...rowOut(720, lo, -14000, s, 230), ...rowOut(721, hi, 11000, s, 230)];
+})();
+export const streetSide = (): Block[] => (LANDSCAPE ? STREET_SIDE : []);
+
+/**
+ * 第一幕老钟家左边那栋五层楼（scenes/act1.ts 的 NEIGHBORS[1]：x = 老钟家左边 − 620，按她走路的位置算出来的，这里抄一份数，
+ * 改了第一幕她走路的位置要一起改）。B 站横屏看得宽，第二幕哑铃店门口排队的人后面就是它：第二幕在横屏里也画，换图层那一下楼不变
+ */
+export const ACT1_FIVE: Block = { x: -2542.7445969369464, w: 560, floors: 5, fh: 230, wall: "#e6b39d", wallShade: "#d69f88", seed: 312, shop: "#6f8f86" };
 
 /**
  * 千斤家那栋楼：最高那栋楼左边，隔一条宽巷子（−4660…−3700）的一栋三十层老楼（楼顶 −7922，比最高那栋楼矮 620）。一楼是她家（门口一根拴人的铁桩），
@@ -1190,7 +1285,8 @@ export function drawCity(
     drawGround(g, c, L.D, L.ground, L.lw);
     const clip = new Path2D();
     clip.rect(v.x0, 0, v.x1 - v.x0, 8000);
-    for (const b of L.blocks) {
+    const blocks = blocksOf(L);
+    for (const b of blocks) {
       if (b.x + b.w < v.x0 || b.x > v.x1 || -b.floors * b.fh - 300 > v.y1) continue;
       if (b.wide) {
         if (wide <= 0.01) continue;
@@ -1203,7 +1299,7 @@ export function drawCity(
       clip.rect(b.x, -b.floors * b.fh - 80, b.w, b.floors * b.fh + 80);
     }
     if (L.D < 3 && light > 0) drawLightBands(g, c, L.D, clip, light * (L.D > 2 ? 0.6 : 1));
-    for (const b of L.blocks) {
+    for (const b of blocks) {
       if (b.x + b.w < v.x0 || b.x > v.x1) continue;
       if (b.wide && wide <= 0.01) continue;
       drawBlockGlow(g, b, c, L.D, (L.D > 3 ? 0.6 : 1) * (b.wide ? wide : 1));
@@ -1235,7 +1331,8 @@ export function drawCity(
 }
 
 /** 人这一层的街面：人行道（地砖缝按透视往下越来越疏、往两边斜开，看得出是平躺的地面） */
-export function drawStreet(g: CanvasRenderingContext2D, c: Cam) {
+export function drawStreet(g: CanvasRenderingContext2D, c0: Cam) {
+  const c = lensOf(c0);
   const v = viewOf(c, 1);
   g.fillStyle = "#dcc7b0";
   g.fillRect(v.x0, 0, v.x1 - v.x0, 8000);
@@ -1278,7 +1375,8 @@ export const whiteEdge = (x: number, t: number) => Y_WHITE + 34 * Math.sin(x / 5
  * 天上的白：下沿以上是发光的白，下沿一层肥皂泡一样的彩光（离得近时更宽、里面也流动着彩色），往下一片柔和的眩光和光柱。
  * flash 是有人被吸进去时整个画面亮一下。
  */
-export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, t: number, flash = 0) {
+export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c0: Cam, t: number, flash = 0) {
+  const c = lensOf(c0);
   // 白的下沿在没转的画面上的高度；画面转着时眩光和光柱跟着转（pad：转开后露出来的角）
   const yEdge = H / 2 + (Y_WHITE - c.y) * c.z;
   const pad = c.r ? Math.abs(Math.sin(c.r)) * H + 40 : 0;
@@ -1302,7 +1400,9 @@ export function drawWhite(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, 
     // 白往下打的光柱（一根根很淡的斜光，慢慢地挪）
     const k = clamp01(1 - (yEdge - 0) / (H * 1.6)) * clamp01((yEdge + glare) / 600);
     if (k > 0.01) {
-      for (let i = 0; i < 7; i++) {
+      // 横屏画面宽，光柱按宽度多几根（竖屏 7 根）
+      const nCol = Math.round(7 * (W / VW));
+      for (let i = 0; i < nCol; i++) {
         const x = ((i * 233 + 80 + t * 9 * (i % 2 ? 1 : -1) - c.x * c.z * 0.15) % (W + 400)) - 200;
         const wd = 60 + ((i * 97) % 110);
         const ray = g.createLinearGradient(0, yEdge, 0, yEdge + glare * 0.8);
@@ -1389,7 +1489,7 @@ export function drawAfterglow(g: CanvasRenderingContext2D, base: DOMMatrix, c: C
   g.save();
   g.globalCompositeOperation = "screen";
   g.translate(W / 2, cy);
-  g.scale(1, 0.34);
+  g.scale(W / VW, 0.34);
   const gr = g.createRadialGradient(0, 0, 0, 0, 0, 900);
   gr.addColorStop(0, `rgba(255,206,140,${0.55 * k})`);
   gr.addColorStop(0.45, `rgba(255,198,150,${0.28 * k})`);
@@ -1403,8 +1503,11 @@ export function drawAfterglow(g: CanvasRenderingContext2D, base: DOMMatrix, c: C
  * 拉开到整座城上时，白往下打的几道宽宽的斜光（耶稣光）：从白的下沿斜着照下来，穿过满天往上飘的人，落在城上，
  * 越往下越宽、越淡，慢慢地挪（screen：只把亮处提亮）。k：0 不画，1 拉开到整座城上。
  */
-export function drawRays(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, t: number, k: number) {
+export function drawRays(g: CanvasRenderingContext2D, base: DOMMatrix, c0: Cam, t: number, k: number) {
   if (k <= 0.01) return;
+  const c = lensOf(c0);
+  // 横屏：几道光按画面宽度摆开（竖屏原样）
+  const fx = W / VW;
   const [, yEdge] = toScreen(c, 0, Y_WHITE);
   const top = Math.max(-80, yEdge - 30);
   const len = H * 1.05 - top;
@@ -1422,7 +1525,7 @@ export function drawRays(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, t
     [990, 70, 0.13, -0.5],
   ];
   for (const [x0, w0, a0, sp] of rays) {
-    const x = x0 + 26 * Math.sin(t * 0.21 * sp + x0) - c.x * c.z * 0.05;
+    const x = x0 * fx + 26 * Math.sin(t * 0.21 * sp + x0) - c.x * c.z * 0.05;
     const a = a0 * k * (0.8 + 0.2 * Math.sin(t * 0.5 + x0 * 0.01));
     const slant = 0.32;
     const w1 = w0 * 2.4;
@@ -1602,13 +1705,17 @@ export function drawSilhouette(g: CanvasRenderingContext2D, x: number, y: number
 
 // ——— 光 ———
 /** 斜照进来的几道暖光（画面坐标，跟着镜头横向挪一点） */
-export function drawSunbeams(g: CanvasRenderingContext2D, base: DOMMatrix, c: Cam, t: number, k = 1) {
+export function drawSunbeams(g: CanvasRenderingContext2D, base: DOMMatrix, c0: Cam, t: number, k = 1) {
   k *= dayLeft();
   if (k <= 0.005) return;
+  const c = lensOf(c0);
+  // 横屏：光按画面宽度摆开，斜的角度和竖屏一样（竖屏 fx = fy = 1）
+  const fx = W / VW;
+  const fy = H / VH;
   g.setTransform(base);
   g.save();
   g.globalCompositeOperation = "screen";
-  const shift = -((c.x * c.z) / 6) % 1400;
+  const shift = -((c.x * c.z) / 6) % (1400 * fx);
   const beams: [number, number, number][] = [
     [-520, 440, 0.15],
     [-80, 300, 0.1],
@@ -1617,12 +1724,12 @@ export function drawSunbeams(g: CanvasRenderingContext2D, base: DOMMatrix, c: Ca
   ];
   for (const [x0, w, a] of beams) {
     const kk = k * a * (0.85 + 0.15 * Math.sin(t * 0.6 + x0));
-    const x = x0 + shift;
+    const x = x0 * fx + shift;
     const p = new Path2D();
     p.moveTo(x, -100);
     p.lineTo(x + w, -100);
-    p.lineTo(x + w + 1300, H);
-    p.lineTo(x + 1300, H);
+    p.lineTo(x + w + 1300 * fy, H);
+    p.lineTo(x + 1300 * fy, H);
     p.closePath();
     const gr = g.createLinearGradient(0, 0, 0, H);
     gr.addColorStop(0, `rgba(255,234,196,${kk})`);

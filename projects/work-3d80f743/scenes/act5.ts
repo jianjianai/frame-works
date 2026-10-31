@@ -18,7 +18,8 @@
 // 开头接着主歌二⑧（scenes/act4.ts）：仰头看的画面照样从 lib/bed.ts 画（同一个镜头函数 bedCam，接过去的那一帧一样）。
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
-import { applyCam, clamp01, viewOf } from "../lib/cam";
+import { H, W, applyCam, clamp01, setLens, syncFrame, viewOf } from "../lib/cam";
+import { lensAt } from "../lib/wide";
 import { PULL_T, WALK_T, drawPull3, pullCam } from "../lib/street3";
 import { SPREAD_T, drawSpread, spreadCam, walkCam } from "../lib/street4";
 import { FULL_T, GIFT_T, LESSON_T, fullAway, fullMix, giftAway, giftMix, lessonAway, lessonCam, lessonMix } from "../lib/write5";
@@ -33,12 +34,13 @@ import { bedCam, drawCeiling } from "../lib/bed";
 import { morningAway, morningCam, morningMix } from "../lib/morning";
 
 export async function createScene({ width, height }: SceneOptions): Promise<Scene> {
+  syncFrame(width, height);
   await loadHandFont();
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
-  const base = new DOMMatrix([width / 1080, 0, 0, height / 1920, 0, 0]);
+  const base = new DOMMatrix([width / W, 0, 0, height / H, 0, 0]);
   const grain = makeGrain();
   prepareCity();
   const { drawWorld, drawAir } = makeStage(base, grain);
@@ -56,6 +58,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   return {
     canvas,
     render(t) {
+      syncFrame(width, height);
+      setLens(lensAt("act5", t));
       try {
         if (t >= PULL_T.start) {
           const k = t >= LESSON_T.mix0 ? lessonMix(t) : 0;

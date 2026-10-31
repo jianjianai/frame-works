@@ -7,7 +7,7 @@
 import { type CastSpec, lookOf, passerby } from "@materials/剪纸角色/code/cast";
 import { type Angles, type PoseIn, figurePose } from "@materials/剪纸角色/code/chengtuo";
 import { seeded } from "@frame/engine/math";
-import { type Cam, applyCam, toScreen } from "./cam";
+import { type Cam, applyCam, toScreen, W } from "./cam";
 import { drawTinted } from "./world";
 import { armL, armR, legL, legR } from "./poses";
 import { drawPerson } from "./people";
@@ -113,7 +113,7 @@ function drawRow(g: CanvasRenderingContext2D, base: DOMMatrix, cam: Cam, row: Pe
   for (const p of row) {
     // 看得见的才画
     const [sx] = toScreen(cam, p.x, 0, D);
-    if (sx < -120 || sx > 1200) continue;
+    if (sx < -120 || sx > W + 120) continue;
     // 描边粗细按这一镜退得最远时（0.2 倍）定下来
     g.drawImage(spriteOf(p, 0.2 / p.D), p.x + BOX.x0, BOX.y0, BOX.x1 - BOX.x0, BOX.y1 - BOX.y0);
   }

@@ -27,7 +27,7 @@ import { createCompositionScene, type SceneLoaders, type VisualDocument } from "
 import { timeline } from "@frame/engine/timeline";
 
 /** 和 scene.ts 一样的模块（歌词层去掉了，用不到它） */
-const LOADERS: SceneLoaders = {
+export const LOADERS: SceneLoaders = {
   act1: () => import("../scenes/act1"),
   act2: () => import("../scenes/act2"),
   act3: () => import("../scenes/act3"),
@@ -57,7 +57,7 @@ const GLOW = "rgba(255,247,234,0.95)";
 
 // 每版的字体文件定了就不再重截：同一个文件加了字，已经出过图的那几版字的位置会差零点几个像素（重新渲染不一样了）。
 // 新的一版要新的字，另截一个文件。
-const FONTS = {
+export const FONTS = {
   cover: { family: "CoverTitleSerif", file: "films/work-3d80f743/fonts/NotoSerifSC-Bold-cover.woff2" },
   note: { family: "CoverNoteSerif", file: "films/work-3d80f743/fonts/NotoSerifSC-Bold-subset.woff2" },
   zuichen: { family: "CoverZuichenSerif", file: "films/work-3d80f743/fonts/NotoSerifSC-Bold-cover-zuichen.woff2" },
@@ -65,7 +65,7 @@ const FONTS = {
 type FontKey = keyof typeof FONTS;
 
 const fontLoads = new Map<FontKey, Promise<void>>();
-function loadFont(key: FontKey) {
+export function loadFont(key: FontKey) {
   let load = fontLoads.get(key);
   if (!load) {
     const { family, file } = FONTS[key];
@@ -99,7 +99,7 @@ async function filmFrames(options: SceneOptions, q: number, times: number[], sig
 
 /** 成片的一帧（按设计尺寸 q 倍画的）放进 rect：设计坐标 (fx, fy) 落在封面的 (cx, cy)，设计的 1 像素是封面的 z 像素。
  *  extra：再加的滤镜（虚化） */
-function shot(g: CanvasRenderingContext2D, frame: HTMLCanvasElement, q: number, fx: number, fy: number, cx: number, cy: number, z: number, rect: [number, number, number, number], extra = "") {
+export function shot(g: CanvasRenderingContext2D, frame: HTMLCanvasElement, q: number, fx: number, fy: number, cx: number, cy: number, z: number, rect: [number, number, number, number], extra = "") {
   g.save();
   g.beginPath();
   g.rect(...rect);
@@ -116,7 +116,7 @@ function shot(g: CanvasRenderingContext2D, frame: HTMLCanvasElement, q: number, 
 }
 
 /** 字后面一片柔和的暖白：从 (x0, y0) 最浓到 (x1, y1) 淡完，铺满 rect，把字从彩虹、楼面上托出来 */
-function backdrop(g: CanvasRenderingContext2D, rect: [number, number, number, number], x0: number, y0: number, x1: number, y1: number, a: number) {
+export function backdrop(g: CanvasRenderingContext2D, rect: [number, number, number, number], x0: number, y0: number, x1: number, y1: number, a: number) {
   const gr = g.createLinearGradient(x0, y0, x1, y1);
   gr.addColorStop(0, `rgba(255,246,232,${a})`);
   gr.addColorStop(0.55, `rgba(255,246,232,${a * 0.6})`);
@@ -189,7 +189,7 @@ function paintGlyphs(g: CanvasRenderingContext2D, k: number, size: number, glyph
 }
 
 /** 一行字，中心在 (x, y) */
-function line(g: CanvasRenderingContext2D, k: number, font: string, { text, accent = [], x, y, size, tracking = 0.06 }: Caption) {
+export function line(g: CanvasRenderingContext2D, k: number, font: string, { text, accent = [], x, y, size, tracking = 0.06 }: Caption) {
   const hot = hotOf(text, accent);
   g.save();
   g.font = `700 ${size}px ${font}, "Noto Serif SC", serif`;

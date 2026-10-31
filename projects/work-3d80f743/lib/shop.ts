@@ -10,7 +10,7 @@
 import { beatAt } from "@frame/engine/tempo";
 import { CAST, type CastSpec, castJoints, lookOf, passerby } from "@materials/剪纸角色/code/cast";
 import type { HoldFn, MoveKey, PoseIn } from "@materials/剪纸角色/code/chengtuo";
-import { type Cam, E, aim, clamp01, kick, ph, viewOf } from "./cam";
+import { type Cam, E, H, W, aim, clamp01, kick, ph, viewOf } from "./cam";
 import { INK, TOWER, addEllipse, drawGlow, part, rectPath } from "./world";
 import { HAND_FONT } from "./note";
 import { groundShadow } from "./props";
@@ -434,12 +434,12 @@ export function drawShopShade(g: CanvasRenderingContext2D, base: DOMMatrix, t: n
   g.save();
   g.setTransform(base);
   g.globalCompositeOperation = "multiply";
-  const gr = g.createLinearGradient(0, 0, 0, 1920);
+  const gr = g.createLinearGradient(0, 0, 0, H);
   gr.addColorStop(0, `rgba(146,112,150,${0.36 * k})`);
   gr.addColorStop(0.55, `rgba(184,150,172,${0.26 * k})`);
   gr.addColorStop(1, `rgba(206,178,190,${0.16 * k})`);
   g.fillStyle = gr;
-  g.fillRect(0, 0, 1080, 1920);
+  g.fillRect(0, 0, W, H);
   g.restore();
 }
 

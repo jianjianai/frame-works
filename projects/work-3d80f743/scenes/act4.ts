@@ -22,14 +22,18 @@ import { setRoomAway } from "../lib/room";
 import { KNOT_T, roomAwayAt, sillCam } from "../lib/sill";
 import { drawNightWindow } from "../lib/nightwin";
 import { BED_T, bedCam, bedMix, drawCeiling, tiltPx } from "../lib/bed";
+import { H, W, setLens, syncFrame } from "../lib/cam";
+import { lensAt } from "../lib/wide";
 
-export async function createScene({ width, height }: SceneOptions): Promise<Scene> {
+/** lens：横屏取景用哪张表（回忆 scenes/recall.ts 里画那一夜用 "act4mem"，见 lib/wide.ts） */
+export async function createScene({ width, height }: SceneOptions, lens = "act4"): Promise<Scene> {
+  syncFrame(width, height);
   await loadHandFont();
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
-  const base = new DOMMatrix([width / 1080, 0, 0, height / 1920, 0, 0]);
+  const base = new DOMMatrix([width / W, 0, 0, height / H, 0, 0]);
   const grain = makeGrain();
   prepareCity();
   const { drawAir, drawInside } = makeStage(base, grain);
@@ -42,6 +46,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   return {
     canvas,
     render(t) {
+      syncFrame(width, height);
+      setLens(lensAt(lens, t));
       setDusk(1, 1);
       setRoomAway(roomAwayAt(t));
       try {

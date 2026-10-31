@@ -19,7 +19,8 @@
 // 第二幕的城、她那扇窗、她的屋子都从 lib/stage.ts 画（和第二幕同一套），接过去的那一帧一样。
 
 import type { Scene, SceneOptions } from "@frame/engine/types";
-import { type Cam, E, applyCam, ph, shake, spinBlur, viewOf } from "../lib/cam";
+import { type Cam, E, H, LANDSCAPE, W, applyCam, ph, shake, spinBlur, setLens, syncFrame, viewOf } from "../lib/cam";
+import { lensAt } from "../lib/wide";
 import { drawBurst, drawRays, drawStreet, drawTinted, makeGrain, prepareCity, setDusk } from "../lib/world";
 import { loadHandFont } from "../lib/note";
 import { skyLook } from "../lib/sky";
@@ -31,11 +32,12 @@ import { MT, drawDazzle, drawMothers } from "../lib/mother";
 import { ASH_T, ashFlash, ashRays, burstAt, drawSkyBloom, drawSnow } from "../lib/ash";
 import { XFER, streetCam, streetLook, streetShake, xferWhite } from "../lib/streetcam";
 import { MEM_T, drawThen, memoryGrade, nowCam, thenCam } from "../lib/memory";
-import { SIGN_T, drawDust, drawFallingBoard, drawMemAsh, drawMemFlash, drawSign8, signCam, signShake } from "../lib/sign";
+import { SIGN_T, drawDust, drawFallingBoard, drawMemAsh, drawMemFlash, drawSign8, signCam, signShake, walkersOut } from "../lib/sign";
 import { GROW_T, type Layer, backCam, drawGrowFront, drawGrowGlow, drawSaved, frontSeg, growCam, growDissolve, growDusk, growLook, growShake, landX, memoryAmount, segAt } from "../lib/grow";
 import { drawBusStop, drawSchool } from "../lib/years";
 
 export async function createScene({ width, height }: SceneOptions): Promise<Scene> {
+  syncFrame(width, height);
   await loadHandFont();
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -46,7 +48,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   buf.width = width;
   buf.height = height;
   const bctx = buf.getContext("2d")!;
-  const base = new DOMMatrix([width / 1080, 0, 0, height / 1920, 0, 0]);
+  const base = new DOMMatrix([width / W, 0, 0, height / H, 0, 0]);
   const grain = makeGrain();
   prepareCity();
   const { drawWorld, drawAir, windowCovers, drawInside } = makeStage(base, grain, ZHONG_NEIGHBORS);
@@ -58,6 +60,13 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   /** ⑦⑧、间奏 十二年前的镜头 */
   const thenCamAt = (t: number): Cam => growCam(t, (t2) => signCam(t2, (tt) => thenCam(tt, camAt)));
 
+  /** 横屏：⑧ 两个路人各自走出画面的那一刻（第一次画到时按横屏镜头算） */
+  let walkOut: number[] | undefined;
+  const walkOutAt = () =>
+    (walkOut ??= walkersOut((t) => {
+      const lens = lensAt("act3", t);
+      return lens ? lens(thenCamAt(t)) : thenCamAt(t);
+    }));
   /** ⑦⑧ 十二年前：同一条街，白天，颜色淡一些、旧一些；穿着妈妈铁靴的她、往天上飘的妈妈（掉在半空的木牌、灰、调色在 drawPastTop） */
   const drawPast = (g: CanvasRenderingContext2D, t: number, layer?: Layer) => {
     const cam = thenCamAt(t);
@@ -79,7 +88,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     applyCam(g, base, cam, 1, sh);
     if (t < SIGN_T.start) drawThen(g, t, cam.z);
     else {
-      drawSign8(g, t, cam.z);
+      drawSign8(g, t, cam.z, LANDSCAPE ? walkOutAt() : undefined);
       drawDust(g, t);
     }
     drawAir(g, cam, t, sh, skyLook(t), 0, 0);
@@ -128,7 +137,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
       drawSaved(g, t, cam.z, fs, true, late);
     }
     for (const f of late.splice(0)) f();
-    drawGrowGlow(g, t, width / 1080, seg);
+    drawGrowGlow(g, t, width / W, seg);
     const dk = growDusk(seg);
     setDusk(dk, dk);
     try {
@@ -157,7 +166,7 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     const n = 9;
-    const py = (Math.min(260, Math.abs(dy)) * Math.sign(dy) * height) / 1920;
+    const py = (Math.min(260, Math.abs(dy)) * Math.sign(dy) * height) / H;
     for (let i = 1; i < n; i++) {
       ctx.globalAlpha = 1 / (i + 1);
       ctx.drawImage(buf, 0, (i / (n - 1) - 0.5) * py);
@@ -225,6 +234,8 @@ export async function createScene({ width, height }: SceneOptions): Promise<Scen
   return {
     canvas,
     render(t) {
+      syncFrame(width, height);
+      setLens(lensAt("act3", t));
       // 间奏最后溶回现在：先画现在，再把回忆那一帧叠在上面越来越淡（两边的她同一个姿势、同一个地方、一样大，只有四周和怀里的人在换）
       if (t >= GROW_T.kneel) {
         drawNight(ctx, t);

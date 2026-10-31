@@ -14,6 +14,7 @@ const project: Project = {
   experiences: ["情绪运镜","剧情音乐短片","骨架剪纸动画","逐字歌词"],
   materials: ["剪纸角色"],
   loadAudio: () => import("./audio"),
-  timelines: ["main"],
+  timelines: ["main","bili"],
+  publishedAt: "2026-10-31T07:46:56.214Z",
 };
 export default project;

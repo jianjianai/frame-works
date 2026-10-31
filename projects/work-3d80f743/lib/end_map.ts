@@ -3,7 +3,7 @@
 // 她的窗为这一段挪到顶层最右那扇（朝着老钟家这边，openCage [0, 2]）；楼顶的栏杆补到右边的角上（她最后倒挂着攥住的地方）。
 // 风这一段往左吹。世界坐标：街面 y = 0，往上为负；人和第一幕一样按 1 倍画（她 590 高）。
 
-import { type Cam, E, applyCam, clamp01, ph, toScreen, viewOf } from "./cam";
+import { type Cam, E, H, W, applyCam, clamp01, ph, toScreen, viewOf } from "./cam";
 import {
   type Block,
   INK,
@@ -23,6 +23,7 @@ import {
   duskTint,
   rectPath,
   specialWindow,
+  streetSide,
 } from "./world";
 import { TOWER_ROOF, drawRoof } from "./props";
 import { ZHONG_HOUSE, ZHONG_NEIGHBORS } from "./dawn";
@@ -344,7 +345,7 @@ export function makeEndStage(base: DOMMatrix, grain: HTMLCanvasElement) {
       const hw = herWindow();
       if (view.y1 > hw.y - 200 && view.y0 < hw.y + hw.h + 200 && view.x1 > hw.x - 200 && view.x0 < hw.x + hw.w + 200) drawHerWindow(g, t);
     }
-    for (const b of BLOCKS) {
+    for (const b of BLOCKS.concat(streetSide())) {
       if (b.x > view.x1 + 50 || b.x + b.w < view.x0 - 50) continue;
       drawBlock(g, b, cam, 1, 2, 3.2, t);
       drawBlockGlow(g, b, cam, 1);
@@ -364,5 +365,5 @@ export function makeEndStage(base: DOMMatrix, grain: HTMLCanvasElement) {
 /** 世界里一点在不在画面里（留 m 像素的边） */
 export const onScreen = (cam: Cam, p: V2, m = 200) => {
   const [x, y] = toScreen(cam, p[0], p[1]);
-  return x > -m && x < 1080 + m && y > -m && y < 1920 + m;
+  return x > -m && x < W + m && y > -m && y < H + m;
 };
