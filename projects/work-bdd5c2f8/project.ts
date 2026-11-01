@@ -16,5 +16,6 @@ const project: Project = {
   materials: ["s0rrow"],
   posterTime: 1.5,
   timelines: ["main"],
+  publishedAt: "2026-11-01T06:39:06.805Z",
 };
 export default project;

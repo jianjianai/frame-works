@@ -27,3 +27,11 @@
 - public/fonts/zcool-kuaile-extra5.ttf: ZCOOL KuaiLe, SIL OFL, via Google Fonts
 - public/fonts/zk-extra6.css: Google Fonts CSS (OFL font)
 - public/fonts/zcool-kuaile-extra6.ttf: ZCOOL KuaiLe, SIL OFL, via Google Fonts
+- public/production/zcool-kuaile-bili.css: Google Fonts CSS（ZCOOL KuaiLe，SIL OFL 1.1），B 站封面用字子集
+- public/fonts/zcool-kuaile-bili.ttf: ZCOOL KuaiLe（Google Fonts，SIL OFL 1.1），B 站封面用字子集
+- public/production/zcool-kuaile-bili.css: Google Fonts CSS（ZCOOL KuaiLe，SIL OFL 1.1），B 站封面用字子集
+- public/fonts/zcool-kuaile-bili.ttf: ZCOOL KuaiLe（Google Fonts，SIL OFL 1.1），B 站封面用字子集
+- public/production/zcool-kuaile-bili2.css: Google Fonts CSS（ZCOOL KuaiLe，SIL OFL 1.1），B 站封面第二轮用字子集
+- public/fonts/zcool-kuaile-bili2.ttf: ZCOOL KuaiLe（Google Fonts，SIL OFL 1.1），B 站封面第二轮用字子集
+- public/production/zcool-kuaile-bili2.css: Google Fonts CSS（ZCOOL KuaiLe，SIL OFL 1.1），B 站封面第二轮用字子集
+- public/fonts/zcool-kuaile-bili2.ttf: ZCOOL KuaiLe（Google Fonts，SIL OFL 1.1），B 站封面第二轮用字子集
