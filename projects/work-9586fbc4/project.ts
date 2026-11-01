@@ -15,5 +15,6 @@ const project: Project = {
   materials: ["s0rrow"],
   loadAudio: () => import("./audio"),
   timelines: ["main"],
+  publishedAt: "2026-11-01T06:18:12.207Z",
 };
 export default project;

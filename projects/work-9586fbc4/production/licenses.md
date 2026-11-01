@@ -22,3 +22,7 @@
 - public/fonts/noto-sans-sc-400-extra.ttf: Noto Sans SC (Google Fonts), SIL Open Font License 1.1 — subset: 业交作数知给要道
 - public/production/long-cang-extra.css: Google Fonts CSS (Long Cang, SIL OFL 1.1) — subset request: P
 - public/fonts/long-cang-extra.ttf: Long Cang (Google Fonts), SIL Open Font License 1.1 — subset: P
+- public/production/zcool-kuaile-bili.css: Google Fonts CSS（ZCOOL KuaiLe，SIL OFL 1.1），B 站封面用字子集
+- public/fonts/zcool-kuaile-bili.ttf: ZCOOL KuaiLe（Google Fonts，SIL OFL 1.1），B 站封面用字子集
+- public/production/zcool-kuaile-bili2.css: Google Fonts CSS（ZCOOL KuaiLe，SIL OFL 1.1），B 站封面第二轮用字子集
+- public/fonts/zcool-kuaile-bili2.ttf: ZCOOL KuaiLe（Google Fonts，SIL OFL 1.1），B 站封面第二轮用字子集
