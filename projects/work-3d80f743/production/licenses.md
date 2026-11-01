@@ -5,3 +5,5 @@
 - public/fonts/NotoSerifSC-Bold-cover.woff2: 思源宋体 Noto Serif SC Bold（Google Fonts，SIL Open Font License 1.1）。抖音封面用的子集：只含封面上的字「她拽住了全城飘起来的人，可谁来拽住她？《引力》反乌托邦-乌托邦P·｜|」「人不是被地拉住的，是被人拉住的。」（2026-10-30 截取，加字重截过一次，fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&text=<这些字>）
 - public/fonts/NotoSerifSC-Bold-cover-zuichen.woff2: 思源宋体 Noto Serif SC Bold（Google Fonts，SIL Open Font License 1.1）。抖音封面第四版「最沉」用的子集：只含「引力城里都说，她是最沉的人」（2026-10-30 截取，同上）
 - public/fonts/NotoSerifSC-Bold-bili.woff2: Noto Serif SC Bold（Google Fonts，SIL Open Font License 1.1），按 B 站横屏点赞那句截的子集：一键三连的人，身边一直有个拽住你的人
+- public/fonts/NotoSerifSC-Bold-cover-duchen.woff2: Noto Serif SC Bold（思源宋体），Google Fonts，SIL Open Font License 1.1；按字截的子集（独沉封面新文案用到的 33 个字）
+- public/fonts/NotoSerifSC-Bold-cover-buken.woff2: Noto Serif SC Bold（思源宋体），Google Fonts，SIL Open Font License 1.1；按字截的子集（独沉封面文案「全城都在飘向那道光 / 只有她不肯走」的 15 个字）

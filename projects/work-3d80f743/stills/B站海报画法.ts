@@ -14,11 +14,26 @@ type FigureOptions = NonNullable<Parameters<typeof figurePose>[0]>;
 type PoseIn = ReturnType<typeof figurePose>;
 
 // ———————————————————————— 字 ————————————————————————
-/** 封面的字：思源宋体粗体，只截了「城里人都说，她是最沉的人」这几个字也够用的子集（成片设定字那个文件，不加字） */
-const FONT = { family: "PosterSerif", file: "films/work-3d80f743/fonts/NotoSerifSC-Bold-subset.woff2" };
-let fontLoad: Promise<void> | null = null;
-export const loadPosterFont = () =>
-  (fontLoad ??= new FontFace(FONT.family, `url(${assetUrl(FONT.file)})`, { weight: "700" }).load().then((face) => void document.fonts.add(face)));
+/** 封面的字：思源宋体粗体，都是只截了用到的字的子集。已经出过图的文件不再加字（加了字，同一行字的位置会差零点几个像素），
+ *  新文案另截一个：note 是成片设定字那个文件（「城里人都说，她是最沉的人」的字也都在），duchen 是「独沉」2026-11-01 改文案时
+ *  截的（独沉画法.ts 的 COPIES 用到的字，`https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&text=<全部的字>`） */
+export const POSTER_FONTS = {
+  note: { family: "PosterSerif", file: "films/work-3d80f743/fonts/NotoSerifSC-Bold-subset.woff2" },
+  duchen: { family: "PosterDuchenSerif", file: "films/work-3d80f743/fonts/NotoSerifSC-Bold-cover-duchen.woff2" },
+  /** 「独沉」用户选定的文案「全城都在飘向那道光 / 只有她不肯走」（2026-11-01） */
+  buken: { family: "PosterBukenSerif", file: "films/work-3d80f743/fonts/NotoSerifSC-Bold-cover-buken.woff2" },
+};
+export type PosterFont = keyof typeof POSTER_FONTS;
+const fontLoads = new Map<PosterFont, Promise<void>>();
+export function loadPosterFont(key: PosterFont = "note") {
+  let load = fontLoads.get(key);
+  if (!load) {
+    const { family, file } = POSTER_FONTS[key];
+    load = new FontFace(family, `url(${assetUrl(file)})`, { weight: "700" }).load().then((face) => void document.fonts.add(face));
+    fontLoads.set(key, load);
+  }
+  return load;
+}
 
 export type Line = {
   text: string;
@@ -36,13 +51,25 @@ export type Line = {
   /** 字后面的晕：颜色、浓淡（0 不要） */
   halo?: string;
   haloAlpha?: number;
+  /** 哪个字体文件（默认 note） */
+  font?: PosterFont;
 };
+
+/** 一行字有多宽（字号 size、字距 tracking） */
+export function lineWidth(g: CanvasRenderingContext2D, text: string, size: number, tracking = 0.06, font: PosterFont = "note") {
+  g.save();
+  g.font = `700 ${size}px ${POSTER_FONTS[font].family}, "Noto Serif SC", serif`;
+  const chars = [...text];
+  const w = chars.reduce((a, ch) => a + g.measureText(ch).width, 0) + size * tracking * (chars.length - 1);
+  g.restore();
+  return w;
+}
 
 /** 一行字。k：封面 1 像素是画布的几像素（晕按它放大） */
 export function posterLine(g: CanvasRenderingContext2D, k: number, l: Line) {
-  const { text, accent = "", x, y, size, tracking = 0.06, align = "center", color = "#fff3e2", accentColor = "#f5ae45", halo = "20,10,30", haloAlpha = 0.85 } = l;
+  const { text, accent = "", x, y, size, tracking = 0.06, align = "center", color = "#fff3e2", accentColor = "#f5ae45", halo = "20,10,30", haloAlpha = 0.85, font = "note" } = l;
   g.save();
-  g.font = `700 ${size}px ${FONT.family}, "Noto Serif SC", serif`;
+  g.font = `700 ${size}px ${POSTER_FONTS[font].family}, "Noto Serif SC", serif`;
   g.textBaseline = "middle";
   g.textAlign = "left";
   const spacing = size * tracking;

@@ -5,6 +5,9 @@
 // 神秘在「为什么只有她不飘」。近处左右两个飘过镜头的人（骨架）虚着、压暗，当前景，画面有了纵深。
 // 两种摆法（Layout）：WIDE 4:3 1440×1080（stills/B站封面-独沉.ts、抖音横封面-独沉.ts，就是 B 站定稿那张，数值一个都不能动：
 // B 站已经导出过），TALL 3:4 1080×1440（stills/小红书封面-独沉.ts、抖音竖封面-独沉.ts）。画法和其他几版共用的部分在 B站海报画法.ts。
+// 文案（COPIES）：2026-11-01 用户：「独沉封面很好，但是没有激发观众的探索欲，导致封面点击率只有平均水平，需要修改文案」。
+// 原来的「城里人都说，她是 / 最沉的人」是一句陈述：没交代这个世界，「最沉」还有歧义，满天飘着的人是什么、看的人不知道，也就没有
+// 想弄明白的问题。改成先给一点信息、再留一个看得见的缺口：DUCHEN_COPY 是四张正式封面用的那版，其余几版留着对比（换一行就能换）。
 import { passerby } from "@materials/剪纸角色/code/cast";
 import { bloom } from "./小红书封面画法";
 import {
@@ -14,9 +17,11 @@ import {
   grain,
   heroine,
   litFigure,
+  lineWidth,
   loadPosterFont,
   motes,
   person,
+  type PosterFont,
   posterLine,
   radial,
   seeded,
@@ -52,9 +57,34 @@ export type Layout = {
   /** 她：两脚之间的地面、倍数 */
   her: V2;
   herS: number;
-  /** 字：第一行 y、字号，第二行 y、字号（都在画面中线上） */
+  /** 字：第一行 y、字号，第二行 y、字号（都在画面中线上；字号是最大的，一行放不下就按 textW 收小） */
   text: [number, number, number, number];
+  /** 两行字各自最多占多宽 */
+  textW: [number, number];
 };
+
+/** 一版文案：上面一行小的交代、下面一行大的钩子，各自的关键词（换色）和字距；font 哪个字体子集 */
+export type Copy = { top: string; topAccent: string; topTracking: number; hook: string; hookAccent: string; hookTracking: number; font: PosterFont };
+
+export const COPIES = {
+  /** 原来的（2026-10-31 用户定的文案，B 站、小红书、抖音第一次发的就是这句）：反差，但只是一句陈述 */
+  最沉: { top: "城里人都说，她是", topAccent: "", topTracking: 0.14, hook: "最沉的人", hookAccent: "最沉", hookTracking: 0.1, font: "note" },
+  /** 规则 + 反常：先把世界的规则说破——满天飘着的人一下子变成「满城绝望的人」，再指着画面里唯一的反常问一句：
+   *  为什么只有她站着？两个红词「飘起来 / 没飘」连起来就是这张图。用户看了：「感觉文案还是有点怪」（像一道答案很明显的谜语，
+   *  「没飘」也拗口），没用 */
+  没飘: { top: "这里的人，一绝望就会飘起来", topAccent: "飘起来", topTracking: 0.06, hook: "她为什么没飘？", hookAccent: "没飘", hookTracking: 0.08, font: "duchen" },
+  /** 画面反转：看着是一幅很美的黄昏，字说这些往上飘的人都会化成灰（片子首帧的设定：飘进天上的强光就会化成灰）——美的画面
+   *  一下子成了一场集体消失，唯一站着的她是谁、能不能拦住，点进去看 */
+  化成灰: { top: "这些往上飘的人", topAccent: "", topTracking: 0.12, hook: "都会化成灰", hookAccent: "化成灰", hookTracking: 0.1, font: "duchen" },
+  /** 代入提问：让看的人在画面里找自己——是往上飘的那一群，还是站着的她（和片尾评论题「你是拽人的，还是被拽的？」一个路数） */
+  哪一个: { top: "如果绝望会让人飘起来", topAccent: "绝望", topTracking: 0.08, hook: "你是哪一个？", hookAccent: "哪一个", hookTracking: 0.1, font: "duchen" },
+  /** 用户从 8 句里选的（2026-11-01「选5」）：上一句交代全城在飘向光（画面里的满天人影一下子有了方向），下一句「只有她不肯走」
+   *  ——「不肯」是她自己选的，比「没飘」自然：她明明也可以走，为什么留下、为谁留下，点进去看。关键词「不肯走」标红 */
+  不肯: { top: "全城都在飘向那道光", topAccent: "", topTracking: 0.12, hook: "只有她不肯走", hookAccent: "不肯走", hookTracking: 0.1, font: "buken" },
+} satisfies Record<string, Copy>;
+
+/** 四张正式的「独沉」封面现在用的文案 */
+export const DUCHEN_COPY: Copy = COPIES.不肯;
 
 /** 4:3（B 站、抖音横封面）：B 站定稿的那张 */
 export const WIDE: Layout = {
@@ -88,6 +118,7 @@ export const WIDE: Layout = {
   her: [720, 932],
   herS: 0.6,
   text: [330, 62, 462, 158],
+  textW: [1080, 1020],
 };
 
 /** 3:4（小红书、抖音竖封面）：天更高，往上飘的人更多；字在上半截，她站在下面楼顶的正中间。
@@ -123,6 +154,7 @@ export const TALL: Layout = {
   her: [540, 1266],
   herS: 0.68,
   text: [400, 60, 538, 150],
+  textW: [940, 870],
 };
 
 /** 黄昏的天：白下面是发亮的淡金，往下桃色、玫瑰色、灰紫，城上面是暗暗的梅子色 */
@@ -138,8 +170,8 @@ function sky(g: CanvasRenderingContext2D, L: Layout) {
   ]);
 }
 
-/** 往上飘的人：一股股从城里升起来，越往上越小、越淡；中间放字的地方留空 */
-function rising(g: CanvasRenderingContext2D, L: Layout) {
+/** 往上飘的人：一股股从城里升起来，越往上越小、越淡；中间放字的地方留空（clearHalf：字实际有多宽的一半，比摆法给的宽就按它清） */
+function rising(g: CanvasRenderingContext2D, L: Layout, clearHalf: number) {
   const { n, ySpan, xMin, xSpan, cx, sparse, column, clear, near } = L.rising;
   const r = seeded(17);
   const items: [number, number, number, number][] = [];
@@ -152,7 +184,7 @@ function rising(g: CanvasRenderingContext2D, L: Layout) {
     if (Math.abs(x - cx) < column[0] && y > column[1]) continue;
     const h = 7 + u * u * 46 + r() * 5;
     // 字的方框里一个也不留：上面按随机数留下的那些在这里去掉（随机数照原来的顺序取完，别的人位置不变）
-    if (y > clear[0] && y < clear[1] && Math.abs(x - cx) < clear[2]) continue;
+    if (y > clear[0] && y < clear[1] && Math.abs(x - cx) < Math.max(clear[2], clearHalf)) continue;
     items.push([x, y, h, u]);
   }
   // 刚离开楼顶的几个：比别人大，脚下离楼顶还有一截（一看就是飘起来，不是站着举手）
@@ -203,14 +235,26 @@ function roof(g: CanvasRenderingContext2D, L: Layout) {
   ]);
 }
 
-/** 按摆法 L 画整张封面（g 已经按封面的设计像素缩放，k 是设计 1 像素对画布的像素） */
-export async function paintDuchen(g: CanvasRenderingContext2D, k: number, L: Layout) {
-  await loadPosterFont();
+/** 这版文案在这个摆法下两行字的字号和位置：字号先用摆法给的，一行放不下就按 textW 收小；第二行收小了往上挪，两行的间距不变。
+ *  half：两行里宽的那行的一半（往上飘的人按它清开） */
+function textOf(g: CanvasRenderingContext2D, L: Layout, c: Copy) {
+  const [y1, s1max, y2, s2max] = L.text;
+  const fit = (text: string, size: number, tracking: number, maxW: number) => Math.min(size, (size * maxW) / lineWidth(g, text, size, tracking, c.font));
+  const s1 = fit(c.top, s1max, c.topTracking, L.textW[0]);
+  const s2 = fit(c.hook, s2max, c.hookTracking, L.textW[1]);
+  const half = Math.max(lineWidth(g, c.top, s1, c.topTracking, c.font), lineWidth(g, c.hook, s2, c.hookTracking, c.font)) / 2;
+  return { y1, s1, y2: y2 - (s2max - s2) / 2, s2, half };
+}
+
+/** 按摆法 L、文案 copy 画整张封面（g 已经按封面的设计像素缩放，k 是设计 1 像素对画布的像素） */
+export async function paintDuchen(g: CanvasRenderingContext2D, k: number, L: Layout, copy: Copy = DUCHEN_COPY) {
+  await loadPosterFont(copy.font);
+  const text = textOf(g, L, copy);
   sky(g, L);
   const edge = whiteCeiling(g, L.whiteY, 700, 1.1, L.cols, false, L.W);
   motes(g, ...L.motes, 21, 0.7);
   for (const [x, rr, sd] of L.dissolves) dissolve(g, x, edge(x) + 6, rr, sd);
-  rising(g, L);
+  rising(g, L, text.half + 24);
   skyline(g, 23, L.city, L.W, L.H + 120);
   const [vx, vy, vin, vout, vsy] = L.vignette;
   vignette(g, vx, vy, vin, vout, "rgb(70,40,70)", 0.55, vsy, L.W);
@@ -259,8 +303,8 @@ export async function paintDuchen(g: CanvasRenderingContext2D, k: number, L: Lay
     [1, "rgba(255,236,210,0)"],
   ]);
   bloom(g, k);
-  const ink = { color: "#3a2629", accentColor: "#b4472f", halo: "255,244,230", haloAlpha: 0.9 };
-  posterLine(g, k, { text: "城里人都说，她是", x: L.W / 2, y: L.text[0], size: L.text[1], tracking: 0.14, ...ink });
-  posterLine(g, k, { text: "最沉的人", accent: "最沉", x: L.W / 2, y: L.text[2], size: L.text[3], tracking: 0.1, ...ink });
+  const ink = { color: "#3a2629", accentColor: "#b4472f", halo: "255,244,230", haloAlpha: 0.9, font: copy.font };
+  posterLine(g, k, { text: copy.top, accent: copy.topAccent, x: L.W / 2, y: text.y1, size: text.s1, tracking: copy.topTracking, ...ink });
+  posterLine(g, k, { text: copy.hook, accent: copy.hookAccent, x: L.W / 2, y: text.y2, size: text.s2, tracking: copy.hookTracking, ...ink });
   grain(g, 0.05);
 }
