@@ -15,5 +15,6 @@ const project: Project = {
   materials: ["剪纸角色"],
   loadAudio: () => import("./audio"),
   timelines: ["main","bili"],
+  publishedAt: "2026-11-01T04:04:42.415Z",
 };
 export default project;
